@@ -869,7 +869,7 @@ struct lock_manager_operations {
 	int (*lm_compare_owner)(struct file_lock *, struct file_lock *);
 	unsigned long (*lm_owner_key)(struct file_lock *);
 	void (*lm_notify)(struct file_lock *);	/* unblock callback */
-	int (*lm_grant)(struct file_lock *, struct file_lock *, int);
+	int (*lm_grant)(struct file_lock *, int);
 	void (*lm_break)(struct file_lock *);
 	int (*lm_change)(struct file_lock **, int);
 };
@@ -1874,7 +1874,7 @@ extern int current_umask(void);
 extern void ihold(struct inode * inode);
 extern void iput(struct inode *);
 
-static inline struct inode *file_inode(struct file *f)
+static inline struct inode *file_inode(const struct file *f)
 {
 	return f->f_inode;
 }
