@@ -111,9 +111,11 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 static int
 asoc_simple_card_sub_parse_of(struct device_node *np,
 			      struct asoc_simple_dai *dai,
-			      const struct device_node **p_node,
-			      const char **name)
+			      struct device_node **p_node,
+			      const char **name,
+			      int *args_count)
 {
+	struct of_phandle_args args;
 	struct device_node *node;
 	struct clk *clk;
 	u32 val;
@@ -123,10 +125,15 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 	 * get node via "sound-dai = <&phandle port>"
 	 * it will be used as xxx_of_node on soc_bind_dai_link()
 	 */
-	node = of_parse_phandle(np, "sound-dai", 0);
-	if (!node)
-		return -ENODEV;
-	*p_node = node;
+	ret = of_parse_phandle_with_args(np, "sound-dai",
+					 "#sound-dai-cells", 0, &args);
+	if (ret)
+		return ret;
+
+	*p_node = args.np;
+
+	if (args_count)
+		*args_count = args.args_count;
 
 	/* get dai->name */
 	ret = snd_soc_of_get_dai_name(np, name);
@@ -163,11 +170,11 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 	return 0;
 }
 
-static int simple_card_dai_link_of(struct device_node *node,
-				   struct device *dev,
-				   struct snd_soc_dai_link *dai_link,
-				   struct simple_dai_props *dai_props,
-				   bool is_top_level_node)
+static int asoc_simple_card_dai_link_of(struct device_node *node,
+					struct device *dev,
+					struct snd_soc_dai_link *dai_link,
+					struct simple_dai_props *dai_props,
+					bool is_top_level_node)
 {
 	struct device_node *np = NULL;
 	struct device_node *bitclkmaster = NULL;
@@ -176,8 +183,9 @@ static int simple_card_dai_link_of(struct device_node *node,
 	char *name;
 	char prop[128];
 	char *prefix = "";
-	int ret;
+	int ret, cpu_args;
 
+	/* For single DAI link & old style of DT node */
 	if (is_top_level_node)
 		prefix = "simple-audio-card,";
 
@@ -195,7 +203,8 @@ static int simple_card_dai_link_of(struct device_node *node,
 
 	ret = asoc_simple_card_sub_parse_of(np, &dai_props->cpu_dai,
 					    &dai_link->cpu_of_node,
-					    &dai_link->cpu_dai_name);
+					    &dai_link->cpu_dai_name,
+					    &cpu_args);
 	if (ret < 0)
 		goto dai_link_of_err;
 
@@ -226,7 +235,7 @@ static int simple_card_dai_link_of(struct device_node *node,
 
 	ret = asoc_simple_card_sub_parse_of(np, &dai_props->codec_dai,
 					    &dai_link->codec_of_node,
-					    &dai_link->codec_dai_name);
+					    &dai_link->codec_dai_name, NULL);
 	if (ret < 0)
 		goto dai_link_of_err;
 
@@ -274,6 +283,7 @@ static int simple_card_dai_link_of(struct device_node *node,
 				dai_link->codec_dai_name);
 	dai_link->name = dai_link->stream_name = name;
 	dai_link->ops = &asoc_simple_card_ops;
+	dai_link->init = asoc_simple_card_dai_init;
 
 	dev_dbg(dev, "\tname : %s\n", dai_link->stream_name);
 	dev_dbg(dev, "\tcpu : %s / %04x / %d\n",
@@ -284,6 +294,18 @@ static int simple_card_dai_link_of(struct device_node *node,
 		dai_link->codec_dai_name,
 		dai_props->codec_dai.fmt,
 		dai_props->codec_dai.sysclk);
+
+	/*
+	 * soc_bind_dai_link() will check cpu name
+	 * after of_node matching if dai_link has cpu_dai_name.
+	 * but, it will never match if name was created by fmt_single_name()
+	 * remove cpu_dai_name if cpu_args was 0.
+	 * see
+	 *	fmt_single_name()
+	 *	fmt_multiple_name()
+	 */
+	if (!cpu_args)
+		dai_link->cpu_dai_name = NULL;
 
 dai_link_of_err:
 	if (np)
@@ -297,13 +319,15 @@ dai_link_of_err:
 
 static int asoc_simple_card_parse_of(struct device_node *node,
 				     struct simple_card_data *priv,
-				     struct device *dev,
-				     int multi)
+				     struct device *dev)
 {
 	struct snd_soc_dai_link *dai_link = priv->snd_card.dai_link;
 	struct simple_dai_props *dai_props = priv->dai_props;
 	u32 val;
 	int ret;
+
+	if (!node)
+		return -EINVAL;
 
 	/* parsing the card name from DT */
 	snd_soc_of_parse_card_name(&priv->snd_card, "simple-audio-card,name");
@@ -332,21 +356,27 @@ static int asoc_simple_card_parse_of(struct device_node *node,
 	dev_dbg(dev, "New simple-card: %s\n", priv->snd_card.name ?
 		priv->snd_card.name : "");
 
-	if (multi) {
+	/* Single/Muti DAI link(s) & New style of DT node */
+	if (of_get_child_by_name(node, "simple-audio-card,dai-link")) {
 		struct device_node *np = NULL;
-		int i;
-		for (i = 0; (np = of_get_next_child(node, np)); i++) {
+		int i = 0;
+
+		for_each_child_of_node(node, np) {
 			dev_dbg(dev, "\tlink %d:\n", i);
-			ret = simple_card_dai_link_of(np, dev, dai_link + i,
-						      dai_props + i, false);
+			ret = asoc_simple_card_dai_link_of(np, dev,
+							   dai_link + i,
+							   dai_props + i,
+							   false);
 			if (ret < 0) {
 				of_node_put(np);
 				return ret;
 			}
+			i++;
 		}
 	} else {
-		ret = simple_card_dai_link_of(node, dev, dai_link, dai_props,
-					      true);
+		/* For single DAI link & old style of DT node */
+		ret = asoc_simple_card_dai_link_of(node, dev,
+						   dai_link, dai_props, true);
 		if (ret < 0)
 			return ret;
 	}
@@ -384,16 +414,13 @@ static int asoc_simple_card_probe(struct platform_device *pdev)
 	struct snd_soc_dai_link *dai_link;
 	struct device_node *np = pdev->dev.of_node;
 	struct device *dev = &pdev->dev;
-	int num_links, multi, ret;
+	int num_links, ret;
 
 	/* get the number of DAI links */
-	if (np && of_get_child_by_name(np, "simple-audio-card,dai-link")) {
+	if (np && of_get_child_by_name(np, "simple-audio-card,dai-link"))
 		num_links = of_get_child_count(np);
-		multi = 1;
-	} else {
+	else
 		num_links = 1;
-		multi = 0;
-	}
 
 	/* allocate the private data and the DAI link array */
 	priv = devm_kzalloc(dev,
@@ -420,24 +447,12 @@ static int asoc_simple_card_probe(struct platform_device *pdev)
 
 	if (np && of_device_is_available(np)) {
 
-		ret = asoc_simple_card_parse_of(np, priv, dev, multi);
+		ret = asoc_simple_card_parse_of(np, priv, dev);
 		if (ret < 0) {
 			if (ret != -EPROBE_DEFER)
 				dev_err(dev, "parse error %d\n", ret);
 			goto err;
 		}
-
-		/*
-		 * soc_bind_dai_link() will check cpu name
-		 * after of_node matching if dai_link has cpu_dai_name.
-		 * but, it will never match if name was created by fmt_single_name()
-		 * remove cpu_dai_name to escape name matching.
-		 * see
-		 *	fmt_single_name()
-		 *	fmt_multiple_name()
-		 */
-		if (num_links == 1)
-			dai_link->cpu_dai_name = NULL;
 
 	} else {
 		struct asoc_simple_card_info *cinfo;
@@ -464,6 +479,7 @@ static int asoc_simple_card_probe(struct platform_device *pdev)
 		dai_link->codec_name	= cinfo->codec;
 		dai_link->cpu_dai_name	= cinfo->cpu_dai.name;
 		dai_link->codec_dai_name = cinfo->codec_dai.name;
+		dai_link->init		= asoc_simple_card_dai_init;
 		memcpy(&priv->dai_props->cpu_dai, &cinfo->cpu_dai,
 					sizeof(priv->dai_props->cpu_dai));
 		memcpy(&priv->dai_props->codec_dai, &cinfo->codec_dai,
@@ -472,11 +488,6 @@ static int asoc_simple_card_probe(struct platform_device *pdev)
 		priv->dai_props->cpu_dai.fmt	|= cinfo->daifmt;
 		priv->dai_props->codec_dai.fmt	|= cinfo->daifmt;
 	}
-
-	/*
-	 * init snd_soc_dai_link
-	 */
-	dai_link->init = asoc_simple_card_dai_init;
 
 	snd_soc_card_set_drvdata(&priv->snd_card, priv);
 
