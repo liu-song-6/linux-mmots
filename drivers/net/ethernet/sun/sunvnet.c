@@ -350,14 +350,17 @@ static int vnet_walk_rx_one(struct vnet_port *port,
 	if (IS_ERR(desc))
 		return PTR_ERR(desc);
 
+	if (desc->hdr.state != VIO_DESC_READY)
+		return 1;
+
+	rmb();
+
 	viodbg(DATA, "vio_walk_rx_one desc[%02x:%02x:%08x:%08x:%llx:%llx]\n",
 	       desc->hdr.state, desc->hdr.ack,
 	       desc->size, desc->ncookies,
 	       desc->cookies[0].cookie_addr,
 	       desc->cookies[0].cookie_size);
 
-	if (desc->hdr.state != VIO_DESC_READY)
-		return 1;
 	err = vnet_rx_one(port, desc->size, desc->cookies, desc->ncookies);
 	if (err == -ECONNRESET)
 		return err;
@@ -534,7 +537,7 @@ static void vnet_event(void *arg, int event)
 	}
 
 	if (unlikely(event != LDC_EVENT_DATA_READY)) {
-		pr_warning("Unexpected LDC event %d\n", event);
+		pr_warn("Unexpected LDC event %d\n", event);
 		spin_unlock_irqrestore(&vio->lock, flags);
 		return;
 	}

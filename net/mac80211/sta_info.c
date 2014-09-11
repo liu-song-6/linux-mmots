@@ -1182,7 +1182,7 @@ static void ieee80211_send_null_response(struct ieee80211_sub_if_data *sdata,
 	struct sk_buff *skb;
 	int size = sizeof(*nullfunc);
 	__le16 fc;
-	bool qos = test_sta_flag(sta, WLAN_STA_WME);
+	bool qos = sta->sta.wme;
 	struct ieee80211_tx_info *info;
 	struct ieee80211_chanctx_conf *chanctx_conf;
 
@@ -1822,7 +1822,7 @@ void sta_set_sinfo(struct sta_info *sta, struct station_info *sinfo)
 		sinfo->bss_param.flags |= BSS_PARAM_FLAGS_SHORT_PREAMBLE;
 	if (sdata->vif.bss_conf.use_short_slot)
 		sinfo->bss_param.flags |= BSS_PARAM_FLAGS_SHORT_SLOT_TIME;
-	sinfo->bss_param.dtim_period = sdata->local->hw.conf.ps_dtim_period;
+	sinfo->bss_param.dtim_period = sdata->vif.bss_conf.dtim_period;
 	sinfo->bss_param.beacon_interval = sdata->vif.bss_conf.beacon_int;
 
 	sinfo->sta_flags.set = 0;
@@ -1837,7 +1837,7 @@ void sta_set_sinfo(struct sta_info *sta, struct station_info *sinfo)
 		sinfo->sta_flags.set |= BIT(NL80211_STA_FLAG_AUTHORIZED);
 	if (test_sta_flag(sta, WLAN_STA_SHORT_PREAMBLE))
 		sinfo->sta_flags.set |= BIT(NL80211_STA_FLAG_SHORT_PREAMBLE);
-	if (test_sta_flag(sta, WLAN_STA_WME))
+	if (sta->sta.wme)
 		sinfo->sta_flags.set |= BIT(NL80211_STA_FLAG_WME);
 	if (test_sta_flag(sta, WLAN_STA_MFP))
 		sinfo->sta_flags.set |= BIT(NL80211_STA_FLAG_MFP);

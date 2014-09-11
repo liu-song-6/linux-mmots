@@ -6,6 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -31,6 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -172,7 +174,7 @@ static int iwl_mvm_sf_config(struct iwl_mvm *mvm, u8 sta_id,
 			     enum iwl_sf_state new_state)
 {
 	struct iwl_sf_cfg_cmd sf_cmd = {
-		.state = new_state,
+		.state = cpu_to_le32(new_state),
 	};
 	struct ieee80211_sta *sta;
 	int ret = 0;

@@ -38,6 +38,7 @@
 #include <linux/completion.h>
 #include <linux/radix-tree.h>
 #include <linux/cpu_rmap.h>
+#include <linux/crash_dump.h>
 
 #include <linux/atomic.h>
 
@@ -209,6 +210,7 @@ enum {
 	MLX4_BMME_FLAG_TYPE_2_WIN	= 1 <<  9,
 	MLX4_BMME_FLAG_RESERVED_LKEY	= 1 << 10,
 	MLX4_BMME_FLAG_FAST_REG_WR	= 1 << 11,
+	MLX4_BMME_FLAG_VSD_INIT2RTR	= 1 << 28,
 };
 
 enum mlx4_event {
@@ -1278,7 +1280,7 @@ int mlx4_mr_rereg_mem_write(struct mlx4_dev *dev, struct mlx4_mr *mr,
 /* Returns true if running in low memory profile (kdump kernel) */
 static inline bool mlx4_low_memory_profile(void)
 {
-	return reset_devices;
+	return is_kdump_kernel();
 }
 
 #endif /* MLX4_DEVICE_H */

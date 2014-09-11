@@ -21,10 +21,16 @@
 #include <linux/sched.h>
 
 #ifdef CONFIG_F2FS_CHECK_FS
-#define f2fs_bug_on(condition)	BUG_ON(condition)
+#define f2fs_bug_on(sbi, condition)	BUG_ON(condition)
 #define f2fs_down_write(x, y)	down_write_nest_lock(x, y)
 #else
-#define f2fs_bug_on(condition)	WARN_ON(condition)
+#define f2fs_bug_on(sbi, condition)					\
+	do {								\
+		if (unlikely(condition)) {				\
+			WARN_ON(1);					\
+			sbi->need_fsck = true;				\
+		}							\
+	} while (0)
 #define f2fs_down_write(x, y)	down_write(x)
 #endif
 
@@ -153,6 +159,15 @@ static inline int update_sits_in_cursum(struct f2fs_summary_block *rs, int i)
 	int before = sits_in_cursum(rs);
 	rs->n_sits = cpu_to_le16(before + i);
 	return before;
+}
+
+static inline bool __has_cursum_space(struct f2fs_summary_block *sum, int size,
+								int type)
+{
+	if (type == NAT_JOURNAL)
+		return nats_in_cursum(sum) + size <= NAT_JOURNAL_ENTRIES;
+
+	return sits_in_cursum(sum) + size <= SIT_JOURNAL_ENTRIES;
 }
 
 /*
@@ -332,18 +347,16 @@ enum {
 };
 
 struct flush_cmd {
-	struct flush_cmd *next;
 	struct completion wait;
+	struct llist_node llnode;
 	int ret;
 };
 
 struct flush_cmd_control {
 	struct task_struct *f2fs_issue_flush;	/* flush thread */
 	wait_queue_head_t flush_wait_queue;	/* waiting queue for wake-up */
-	struct flush_cmd *issue_list;		/* list for command issue */
-	struct flush_cmd *dispatch_list;	/* list for command dispatch */
-	spinlock_t issue_lock;			/* for issue list lock */
-	struct flush_cmd *issue_tail;		/* list tail of issue list */
+	struct llist_head issue_list;		/* list for command issue */
+	struct llist_node *dispatch_list;	/* list for command dispatch */
 };
 
 struct f2fs_sm_info {
@@ -368,6 +381,8 @@ struct f2fs_sm_info {
 	struct list_head discard_list;		/* 4KB discard list */
 	int nr_discards;			/* # of discards in the list */
 	int max_discards;			/* max. discards to be issued */
+
+	struct list_head sit_entry_set;	/* sit entry set list */
 
 	unsigned int ipu_policy;	/* in-place-update policy */
 	unsigned int min_ipu_util;	/* in-place-update threshold */
@@ -434,6 +449,7 @@ struct f2fs_sb_info {
 	struct buffer_head *raw_super_buf;	/* buffer head of raw sb */
 	struct f2fs_super_block *raw_super;	/* raw super block pointer */
 	int s_dirty;				/* dirty flag for checkpoint */
+	bool need_fsck;				/* need fsck.f2fs to fix */
 
 	/* for node-related operations */
 	struct f2fs_nm_info *nm_info;		/* node manager */
@@ -537,6 +553,21 @@ static inline struct f2fs_inode_info *F2FS_I(struct inode *inode)
 static inline struct f2fs_sb_info *F2FS_SB(struct super_block *sb)
 {
 	return sb->s_fs_info;
+}
+
+static inline struct f2fs_sb_info *F2FS_I_SB(struct inode *inode)
+{
+	return F2FS_SB(inode->i_sb);
+}
+
+static inline struct f2fs_sb_info *F2FS_M_SB(struct address_space *mapping)
+{
+	return F2FS_I_SB(mapping->host);
+}
+
+static inline struct f2fs_sb_info *F2FS_P_SB(struct page *page)
+{
+	return F2FS_M_SB(page->mapping);
 }
 
 static inline struct f2fs_super_block *F2FS_RAW_SUPER(struct f2fs_sb_info *sbi)
@@ -703,8 +734,8 @@ static inline void dec_valid_block_count(struct f2fs_sb_info *sbi,
 						blkcnt_t count)
 {
 	spin_lock(&sbi->stat_lock);
-	f2fs_bug_on(sbi->total_valid_block_count < (block_t) count);
-	f2fs_bug_on(inode->i_blocks < count);
+	f2fs_bug_on(sbi, sbi->total_valid_block_count < (block_t) count);
+	f2fs_bug_on(sbi, inode->i_blocks < count);
 	inode->i_blocks -= count;
 	sbi->total_valid_block_count -= (block_t)count;
 	spin_unlock(&sbi->stat_lock);
@@ -718,7 +749,7 @@ static inline void inc_page_count(struct f2fs_sb_info *sbi, int count_type)
 
 static inline void inode_inc_dirty_dents(struct inode *inode)
 {
-	inc_page_count(F2FS_SB(inode->i_sb), F2FS_DIRTY_DENTS);
+	inc_page_count(F2FS_I_SB(inode), F2FS_DIRTY_DENTS);
 	atomic_inc(&F2FS_I(inode)->dirty_dents);
 }
 
@@ -732,7 +763,7 @@ static inline void inode_dec_dirty_dents(struct inode *inode)
 	if (!S_ISDIR(inode->i_mode))
 		return;
 
-	dec_page_count(F2FS_SB(inode->i_sb), F2FS_DIRTY_DENTS);
+	dec_page_count(F2FS_I_SB(inode), F2FS_DIRTY_DENTS);
 	atomic_dec(&F2FS_I(inode)->dirty_dents);
 }
 
@@ -848,9 +879,9 @@ static inline void dec_valid_node_count(struct f2fs_sb_info *sbi,
 {
 	spin_lock(&sbi->stat_lock);
 
-	f2fs_bug_on(!sbi->total_valid_block_count);
-	f2fs_bug_on(!sbi->total_valid_node_count);
-	f2fs_bug_on(!inode->i_blocks);
+	f2fs_bug_on(sbi, !sbi->total_valid_block_count);
+	f2fs_bug_on(sbi, !sbi->total_valid_node_count);
+	f2fs_bug_on(sbi, !inode->i_blocks);
 
 	inode->i_blocks--;
 	sbi->total_valid_node_count--;
@@ -867,7 +898,7 @@ static inline unsigned int valid_node_count(struct f2fs_sb_info *sbi)
 static inline void inc_valid_inode_count(struct f2fs_sb_info *sbi)
 {
 	spin_lock(&sbi->stat_lock);
-	f2fs_bug_on(sbi->total_valid_inode_count == sbi->total_node_count);
+	f2fs_bug_on(sbi, sbi->total_valid_inode_count == sbi->total_node_count);
 	sbi->total_valid_inode_count++;
 	spin_unlock(&sbi->stat_lock);
 }
@@ -875,7 +906,7 @@ static inline void inc_valid_inode_count(struct f2fs_sb_info *sbi)
 static inline void dec_valid_inode_count(struct f2fs_sb_info *sbi)
 {
 	spin_lock(&sbi->stat_lock);
-	f2fs_bug_on(!sbi->total_valid_inode_count);
+	f2fs_bug_on(sbi, !sbi->total_valid_inode_count);
 	sbi->total_valid_inode_count--;
 	spin_unlock(&sbi->stat_lock);
 }
@@ -891,7 +922,7 @@ static inline void f2fs_put_page(struct page *page, int unlock)
 		return;
 
 	if (unlock) {
-		f2fs_bug_on(!PageLocked(page));
+		f2fs_bug_on(F2FS_P_SB(page), !PageLocked(page));
 		unlock_page(page);
 	}
 	page_cache_release(page);
@@ -1359,12 +1390,12 @@ static inline struct f2fs_stat_info *F2FS_STAT(struct f2fs_sb_info *sbi)
 #define stat_inc_inline_inode(inode)					\
 	do {								\
 		if (f2fs_has_inline_data(inode))			\
-			((F2FS_SB(inode->i_sb))->inline_inode++);	\
+			((F2FS_I_SB(inode))->inline_inode++);		\
 	} while (0)
 #define stat_dec_inline_inode(inode)					\
 	do {								\
 		if (f2fs_has_inline_data(inode))			\
-			((F2FS_SB(inode->i_sb))->inline_inode--);	\
+			((F2FS_I_SB(inode))->inline_inode--);		\
 	} while (0)
 
 #define stat_inc_seg_type(sbi, curseg)					\
