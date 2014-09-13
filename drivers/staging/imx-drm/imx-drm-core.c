@@ -427,6 +427,7 @@ static uint32_t imx_drm_find_crtc_mask(struct imx_drm_device *imxdrm,
 
 	for (i = 0; i < MAX_CRTC; i++) {
 		struct imx_drm_crtc *imx_drm_crtc = imxdrm->crtc[i];
+
 		if (imx_drm_crtc && imx_drm_crtc->port == port)
 			return drm_crtc_mask(imx_drm_crtc->crtc);
 	}
@@ -438,6 +439,7 @@ static struct device_node *imx_drm_of_get_next_endpoint(
 		const struct device_node *parent, struct device_node *prev)
 {
 	struct device_node *node = of_graph_get_next_endpoint(parent, prev);
+
 	of_node_put(prev);
 	return node;
 }
@@ -471,8 +473,7 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 		crtc_mask |= mask;
 	}
 
-	if (ep)
-		of_node_put(ep);
+	of_node_put(ep);
 	if (i == 0)
 		return -ENOENT;
 
@@ -528,6 +529,7 @@ static struct drm_driver imx_drm_driver = {
 	.unload			= imx_drm_driver_unload,
 	.lastclose		= imx_drm_driver_lastclose,
 	.preclose		= imx_drm_driver_preclose,
+	.set_busid		= drm_platform_set_busid,
 	.gem_free_object	= drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,
 	.dumb_create		= drm_gem_cma_dumb_create,

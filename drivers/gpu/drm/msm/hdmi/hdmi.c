@@ -123,7 +123,7 @@ struct hdmi *hdmi_init(struct drm_device *dev, struct drm_encoder *encoder)
 	for (i = 0; i < config->hpd_reg_cnt; i++) {
 		struct regulator *reg;
 
-		reg = devm_regulator_get_exclusive(&pdev->dev,
+		reg = devm_regulator_get(&pdev->dev,
 				config->hpd_reg_names[i]);
 		if (IS_ERR(reg)) {
 			ret = PTR_ERR(reg);
@@ -139,7 +139,7 @@ struct hdmi *hdmi_init(struct drm_device *dev, struct drm_encoder *encoder)
 	for (i = 0; i < config->pwr_reg_cnt; i++) {
 		struct regulator *reg;
 
-		reg = devm_regulator_get_exclusive(&pdev->dev,
+		reg = devm_regulator_get(&pdev->dev,
 				config->pwr_reg_names[i]);
 		if (IS_ERR(reg)) {
 			ret = PTR_ERR(reg);
@@ -258,6 +258,7 @@ static void set_hdmi_pdev(struct drm_device *dev,
 	priv->hdmi_pdev = pdev;
 }
 
+<<<<<<< HEAD
 #ifdef CONFIG_OF
 static int get_gpio(struct device *dev, struct device_node *of_node, const char *name)
 {
@@ -279,9 +280,38 @@ static int get_gpio(struct device *dev, struct device_node *of_node, const char 
 static int hdmi_bind(struct device *dev, struct device *master, void *data)
 {
 	static struct hdmi_platform_config config = {};
+=======
+>>>>>>> linux-next/akpm-base
+#ifdef CONFIG_OF
+static int get_gpio(struct device *dev, struct device_node *of_node,
+	const char *name)
+{
+	int gpio = of_get_named_gpio(of_node, name, 0);
+
+	if (gpio < 0) {
+		char name2[32];
+
+<<<<<<< HEAD
+=======
+		snprintf(name2, sizeof(name2), "%s-gpio", name);
+		gpio = of_get_named_gpio(of_node, name2, 0);
+		if (gpio < 0) {
+			dev_err(dev, "failed to get gpio: %s (%d)\n",
+					name, gpio);
+			gpio = -1;
+		}
+	}
+	return gpio;
+}
+#endif
+
+static int hdmi_bind(struct device *dev, struct device *master, void *data)
+{
+	static struct hdmi_platform_config config = {};
 #ifdef CONFIG_OF
 	struct device_node *of_node = dev->of_node;
 
+>>>>>>> linux-next/akpm-base
 	if (of_device_is_compatible(of_node, "qcom,hdmi-tx-8074")) {
 		static const char *hpd_reg_names[] = {"hpd-gdsc", "hpd-5v"};
 		static const char *pwr_reg_names[] = {"core-vdda", "core-vcc"};

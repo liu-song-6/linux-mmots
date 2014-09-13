@@ -77,10 +77,10 @@
 
 #define SIT_ENTRY_OFFSET(sit_i, segno)					\
 	(segno % sit_i->sents_per_block)
-#define SIT_BLOCK_OFFSET(sit_i, segno)					\
+#define SIT_BLOCK_OFFSET(segno)					\
 	(segno / SIT_ENTRY_PER_BLOCK)
-#define	START_SEGNO(sit_i, segno)		\
-	(SIT_BLOCK_OFFSET(sit_i, segno) * SIT_ENTRY_PER_BLOCK)
+#define	START_SEGNO(segno)		\
+	(SIT_BLOCK_OFFSET(segno) * SIT_ENTRY_PER_BLOCK)
 #define SIT_BLK_CNT(sbi)			\
 	((TOTAL_SEGS(sbi) + SIT_ENTRY_PER_BLOCK - 1) / SIT_ENTRY_PER_BLOCK)
 #define f2fs_bitmap_size(nr)			\
@@ -235,6 +235,12 @@ struct curseg_info {
 	unsigned short next_blkoff;		/* next block offset to write */
 	unsigned int zone;			/* current zone number */
 	unsigned int next_segno;		/* preallocated segment */
+};
+
+struct sit_entry_set {
+	struct list_head set_list;	/* link with all sit sets */
+	unsigned int start_segno;	/* start segno of sits in set */
+	unsigned int entry_cnt;		/* the # of sit entries in set */
 };
 
 /*
@@ -480,7 +486,7 @@ enum {
 
 static inline bool need_inplace_update(struct inode *inode)
 {
-	struct f2fs_sb_info *sbi = F2FS_SB(inode->i_sb);
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 
 	/* IPU can be done only for the user data */
 	if (S_ISDIR(inode->i_mode))
@@ -583,16 +589,48 @@ static inline void check_block_count(struct f2fs_sb_info *sbi,
 	BUG_ON(GET_SIT_VBLOCKS(raw_sit) != valid_blocks);
 }
 #else
-#define check_seg_range(sbi, segno)
-#define verify_block_addr(sbi, blk_addr)
-#define check_block_count(sbi, segno, raw_sit)
+static inline void check_seg_range(struct f2fs_sb_info *sbi, unsigned int segno)
+{
+	unsigned int end_segno = SM_I(sbi)->segment_count - 1;
+
+	if (segno > end_segno)
+		sbi->need_fsck = true;
+}
+
+static inline void verify_block_addr(struct f2fs_sb_info *sbi, block_t blk_addr)
+{
+	struct f2fs_sm_info *sm_info = SM_I(sbi);
+	block_t total_blks = sm_info->segment_count << sbi->log_blocks_per_seg;
+	block_t start_addr = sm_info->seg0_blkaddr;
+	block_t end_addr = start_addr + total_blks - 1;
+
+	if (blk_addr < start_addr || blk_addr > end_addr)
+		sbi->need_fsck = true;
+}
+
+/*
+ * Summary block is always treated as an invalid block
+ */
+static inline void check_block_count(struct f2fs_sb_info *sbi,
+		int segno, struct f2fs_sit_entry *raw_sit)
+{
+	unsigned int end_segno = SM_I(sbi)->segment_count - 1;
+
+	/* check segment usage */
+	if (GET_SIT_VBLOCKS(raw_sit) > sbi->blocks_per_seg)
+		sbi->need_fsck = true;
+
+	/* check boundary of a given segment number */
+	if (segno > end_segno)
+		sbi->need_fsck = true;
+}
 #endif
 
 static inline pgoff_t current_sit_addr(struct f2fs_sb_info *sbi,
 						unsigned int start)
 {
 	struct sit_info *sit_i = SIT_I(sbi);
-	unsigned int offset = SIT_BLOCK_OFFSET(sit_i, start);
+	unsigned int offset = SIT_BLOCK_OFFSET(start);
 	block_t blk_addr = sit_i->sit_base_addr + offset;
 
 	check_seg_range(sbi, start);
@@ -619,7 +657,7 @@ static inline pgoff_t next_sit_addr(struct f2fs_sb_info *sbi,
 
 static inline void set_to_next_sit(struct sit_info *sit_i, unsigned int start)
 {
-	unsigned int block_off = SIT_BLOCK_OFFSET(sit_i, start);
+	unsigned int block_off = SIT_BLOCK_OFFSET(start);
 
 	if (f2fs_test_bit(block_off, sit_i->sit_bitmap))
 		f2fs_clear_bit(block_off, sit_i->sit_bitmap);
