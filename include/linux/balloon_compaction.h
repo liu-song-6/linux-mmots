@@ -46,6 +46,8 @@
 #include <linux/gfp.h>
 #include <linux/err.h>
 
+#ifdef CONFIG_MEMORY_BALLOON
+
 /*
  * Balloon device information descriptor.
  * This struct is used to allow the common balloon compaction interface
@@ -93,20 +95,6 @@ static inline void balloon_page_free(struct page *page)
 	__free_page(page);
 }
 
-#ifdef CONFIG_BALLOON_COMPACTION
-extern bool balloon_page_isolate(struct page *page);
-extern void balloon_page_putback(struct page *page);
-extern int balloon_page_migrate(struct page *newpage,
-				struct page *page, enum migrate_mode mode);
-extern struct address_space
-*balloon_mapping_alloc(struct balloon_dev_info *b_dev_info,
-			const struct address_space_operations *a_ops);
-
-static inline void balloon_mapping_free(struct address_space *balloon_mapping)
-{
-	kfree(balloon_mapping);
-}
-
 /*
  * balloon_page_insert - insert a page into the balloon's page list and make
  *		         the page->mapping assignment accordingly.
@@ -122,6 +110,7 @@ static inline void balloon_page_insert(struct page *page,
 				       struct list_head *head)
 {
 	__SetPageBalloon(page);
+	inc_zone_page_state(page, NR_BALLOON_PAGES);
 	page->mapping = mapping;
 	list_add(&page->lru, head);
 }
@@ -137,8 +126,26 @@ static inline void balloon_page_insert(struct page *page,
 static inline void balloon_page_delete(struct page *page)
 {
 	__ClearPageBalloon(page);
+	dec_zone_page_state(page, NR_BALLOON_PAGES);
 	page->mapping = NULL;
 	list_del(&page->lru);
+}
+
+#endif /* CONFIG_MEMORY_BALLOON */
+
+#ifdef CONFIG_BALLOON_COMPACTION
+
+extern bool balloon_page_isolate(struct page *page);
+extern void balloon_page_putback(struct page *page);
+extern int balloon_page_migrate(struct page *newpage,
+				struct page *page, enum migrate_mode mode);
+extern struct address_space
+*balloon_mapping_alloc(struct balloon_dev_info *b_dev_info,
+			const struct address_space_operations *a_ops);
+
+static inline void balloon_mapping_free(struct address_space *balloon_mapping)
+{
+	kfree(balloon_mapping);
 }
 
 /*
@@ -175,20 +182,6 @@ static inline void *balloon_mapping_alloc(void *balloon_device,
 static inline void balloon_mapping_free(struct address_space *balloon_mapping)
 {
 	return;
-}
-
-static inline void balloon_page_insert(struct page *page,
-				       struct address_space *mapping,
-				       struct list_head *head)
-{
-	__SetPageBalloon(page);
-	list_add(&page->lru, head);
-}
-
-static inline void balloon_page_delete(struct page *page)
-{
-	__ClearPageBalloon(page);
-	list_del(&page->lru);
 }
 
 static inline bool balloon_page_isolate(struct page *page)
