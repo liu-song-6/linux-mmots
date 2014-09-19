@@ -6,6 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -31,6 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -149,13 +151,13 @@ static void iwl_mvm_get_signal_strength(struct iwl_mvm *mvm,
 	    le32_to_cpu(phy_info->non_cfg_phy[IWL_RX_INFO_ENERGY_ANT_ABC_IDX]);
 	energy_a = (val & IWL_RX_INFO_ENERGY_ANT_A_MSK) >>
 						IWL_RX_INFO_ENERGY_ANT_A_POS;
-	energy_a = energy_a ? -energy_a : -256;
+	energy_a = energy_a ? -energy_a : S8_MIN;
 	energy_b = (val & IWL_RX_INFO_ENERGY_ANT_B_MSK) >>
 						IWL_RX_INFO_ENERGY_ANT_B_POS;
-	energy_b = energy_b ? -energy_b : -256;
+	energy_b = energy_b ? -energy_b : S8_MIN;
 	energy_c = (val & IWL_RX_INFO_ENERGY_ANT_C_MSK) >>
 						IWL_RX_INFO_ENERGY_ANT_C_POS;
-	energy_c = energy_c ? -energy_c : -256;
+	energy_c = energy_c ? -energy_c : S8_MIN;
 	max_energy = max(energy_a, energy_b);
 	max_energy = max(max_energy, energy_c);
 
@@ -491,10 +493,29 @@ int iwl_mvm_rx_statistics(struct iwl_mvm *mvm,
 		.mvm = mvm,
 	};
 
+	/*
+	 * set temperature debug enabled - ignore FW temperature updates
+	 * and use the user set temperature.
+	 */
+	if (mvm->temperature_test) {
+		if (mvm->temperature < le32_to_cpu(common->temperature))
+			IWL_DEBUG_TEMP(mvm,
+				       "Ignoring FW temperature update that is greater than the debug set temperature (debug temp = %d, fw temp = %d)\n",
+				       mvm->temperature,
+				       le32_to_cpu(common->temperature));
+		/*
+		 * skip iwl_mvm_tt_handler since we are in
+		 * temperature debug mode and we are ignoring
+		 * the new temperature value
+		 */
+		goto update;
+	}
+
 	if (mvm->temperature != le32_to_cpu(common->temperature)) {
 		mvm->temperature = le32_to_cpu(common->temperature);
 		iwl_mvm_tt_handler(mvm);
 	}
+update:
 	iwl_mvm_update_rx_statistics(mvm, stats);
 
 	ieee80211_iterate_active_interfaces(mvm->hw,

@@ -185,7 +185,6 @@ static int need_forkexit_callback __read_mostly;
 static struct cftype cgroup_dfl_base_files[];
 static struct cftype cgroup_legacy_base_files[];
 
-static void cgroup_put(struct cgroup *cgrp);
 static int rebind_subsystems(struct cgroup_root *dst_root,
 			     unsigned int ss_mask);
 static int cgroup_destroy_locked(struct cgroup *cgrp);
@@ -195,7 +194,6 @@ static void css_release(struct percpu_ref *ref);
 static void kill_css(struct cgroup_subsys_state *css);
 static int cgroup_addrm_files(struct cgroup *cgrp, struct cftype cfts[],
 			      bool is_add);
-static void cgroup_pidlist_destroy_all(struct cgroup *cgrp);
 
 /* IDR wrappers which synchronize using cgroup_idr_lock */
 static int cgroup_idr_alloc(struct idr *idr, void *ptr, int start, int end,
@@ -969,14 +967,6 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  * knows that the cgroup won't be removed, as cgroup_rmdir()
  * needs that mutex.
  *
- * The fork and exit callbacks cgroup_fork() and cgroup_exit(), don't
- * (usually) take cgroup_mutex.  These are the two most performance
- * critical pieces of code here.  The exception occurs on cgroup_exit(),
- * when a task in a notify_on_release cgroup exits.  Then cgroup_mutex
- * is taken, and if the cgroup count is zero, a usermode call made
- * to the release agent with the name of the cgroup (path relative to
- * the root of cgroup file system) as the argument.
- *
  * A cgroup can only be deleted if both its 'count' of using tasks
  * is zero, and its list of 'children' cgroups is empty.  Since all
  * tasks in the system use _some_ cgroup, and since there is always at
@@ -1634,7 +1624,7 @@ static int cgroup_setup_root(struct cgroup_root *root, unsigned int ss_mask)
 		goto out;
 	root_cgrp->id = ret;
 
-	ret = percpu_ref_init(&root_cgrp->self.refcnt, css_release);
+	ret = percpu_ref_init(&root_cgrp->self.refcnt, css_release, GFP_KERNEL);
 	if (ret)
 		goto out;
 
@@ -4511,7 +4501,7 @@ static int create_css(struct cgroup *cgrp, struct cgroup_subsys *ss,
 
 	init_and_link_css(css, ss, cgrp);
 
-	err = percpu_ref_init(&css->refcnt, css_release);
+	err = percpu_ref_init(&css->refcnt, css_release, GFP_KERNEL);
 	if (err)
 		goto err_free_css;
 
@@ -4584,7 +4574,7 @@ static int cgroup_mkdir(struct kernfs_node *parent_kn, const char *name,
 		goto out_unlock;
 	}
 
-	ret = percpu_ref_init(&cgrp->self.refcnt, css_release);
+	ret = percpu_ref_init(&cgrp->self.refcnt, css_release, GFP_KERNEL);
 	if (ret)
 		goto out_free_cgrp;
 
@@ -4843,13 +4833,10 @@ static int cgroup_rmdir(struct kernfs_node *kn)
 	cgrp = cgroup_kn_lock_live(kn);
 	if (!cgrp)
 		return 0;
-	cgroup_get(cgrp);	/* for @kn->priv clearing */
 
 	ret = cgroup_destroy_locked(cgrp);
 
 	cgroup_kn_unlock(kn);
-
-	cgroup_put(cgrp);
 	return ret;
 }
 
@@ -5180,7 +5167,7 @@ void cgroup_post_fork(struct task_struct *child)
 	int i;
 
 	/*
-	 * This may race against cgroup_enable_task_cg_links().  As that
+	 * This may race against cgroup_enable_task_cg_lists().  As that
 	 * function sets use_task_css_set_links before grabbing
 	 * tasklist_lock and we just went through tasklist_lock to add
 	 * @child, it's guaranteed that either we see the set
@@ -5195,7 +5182,7 @@ void cgroup_post_fork(struct task_struct *child)
 	 * when implementing operations which need to migrate all tasks of
 	 * a cgroup to another.
 	 *
-	 * Note that if we lose to cgroup_enable_task_cg_links(), @child
+	 * Note that if we lose to cgroup_enable_task_cg_lists(), @child
 	 * will remain in init_css_set.  This is safe because all tasks are
 	 * in the init_css_set before cg_links is enabled and there's no
 	 * operation which transfers all tasks out of init_css_set.

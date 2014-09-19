@@ -306,7 +306,6 @@ void __show_regs(struct pt_regs *regs)
 
 void show_regs(struct pt_regs * regs)
 {
-	printk("\n");
 	__show_regs(regs);
 	dump_stack();
 }
@@ -333,6 +332,8 @@ void flush_thread(void)
 	memset(thread->used_cp, 0, sizeof(thread->used_cp));
 	memset(&tsk->thread.debug, 0, sizeof(struct debug_info));
 	memset(&thread->fpstate, 0, sizeof(union fp_state));
+
+	flush_tls();
 
 	thread_notify(THREAD_NOTIFY_FLUSH, thread);
 }
