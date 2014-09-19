@@ -239,8 +239,7 @@ bool balloon_page_isolate(struct page *page)
 			 * Prevent concurrent compaction threads from isolating
 			 * an already isolated balloon page by refcount check.
 			 */
-			if (__is_movable_balloon_page(page) &&
-			    page_count(page) == 2) {
+			if (PageBalloon(page) && page_count(page) == 2) {
 				__isolate_balloon_page(page);
 				unlock_page(page);
 				return true;
@@ -261,7 +260,7 @@ void balloon_page_putback(struct page *page)
 	 */
 	lock_page(page);
 
-	if (__is_movable_balloon_page(page)) {
+	if (PageBalloon(page)) {
 		__putback_balloon_page(page);
 		/* drop the extra ref count taken for page isolation */
 		put_page(page);
@@ -286,7 +285,7 @@ int balloon_page_migrate(struct page *newpage,
 	 */
 	BUG_ON(!trylock_page(newpage));
 
-	if (WARN_ON(!__is_movable_balloon_page(page))) {
+	if (WARN_ON(!PageBalloon(page))) {
 		dump_page(page, "not movable balloon page");
 		unlock_page(newpage);
 		return rc;
