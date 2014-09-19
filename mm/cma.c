@@ -115,6 +115,8 @@ static int __init cma_activate_area(struct cma *cma)
 				goto err;
 		}
 		init_cma_reserved_pageblock(pfn_to_page(base_pfn));
+		memblock_free(__pfn_to_phys(base_pfn),
+				pageblock_nr_pages * PAGE_SIZE);
 	} while (--i);
 
 	mutex_init(&cma->lock);
