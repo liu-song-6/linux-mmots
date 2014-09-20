@@ -87,7 +87,6 @@ static inline void
 balloon_page_insert(struct balloon_dev_info *b_dev_info, struct page *page)
 {
 	__SetPageBalloon(page);
-	inc_zone_page_state(page, NR_BALLOON_PAGES);
 	set_page_private(page, (unsigned long)b_dev_info);
 	list_add(&page->lru, &b_dev_info->pages);
 }
@@ -104,7 +103,6 @@ balloon_page_insert(struct balloon_dev_info *b_dev_info, struct page *page)
 static inline void balloon_page_delete(struct page *page, bool isolated)
 {
 	__ClearPageBalloon(page);
-	dec_zone_page_state(page, NR_BALLOON_PAGES);
 	set_page_private(page, 0);
 	if (!isolated)
 		list_del(&page->lru);
