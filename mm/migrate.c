@@ -952,6 +952,7 @@ static int unmap_and_move(new_page_t get_new_page, free_page_t put_new_page,
 
 	rc = __unmap_and_move(page, newpage, force, mode);
 
+#ifdef CONFIG_MEMORY_BALLOON
 	if (unlikely(rc == MIGRATEPAGE_BALLOON_SUCCESS)) {
 		/*
 		 * A ballooned page has been migrated already.
@@ -963,6 +964,7 @@ static int unmap_and_move(new_page_t get_new_page, free_page_t put_new_page,
 		balloon_page_free(page);
 		return MIGRATEPAGE_SUCCESS;
 	}
+#endif
 out:
 	if (rc != -EAGAIN) {
 		/*
