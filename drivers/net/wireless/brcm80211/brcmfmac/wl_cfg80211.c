@@ -497,8 +497,11 @@ brcmf_configure_arp_offload(struct brcmf_if *ifp, bool enable)
 static void
 brcmf_cfg80211_update_proto_addr_mode(struct wireless_dev *wdev)
 {
-	struct net_device *ndev = wdev->netdev;
-	struct brcmf_if *ifp = netdev_priv(ndev);
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
 
 	if ((wdev->iftype == NL80211_IFTYPE_ADHOC) ||
 	    (wdev->iftype == NL80211_IFTYPE_AP) ||
@@ -2394,9 +2397,13 @@ static s32 brcmf_inform_single_bss(struct brcmf_cfg80211_info *cfg,
 	brcmf_dbg(CONN, "Beacon interval: %d\n", notify_interval);
 	brcmf_dbg(CONN, "Signal: %d\n", notify_signal);
 
-	bss = cfg80211_inform_bss(wiphy, notify_channel, (const u8 *)bi->BSSID,
-		0, notify_capability, notify_interval, notify_ie,
-		notify_ielen, notify_signal, GFP_KERNEL);
+	bss = cfg80211_inform_bss(wiphy, notify_channel,
+				  CFG80211_BSS_FTYPE_UNKNOWN,
+				  (const u8 *)bi->BSSID,
+				  0, notify_capability,
+				  notify_interval, notify_ie,
+				  notify_ielen, notify_signal,
+				  GFP_KERNEL);
 
 	if (!bss)
 		return -ENOMEM;
@@ -2498,9 +2505,11 @@ static s32 wl_inform_ibss(struct brcmf_cfg80211_info *cfg,
 	brcmf_dbg(CONN, "beacon interval: %d\n", notify_interval);
 	brcmf_dbg(CONN, "signal: %d\n", notify_signal);
 
-	bss = cfg80211_inform_bss(wiphy, notify_channel, bssid,
-		0, notify_capability, notify_interval,
-		notify_ie, notify_ielen, notify_signal, GFP_KERNEL);
+	bss = cfg80211_inform_bss(wiphy, notify_channel,
+				  CFG80211_BSS_FTYPE_UNKNOWN, bssid, 0,
+				  notify_capability, notify_interval,
+				  notify_ie, notify_ielen, notify_signal,
+				  GFP_KERNEL);
 
 	if (!bss) {
 		err = -ENOMEM;
@@ -5143,6 +5152,7 @@ static int brcmf_enable_bw40_2g(struct brcmf_cfg80211_info *cfg)
 
 		ch.band = BRCMU_CHAN_BAND_2G;
 		ch.bw = BRCMU_CHAN_BW_40;
+		ch.sb = BRCMU_CHAN_SB_NONE;
 		ch.chnum = 0;
 		cfg->d11inf.encchspec(&ch);
 
@@ -5176,6 +5186,7 @@ static int brcmf_enable_bw40_2g(struct brcmf_cfg80211_info *cfg)
 
 			brcmf_update_bw40_channel_flag(&band->channels[j], &ch);
 		}
+		kfree(pbuf);
 	}
 	return err;
 }

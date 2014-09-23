@@ -29,7 +29,7 @@
  * calls io_destroy() or the process exits.
  *
  * In the aio code, kill_ioctx() is called when we wish to destroy a kioctx; it
- * calls percpu_ref_kill(), then hlist_del_rcu() and sychronize_rcu() to remove
+ * calls percpu_ref_kill(), then hlist_del_rcu() and synchronize_rcu() to remove
  * the kioctx from the proccess's list of kioctxs - after that, there can't be
  * any new users of the kioctx (from lookup_ioctx()) and it's then safe to drop
  * the initial ref with percpu_ref_put().
@@ -49,12 +49,13 @@
 #include <linux/kernel.h>
 #include <linux/percpu.h>
 #include <linux/rcupdate.h>
+#include <linux/gfp.h>
 
 struct percpu_ref;
 typedef void (percpu_ref_func_t)(struct percpu_ref *);
 
 struct percpu_ref {
-	atomic_t		count;
+	atomic_long_t		count;
 	/*
 	 * The low bit of the pointer indicates whether the ref is in percpu
 	 * mode; if set, then get/put will manipulate the atomic_t.
@@ -66,7 +67,7 @@ struct percpu_ref {
 };
 
 int __must_check percpu_ref_init(struct percpu_ref *ref,
-				 percpu_ref_func_t *release);
+				 percpu_ref_func_t *release, gfp_t gfp);
 void percpu_ref_reinit(struct percpu_ref *ref);
 void percpu_ref_exit(struct percpu_ref *ref);
 void percpu_ref_kill_and_confirm(struct percpu_ref *ref,
@@ -96,7 +97,7 @@ static inline void percpu_ref_kill(struct percpu_ref *ref)
  * branches as it can't assume that @ref->pcpu_count is not NULL.
  */
 static inline bool __pcpu_ref_alive(struct percpu_ref *ref,
-				    unsigned __percpu **pcpu_countp)
+				    unsigned long __percpu **pcpu_countp)
 {
 	unsigned long pcpu_ptr = ACCESS_ONCE(ref->pcpu_count_ptr);
 
@@ -106,7 +107,7 @@ static inline bool __pcpu_ref_alive(struct percpu_ref *ref,
 	if (unlikely(pcpu_ptr & PCPU_REF_DEAD))
 		return false;
 
-	*pcpu_countp = (unsigned __percpu *)pcpu_ptr;
+	*pcpu_countp = (unsigned long __percpu *)pcpu_ptr;
 	return true;
 }
 
@@ -118,14 +119,14 @@ static inline bool __pcpu_ref_alive(struct percpu_ref *ref,
   */
 static inline void percpu_ref_get(struct percpu_ref *ref)
 {
-	unsigned __percpu *pcpu_count;
+	unsigned long __percpu *pcpu_count;
 
 	rcu_read_lock_sched();
 
 	if (__pcpu_ref_alive(ref, &pcpu_count))
 		this_cpu_inc(*pcpu_count);
 	else
-		atomic_inc(&ref->count);
+		atomic_long_inc(&ref->count);
 
 	rcu_read_unlock_sched();
 }
@@ -141,7 +142,7 @@ static inline void percpu_ref_get(struct percpu_ref *ref)
  */
 static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 {
-	unsigned __percpu *pcpu_count;
+	unsigned long __percpu *pcpu_count;
 	int ret = false;
 
 	rcu_read_lock_sched();
@@ -150,7 +151,7 @@ static inline bool percpu_ref_tryget(struct percpu_ref *ref)
 		this_cpu_inc(*pcpu_count);
 		ret = true;
 	} else {
-		ret = atomic_inc_not_zero(&ref->count);
+		ret = atomic_long_inc_not_zero(&ref->count);
 	}
 
 	rcu_read_unlock_sched();
@@ -174,7 +175,7 @@ static inline bool percpu_ref_tryget(struct percpu_ref *ref)
  */
 static inline bool percpu_ref_tryget_live(struct percpu_ref *ref)
 {
-	unsigned __percpu *pcpu_count;
+	unsigned long __percpu *pcpu_count;
 	int ret = false;
 
 	rcu_read_lock_sched();
@@ -198,13 +199,13 @@ static inline bool percpu_ref_tryget_live(struct percpu_ref *ref)
  */
 static inline void percpu_ref_put(struct percpu_ref *ref)
 {
-	unsigned __percpu *pcpu_count;
+	unsigned long __percpu *pcpu_count;
 
 	rcu_read_lock_sched();
 
 	if (__pcpu_ref_alive(ref, &pcpu_count))
 		this_cpu_dec(*pcpu_count);
-	else if (unlikely(atomic_dec_and_test(&ref->count)))
+	else if (unlikely(atomic_long_dec_and_test(&ref->count)))
 		ref->release(ref);
 
 	rcu_read_unlock_sched();
@@ -218,11 +219,11 @@ static inline void percpu_ref_put(struct percpu_ref *ref)
  */
 static inline bool percpu_ref_is_zero(struct percpu_ref *ref)
 {
-	unsigned __percpu *pcpu_count;
+	unsigned long __percpu *pcpu_count;
 
 	if (__pcpu_ref_alive(ref, &pcpu_count))
 		return false;
-	return !atomic_read(&ref->count);
+	return !atomic_long_read(&ref->count);
 }
 
 #endif
