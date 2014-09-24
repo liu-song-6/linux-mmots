@@ -821,7 +821,7 @@ static void xen_convert_trap_info(const struct desc_ptr *desc,
 
 void xen_copy_trap_info(struct trap_info *traps)
 {
-	const struct desc_ptr *desc = &__get_cpu_var(idt_desc);
+	const struct desc_ptr *desc = this_cpu_ptr(&idt_desc);
 
 	xen_convert_trap_info(desc, traps);
 }
@@ -838,7 +838,7 @@ static void xen_load_idt(const struct desc_ptr *desc)
 
 	spin_lock(&lock);
 
-	__get_cpu_var(idt_desc) = *desc;
+	memcpy(this_cpu_ptr(&idt_desc), desc, sizeof(idt_desc));
 
 	xen_convert_trap_info(desc, traps);
 
@@ -912,6 +912,7 @@ static void xen_load_sp0(struct tss_struct *tss,
 	xen_mc_issue(PARAVIRT_LAZY_CPU);
 }
 
+#ifdef CONFIG_X86_IOPORT
 static void xen_set_iopl_mask(unsigned mask)
 {
 	struct physdev_set_iopl set_iopl;
@@ -920,6 +921,7 @@ static void xen_set_iopl_mask(unsigned mask)
 	set_iopl.iopl = (mask == 0) ? 1 : (mask >> 12) & 3;
 	HYPERVISOR_physdev_op(PHYSDEVOP_set_iopl, &set_iopl);
 }
+#endif /* CONFIG_X86_IOPORT */
 
 static void xen_io_delay(void)
 {
@@ -1279,7 +1281,9 @@ static const struct pv_cpu_ops xen_cpu_ops __initconst = {
 	.write_idt_entry = xen_write_idt_entry,
 	.load_sp0 = xen_load_sp0,
 
+#ifdef CONFIG_X86_IOPORT
 	.set_iopl_mask = xen_set_iopl_mask,
+#endif /* CONFIG_X86_IOPORT */
 	.io_delay = xen_io_delay,
 
 	/* Xen takes care of %gs when switching to usermode for us */
@@ -1558,8 +1562,6 @@ asmlinkage __visible void __init xen_start_kernel(void)
 	if (!xen_initial_domain())
 #endif
 		__supported_pte_mask &= ~(_PAGE_PWT | _PAGE_PCD);
-
-	__supported_pte_mask |= _PAGE_IOMAP;
 
 	/*
 	 * Prevent page tables from being allocated in highmem, even
