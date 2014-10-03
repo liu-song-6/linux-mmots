@@ -223,13 +223,9 @@ bool dma_release_from_contiguous(struct device *dev, struct page *pages,
 #undef pr_fmt
 #define pr_fmt(fmt) fmt
 
-static int rmem_cma_device_init(struct reserved_mem *rmem, struct device *dev)
+static void rmem_cma_device_init(struct reserved_mem *rmem, struct device *dev)
 {
-	struct cma *cma = rmem->priv;
-	if (!cma)
-		return -ENODEV;
-
-	dev_set_cma_area(dev, cma);
+	dev_set_cma_area(dev, rmem->priv);
 	return 0;
 }
 
