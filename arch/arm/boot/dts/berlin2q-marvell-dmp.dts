@@ -46,6 +46,17 @@
 	status = "okay";
 };
 
+<<<<<<< HEAD
+=======
+&sata0 {
+	status = "okay";
+};
+
+&sata_phy {
+	status = "okay";
+};
+
+>>>>>>> linux-next/akpm-base
 &eth0 {
 	status = "okay";
 };
