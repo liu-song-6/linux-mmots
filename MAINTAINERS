@@ -3164,7 +3164,7 @@ F:	include/drm/drm_panel.h
 F:	Documentation/devicetree/bindings/panel/
 
 INTEL DRM DRIVERS (excluding Poulsbo, Moorestown and derivative chipsets)
-M:	Daniel Vetter <daniel.vetter@ffwll.ch>
+M:	Daniel Vetter <daniel.vetter@intel.com>
 M:	Jani Nikula <jani.nikula@linux.intel.com>
 L:	intel-gfx@lists.freedesktop.org
 L:	dri-devel@lists.freedesktop.org
@@ -5837,6 +5837,14 @@ S:	Maintained
 F:	drivers/net/macvlan.c
 F:	include/linux/if_macvlan.h
 
+MAILBOX API
+M:	Jassi Brar <jassisinghbrar@gmail.com>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+F:	drivers/mailbox/
+F:	include/linux/mailbox_client.h
+F:	include/linux/mailbox_controller.h
+
 MAN-PAGES: MANUAL PAGES FOR LINUX -- Sections 2, 3, 4, 5, and 7
 M:	Michael Kerrisk <mtk.manpages@gmail.com>
 W:	http://www.kernel.org/doc/man-pages
@@ -5993,6 +6001,7 @@ L:	linux-mtd@lists.infradead.org
 W:	http://www.linux-mtd.infradead.org/
 Q:	http://patchwork.ozlabs.org/project/linux-mtd/list/
 T:	git git://git.infradead.org/linux-mtd.git
+T:	git git://git.infradead.org/l2-mtd.git
 S:	Maintained
 F:	drivers/mtd/
 F:	include/linux/mtd/
@@ -6009,6 +6018,15 @@ M:  	Johannes Thumshirn <johannes.thumshirn@men.de>
 S:	Supported
 F:	drivers/mcb/
 F:	include/linux/mcb.h
+
+MEN F21BMC (Board Management Controller)
+M:	Andreas Werner <andreas.werner@men.de>
+S:	Supported
+F:	drivers/mfd/menf21bmc.c
+F:	drivers/watchdog/menf21bmc_wdt.c
+F:	drivers/leds/leds-menf21bmc.c
+F:	drivers/hwmon/menf21bmc_hwmon.c
+F:	Documentation/hwmon/menf21bmc
 
 METAG ARCHITECTURE
 M:	James Hogan <james.hogan@imgtec.com>
@@ -8053,7 +8071,7 @@ SYNOPSYS DESIGNWARE DMAC DRIVER
 M:	Viresh Kumar <viresh.linux@gmail.com>
 M:	Andy Shevchenko <andriy.shevchenko@linux.intel.com>
 S:	Maintained
-F:	include/linux/dw_dmac.h
+F:	include/linux/platform_data/dma-dw.h
 F:	drivers/dma/dw/
 
 SYNOPSYS DESIGNWARE MMC/SD/SDIO DRIVER

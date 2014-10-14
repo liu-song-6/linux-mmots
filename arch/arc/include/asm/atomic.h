@@ -9,8 +9,6 @@
 #ifndef _ASM_ARC_ATOMIC_H
 #define _ASM_ARC_ATOMIC_H
 
-#ifdef __KERNEL__
-
 #ifndef __ASSEMBLY__
 
 #include <linux/types.h>
@@ -99,6 +97,7 @@ static inline void atomic_##op(int i, atomic_t *v)			\
 	atomic_ops_lock(flags);						\
 	v->counter c_op i;						\
 	atomic_ops_unlock(flags);					\
+<<<<<<< HEAD
 }
 
 #define ATOMIC_OP_RETURN(op, c_op)					\
@@ -116,6 +115,25 @@ static inline int atomic_##op##_return(int i, atomic_t *v)		\
 	return temp;							\
 }
 
+=======
+}
+
+#define ATOMIC_OP_RETURN(op, c_op)					\
+static inline int atomic_##op##_return(int i, atomic_t *v)		\
+{									\
+	unsigned long flags;						\
+	unsigned long temp;						\
+									\
+	atomic_ops_lock(flags);						\
+	temp = v->counter;						\
+	temp c_op i;							\
+	v->counter = temp;						\
+	atomic_ops_unlock(flags);					\
+									\
+	return temp;							\
+}
+
+>>>>>>> linux-next/akpm-base
 #endif /* !CONFIG_ARC_HAS_LLSC */
 
 #define ATOMIC_OPS(op, c_op, asm_op)					\
@@ -166,8 +184,6 @@ ATOMIC_OP(and, &=, and)
 #define ATOMIC_INIT(i)			{ (i) }
 
 #include <asm-generic/atomic64.h>
-
-#endif
 
 #endif
 
