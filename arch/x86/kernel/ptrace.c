@@ -1445,20 +1445,12 @@ static void do_audit_syscall_entry(struct pt_regs *regs, u32 arch)
 {
 #ifdef CONFIG_X86_64
 	if (arch == AUDIT_ARCH_X86_64) {
-<<<<<<< HEAD
-		audit_syscall_entry(arch, regs->orig_ax, regs->di,
-=======
 		audit_syscall_entry(regs->orig_ax, regs->di,
->>>>>>> linux-next/akpm-base
 				    regs->si, regs->dx, regs->r10);
 	} else
 #endif
 	{
-<<<<<<< HEAD
-		audit_syscall_entry(arch, regs->orig_ax, regs->bx,
-=======
 		audit_syscall_entry(regs->orig_ax, regs->bx,
->>>>>>> linux-next/akpm-base
 				    regs->cx, regs->dx, regs->si);
 	}
 }
