@@ -2177,13 +2177,14 @@ void mem_cgroup_update_page_stat(struct page *page,
 				 enum mem_cgroup_stat_index idx, int val)
 {
 	struct mem_cgroup *memcg;
-	struct page_cgroup *pc = lookup_page_cgroup(page);
-	unsigned long uninitialized_var(flags);
+	struct page_cgroup *pc;
+
+	VM_BUG_ON(!rcu_read_lock_held());
 
 	if (mem_cgroup_disabled())
 		return;
 
-	VM_BUG_ON(!rcu_read_lock_held());
+	pc = lookup_page_cgroup(page);
 	memcg = pc->mem_cgroup;
 	if (unlikely(!memcg || !PageCgroupUsed(pc)))
 		return;
