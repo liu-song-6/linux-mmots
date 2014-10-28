@@ -649,7 +649,7 @@ static ssize_t ocfs2_direct_IO_write(struct kiocb *iocb,
 	unsigned int ext_flags = 0;
 
 	{
-		loff_t o = offset;
+		u64 o = offset;
 
 		zero_len = do_div(o, 1 << osb->s_clustersize_bits);
 		cluster_align = !!zero_len;
