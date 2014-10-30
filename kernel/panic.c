@@ -435,7 +435,7 @@ static void warn_slowpath_common(const char *file, int line, void *caller,
 		 * from panicking the system.
 		 */
 		panic_on_warn = 0;
-		panic("panic_on_warn set ... \n");
+		panic("panic_on_warn set ...\n");
 	}
 
 	print_modules();
