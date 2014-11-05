@@ -6453,6 +6453,11 @@ void __meminit zone_pcp_update(struct zone *zone)
 }
 #endif
 
+bool zone_pcp_initialized(struct zone *zone)
+{
+	return (zone->pageset != &boot_pageset);
+}
+
 void zone_pcp_reset(struct zone *zone)
 {
 	unsigned long flags;

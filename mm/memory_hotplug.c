@@ -1013,9 +1013,13 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages, int online_typ
 	 * If this zone is not populated, then it is not in zonelist.
 	 * This means the page allocator ignores this zone.
 	 * So, zonelist must be updated after online.
+	 *
+	 * If this zone is populated, zone->pageset could be initialized
+	 * to boot_pageset for the first time a node is added. If so,
+	 * zone->pageset should be allocated.
 	 */
 	mutex_lock(&zonelists_mutex);
-	if (!populated_zone(zone)) {
+	if (!populated_zone(zone) || !zone_pcp_initialized(zone)) {
 		need_zonelists_rebuild = 1;
 		build_all_zonelists(NULL, zone);
 	}
