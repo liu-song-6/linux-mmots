@@ -1485,8 +1485,7 @@ static int m66592_udc_start(struct usb_gadget *g,
 	return 0;
 }
 
-static int m66592_udc_stop(struct usb_gadget *g,
-		struct usb_gadget_driver *driver)
+static int m66592_udc_stop(struct usb_gadget *g)
 {
 	struct m66592 *m66592 = to_m66592(g);
 
@@ -1699,7 +1698,6 @@ static struct platform_driver m66592_driver = {
 	.remove =	__exit_p(m66592_remove),
 	.driver		= {
 		.name =	(char *) udc_name,
-		.owner	= THIS_MODULE,
 	},
 };
 

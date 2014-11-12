@@ -897,6 +897,7 @@ static inline void sock_rps_reset_rxhash(struct sock *sk)
 		if (!__rc) {						\
 			*(__timeo) = schedule_timeout(*(__timeo));	\
 		}							\
+		sched_annotate_sleep();						\
 		lock_sock(__sk);					\
 		__rc = __condition;					\
 		__rc;							\
@@ -2272,9 +2273,6 @@ bool sk_net_capable(const struct sock *sk, int cap);
  *	Enable debug/info messages
  */
 extern int net_msg_warn;
-#define NETDEBUG(fmt, args...) \
-	do { if (net_msg_warn) printk(fmt,##args); } while (0)
-
 #define LIMIT_NETDEBUG(fmt, args...) \
 	do { if (net_msg_warn && net_ratelimit()) printk(fmt,##args); } while(0)
 
