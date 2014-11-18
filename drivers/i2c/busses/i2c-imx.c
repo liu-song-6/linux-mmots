@@ -668,8 +668,7 @@ static int i2c_imx_probe(struct platform_device *pdev)
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 
-	i2c_imx = devm_kzalloc(&pdev->dev, sizeof(struct imx_i2c_struct),
-				GFP_KERNEL);
+	i2c_imx = devm_kzalloc(&pdev->dev, sizeof(*i2c_imx), GFP_KERNEL);
 	if (!i2c_imx)
 		return -ENOMEM;
 
@@ -772,7 +771,6 @@ static struct platform_driver i2c_imx_driver = {
 	.remove = i2c_imx_remove,
 	.driver	= {
 		.name	= DRIVER_NAME,
-		.owner	= THIS_MODULE,
 		.of_match_table = i2c_imx_dt_ids,
 	},
 	.id_table	= imx_i2c_devtype,
