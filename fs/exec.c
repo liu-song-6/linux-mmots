@@ -1501,10 +1501,12 @@ static int do_execveat_common(int fd, struct filename *filename,
 			retval = -ENOMEM;
 			goto out_unmark;
 		}
-		/* Record that a name derived from an O_CLOEXEC fd will be
+		/*
+		 * Record that a name derived from an O_CLOEXEC fd will be
 		 * inaccessible after exec. Relies on having exclusive access to
-		 * current->files (due to unshare_files above). */
-		if (close_on_exec(fd, current->files->fdt))
+		 * current->files (due to unshare_files above).
+		 */
+		if (close_on_exec(fd, rcu_dereference_raw(current->files->fdt)))
 			bprm->interp_flags |= BINPRM_FLAGS_PATH_INACCESSIBLE;
 		bprm->filename = pathbuf;
 	}
@@ -1549,6 +1551,7 @@ static int do_execveat_common(int fd, struct filename *filename,
 	acct_update_integrals(current);
 	task_numa_free(current);
 	free_bprm(bprm);
+	kfree(pathbuf);
 	putname(filename);
 	if (displaced)
 		put_files_struct(displaced);
