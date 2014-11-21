@@ -13,7 +13,6 @@
  *
  */
 #include <linux/irq.h>
-#include <linux/bootmem.h>
 #include <linux/msi.h>
 #include <linux/pci.h>
 #include <linux/slab.h>
@@ -361,7 +360,7 @@ static int fsl_msi_setup_hwirq(struct fsl_msi *msi, struct platform_device *dev,
 	cascade_data->virq = virt_msir;
 	msi->cascade_array[irq_index] = cascade_data;
 
-	ret = request_irq(virt_msir, fsl_msi_cascade, 0,
+	ret = request_irq(virt_msir, fsl_msi_cascade, IRQF_NO_THREAD,
 			  "fsl-msi-cascade", cascade_data);
 	if (ret) {
 		dev_err(&dev->dev, "failed to request_irq(%d), ret = %d\n",
@@ -578,7 +577,6 @@ static const struct of_device_id fsl_of_msi_ids[] = {
 static struct platform_driver fsl_of_msi_driver = {
 	.driver = {
 		.name = "fsl-msi",
-		.owner = THIS_MODULE,
 		.of_match_table = fsl_of_msi_ids,
 	},
 	.probe = fsl_of_msi_probe,
