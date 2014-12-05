@@ -692,6 +692,7 @@ static ssize_t ocfs2_direct_IO_write(struct kiocb *iocb,
 
 		ocfs2_inode_unlock(inode, 1);
 		brelse(di_bh);
+		di_bh = NULL;
 	}
 
 	written = __blockdev_direct_IO(WRITE, iocb, inode, inode->i_sb->s_bdev,
