@@ -257,11 +257,6 @@ static int radeon_cs_sync_rings(struct radeon_cs_parser *p)
 	list_for_each_entry(reloc, &p->validated, tv.head) {
 		struct reservation_object *resv;
 
-<<<<<<< HEAD
-		resv = reloc->robj->tbo.resv;
-		r = radeon_semaphore_sync_resv(p->rdev, p->ib.semaphore, resv,
-					       reloc->tv.shared);
-=======
 		if (!p->relocs[i].robj)
 			continue;
 
@@ -269,7 +264,6 @@ static int radeon_cs_sync_rings(struct radeon_cs_parser *p)
 		r = radeon_sync_resv(p->rdev, &p->ib.sync, resv,
 				     p->relocs[i].tv.shared);
 
->>>>>>> linux-next/akpm-base
 		if (r)
 			return r;
 	}
