@@ -15,6 +15,7 @@ TARGETS += user
 TARGETS += sysctl
 TARGETS += firmware
 TARGETS += ftrace
+TARGETS += size
 TARGETS += exec
 
 TARGETS_HOTPLUG = cpu-hotplug
