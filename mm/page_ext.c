@@ -104,7 +104,8 @@ struct page_ext *lookup_page_ext(struct page *page)
 	if (unlikely(!base))
 		return NULL;
 #endif
-	offset = pfn - NODE_DATA(page_to_nid(page))->node_start_pfn;
+	offset = pfn - round_down(node_start_pfn(page_to_nid(page)),
+					MAX_ORDER_NR_PAGES);
 	return base + offset;
 }
 
@@ -117,6 +118,15 @@ static int __init alloc_node_page_ext(int nid)
 	nr_pages = NODE_DATA(nid)->node_spanned_pages;
 	if (!nr_pages)
 		return 0;
+
+	/*
+	 * Need extra space if node range is not aligned with
+	 * MAX_ORDER_NR_PAGES. When page allocator's buddy algorithm
+	 * checks buddy's status, range could be out of exact node range.
+	 */
+	if (!IS_ALIGNED(node_start_pfn(nid), MAX_ORDER_NR_PAGES) ||
+		!IS_ALIGNED(node_end_pfn(nid), MAX_ORDER_NR_PAGES))
+		nr_pages += MAX_ORDER_NR_PAGES;
 
 	table_size = sizeof(struct page_ext) * nr_pages;
 
