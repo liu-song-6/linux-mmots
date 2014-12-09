@@ -87,6 +87,12 @@ static inline void oom_killer_enable(void)
 
 extern struct task_struct *find_lock_task_mm(struct task_struct *p);
 
+static inline bool task_will_free_mem(struct task_struct *task)
+{
+	return (task->flags & PF_EXITING) &&
+		!(task->signal->flags & SIGNAL_GROUP_COREDUMP);
+}
+
 /* sysctls */
 extern int sysctl_oom_dump_tasks;
 extern int sysctl_oom_kill_allocating_task;
