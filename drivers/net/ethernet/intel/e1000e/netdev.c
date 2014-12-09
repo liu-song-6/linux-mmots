@@ -3449,15 +3449,12 @@ static void e1000e_setup_rss_hash(struct e1000_adapter *adapter)
 {
 	struct e1000_hw *hw = &adapter->hw;
 	u32 mrqc, rxcsum;
+	u32 rss_key[10];
 	int i;
-	static const u32 rsskey[10] = {
-		0xda565a6d, 0xc20e5b25, 0x3d256741, 0xb08fa343, 0xcb2bcad0,
-		0xb4307bae, 0xa32dcb77, 0x0cf23080, 0x3bb7426a, 0xfa01acbe
-	};
 
-	/* Fill out hash function seed */
+	netdev_rss_key_fill(rss_key, sizeof(rss_key));
 	for (i = 0; i < 10; i++)
-		ew32(RSSRK(i), rsskey[i]);
+		ew32(RSSRK(i), rss_key[i]);
 
 	/* Direct all traffic to queue 0 */
 	for (i = 0; i < 32; i++)
@@ -6372,7 +6369,6 @@ static int e1000e_pm_resume(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-#ifdef CONFIG_PM_RUNTIME
 static int e1000e_pm_runtime_idle(struct device *dev)
 {
 	struct pci_dev *pdev = to_pci_dev(dev);
@@ -6432,7 +6428,6 @@ static int e1000e_pm_runtime_suspend(struct device *dev)
 
 	return 0;
 }
-#endif /* CONFIG_PM_RUNTIME */
 #endif /* CONFIG_PM */
 
 static void e1000_shutdown(struct pci_dev *pdev)
