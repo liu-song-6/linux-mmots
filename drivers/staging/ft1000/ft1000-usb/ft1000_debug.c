@@ -413,7 +413,11 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 	int i;
 	u16 tempword;
 	unsigned long flags;
+<<<<<<< HEAD
 	struct timeval tv;
+=======
+	time64_t time;
+>>>>>>> linux-next/akpm-base
 	struct IOCTL_GET_VER get_ver_data;
 	struct IOCTL_GET_DSP_STAT get_stat_data;
 	u8 ConnectionMsg[] = {0x00, 0x44, 0x10, 0x20, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x93, 0x64,
@@ -511,8 +515,13 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 		get_stat_data.nRxPkts = info->stats.rx_packets;
 		get_stat_data.nTxBytes = info->stats.tx_bytes;
 		get_stat_data.nRxBytes = info->stats.rx_bytes;
+<<<<<<< HEAD
 		do_gettimeofday(&tv);
 		get_stat_data.ConTm = (u32)(tv.tv_sec - info->ConTm);
+=======
+		time = get_seconds();
+		get_stat_data.ConTm = time - info->ConTm;
+>>>>>>> linux-next/akpm-base
 		pr_debug("Connection Time = %d\n", (int)get_stat_data.ConTm);
 		if (copy_to_user(argp, &get_stat_data, sizeof(get_stat_data))) {
 			pr_debug("copy fault occurred\n");

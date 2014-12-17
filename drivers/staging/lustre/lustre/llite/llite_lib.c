@@ -690,9 +690,15 @@ void lustre_dump_dentry(struct dentry *dentry, int recur)
 	list_for_each(tmp, &dentry->d_subdirs)
 		subdirs++;
 
+<<<<<<< HEAD
 	CERROR("dentry %p dump: name=%pd parent=%pd (%p), inode=%p, count=%u, flags=0x%x, fsdata=%p, %d subdirs\n",
 	       dentry, dentry, dentry->d_parent, dentry->d_parent,
 	       dentry->d_inode, d_count(dentry),
+=======
+	CERROR("dentry %p dump: name=%pd parent=%p, inode=%p, count=%u, flags=0x%x, fsdata=%p, %d subdirs\n",
+	       dentry, dentry,
+	       dentry->d_parent, dentry->d_inode, d_count(dentry),
+>>>>>>> linux-next/akpm-base
 	       dentry->d_flags, dentry->d_fsdata, subdirs);
 	if (dentry->d_inode != NULL)
 		ll_dump_inode(dentry->d_inode);
@@ -2372,6 +2378,7 @@ char *ll_get_fsname(struct super_block *sb, char *buf, int buflen)
 	return buf;
 }
 
+<<<<<<< HEAD
 static char *ll_d_path(struct dentry *dentry, char *buf, int bufsize)
 {
 	char *path = NULL;
@@ -2387,6 +2394,8 @@ static char *ll_d_path(struct dentry *dentry, char *buf, int bufsize)
 	return path;
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 void ll_dirty_page_discard_warn(struct page *page, int ioret)
 {
 	char *buf, *path = NULL;
@@ -2398,7 +2407,7 @@ void ll_dirty_page_discard_warn(struct page *page, int ioret)
 	if (buf != NULL) {
 		dentry = d_find_alias(page->mapping->host);
 		if (dentry != NULL)
-			path = ll_d_path(dentry, buf, PAGE_SIZE);
+			path = dentry_path_raw(dentry, buf, PAGE_SIZE);
 	}
 
 	CDEBUG(D_WARNING,

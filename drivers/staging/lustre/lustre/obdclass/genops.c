@@ -1709,7 +1709,6 @@ EXPORT_SYMBOL(obd_zombie_barrier);
  */
 static int obd_zombie_impexp_thread(void *unused)
 {
-	unshare_fs_struct();
 	complete(&obd_zombie_start);
 
 	obd_zombie_pid = current_pid();

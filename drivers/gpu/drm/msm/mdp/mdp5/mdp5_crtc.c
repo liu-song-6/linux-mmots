@@ -234,10 +234,17 @@ static void mdp5_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	struct mdp5_kms *mdp5_kms = get_kms(crtc);
 	unsigned long flags;
 	struct drm_display_mode *mode;
+<<<<<<< HEAD
 
 	if (WARN_ON(!crtc->state))
 		return;
 
+=======
+
+	if (WARN_ON(!crtc->state))
+		return;
+
+>>>>>>> linux-next/akpm-base
 	mode = &crtc->state->adjusted_mode;
 
 	DBG("%s: set mode: %d:\"%s\" %d %d %d %d %d %d %d %d %d %d 0x%x 0x%x",
@@ -275,10 +282,13 @@ static void mdp5_crtc_commit(struct drm_crtc *crtc)
 	mdp5_disable(get_kms(crtc));
 }
 
+<<<<<<< HEAD
 static void mdp5_crtc_load_lut(struct drm_crtc *crtc)
 {
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 struct plane_state {
 	struct drm_plane *plane;
 	struct mdp5_plane_state *state;
@@ -306,6 +316,7 @@ static int mdp5_crtc_atomic_check(struct drm_crtc *crtc,
 	if (mdp5_crtc->event) {
 		dev_err(dev->dev, "already pending flip!\n");
 		return -EBUSY;
+<<<<<<< HEAD
 	}
 
 	/* request a free CTL, if none is already allocated for this CRTC */
@@ -315,6 +326,17 @@ static int mdp5_crtc_atomic_check(struct drm_crtc *crtc,
 			return -EINVAL;
 	}
 
+=======
+	}
+
+	/* request a free CTL, if none is already allocated for this CRTC */
+	if (state->enable && !mdp5_crtc->ctl) {
+		mdp5_crtc->ctl = mdp5_ctlm_request(mdp5_kms->ctlm, crtc);
+		if (WARN_ON(!mdp5_crtc->ctl))
+			return -EINVAL;
+	}
+
+>>>>>>> linux-next/akpm-base
 	/* verify that there are not too many planes attached to crtc
 	 * and that we don't have conflicting mixer stages:
 	 */
@@ -407,7 +429,10 @@ static const struct drm_crtc_helper_funcs mdp5_crtc_helper_funcs = {
 	.mode_set_base = drm_helper_crtc_mode_set_base,
 	.prepare = mdp5_crtc_prepare,
 	.commit = mdp5_crtc_commit,
+<<<<<<< HEAD
 	.load_lut = mdp5_crtc_load_lut,
+=======
+>>>>>>> linux-next/akpm-base
 	.atomic_check = mdp5_crtc_atomic_check,
 	.atomic_begin = mdp5_crtc_atomic_begin,
 	.atomic_flush = mdp5_crtc_atomic_flush,

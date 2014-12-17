@@ -597,7 +597,8 @@ static void imon_incoming_packet(struct imon_context *context,
 	}
 
 	if (debug)
-		dev_info(dev, "raw packet: %*ph\n", len, buf);
+		dev_dbg(dev, "raw packet: %*ph\n", len, buf);
+
 	/*
 	 * Translate received data to pulse and space lengths.
 	 * Received data is active low, i.e. pulses are 0 and

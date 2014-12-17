@@ -246,6 +246,7 @@ void gen6_enable_pm_irq(struct drm_i915_private *dev_priv, uint32_t mask)
 {
 	if (WARN_ON(!intel_irqs_enabled(dev_priv)))
 		return;
+<<<<<<< HEAD
 
 	snb_update_pm_irq(dev_priv, mask, mask);
 }
@@ -285,6 +286,51 @@ void gen6_enable_rps_interrupts(struct drm_device *dev)
 	WARN_ON(I915_READ(gen6_pm_iir(dev_priv)) & dev_priv->pm_rps_events);
 	dev_priv->rps.interrupts_enabled = true;
 	gen6_enable_pm_irq(dev_priv, dev_priv->pm_rps_events);
+=======
+
+	snb_update_pm_irq(dev_priv, mask, mask);
+}
+
+static void __gen6_disable_pm_irq(struct drm_i915_private *dev_priv,
+				  uint32_t mask)
+{
+	snb_update_pm_irq(dev_priv, mask, 0);
+}
+
+void gen6_disable_pm_irq(struct drm_i915_private *dev_priv, uint32_t mask)
+{
+	if (WARN_ON(!intel_irqs_enabled(dev_priv)))
+		return;
+
+	__gen6_disable_pm_irq(dev_priv, mask);
+}
+
+void gen6_reset_rps_interrupts(struct drm_device *dev)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	uint32_t reg = gen6_pm_iir(dev_priv);
+
+	spin_lock_irq(&dev_priv->irq_lock);
+	I915_WRITE(reg, dev_priv->pm_rps_events);
+	I915_WRITE(reg, dev_priv->pm_rps_events);
+	POSTING_READ(reg);
+	spin_unlock_irq(&dev_priv->irq_lock);
+}
+
+void gen6_enable_rps_interrupts(struct drm_device *dev)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	spin_lock_irq(&dev_priv->irq_lock);
+
+	WARN_ON(dev_priv->rps.pm_iir);
+	WARN_ON(I915_READ(gen6_pm_iir(dev_priv)) & dev_priv->pm_rps_events);
+	dev_priv->rps.interrupts_enabled = true;
+	I915_WRITE(gen6_pm_ier(dev_priv), I915_READ(gen6_pm_ier(dev_priv)) |
+				dev_priv->pm_rps_events);
+	gen6_enable_pm_irq(dev_priv, dev_priv->pm_rps_events);
+
+>>>>>>> linux-next/akpm-base
 	spin_unlock_irq(&dev_priv->irq_lock);
 }
 
@@ -2328,12 +2374,21 @@ static irqreturn_t gen8_irq_handler(int irq, void *arg)
 				intel_cpu_fifo_underrun_irq_handler(dev_priv,
 								    pipe);
 
+<<<<<<< HEAD
 
 			if (IS_GEN9(dev))
 				fault_errors = pipe_iir & GEN9_DE_PIPE_IRQ_FAULT_ERRORS;
 			else
 				fault_errors = pipe_iir & GEN8_DE_PIPE_IRQ_FAULT_ERRORS;
 
+=======
+
+			if (IS_GEN9(dev))
+				fault_errors = pipe_iir & GEN9_DE_PIPE_IRQ_FAULT_ERRORS;
+			else
+				fault_errors = pipe_iir & GEN8_DE_PIPE_IRQ_FAULT_ERRORS;
+
+>>>>>>> linux-next/akpm-base
 			if (fault_errors)
 				DRM_ERROR("Fault errors on pipe %c\n: 0x%08x",
 					  pipe_name(pipe),
@@ -3307,8 +3362,10 @@ static void gen5_gt_irq_postinstall(struct drm_device *dev)
 	GEN5_IRQ_INIT(GT, dev_priv->gt_irq_mask, gt_irqs);
 
 	if (INTEL_INFO(dev)->gen >= 6) {
-		pm_irqs |= dev_priv->pm_rps_events;
-
+		/*
+		 * RPS interrupts will get enabled/disabled on demand when RPS
+		 * itself is enabled/disabled.
+		 */
 		if (HAS_VEBOX(dev))
 			pm_irqs |= PM_VEBOX_USER_INTERRUPT;
 
@@ -3520,7 +3577,11 @@ static void gen8_gt_irq_postinstall(struct drm_i915_private *dev_priv)
 	dev_priv->pm_irq_mask = 0xffffffff;
 	GEN8_IRQ_INIT_NDX(GT, 0, ~gt_interrupts[0], gt_interrupts[0]);
 	GEN8_IRQ_INIT_NDX(GT, 1, ~gt_interrupts[1], gt_interrupts[1]);
-	GEN8_IRQ_INIT_NDX(GT, 2, dev_priv->pm_irq_mask, dev_priv->pm_rps_events);
+	/*
+	 * RPS interrupts will get enabled/disabled on demand when RPS itself
+	 * is enabled/disabled.
+	 */
+	GEN8_IRQ_INIT_NDX(GT, 2, dev_priv->pm_irq_mask, 0);
 	GEN8_IRQ_INIT_NDX(GT, 3, ~gt_interrupts[3], gt_interrupts[3]);
 }
 
@@ -3609,7 +3670,11 @@ static void vlv_display_irq_uninstall(struct drm_i915_private *dev_priv)
 
 	vlv_display_irq_reset(dev_priv);
 
+<<<<<<< HEAD
 	dev_priv->irq_mask = 0;
+=======
+	dev_priv->irq_mask = ~0;
+>>>>>>> linux-next/akpm-base
 }
 
 static void valleyview_irq_uninstall(struct drm_device *dev)
@@ -4470,6 +4535,23 @@ int intel_irq_install(struct drm_i915_private *dev_priv)
 	 * special cases in our ordering checks.
 	 */
 	dev_priv->pm.irqs_enabled = true;
+<<<<<<< HEAD
+
+	return drm_irq_install(dev_priv->dev, dev_priv->dev->pdev->irq);
+}
+
+/**
+ * intel_irq_uninstall - finilizes all irq handling
+ * @dev_priv: i915 device instance
+ *
+ * This stops interrupt and hotplug handling and unregisters and frees all
+ * resources acquired in the init functions.
+ */
+void intel_irq_uninstall(struct drm_i915_private *dev_priv)
+{
+	drm_irq_uninstall(dev_priv->dev);
+	intel_hpd_cancel_work(dev_priv);
+=======
 
 	return drm_irq_install(dev_priv->dev, dev_priv->dev->pdev->irq);
 }
@@ -4498,10 +4580,27 @@ void intel_irq_uninstall(struct drm_i915_private *dev_priv)
 void intel_runtime_pm_disable_interrupts(struct drm_i915_private *dev_priv)
 {
 	dev_priv->dev->driver->irq_uninstall(dev_priv->dev);
+>>>>>>> linux-next/akpm-base
 	dev_priv->pm.irqs_enabled = false;
 }
 
 /**
+<<<<<<< HEAD
+ * intel_runtime_pm_disable_interrupts - runtime interrupt disabling
+ * @dev_priv: i915 device instance
+ *
+ * This function is used to disable interrupts at runtime, both in the runtime
+ * pm and the system suspend/resume code.
+ */
+void intel_runtime_pm_disable_interrupts(struct drm_i915_private *dev_priv)
+{
+	dev_priv->dev->driver->irq_uninstall(dev_priv->dev);
+	dev_priv->pm.irqs_enabled = false;
+}
+
+/**
+=======
+>>>>>>> linux-next/akpm-base
  * intel_runtime_pm_enable_interrupts - runtime interrupt enabling
  * @dev_priv: i915 device instance
  *

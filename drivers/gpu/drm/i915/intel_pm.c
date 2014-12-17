@@ -6149,6 +6149,33 @@ static void intel_init_emon(struct drm_device *dev)
 			(pxw[(i*4)+2] << 8) | (pxw[(i*4)+3]);
 		I915_WRITE(PXW + (i * 4), val);
 	}
+<<<<<<< HEAD
+
+	/* Adjust magic regs to magic values (more experimental results) */
+	I915_WRITE(OGW0, 0);
+	I915_WRITE(OGW1, 0);
+	I915_WRITE(EG0, 0x00007f00);
+	I915_WRITE(EG1, 0x0000000e);
+	I915_WRITE(EG2, 0x000e0000);
+	I915_WRITE(EG3, 0x68000300);
+	I915_WRITE(EG4, 0x42000000);
+	I915_WRITE(EG5, 0x00140031);
+	I915_WRITE(EG6, 0);
+	I915_WRITE(EG7, 0);
+
+	for (i = 0; i < 8; i++)
+		I915_WRITE(PXWL + (i * 4), 0);
+
+	/* Enable PMON + select events */
+	I915_WRITE(ECR, 0x80000019);
+
+	lcfuse = I915_READ(LCFUSE02);
+
+	dev_priv->ips.corr = (lcfuse & LCFUSE_HIV_MASK);
+}
+
+void intel_init_gt_powersave(struct drm_device *dev)
+=======
 
 	/* Adjust magic regs to magic values (more experimental results) */
 	I915_WRITE(OGW0, 0);
@@ -6191,6 +6218,36 @@ void intel_cleanup_gt_powersave(struct drm_device *dev)
 		valleyview_cleanup_gt_powersave(dev);
 }
 
+static void gen6_suspend_rps(struct drm_device *dev)
+>>>>>>> linux-next/akpm-base
+{
+	i915.enable_rc6 = sanitize_rc6_option(dev, i915.enable_rc6);
+
+<<<<<<< HEAD
+	if (IS_CHERRYVIEW(dev))
+		cherryview_init_gt_powersave(dev);
+	else if (IS_VALLEYVIEW(dev))
+		valleyview_init_gt_powersave(dev);
+}
+
+void intel_cleanup_gt_powersave(struct drm_device *dev)
+{
+	if (IS_CHERRYVIEW(dev))
+		return;
+	else if (IS_VALLEYVIEW(dev))
+		valleyview_cleanup_gt_powersave(dev);
+=======
+	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
+
+	/*
+	 * TODO: disable RPS interrupts on GEN9+ too once RPS support
+	 * is added for it.
+	 */
+	if (INTEL_INFO(dev)->gen < 9)
+		gen6_disable_rps_interrupts(dev);
+>>>>>>> linux-next/akpm-base
+}
+
 /**
  * intel_suspend_gt_powersave - suspend PM work and helper threads
  * @dev: drm device
@@ -6206,6 +6263,7 @@ void intel_suspend_gt_powersave(struct drm_device *dev)
 	if (INTEL_INFO(dev)->gen < 6)
 		return;
 
+<<<<<<< HEAD
 	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
 
 	/*
@@ -6214,6 +6272,9 @@ void intel_suspend_gt_powersave(struct drm_device *dev)
 	 */
 	if (INTEL_INFO(dev)->gen < 9)
 		gen6_disable_rps_interrupts(dev);
+=======
+	gen6_suspend_rps(dev);
+>>>>>>> linux-next/akpm-base
 
 	/* Force GPU to min freq during suspend */
 	gen6_rps_idle(dev_priv);
@@ -6315,9 +6376,18 @@ void intel_enable_gt_powersave(struct drm_device *dev)
 void intel_reset_gt_powersave(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
+<<<<<<< HEAD
 
 	dev_priv->rps.enabled = false;
 	intel_enable_gt_powersave(dev);
+=======
+
+	if (INTEL_INFO(dev)->gen < 6)
+		return;
+
+	gen6_suspend_rps(dev);
+	dev_priv->rps.enabled = false;
+>>>>>>> linux-next/akpm-base
 }
 
 static void ibx_init_clock_gating(struct drm_device *dev)

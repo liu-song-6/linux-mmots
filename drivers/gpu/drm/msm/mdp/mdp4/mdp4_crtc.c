@@ -196,6 +196,7 @@ static void setup_mixer(struct mdp4_kms *mdp4_kms)
 	list_for_each_entry(crtc, &config->crtc_list, head) {
 		struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
 		struct drm_plane *plane;
+<<<<<<< HEAD
 
 		drm_atomic_crtc_for_each_plane(plane, crtc) {
 			enum mdp4_pipe pipe_id = mdp4_plane_pipe(plane);
@@ -208,6 +209,20 @@ static void setup_mixer(struct mdp4_kms *mdp4_kms)
 	mdp4_write(mdp4_kms, REG_MDP4_LAYERMIXER_IN_CFG, mixer_cfg);
 }
 
+=======
+
+		drm_atomic_crtc_for_each_plane(plane, crtc) {
+			enum mdp4_pipe pipe_id = mdp4_plane_pipe(plane);
+			int idx = idxs[pipe_id];
+			mixer_cfg = mixercfg(mixer_cfg, mdp4_crtc->mixer,
+					pipe_id, stages[idx]);
+		}
+	}
+
+	mdp4_write(mdp4_kms, REG_MDP4_LAYERMIXER_IN_CFG, mixer_cfg);
+}
+
+>>>>>>> linux-next/akpm-base
 static void blend_setup(struct drm_crtc *crtc)
 {
 	struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
@@ -323,10 +338,13 @@ static void mdp4_crtc_commit(struct drm_crtc *crtc)
 	drm_crtc_vblank_put(crtc);
 }
 
+<<<<<<< HEAD
 static void mdp4_crtc_load_lut(struct drm_crtc *crtc)
 {
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 static int mdp4_crtc_atomic_check(struct drm_crtc *crtc,
 		struct drm_crtc_state *state)
 {
@@ -524,7 +542,10 @@ static const struct drm_crtc_helper_funcs mdp4_crtc_helper_funcs = {
 	.mode_set_base = drm_helper_crtc_mode_set_base,
 	.prepare = mdp4_crtc_prepare,
 	.commit = mdp4_crtc_commit,
+<<<<<<< HEAD
 	.load_lut = mdp4_crtc_load_lut,
+=======
+>>>>>>> linux-next/akpm-base
 	.atomic_check = mdp4_crtc_atomic_check,
 	.atomic_begin = mdp4_crtc_atomic_begin,
 	.atomic_flush = mdp4_crtc_atomic_flush,

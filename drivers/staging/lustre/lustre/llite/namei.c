@@ -598,7 +598,11 @@ static int ll_atomic_open(struct inode *dir, struct dentry *dentry,
 	long long lookup_flags = LOOKUP_OPEN;
 	int rc = 0;
 
+<<<<<<< HEAD
 	CDEBUG(D_VFSTRACE, "VFS Op:name=%pd,dir=%lu/%u(%p),file %p,open_flags %x,mode %x opened %d\n",
+=======
+	CDEBUG(D_VFSTRACE, "VFS Op:name=%pd,dir=%lu/%u(%p),file %p, open_flags %x,mode %x opened %d\n",
+>>>>>>> linux-next/akpm-base
 	       dentry, dir->i_ino,
 	       dir->i_generation, dir, file, open_flags, mode, *opened);
 
@@ -842,7 +846,11 @@ static int ll_create_nd(struct inode *dir, struct dentry *dentry,
 {
 	int rc;
 
+<<<<<<< HEAD
 	CDEBUG(D_VFSTRACE, "VFS Op:name=%pd,dir=%lu/%u(%p),flags=%u, excl=%d\n",
+=======
+	CDEBUG(D_VFSTRACE, "VFS Op:name=%pd,dir=%lu/%u(%p), flags=%u, excl=%d\n",
+>>>>>>> linux-next/akpm-base
 	       dentry, dir->i_ino,
 	       dir->i_generation, dir, mode, want_excl);
 
@@ -972,7 +980,7 @@ out:
  * Instead, ll_ddelete() and ll_d_iput() will update it based upon if there
  * is any lock existing. They will recycle dentries and inodes based upon locks
  * too. b=20433 */
-static int ll_unlink(struct inode * dir, struct dentry *dentry)
+static int ll_unlink(struct inode *dir, struct dentry *dentry)
 {
 	struct ptlrpc_request *request = NULL;
 	struct md_op_data *op_data;
