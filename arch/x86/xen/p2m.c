@@ -554,7 +554,11 @@ static bool alloc_p2m(unsigned long pfn)
 		mid_mfn = NULL;
 	}
 
+<<<<<<< HEAD
 	p2m_pfn = pte_pfn(ACCESS_ONCE(*ptep));
+=======
+	p2m_pfn = pte_pfn(READ_ONCE(*ptep));
+>>>>>>> linux-next/akpm-base
 	if (p2m_pfn == PFN_DOWN(__pa(p2m_identity)) ||
 	    p2m_pfn == PFN_DOWN(__pa(p2m_missing))) {
 		/* p2m leaf page is missing */
@@ -625,7 +629,11 @@ bool __set_phys_to_machine(unsigned long pfn, unsigned long mfn)
 		return true;
 	}
 
+<<<<<<< HEAD
 	if (likely(!xen_safe_write_ulong(xen_p2m_addr + pfn, mfn)))
+=======
+	if (likely(!__put_user(mfn, xen_p2m_addr + pfn)))
+>>>>>>> linux-next/akpm-base
 		return true;
 
 	ptep = lookup_address((unsigned long)(xen_p2m_addr + pfn), &level);
