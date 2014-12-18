@@ -60,23 +60,6 @@ extern int clear_foreign_p2m_mapping(struct gnttab_unmap_grant_ref *unmap_ops,
 extern unsigned long m2p_find_override_pfn(unsigned long mfn, unsigned long pfn);
 
 /*
-<<<<<<< HEAD
- * Helper functions to write or read unsigned long values to/from
- * memory, when the access may fault.
- */
-static inline int xen_safe_write_ulong(unsigned long *addr, unsigned long val)
-{
-	return __put_user(val, (unsigned long __user *)addr);
-}
-
-static inline int xen_safe_read_ulong(unsigned long *addr, unsigned long *val)
-{
-	return __get_user(*val, (unsigned long __user *)addr);
-}
-
-/*
-=======
->>>>>>> linux-next/akpm-base
  * When to use pfn_to_mfn(), __pfn_to_mfn() or get_phys_to_machine():
  * - pfn_to_mfn() returns either INVALID_P2M_ENTRY or the mfn. No indicator
  *   bits (identity or foreign) are set.

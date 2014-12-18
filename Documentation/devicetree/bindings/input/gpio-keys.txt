@@ -10,14 +10,6 @@ Optional properties:
 Each button (key) is represented as a sub-node of "gpio-keys":
 Subnode properties:
 
-<<<<<<< HEAD
-	- label: Descriptive name of the key.
-	- linux,code: Keycode to emit.
-
-Required mutual exclusive subnode-properties:
-	- gpios: OF device-tree gpio specification.
-	- interrupts: the interrupt line for that input
-=======
 	- gpios: OF device-tree gpio specification.
 	- interrupts: the interrupt line for that input.
 	- label: Descriptive name of the key.
@@ -25,7 +17,6 @@ Required mutual exclusive subnode-properties:
 
 Note that either "interrupts" or "gpios" properties can be omitted, but not
 both at the same time. Specifying both properties is allowed.
->>>>>>> linux-next/akpm-base
 
 Optional subnode-properties:
 	- linux,input-type: Specify event type this button/key generates.

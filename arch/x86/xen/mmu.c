@@ -1180,10 +1180,6 @@ static void __init xen_pagetable_p2m_setup(void)
 static void __init xen_pagetable_init(void)
 {
 	paging_init();
-<<<<<<< HEAD
-	xen_post_allocator_init();
-=======
->>>>>>> linux-next/akpm-base
 
 	xen_pagetable_p2m_setup();
 

@@ -855,8 +855,6 @@ static inline struct user_namespace *to_user_ns(struct ns_common *ns)
 	return container_of(ns, struct user_namespace, ns);
 }
 
-<<<<<<< HEAD
-=======
 int proc_setgroups_show(struct seq_file *seq, void *v)
 {
 	struct user_namespace *ns = seq->private;
@@ -951,7 +949,6 @@ bool userns_may_setgroups(const struct user_namespace *ns)
 	return allowed;
 }
 
->>>>>>> linux-next/akpm-base
 static struct ns_common *userns_get(struct task_struct *task)
 {
 	struct user_namespace *user_ns;

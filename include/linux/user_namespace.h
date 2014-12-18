@@ -32,10 +32,7 @@ struct user_namespace {
 	kuid_t			owner;
 	kgid_t			group;
 	struct ns_common	ns;
-<<<<<<< HEAD
-=======
 	unsigned long		flags;
->>>>>>> linux-next/akpm-base
 
 	/* Register of per-UID persistent keyrings for this namespace */
 #ifdef CONFIG_PERSISTENT_KEYRINGS

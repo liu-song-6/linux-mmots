@@ -619,45 +619,20 @@ gpio_keys_get_devtree_pdata(struct device *dev)
 
 	i = 0;
 	for_each_child_of_node(node, pp) {
-<<<<<<< HEAD
-		int gpio = -1;
-=======
->>>>>>> linux-next/akpm-base
 		enum of_gpio_flags flags;
 
 		button = &pdata->buttons[i++];
 
-<<<<<<< HEAD
-		if (!of_find_property(pp, "gpios", NULL)) {
-			button->irq = irq_of_parse_and_map(pp, 0);
-			if (button->irq == 0) {
-				i--;
-				pdata->nbuttons--;
-				dev_warn(dev, "Found button without gpios or irqs\n");
-				continue;
-			}
-		} else {
-			gpio = of_get_gpio_flags(pp, 0, &flags);
-			if (gpio < 0) {
-				error = gpio;
-=======
 		button->gpio = of_get_gpio_flags(pp, 0, &flags);
 		if (button->gpio < 0) {
 			error = button->gpio;
 			if (error != -ENOENT) {
->>>>>>> linux-next/akpm-base
 				if (error != -EPROBE_DEFER)
 					dev_err(dev,
 						"Failed to get gpio flags, error: %d\n",
 						error);
 				return ERR_PTR(error);
 			}
-<<<<<<< HEAD
-		}
-
-		button->gpio = gpio;
-		button->active_low = flags & OF_GPIO_ACTIVE_LOW;
-=======
 		} else {
 			button->active_low = flags & OF_GPIO_ACTIVE_LOW;
 		}
@@ -668,7 +643,6 @@ gpio_keys_get_devtree_pdata(struct device *dev)
 			dev_err(dev, "Found button without gpios or irqs\n");
 			return ERR_PTR(-EINVAL);
 		}
->>>>>>> linux-next/akpm-base
 
 		if (of_property_read_u32(pp, "linux,code", &button->code)) {
 			dev_err(dev, "Button without keycode: 0x%x\n",
