@@ -2576,8 +2576,9 @@ F:	drivers/media/platform/coda/
 
 COMMON CLK FRAMEWORK
 M:	Mike Turquette <mturquette@linaro.org>
+M:	Stephen Boyd <sboyd@codeaurora.org>
 L:	linux-kernel@vger.kernel.org
-T:	git git://git.linaro.org/people/mturquette/linux.git
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/clk/linux.git
 S:	Maintained
 F:	drivers/clk/
 X:	drivers/clk/clkdev.c
@@ -4963,6 +4964,12 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/lenb/linux.git
 S:	Supported
 F:	drivers/idle/intel_idle.c
 
+INTEL PSTATE DRIVER
+M:	Kristen Carlson Accardi <kristen@linux.intel.com>
+L:	linux-pm@vger.kernel.org
+S:	Supported
+F:	drivers/cpufreq/intel_pstate.c
+
 INTEL FRAMEBUFFER DRIVER (excluding 810 and 815)
 M:	Maik Broemme <mbroemme@plusserver.de>
 L:	linux-fbdev@vger.kernel.org
@@ -5494,15 +5501,6 @@ T:	git git://github.com/agraf/linux-2.6.git
 S:	Supported
 F:	arch/powerpc/include/asm/kvm*
 F:	arch/powerpc/kvm/
-
-KERNEL VIRTUAL MACHINE For Itanium (KVM/IA64)
-M:	Xiantao Zhang <xiantao.zhang@intel.com>
-L:	kvm-ia64@vger.kernel.org
-W:	http://kvm.qumranet.com
-S:	Supported
-F:	Documentation/ia64/kvm.txt
-F:	arch/ia64/include/asm/kvm*
-F:	arch/ia64/kvm/
 
 KERNEL VIRTUAL MACHINE for s390 (KVM/s390)
 M:	Christian Borntraeger <borntraeger@de.ibm.com>
@@ -10249,13 +10247,13 @@ L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/net/ethernet/via/via-velocity.*
 
-VIVI VIRTUAL VIDEO DRIVER
+VIVID VIRTUAL VIDEO DRIVER
 M:	Hans Verkuil <hverkuil@xs4all.nl>
 L:	linux-media@vger.kernel.org
 T:	git git://linuxtv.org/media_tree.git
 W:	http://linuxtv.org
 S:	Maintained
-F:	drivers/media/platform/vivi*
+F:	drivers/media/platform/vivid/*
 
 VLAN (802.1Q)
 M:	Patrick McHardy <kaber@trash.net>
