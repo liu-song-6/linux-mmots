@@ -494,11 +494,3 @@ static struct pci_driver virtio_pci_driver = {
 };
 
 module_pci_driver(virtio_pci_driver);
-<<<<<<< HEAD
-
-MODULE_AUTHOR("Anthony Liguori <aliguori@us.ibm.com>");
-MODULE_DESCRIPTION("virtio-pci");
-MODULE_LICENSE("GPL");
-MODULE_VERSION("1");
-=======
->>>>>>> linux-next/akpm-base
