@@ -2571,6 +2571,7 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
 	if (gso_segs > dev->gso_max_segs || gso_segs < dev->gso_min_segs)
 		features &= ~NETIF_F_GSO_MASK;
 
+<<<<<<< HEAD
 	/* If encapsulation offload request, verify we are testing
 	 * hardware encapsulation features instead of standard
 	 * features for the netdev
@@ -2578,13 +2579,19 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
 	if (skb->encapsulation)
 		features &= dev->hw_enc_features;
 
+=======
+>>>>>>> linux-next/akpm-base
 	if (!vlan_tx_tag_present(skb)) {
 		if (unlikely(protocol == htons(ETH_P_8021Q) ||
 			     protocol == htons(ETH_P_8021AD))) {
 			struct vlan_ethhdr *veh = (struct vlan_ethhdr *)skb->data;
 			protocol = veh->h_vlan_encapsulated_proto;
 		} else {
+<<<<<<< HEAD
 			goto finalize;
+=======
+			return harmonize_features(skb, features);
+>>>>>>> linux-next/akpm-base
 		}
 	}
 
