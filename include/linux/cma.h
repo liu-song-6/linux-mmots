@@ -1,6 +1,8 @@
 #ifndef __CMA_H__
 #define __CMA_H__
 
+#include <linux/mmzone.h>
+
 /*
  * There is always at least global CMA area and a few optional
  * areas configured in kernel .config.
@@ -28,4 +30,38 @@ extern int cma_init_reserved_mem(phys_addr_t base,
 					struct cma **res_cma);
 extern struct page *cma_alloc(struct cma *cma, int count, unsigned int align);
 extern bool cma_release(struct cma *cma, struct page *pages, int count);
+
+#ifdef CONFIG_CMA
+static inline void cma_nr_free_add(int migratetype, struct free_area *area,
+				   int delta)
+{
+	if (is_migrate_cma(migratetype))
+		area->cma_nr_free += delta;
+}
+
+static inline void cma_nr_free_inc(int migratetype, struct free_area *area)
+{
+	cma_nr_free_add(migratetype, area, 1);
+}
+
+static inline void cma_nr_free_dec(int migratetype, struct free_area *area)
+{
+	cma_nr_free_add(migratetype, area, -1);
+}
+#else
+static inline void cma_nr_free_add(int migratetype, struct free_area *area,
+				   int delta)
+{
+}
+
+static inline void cma_nr_free_inc(int migratetype, struct free_area *area)
+{
+}
+
+static inline void cma_nr_free_dec(int migratetype, struct free_area *area)
+{
+}
+#endif		/* CONFIG_CMA */
+
+
 #endif

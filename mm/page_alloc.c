@@ -32,6 +32,8 @@
 #include <linux/slab.h>
 #include <linux/ratelimit.h>
 #include <linux/oom.h>
+#include <linux/mmzone.h>
+#include <linux/cma.h>
 #include <linux/notifier.h>
 #include <linux/topology.h>
 #include <linux/sysctl.h>
@@ -650,8 +652,7 @@ static inline void __free_one_page(struct page *page,
 		} else {
 			list_del(&buddy->lru);
 			zone->free_area[order].nr_free--;
-			if (is_migrate_cma(migratetype))
-				zone->free_area[order].cma_nr_free--;
+			cma_nr_free_dec(migratetype, &zone->free_area[order]);
 			rmv_page_order(buddy);
 		}
 		combined_idx = buddy_idx & page_idx;
@@ -685,8 +686,7 @@ static inline void __free_one_page(struct page *page,
 	list_add(&page->lru, &zone->free_area[order].free_list[migratetype]);
 out:
 	zone->free_area[order].nr_free++;
-	if (is_migrate_cma(migratetype))
-		zone->free_area[order].cma_nr_free++;
+	cma_nr_free_inc(migratetype, &zone->free_area[order]);
 }
 
 static inline int free_pages_check(struct page *page)
@@ -941,8 +941,7 @@ static inline void expand(struct zone *zone, struct page *page,
 		}
 		list_add(&page[size].lru, &area->free_list[migratetype]);
 		area->nr_free++;
-		if (is_migrate_cma(migratetype))
-			area->cma_nr_free++;
+		cma_nr_free_inc(migratetype, area);
 		set_page_order(&page[size], high);
 	}
 }
@@ -1026,8 +1025,7 @@ struct page *__rmqueue_smallest(struct zone *zone, unsigned int order,
 		list_del(&page->lru);
 		rmv_page_order(page);
 		area->nr_free--;
-		if (is_migrate_cma(migratetype))
-			area->cma_nr_free--;
+		cma_nr_free_dec(migratetype, area);
 		expand(zone, page, order, current_order, area, migratetype);
 		set_freepage_migratetype(page, migratetype);
 		return page;
@@ -1216,8 +1214,7 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 			page = list_entry(area->free_list[migratetype].next,
 					struct page, lru);
 			area->nr_free--;
-			if (is_migrate_cma(migratetype))
-				area->cma_nr_free--;
+			cma_nr_free_dec(migratetype, area);
 
 			new_type = try_to_steal_freepages(zone, page,
 							  start_migratetype,
@@ -1607,8 +1604,7 @@ int __isolate_free_page(struct page *page, unsigned int order)
 	/* Remove page from free list */
 	list_del(&page->lru);
 	zone->free_area[order].nr_free--;
-	if (is_migrate_cma(mt))
-		zone->free_area[order].cma_nr_free--;
+	cma_nr_free_dec(mt, &zone->free_area[order]);
 	rmv_page_order(page);
 
 	/* Set the pageblock if the isolated page is at least a pageblock */
@@ -1845,9 +1841,10 @@ static bool __zone_watermark_ok(struct zone *z, unsigned int order,
 		 * "z->free_area[o].nr_free << o" subtracted CMA's page number
 		 * of this order again.  So add it back.
 		 */
-		if (IS_ENABLED(CONFIG_CMA) && free_cma)
+#ifdef COFNIG_CMA
+		if (free_cma)
 			free_pages += z->free_area[o].cma_nr_free << o;
-
+#endif
 		/* Require fewer higher order pages to be free */
 		min >>= 1;
 
@@ -4247,7 +4244,9 @@ static void __meminit zone_init_free_lists(struct zone *zone)
 	for_each_migratetype_order(order, t) {
 		INIT_LIST_HEAD(&zone->free_area[order].free_list[t]);
 		zone->free_area[order].nr_free = 0;
+#ifdef CONFIG_CMA
 		zone->free_area[order].cma_nr_free = 0;
+#endif
 	}
 }
 
@@ -6620,8 +6619,8 @@ __offline_isolated_pages(unsigned long start_pfn, unsigned long end_pfn)
 		list_del(&page->lru);
 		rmv_page_order(page);
 		zone->free_area[order].nr_free--;
-		if (is_migrate_cma(get_pageblock_migratetype(page)))
-			zone->free_area[order].cma_nr_free--;
+		cma_nr_free_dec(get_pageblock_migratetype(page),
+				&zone->free_area[order]);
 		for (i = 0; i < (1 << order); i++)
 			SetPageReserved((page+i));
 		pfn += (1 << order);
