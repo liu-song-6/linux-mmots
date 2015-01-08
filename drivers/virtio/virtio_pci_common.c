@@ -282,6 +282,7 @@ void vp_del_vqs(struct virtio_device *vdev)
 
 	vp_free_vectors(vdev);
 	kfree(vp_dev->vqs);
+	vp_dev->vqs = NULL;
 }
 
 static int vp_try_to_find_vqs(struct virtio_device *vdev, unsigned nvqs,
@@ -421,15 +422,6 @@ int vp_set_vq_affinity(struct virtqueue *vq, int cpu)
 	return 0;
 }
 
-void virtio_pci_release_dev(struct device *_d)
-{
-	/*
-	 * No need for a release method as we allocate/free
-	 * all devices together with the pci devices.
-	 * Provide an empty one to avoid getting a warning from core.
-	 */
-}
-
 #ifdef CONFIG_PM_SLEEP
 static int virtio_pci_freeze(struct device *dev)
 {
@@ -494,8 +486,3 @@ static struct pci_driver virtio_pci_driver = {
 };
 
 module_pci_driver(virtio_pci_driver);
-
-MODULE_AUTHOR("Anthony Liguori <aliguori@us.ibm.com>");
-MODULE_DESCRIPTION("virtio-pci");
-MODULE_LICENSE("GPL");
-MODULE_VERSION("1");
