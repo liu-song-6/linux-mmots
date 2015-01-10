@@ -112,6 +112,7 @@ dtb-$(CONFIG_ARCH_KEYSTONE) += k2hk-evm.dtb \
 	k2l-evm.dtb \
 	k2e-evm.dtb
 dtb-$(CONFIG_MACH_KIRKWOOD) += kirkwood-b3.dtb \
+	kirkwood-blackarmor-nas220.dtb \
 	kirkwood-cloudbox.dtb \
 	kirkwood-d2net.dtb \
 	kirkwood-db-88f6281.dtb \
@@ -234,6 +235,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-tx6dl-comtft.dtb \
 	imx6dl-tx6u-801x.dtb \
 	imx6dl-tx6u-811x.dtb \
+	imx6dl-udoo.dtb \
 	imx6dl-wandboard.dtb \
 	imx6dl-wandboard-revb1.dtb \
 	imx6q-arm2.dtb \
@@ -266,6 +268,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-tx6q-1020-comtft.dtb \
 	imx6q-tx6q-1110.dtb \
 	imx6sl-evk.dtb \
+	imx6sx-sabreauto.dtb \
 	imx6sx-sdb.dtb \
 	ls1021a-qds.dtb \
 	ls1021a-twr.dtb \
@@ -366,6 +369,7 @@ dtb-$(CONFIG_ARCH_OMAP4) += omap4-duovero-parlor.dtb \
 	omap4-var-stk-om44.dtb
 dtb-$(CONFIG_SOC_AM43XX) += am43x-epos-evm.dtb \
 	am437x-sk-evm.dtb \
+	am437x-idk-evm.dtb \
 	am437x-gp-evm.dtb
 dtb-$(CONFIG_SOC_OMAP5) += omap5-cm-t54.dtb \
 	omap5-sbc-t54.dtb \
@@ -410,12 +414,12 @@ dtb-$(CONFIG_ARCH_SHMOBILE_LEGACY) += \
 	r8a7778-bockw.dtb \
 	r8a7778-bockw-reference.dtb \
 	r8a7779-marzen.dtb \
-	r8a7790-lager.dtb \
 	sh7372-mackerel.dtb \
 	sh73a0-kzm9g.dtb \
 	sh73a0-kzm9g-reference.dtb
 dtb-$(CONFIG_ARCH_SHMOBILE_MULTI) += emev2-kzm9d.dtb \
 	r7s72100-genmai.dtb \
+	r8a73a4-ape6evm.dtb \
 	r8a7740-armadillo800eva.dtb \
 	r8a7779-marzen.dtb \
 	r8a7790-lager.dtb \
@@ -461,7 +465,8 @@ dtb-$(CONFIG_MACH_SUN6I) += \
 	sun6i-a31-app4-evb1.dtb \
 	sun6i-a31-colombus.dtb \
 	sun6i-a31-hummingbird.dtb \
-	sun6i-a31-m9.dtb
+	sun6i-a31-m9.dtb \
+	sun6i-a31s-cs908.dtb
 dtb-$(CONFIG_MACH_SUN7I) += \
 	sun7i-a20-bananapi.dtb \
 	sun7i-a20-cubieboard2.dtb \

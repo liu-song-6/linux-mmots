@@ -754,13 +754,6 @@ L:	linux-media@vger.kernel.org
 S:	Maintained
 F:	drivers/media/i2c/aptina-pll.*
 
-ARASAN COMPACT FLASH PATA CONTROLLER
-M:	Viresh Kumar <viresh.linux@gmail.com>
-L:	linux-ide@vger.kernel.org
-S:	Maintained
-F:	include/linux/pata_arasan_cf_data.h
-F:	drivers/ata/pata_arasan_cf.c
-
 ARC FRAMEBUFFER DRIVER
 M:	Jaya Kumar <jayalk@intworks.biz>
 S:	Maintained
@@ -1395,7 +1388,6 @@ F:	arch/arm/configs/ape6evm_defconfig
 F:	arch/arm/configs/armadillo800eva_defconfig
 F:	arch/arm/configs/bockw_defconfig
 F:	arch/arm/configs/kzm9g_defconfig
-F:	arch/arm/configs/lager_defconfig
 F:	arch/arm/configs/mackerel_defconfig
 F:	arch/arm/configs/marzen_defconfig
 F:	arch/arm/configs/shmobile_defconfig
@@ -1583,6 +1575,7 @@ N:	xilinx
 F:	drivers/clocksource/cadence_ttc_timer.c
 F:	drivers/i2c/busses/i2c-cadence.c
 F:	drivers/mmc/host/sdhci-of-arasan.c
+F:	drivers/edac/synopsys_edac.c
 
 ARM SMMU DRIVER
 M:	Will Deacon <will.deacon@arm.com>
@@ -3182,7 +3175,7 @@ L:	dmaengine@vger.kernel.org
 Q:	https://patchwork.kernel.org/project/linux-dmaengine/list/
 S:	Maintained
 F:	drivers/dma/
-F:	include/linux/dma*
+F:	include/linux/dmaengine.h
 F:	Documentation/dmaengine/
 T:	git git://git.infradead.org/users/vkoul/slave-dma.git
 
@@ -3207,6 +3200,7 @@ F:	Documentation/
 X:	Documentation/ABI/
 X:	Documentation/devicetree/
 X:	Documentation/[a-z][a-z]_[A-Z][A-Z]/
+T:	git git://git.lwn.net/linux-2.6.git docs-next
 
 DOUBLETALK DRIVER
 M:	"James R. Van Zandt" <jrv@vanzandt.mv.com>
@@ -4929,7 +4923,6 @@ F:	include/uapi/linux/inotify.h
 
 INPUT (KEYBOARD, MOUSE, JOYSTICK, TOUCHSCREEN) DRIVERS
 M:	Dmitry Torokhov <dmitry.torokhov@gmail.com>
-M:	Dmitry Torokhov <dtor@mail.ru>
 L:	linux-input@vger.kernel.org
 Q:	http://patchwork.kernel.org/project/linux-input/list/
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/dtor/input.git
@@ -5693,6 +5686,49 @@ F:	drivers/lguest/
 F:	include/linux/lguest*.h
 F:	tools/lguest/
 
+LIBATA SUBSYSTEM (Serial and Parallel ATA drivers)
+M:	Tejun Heo <tj@kernel.org>
+L:	linux-ide@vger.kernel.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/libata.git
+S:	Maintained
+F:	drivers/ata/
+F:	include/linux/ata.h
+F:	include/linux/libata.h
+
+LIBATA PATA ARASAN COMPACT FLASH CONTROLLER
+M:	Viresh Kumar <viresh.linux@gmail.com>
+L:	linux-ide@vger.kernel.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/libata.git
+S:	Maintained
+F:	include/linux/pata_arasan_cf_data.h
+F:	drivers/ata/pata_arasan_cf.c
+
+LIBATA PATA DRIVERS
+M:	Bartlomiej Zolnierkiewicz <b.zolnierkie@samsung.com>
+M:	Tejun Heo <tj@kernel.org>
+L:	linux-ide@vger.kernel.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/libata.git
+S:	Maintained
+F:	drivers/ata/pata_*.c
+F:	drivers/ata/ata_generic.c
+
+LIBATA SATA AHCI PLATFORM devices support
+M:	Hans de Goede <hdegoede@redhat.com>
+M:	Tejun Heo <tj@kernel.org>
+L:	linux-ide@vger.kernel.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/libata.git
+S:	Maintained
+F:	drivers/ata/ahci_platform.c
+F:	drivers/ata/libahci_platform.c
+F:	include/linux/ahci_platform.h
+
+LIBATA SATA PROMISE TX2/TX4 CONTROLLER DRIVER
+M:	Mikael Pettersson <mikpelinux@gmail.com>
+L:	linux-ide@vger.kernel.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/libata.git
+S:	Maintained
+F:	drivers/ata/sata_promise.*
+
 LIBLOCKDEP
 M:	Sasha Levin <sasha.levin@oracle.com>
 S:	Maintained
@@ -5783,6 +5819,21 @@ S:	Maintained
 F:	Documentation/misc-devices/lis3lv02d
 F:	drivers/misc/lis3lv02d/
 F:	drivers/platform/x86/hp_accel.c
+
+LIVE PATCHING
+M:	Josh Poimboeuf <jpoimboe@redhat.com>
+M:	Seth Jennings <sjenning@redhat.com>
+M:	Jiri Kosina <jkosina@suse.cz>
+M:	Vojtech Pavlik <vojtech@suse.cz>
+S:	Maintained
+F:	kernel/livepatch/
+F:	include/linux/livepatch.h
+F:	arch/x86/include/asm/livepatch.h
+F:	arch/x86/kernel/livepatch.c
+F:	Documentation/ABI/testing/sysfs-kernel-livepatch
+F:	samples/livepatch/
+L:	live-patching@vger.kernel.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jikos/livepatching.git
 
 LLC (802.2)
 M:	Arnaldo Carvalho de Melo <acme@ghostprotocols.net>
@@ -6887,6 +6938,12 @@ L:	linux-omap@vger.kernel.org
 S:	Maintained
 F:	arch/arm/mach-omap2/omap_hwmod.*
 
+OMAP HWMOD DATA
+M:	Paul Walmsley <paul@pwsan.com>
+L:	linux-omap@vger.kernel.org
+S:	Maintained
+F:	arch/arm/mach-omap2/omap_hwmod*data*
+
 OMAP HWMOD DATA FOR OMAP4-BASED DEVICES
 M:	Benoît Cousson <bcousson@baylibre.com>
 L:	linux-omap@vger.kernel.org
@@ -7008,11 +7065,12 @@ F:	arch/openrisc/
 
 OPENVSWITCH
 M:	Pravin Shelar <pshelar@nicira.com>
+L:	netdev@vger.kernel.org
 L:	dev@openvswitch.org
 W:	http://openvswitch.org
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/pshelar/openvswitch.git
 S:	Maintained
 F:	net/openvswitch/
+F:	include/uapi/linux/openvswitch.h
 
 OPL4 DRIVER
 M:	Clemens Ladisch <clemens@ladisch.de>
@@ -7565,12 +7623,6 @@ L:	linux-wireless@vger.kernel.org
 W:	http://wireless.kernel.org/en/users/Drivers/p54
 S:	Obsolete
 F:	drivers/net/wireless/prism54/
-
-PROMISE SATA TX2/TX4 CONTROLLER LIBATA DRIVER
-M:	Mikael Pettersson <mikpelinux@gmail.com>
-L:	linux-ide@vger.kernel.org
-S:	Maintained
-F:	drivers/ata/sata_promise.*
 
 PS3 NETWORK SUPPORT
 M:	Geoff Levand <geoff@infradead.org>
@@ -8546,25 +8598,6 @@ S:	Maintained
 F:	drivers/misc/phantom.c
 F:	include/uapi/linux/phantom.h
 
-SERIAL ATA (SATA) SUBSYSTEM
-M:	Tejun Heo <tj@kernel.org>
-L:	linux-ide@vger.kernel.org
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/libata.git
-S:	Supported
-F:	drivers/ata/
-F:	include/linux/ata.h
-F:	include/linux/libata.h
-
-SERIAL ATA AHCI PLATFORM devices support
-M:	Hans de Goede <hdegoede@redhat.com>
-M:	Tejun Heo <tj@kernel.org>
-L:	linux-ide@vger.kernel.org
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/libata.git
-S:	Supported
-F:	drivers/ata/ahci_platform.c
-F:	drivers/ata/libahci_platform.c
-F:	include/linux/ahci_platform.h
-
 SERVER ENGINES 10Gbps iSCSI - BladeEngine 2 DRIVER
 M:	Jayamohan Kallickal <jayamohan.kallickal@emulex.com>
 L:	linux-scsi@vger.kernel.org
@@ -9204,6 +9237,13 @@ F:	arch/m68k/sun3*/
 F:	arch/m68k/include/asm/sun3*
 F:	drivers/net/ethernet/i825xx/sun3*
 
+SUN4I LOW RES ADC ATTACHED TABLET KEYS DRIVER
+M:	Hans de Goede <hdegoede@redhat.com>
+L:	linux-input@vger.kernel.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/input/sun4i-lradc-keys.txt
+F:	drivers/input/keyboard/sun4i-lradc-keys.c
+
 SUNDANCE NETWORK DRIVER
 M:	Denis Kirjanov <kda@linux-powerpc.org>
 L:	netdev@vger.kernel.org
@@ -9533,7 +9573,8 @@ F:	drivers/platform/x86/thinkpad_acpi.c
 TI BANDGAP AND THERMAL DRIVER
 M:	Eduardo Valentin <edubezval@gmail.com>
 L:	linux-pm@vger.kernel.org
-S:	Supported
+L:	linux-omap@vger.kernel.org
+S:	Maintained
 F:	drivers/thermal/ti-soc-thermal/
 
 TI CLOCK DRIVER
@@ -10628,6 +10669,7 @@ M:	Max Filippov <jcmvbkbc@gmail.com>
 L:	linux-xtensa@linux-xtensa.org
 S:	Maintained
 F:	drivers/spi/spi-xtensa-xtfpga.c
+F:	sound/soc/xtensa/xtfpga-i2s.c
 
 YAM DRIVER FOR AX.25
 M:	Jean-Paul Roubelat <jpr@f6fbb.org>

@@ -108,8 +108,12 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm *mvm, struct sk_buff *skb,
 			tx_flags &= ~TX_CMD_FLG_SEQ_CTL;
 	}
 
-	/* tid_tspec will default to 0 = BE when QOS isn't enabled */
-	ac = tid_to_mac80211_ac[tx_cmd->tid_tspec];
+	/* Default to 0 (BE) when tid_spec is set to IWL_TID_NON_QOS */
+	if (tx_cmd->tid_tspec < IWL_MAX_TID_COUNT)
+		ac = tid_to_mac80211_ac[tx_cmd->tid_tspec];
+	else
+		ac = tid_to_mac80211_ac[0];
+
 	tx_flags |= iwl_mvm_bt_coex_tx_prio(mvm, hdr, info, ac) <<
 			TX_CMD_FLG_BT_PRIO_POS;
 
@@ -209,7 +213,7 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm *mvm, struct iwl_tx_cmd *tx_cmd,
 	rate_plcp = iwl_mvm_mac80211_idx_to_hwrate(rate_idx);
 
 	mvm->mgmt_last_antenna_idx =
-		iwl_mvm_next_antenna(mvm, mvm->fw->valid_tx_ant,
+		iwl_mvm_next_antenna(mvm, iwl_mvm_get_valid_tx_ant(mvm),
 				     mvm->mgmt_last_antenna_idx);
 
 	if (info->band == IEEE80211_BAND_2GHZ &&
