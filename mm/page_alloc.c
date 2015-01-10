@@ -764,20 +764,26 @@ static void free_one_page(struct zone *zone,
 	spin_unlock(&zone->lock);
 }
 
-static int free_tail_pages_check(struct page *head_page, struct page *page)
+#ifdef CONFIG_DEBUG_VM
+static void free_tail_pages_check(struct page *head_page, struct page *page)
 {
 	if (!IS_ENABLED(CONFIG_DEBUG_VM))
-		return 0;
+		return;
 	if (unlikely(!PageTail(page))) {
 		bad_page(page, "PageTail not set", 0);
-		return 1;
+		return;
 	}
 	if (unlikely(page->first_page != head_page)) {
 		bad_page(page, "first_page not consistent", 0);
-		return 1;
+		return;
 	}
-	return 0;
 }
+#else
+static inline void free_tail_pages_check(struct page *head_page,
+					 struct page *page)
+{
+}
+#endif
 
 static bool free_pages_prepare(struct page *page, unsigned int order)
 {
