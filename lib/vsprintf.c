@@ -1733,11 +1733,9 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 	str = buf;
 	end = buf + size;
 
-	/* Make sure end is always >= buf */
-	if (end < buf) {
-		end = ((void *)-1);
-		size = end - buf;
-	}
+	/* Also bail out if buf+size wraps */
+	if (WARN_ON_ONCE(end < buf))
+		return 0;
 
 	while (*fmt) {
 		const char *old_fmt = fmt;
