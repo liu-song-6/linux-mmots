@@ -89,8 +89,10 @@ suffix-$(CONFIG_KERNEL_XZ)	:= xz
 suffix-$(CONFIG_KERNEL_LZO) 	:= lzo
 suffix-$(CONFIG_KERNEL_LZ4) 	:= lz4
 
-RUN_SIZE = $(shell $(OBJDUMP) -h vmlinux | \
-	     perl $(srctree)/arch/x86/tools/calc_run_size.pl)
+RUN_SIZE = $(shell NUM='\([0-9a-fA-F]*[ \t]*\)'; $(OBJDUMP) -h vmlinux | \
+sed -n 's/^[ \t0-9]*.b[sr][sk][ \t]*'"$$NUM$$NUM$$NUM$$NUM"'.*/\1\4/p' | \
+xargs | while read a b c d; do [ "$$b" != "$$d" ] && exit 1; \
+expr $$(printf "%d + %d + %d" 0x$$a 0x$$b 0x$$c); done)
 quiet_cmd_mkpiggy = MKPIGGY $@
       cmd_mkpiggy = $(obj)/mkpiggy $< $(RUN_SIZE) > $@ || ( rm -f $@ ; false )
 
