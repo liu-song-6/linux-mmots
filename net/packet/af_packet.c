@@ -2102,7 +2102,7 @@ static bool ll_header_truncated(const struct net_device *dev, int len)
 {
 	/* net device doesn't like empty head */
 	if (unlikely(len <= dev->hard_header_len)) {
-		net_warn_ratelimited("%s: packet size is too short (%d < %d)\n",
+		net_warn_ratelimited("%s: packet size is too short (%d <= %d)\n",
 				     current->comm, len, dev->hard_header_len);
 		return true;
 	}
@@ -2517,7 +2517,7 @@ static int packet_snd(struct socket *sock, struct msghdr *msg, size_t len)
 	err = -EINVAL;
 	if (sock->type == SOCK_DGRAM) {
 		offset = dev_hard_header(skb, dev, ntohs(proto), addr, NULL, len);
-		if (unlikely(offset) < 0)
+		if (unlikely(offset < 0))
 			goto out_free;
 	} else {
 		if (ll_header_truncated(dev, len))
