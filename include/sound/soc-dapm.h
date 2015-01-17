@@ -431,7 +431,6 @@ int snd_soc_dapm_force_enable_pin_unlocked(struct snd_soc_dapm_context *dapm,
 					   const char *pin);
 int snd_soc_dapm_ignore_suspend(struct snd_soc_dapm_context *dapm,
 				const char *pin);
-void snd_soc_dapm_auto_nc_pins(struct snd_soc_card *card);
 unsigned int dapm_kcontrol_get_value(const struct snd_kcontrol *kcontrol);
 
 /* Mostly internal - should not normally be used */
@@ -526,7 +525,6 @@ struct snd_soc_dapm_widget {
 	enum snd_soc_dapm_type id;
 	const char *name;		/* widget name */
 	const char *sname;	/* stream name */
-	struct snd_soc_codec *codec;
 	struct list_head list;
 	struct snd_soc_dapm_context *dapm;
 
