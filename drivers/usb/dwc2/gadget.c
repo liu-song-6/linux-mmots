@@ -2622,11 +2622,6 @@ static int s3c_hsotg_ep_disable_force(struct usb_ep *ep, bool force)
 	epctrl_reg = dir_in ? DIEPCTL(index) : DOEPCTL(index);
 
 	spin_lock_irqsave(&hsotg->lock, flags);
-<<<<<<< HEAD
-	/* terminate all requests with shutdown */
-	kill_all_requests(hsotg, hs_ep, -ESHUTDOWN, force);
-=======
->>>>>>> linux-next/akpm-base
 
 	hsotg->fifo_map &= ~(1<<hs_ep->fifo_index);
 	hs_ep->fifo_index = 0;
@@ -2969,17 +2964,12 @@ static int s3c_hsotg_udc_stop(struct usb_gadget *gadget)
 	mutex_lock(&hsotg->init_mutex);
 
 	/* all endpoints should be shutdown */
-<<<<<<< HEAD
-	for (ep = 1; ep < hsotg->num_of_eps; ep++)
-		s3c_hsotg_ep_disable_force(&hsotg->eps[ep].ep, true);
-=======
 	for (ep = 1; ep < hsotg->num_of_eps; ep++) {
 		if (hsotg->eps_in[ep])
 			s3c_hsotg_ep_disable_force(&hsotg->eps_in[ep]->ep, true);
 		if (hsotg->eps_out[ep])
 			s3c_hsotg_ep_disable_force(&hsotg->eps_out[ep]->ep, true);
 	}
->>>>>>> linux-next/akpm-base
 
 	spin_lock_irqsave(&hsotg->lock, flags);
 

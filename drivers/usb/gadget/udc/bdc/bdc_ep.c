@@ -718,11 +718,7 @@ static int ep_queue(struct bdc_ep *ep, struct bdc_req *req)
 	struct bdc *bdc;
 	int ret = 0;
 
-<<<<<<< HEAD
-	if (!req || !ep || !ep->usb_ep.desc)
-=======
 	if (!req || !ep->usb_ep.desc)
->>>>>>> linux-next/akpm-base
 		return -EINVAL;
 
 	bdc = ep->bdc;
