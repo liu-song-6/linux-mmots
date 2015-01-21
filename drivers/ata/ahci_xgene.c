@@ -178,13 +178,6 @@ static int xgene_ahci_restart_engine(struct ata_port *ap)
  * xgene_ahci_qc_issue - Issue commands to the device
  * @qc: Command to issue
  *
-<<<<<<< HEAD
- * Due to Hardware errata for IDENTIFY DEVICE command and PACKET
- * command of ATAPI protocol set, the controller cannot clear the BSY bit
- * after receiving the PIO setup FIS. This results in the DMA state machine
- * going into the CMFatalErrorUpdate state and locks up. By restarting the
- * DMA engine, it removes the controller out of lock up state.
-=======
  * Due to Hardware errata for IDENTIFY DEVICE command, the controller cannot
  * clear the BSY bit after receiving the PIO setup FIS. This results in the dma
  * state machine goes into the CMFatalErrorUpdate state and locks up. By
@@ -196,7 +189,6 @@ static int xgene_ahci_restart_engine(struct ata_port *ap)
  * a mismatch and results in command completion failure. The
  * workaround is to write the pmp value to PxFBS.DEV field before issuing
  * any command to PMP.
->>>>>>> linux-next/akpm-base
  */
 static unsigned int xgene_ahci_qc_issue(struct ata_queued_cmd *qc)
 {
@@ -207,8 +199,6 @@ static unsigned int xgene_ahci_qc_issue(struct ata_queued_cmd *qc)
 	u32 port_fbs;
 	void *port_mmio = ahci_port_base(ap);
 
-<<<<<<< HEAD
-=======
 	/*
 	 * Write the pmp value to PxFBS.DEV
 	 * for case of Port Mulitplier.
@@ -220,7 +210,6 @@ static unsigned int xgene_ahci_qc_issue(struct ata_queued_cmd *qc)
 		writel(port_fbs, port_mmio + PORT_FBS);
 	}
 
->>>>>>> linux-next/akpm-base
 	if (unlikely((ctx->last_cmd[ap->port_no] == ATA_CMD_ID_ATA) ||
 	    (ctx->last_cmd[ap->port_no] == ATA_CMD_PACKET)))
 		xgene_ahci_restart_engine(ap);

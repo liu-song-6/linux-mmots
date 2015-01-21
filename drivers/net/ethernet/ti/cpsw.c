@@ -1648,7 +1648,6 @@ static inline int cpsw_add_vlan_ale_entry(struct cpsw_priv *priv,
 
 	if (priv->data.dual_emac) {
 		port_mask = (1 << (priv->emac_port + 1)) | ALE_PORT_HOST;
-<<<<<<< HEAD
 
 		if (priv->ndev->flags & IFF_ALLMULTI)
 			unreg_mcast_mask = port_mask;
@@ -1661,20 +1660,6 @@ static inline int cpsw_add_vlan_ale_entry(struct cpsw_priv *priv,
 			unreg_mcast_mask = ALE_PORT_1 | ALE_PORT_2;
 	}
 
-=======
-
-		if (priv->ndev->flags & IFF_ALLMULTI)
-			unreg_mcast_mask = port_mask;
-	} else {
-		port_mask = ALE_ALL_PORTS;
-
-		if (priv->ndev->flags & IFF_ALLMULTI)
-			unreg_mcast_mask = ALE_ALL_PORTS;
-		else
-			unreg_mcast_mask = ALE_PORT_1 | ALE_PORT_2;
-	}
-
->>>>>>> linux-next/akpm-base
 	ret = cpsw_ale_add_vlan(priv->ale, vid, port_mask, 0, port_mask,
 				unreg_mcast_mask << priv->host_port);
 	if (ret != 0)
