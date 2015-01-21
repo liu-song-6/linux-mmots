@@ -872,19 +872,8 @@ static void walk_zones_in_node(struct seq_file *m, pg_data_t *pgdat,
 }
 #endif
 
-#ifdef CONFIG_PROC_FS
-static char * const migratetype_names[MIGRATE_TYPES] = {
-	"Unmovable",
-	"Reclaimable",
-	"Movable",
-	"Reserve",
-#ifdef CONFIG_CMA
-	"CMA",
-#endif
-#ifdef CONFIG_MEMORY_ISOLATION
-	"Isolate",
-#endif
-};
+#if	defined(CONFIG_PROC_FS) || \
+	defined(CONFIG_DEBUG_FS) && defined(CONFIG_COMPACTION)
 
 static void *frag_start(struct seq_file *m, loff_t *pos)
 {
@@ -909,6 +898,21 @@ static void *frag_next(struct seq_file *m, void *arg, loff_t *pos)
 static void frag_stop(struct seq_file *m, void *arg)
 {
 }
+#endif
+
+#ifdef CONFIG_PROC_FS
+static char * const migratetype_names[MIGRATE_TYPES] = {
+	"Unmovable",
+	"Reclaimable",
+	"Movable",
+	"Reserve",
+#ifdef CONFIG_CMA
+	"CMA",
+#endif
+#ifdef CONFIG_MEMORY_ISOLATION
+	"Isolate",
+#endif
+};
 
 static void frag_show_print(struct seq_file *m, pg_data_t *pgdat,
 						struct zone *zone)
