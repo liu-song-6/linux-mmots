@@ -332,14 +332,14 @@ int card_send_command(struct ft1000_usb *ft1000dev, void *ptempbuffer,
 
 	pr_debug("enter card_send_command... size=%d\n", size);
 
+	ret = ft1000_read_register(ft1000dev, &temp, FT1000_REG_DOORBELL);
+	if (ret)
+		return ret;
+
 	commandbuf = kmalloc(size + 2, GFP_KERNEL);
 	if (!commandbuf)
 		return -ENOMEM;
 	memcpy((void *)commandbuf + 2, (void *)ptempbuffer, size);
-
-	ret = ft1000_read_register(ft1000dev, &temp, FT1000_REG_DOORBELL);
-	if (ret)
-		return ret;
 
 	if (temp & 0x0100)
 		usleep_range(900, 1100);
@@ -620,7 +620,7 @@ static int ft1000_open(struct net_device *dev)
 {
 	struct ft1000_info *pInfo = netdev_priv(dev);
 	struct ft1000_usb *pFt1000Dev = pInfo->priv;
-	struct timeval tv;
+	time64_t time;
 
 	pr_debug("ft1000_open is called for card %d\n", pFt1000Dev->CardNumber);
 
@@ -628,8 +628,8 @@ static int ft1000_open(struct net_device *dev)
 	pInfo->stats.tx_bytes = 0;
 	pInfo->stats.rx_packets = 0;
 	pInfo->stats.tx_packets = 0;
-	do_gettimeofday(&tv);
-	pInfo->ConTm = tv.tv_sec;
+	time = get_seconds();
+	pInfo->ConTm = time;
 	pInfo->ProgConStat = 0;
 
 	netif_start_queue(dev);

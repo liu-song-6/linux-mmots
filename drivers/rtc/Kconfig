@@ -65,7 +65,7 @@ config RTC_DEBUG
 comment "RTC interfaces"
 
 config RTC_INTF_SYSFS
-	boolean "/sys/class/rtc/rtcN (sysfs)"
+	bool "/sys/class/rtc/rtcN (sysfs)"
 	depends on SYSFS
 	default RTC_CLASS
 	help
@@ -75,7 +75,7 @@ config RTC_INTF_SYSFS
 	  If unsure, say Y.
 
 config RTC_INTF_PROC
-	boolean "/proc/driver/rtc (procfs for rtcN)"
+	bool "/proc/driver/rtc (procfs for rtcN)"
 	depends on PROC_FS
 	default RTC_CLASS
 	help
@@ -88,7 +88,7 @@ config RTC_INTF_PROC
 	  If unsure, say Y.
 
 config RTC_INTF_DEV
-	boolean "/dev/rtcN (character devices)"
+	bool "/dev/rtcN (character devices)"
 	default RTC_CLASS
 	help
 	  Say yes here if you want to use your RTCs using the /dev
@@ -466,7 +466,7 @@ config RTC_DRV_DM355EVM
 	  Supports the RTC firmware in the MSP430 on the DM355 EVM.
 
 config RTC_DRV_TWL92330
-	boolean "TI TWL92330/Menelaus"
+	bool "TI TWL92330/Menelaus"
 	depends on MENELAUS
 	help
 	  If you say yes here you get support for the RTC on the
@@ -1151,34 +1151,6 @@ config RTC_DRV_AT91SAM9
 	  Some AT91SAM9 SoCs provide a real RTC block, on those ones you'd
 	  probably want to use the real RTC block instead of the "RTT as an
 	  RTC" driver.
-
-config RTC_DRV_AT91SAM9_RTT
-	int
-	range 0 1
-	default 0
-	depends on RTC_DRV_AT91SAM9
-	help
-	  This option is only relevant for legacy board support and
-	  won't be used when booting a DT board.
-
-	  More than one RTT module is available. You can choose which
-	  one will be used as an RTC. The default of zero is normally
-	  OK to use, though some systems use that for non-RTC purposes.
-
-config RTC_DRV_AT91SAM9_GPBR
-	int
-	range 0 3
-	default 0
-	prompt "Backup Register Number"
-	depends on RTC_DRV_AT91SAM9
-	help
-	  This option is only relevant for legacy board support and
-	  won't be used when booting a DT board.
-
-	  The RTC driver needs to use one of the General Purpose Backup
-	  Registers (GPBRs) as well as the RTT. You can choose which one
-	  will be used. The default of zero is normally OK to use, but
-	  on some systems other software needs to use that register.
 
 config RTC_DRV_AU1XXX
 	tristate "Au1xxx Counter0 RTC support"
