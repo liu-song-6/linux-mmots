@@ -40,9 +40,21 @@
 struct t4_debugfs_entry {
 	const char *name;
 	const struct file_operations *ops;
-	mode_t mode;
+	umode_t mode;
 	unsigned char data;
 };
+
+struct seq_tab {
+	int (*show)(struct seq_file *seq, void *v, int idx);
+	unsigned int rows;        /* # of entries */
+	unsigned char width;      /* size in bytes of each entry */
+	unsigned char skip_first; /* whether the first line is a header */
+	char data[0];             /* the table data */
+};
+
+struct seq_tab *seq_open_tab(struct file *f, unsigned int rows,
+			     unsigned int width, unsigned int have_header,
+			     int (*show)(struct seq_file *seq, void *v, int i));
 
 int t4_setup_debugfs(struct adapter *adap);
 void add_debugfs_files(struct adapter *adap,

@@ -132,6 +132,7 @@ enum iwl_ucode_tlv_type {
 	IWL_UCODE_TLV_ENABLED_CAPABILITIES	= 30,
 	IWL_UCODE_TLV_N_SCAN_CHANNELS		= 31,
 	IWL_UCODE_TLV_SEC_RT_USNIFFER	= 34,
+	IWL_UCODE_TLV_SDIO_ADMA_ADDR	= 35,
 	IWL_UCODE_TLV_FW_DBG_DEST	= 38,
 	IWL_UCODE_TLV_FW_DBG_CONF	= 39,
 };
@@ -246,6 +247,7 @@ enum iwl_ucode_tlv_flag {
  * @IWL_UCODE_TLV_API_BASIC_DWELL: use only basic dwell time in scan command,
  *	regardless of the band or the number of the probes. FW will calculate
  *	the actual dwell time.
+ * @IWL_UCODE_TLV_API_SINGLE_SCAN_EBS: EBS is supported for single scans too.
  */
 enum iwl_ucode_tlv_api {
 	IWL_UCODE_TLV_API_WOWLAN_CONFIG_TID	= BIT(0),
@@ -257,6 +259,7 @@ enum iwl_ucode_tlv_api {
 	IWL_UCODE_TLV_API_SF_NO_DUMMY_NOTIF	= BIT(7),
 	IWL_UCODE_TLV_API_FRAGMENTED_SCAN	= BIT(8),
 	IWL_UCODE_TLV_API_BASIC_DWELL		= BIT(13),
+	IWL_UCODE_TLV_API_SINGLE_SCAN_EBS	= BIT(16),
 };
 
 /**
