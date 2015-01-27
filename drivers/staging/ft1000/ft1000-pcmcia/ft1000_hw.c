@@ -172,11 +172,11 @@ u16 ft1000_read_dpram_mag_16(struct net_device *dev, int offset, int Index)
 	spin_lock_irqsave(&info->dpram_lock, flags);
 	ft1000_write_reg(dev, FT1000_REG_DPRAM_ADDR, offset);
 	/* check if we want to read upper or lower 32-bit word */
-	if (Index) {
+	if (Index)
 		data = ft1000_read_reg(dev, FT1000_REG_MAG_DPDATAL);
-	} else {
+	else
 		data = ft1000_read_reg(dev, FT1000_REG_MAG_DPDATAH);
-	}
+
 	spin_unlock_irqrestore(&info->dpram_lock, flags);
 
 	return data;
@@ -570,12 +570,12 @@ static void ft1000_hbchk(u_long data)
 		pr_debug("hi_ho value = 0x%x\n", tempword);
 		/* Let's perform another check if ho is not detected */
 		if (tempword != ho) {
-			if (info->AsicID == ELECTRABUZZ_ID) {
+			if (info->AsicID == ELECTRABUZZ_ID)
 				tempword = ft1000_read_dpram(dev, FT1000_HI_HO);
-			}
-			else {
-				tempword = ntohs(ft1000_read_dpram_mag_16(dev, FT1000_MAG_HI_HO, FT1000_MAG_HI_HO_INDX));
-			}
+			else
+				tempword = ntohs(ft1000_read_dpram_mag_16(dev,
+							FT1000_MAG_HI_HO,
+							FT1000_MAG_HI_HO_INDX));
 		}
 		if (tempword != ho) {
 			pr_info("heartbeat failed - no ho detected\n");
@@ -686,19 +686,15 @@ static void ft1000_hbchk(u_long data)
 		}
 		/* Let's write hi again if fail */
 		if (tempword != hi) {
-			if (info->AsicID == ELECTRABUZZ_ID) {
+			if (info->AsicID == ELECTRABUZZ_ID)
 				ft1000_write_dpram(dev, FT1000_HI_HO, hi);
-			}
-			else {
+			else
 				ft1000_write_dpram_mag_16(dev, FT1000_MAG_HI_HO, hi_mag, FT1000_MAG_HI_HO_INDX);
-			}
 
-			if (info->AsicID == ELECTRABUZZ_ID) {
+			if (info->AsicID == ELECTRABUZZ_ID)
 				tempword = ft1000_read_dpram(dev, FT1000_HI_HO);
-			}
-			else {
+			else
 				tempword = ntohs(ft1000_read_dpram_mag_16(dev, FT1000_MAG_HI_HO, FT1000_MAG_HI_HO_INDX));
-			}
 
 		}
 
@@ -951,18 +947,17 @@ static void ft1000_proc_drvmsg(struct net_device *dev)
 	struct prov_record *ptr;
 	struct pseudo_hdr *ppseudo_hdr;
 	u16 *pmsg;
-	struct timeval tv;
+	time64_t time;
 	union {
 		u8 byte[2];
 		u16 wrd;
 	} convert;
 
-	if (info->AsicID == ELECTRABUZZ_ID) {
+	if (info->AsicID == ELECTRABUZZ_ID)
 		tempword = FT1000_DPRAM_RX_BASE+2;
-	}
-	else {
+	else
 		tempword = FT1000_DPRAM_MAG_RX_BASE;
-	}
+
 	if (ft1000_receive_cmd(dev, &cmdbuffer[0], MAX_CMD_SQSIZE, &tempword)) {
 
 		/* Get the message type which is total_len + PSEUDO header + msgtype + message body */
@@ -1027,8 +1022,8 @@ static void ft1000_proc_drvmsg(struct net_device *dev)
 						netif_carrier_on(dev);
 						netif_wake_queue(dev);
 						info->mediastate = 1;
-						do_gettimeofday(&tv);
-						info->ConTm = tv.tv_sec;
+						time = get_seconds();
+						info->ConTm = time;
 					}
 				} else {
 					pr_debug("Media is down\n");
@@ -1039,8 +1034,7 @@ static void ft1000_proc_drvmsg(struct net_device *dev)
 						info->ConTm = 0;
 					}
 				}
-			}
-			else {
+			} else {
 				pr_debug("Media is down\n");
 				if (info->mediastate == 1) {
 					info->mediastate = 0;
