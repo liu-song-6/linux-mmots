@@ -626,11 +626,6 @@ static void spi_hw_init(struct device *dev, struct dw_spi *dws)
 			if (fifo != dw_readw(dws, DW_SPI_TXFLTR))
 				break;
 		}
-<<<<<<< HEAD
-
-		dws->fifo_len = (fifo == 2) ? 0 : fifo - 1;
-=======
->>>>>>> linux-next/akpm-base
 		dw_writew(dws, DW_SPI_TXFLTR, 0);
 
 		dws->fifo_len = (fifo == 2) ? 0 : fifo - 1;
