@@ -2321,8 +2321,6 @@ static const struct snd_soc_dapm_widget rt5677_dapm_widgets[] = {
 	SND_SOC_DAPM_SUPPLY("PLL2", RT5677_PWR_ANLG2, RT5677_PWR_PLL2_BIT,
 		0, rt5677_set_pll2_event, SND_SOC_DAPM_PRE_PMU |
 		SND_SOC_DAPM_POST_PMU),
-<<<<<<< HEAD
-=======
 
 	/* ASRC */
 	SND_SOC_DAPM_SUPPLY_S("I2S1 ASRC", 1, RT5677_ASRC_1, 0, 0, NULL, 0),
@@ -2362,7 +2360,6 @@ static const struct snd_soc_dapm_widget rt5677_dapm_widgets[] = {
 		0),
 	SND_SOC_DAPM_SUPPLY_S("ADC MONO R ASRC", 1, RT5677_ASRC_2, 0, 0, NULL,
 		0),
->>>>>>> linux-next/akpm-base
 
 	/* Input Side */
 	/* micbias */
