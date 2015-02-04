@@ -970,6 +970,18 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 		smh	Use ARM semihosting calls for early console.
 
+		s3c2410,<addr>
+		s3c2412,<addr>
+		s3c2440,<addr>
+		s3c6400,<addr>
+		s5pv210,<addr>
+		exynos4210,<addr>
+			Use early console provided by serial driver available
+			on Samsung SoCs, requires selecting proper type and
+			a correct base address of the selected UART port. The
+			serial port must already be setup and configured.
+			Options are not yet supported.
+
 	earlyprintk=	[X86,SH,BLACKFIN,ARM,M68k]
 			earlyprintk=vga
 			earlyprintk=efi
@@ -1494,6 +1506,8 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 		forcesac
 		soft
 		pt		[x86, IA-64]
+		nobypass	[PPC/POWERNV]
+			Disable IOMMU bypass, using IOMMU for PCI devices.
 
 
 	io7=		[HW] IO7 for Marvel based alpha systems
@@ -2951,6 +2965,12 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			Set maximum number of finished RCU callbacks to
 			process in one batch.
 
+	rcutree.gp_init_delay=	[KNL]
+			Set the number of jiffies to delay each step of
+			RCU grace-period initialization.  This only has
+			effect when CONFIG_RCU_TORTURE_TEST_SLOW_INIT is
+			set.
+
 	rcutree.rcu_fanout_leaf= [KNL]
 			Increase the number of CPUs assigned to each
 			leaf rcu_node structure.  Useful for very large
@@ -2974,11 +2994,15 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			value is one, and maximum value is HZ.
 
 	rcutree.kthread_prio= 	 [KNL,BOOT]
-			Set the SCHED_FIFO priority of the RCU
-			per-CPU kthreads (rcuc/N). This value is also
-			used for the priority of the RCU boost threads
-			(rcub/N). Valid values are 1-99 and the default
-			is 1 (the least-favored priority).
+			Set the SCHED_FIFO priority of the RCU per-CPU
+			kthreads (rcuc/N). This value is also used for
+			the priority of the RCU boost threads (rcub/N)
+			and for the RCU grace-period kthreads (rcu_bh,
+			rcu_preempt, and rcu_sched). If RCU_BOOST is
+			set, valid values are 1-99 and the default is 1
+			(the least-favored priority).  Otherwise, when
+			RCU_BOOST is not set, valid values are 0-99 and
+			the default is zero (non-realtime operation).
 
 	rcutree.rcu_nocb_leader_stride= [KNL]
 			Set the number of NOCB kthread groups, which
@@ -3206,6 +3230,18 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 		no		Disable hibernation and resume.
 
 	retain_initrd	[RAM] Keep initrd memory after extraction
+
+	rfkill.default_state=
+		0	"airplane mode".  All wifi, bluetooth, wimax, gps, fm,
+			etc. communication is blocked by default.
+		1	Unblocked.
+
+	rfkill.master_switch_mode=
+		0	The "airplane mode" button does nothing.
+		1	The "airplane mode" button toggles between everything
+			blocked and the previous configuration.
+		2	The "airplane mode" button toggles between everything
+			blocked and everything unblocked.
 
 	rhash_entries=	[KNL,NET]
 			Set number of hash buckets for route cache

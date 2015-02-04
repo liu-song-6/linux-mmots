@@ -786,7 +786,7 @@ nfs_request_add_commit_list(struct nfs_page *req, struct list_head *dst,
 	spin_unlock(cinfo->lock);
 	if (!cinfo->dreq) {
 		inc_zone_page_state(req->wb_page, NR_UNSTABLE_NFS);
-		inc_bdi_stat(page_file_mapping(req->wb_page)->backing_dev_info,
+		inc_bdi_stat(inode_to_bdi(page_file_mapping(req->wb_page)->host),
 			     BDI_RECLAIMABLE);
 		__mark_inode_dirty(req->wb_context->dentry->d_inode,
 				   I_DIRTY_DATASYNC);
@@ -853,7 +853,7 @@ static void
 nfs_clear_page_commit(struct page *page)
 {
 	dec_zone_page_state(page, NR_UNSTABLE_NFS);
-	dec_bdi_stat(page_file_mapping(page)->backing_dev_info, BDI_RECLAIMABLE);
+	dec_bdi_stat(inode_to_bdi(page_file_mapping(page)->host), BDI_RECLAIMABLE);
 }
 
 /* Called holding inode (/cinfo) lock */
@@ -1091,6 +1091,7 @@ int nfs_flush_incompatible(struct file *file, struct page *page)
 {
 	struct nfs_open_context *ctx = nfs_file_open_context(file);
 	struct nfs_lock_context *l_ctx;
+	struct file_lock_context *flctx = file_inode(file)->i_flctx;
 	struct nfs_page	*req;
 	int do_flush, status;
 	/*
@@ -1109,7 +1110,9 @@ int nfs_flush_incompatible(struct file *file, struct page *page)
 		do_flush = req->wb_page != page || req->wb_context != ctx;
 		/* for now, flush if more than 1 request in page_group */
 		do_flush |= req->wb_this_page != req;
-		if (l_ctx && ctx->dentry->d_inode->i_flock != NULL) {
+		if (l_ctx && flctx &&
+		    !(list_empty_careful(&flctx->flc_posix) &&
+		      list_empty_careful(&flctx->flc_flock))) {
 			do_flush |= l_ctx->lockowner.l_owner != current->files
 				|| l_ctx->lockowner.l_pid != current->tgid;
 		}
@@ -1170,6 +1173,13 @@ out:
 	return PageUptodate(page) != 0;
 }
 
+static bool
+is_whole_file_wrlock(struct file_lock *fl)
+{
+	return fl->fl_start == 0 && fl->fl_end == OFFSET_MAX &&
+			fl->fl_type == F_WRLCK;
+}
+
 /* If we know the page is up to date, and we're not using byte range locks (or
  * if we have the whole file locked for writing), it may be more efficient to
  * extend the write to cover the entire page in order to avoid fragmentation
@@ -1180,17 +1190,36 @@ out:
  */
 static int nfs_can_extend_write(struct file *file, struct page *page, struct inode *inode)
 {
+	int ret;
+	struct file_lock_context *flctx = inode->i_flctx;
+	struct file_lock *fl;
+
 	if (file->f_flags & O_DSYNC)
 		return 0;
 	if (!nfs_write_pageuptodate(page, inode))
 		return 0;
 	if (NFS_PROTO(inode)->have_delegation(inode, FMODE_WRITE))
 		return 1;
-	if (inode->i_flock == NULL || (inode->i_flock->fl_start == 0 &&
-			inode->i_flock->fl_end == OFFSET_MAX &&
-			inode->i_flock->fl_type != F_RDLCK))
-		return 1;
-	return 0;
+	if (!flctx || (list_empty_careful(&flctx->flc_flock) &&
+		       list_empty_careful(&flctx->flc_posix)))
+		return 0;
+
+	/* Check to see if there are whole file write locks */
+	ret = 0;
+	spin_lock(&flctx->flc_lock);
+	if (!list_empty(&flctx->flc_posix)) {
+		fl = list_first_entry(&flctx->flc_posix, struct file_lock,
+					fl_list);
+		if (is_whole_file_wrlock(fl))
+			ret = 1;
+	} else if (!list_empty(&flctx->flc_flock)) {
+		fl = list_first_entry(&flctx->flc_flock, struct file_lock,
+					fl_list);
+		if (fl->fl_type == F_WRLCK)
+			ret = 1;
+	}
+	spin_unlock(&flctx->flc_lock);
+	return ret;
 }
 
 /*
@@ -1564,7 +1593,7 @@ void nfs_retry_commit(struct list_head *page_list,
 		nfs_mark_request_commit(req, lseg, cinfo);
 		if (!cinfo->dreq) {
 			dec_zone_page_state(req->wb_page, NR_UNSTABLE_NFS);
-			dec_bdi_stat(page_file_mapping(req->wb_page)->backing_dev_info,
+			dec_bdi_stat(inode_to_bdi(page_file_mapping(req->wb_page)->host),
 				     BDI_RECLAIMABLE);
 		}
 		nfs_unlock_and_release_request(req);

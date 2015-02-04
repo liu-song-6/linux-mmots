@@ -88,7 +88,9 @@ size_t iov_iter_zero(size_t bytes, struct iov_iter *);
 unsigned long iov_iter_alignment(const struct iov_iter *i);
 void iov_iter_init(struct iov_iter *i, int direction, const struct iovec *iov,
 			unsigned long nr_segs, size_t count);
-void iov_iter_kvec(struct iov_iter *i, int direction, const struct kvec *iov,
+void iov_iter_kvec(struct iov_iter *i, int direction, const struct kvec *kvec,
+			unsigned long nr_segs, size_t count);
+void iov_iter_bvec(struct iov_iter *i, int direction, const struct bio_vec *bvec,
 			unsigned long nr_segs, size_t count);
 ssize_t iov_iter_get_pages(struct iov_iter *i, struct page **pages,
 			size_t maxsize, unsigned maxpages, size_t *start);
@@ -136,6 +138,8 @@ size_t csum_and_copy_to_iter(void *addr, size_t bytes, __wsum *csum, struct iov_
 size_t csum_and_copy_from_iter(void *addr, size_t bytes, __wsum *csum, struct iov_iter *i);
 
 int memcpy_fromiovec(unsigned char *kdata, struct iovec *iov, int len);
+int memcpy_fromiovec_out(unsigned char *kdata, struct iovec *iov,
+			 struct iovec **iov_out, int len);
 int memcpy_fromiovecend(unsigned char *kdata, const struct iovec *iov,
 			int offset, int len);
 int memcpy_toiovecend(const struct iovec *v, unsigned char *kdata,
