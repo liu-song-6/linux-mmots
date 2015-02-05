@@ -1136,12 +1136,12 @@ static void destroy_devices(unsigned int nr)
 
 	kfree(zram_devices);
 	unregister_blkdev(zram_major, "zram");
-	pr_debug("Destroyed %u device(s)\n", nr);
+	pr_info("Destroyed %u device(s)\n", nr);
 }
 
 static int __init zram_init(void)
 {
-	int ret, dev_id;
+	int ret = -ENOMEM, dev_id = 0;
 
 	if (num_devices > max_num_devices) {
 		pr_warn("Invalid value for num_devices: %u\n",
@@ -1157,10 +1157,8 @@ static int __init zram_init(void)
 
 	/* Allocate the device array and initialize each one */
 	zram_devices = kzalloc(num_devices * sizeof(struct zram), GFP_KERNEL);
-	if (!zram_devices) {
-		ret = -ENOMEM;
+	if (!zram_devices)
 		goto out_error;
-	}
 
 	for (dev_id = 0; dev_id < num_devices; dev_id++) {
 		ret = create_device(&zram_devices[dev_id], dev_id);
