@@ -2761,10 +2761,6 @@ static int vxlan_newlink(struct net *src_net, struct net_device *dev,
 	    nla_get_u8(data[IFLA_VXLAN_UDP_ZERO_CSUM6_RX]))
 		vxlan->flags |= VXLAN_F_UDP_ZERO_CSUM6_RX;
 
-<<<<<<< HEAD
-	if (vxlan_find_vni(src_net, vni, use_ipv6 ? AF_INET6 : AF_INET,
-			   vxlan->dst_port)) {
-=======
 	if (data[IFLA_VXLAN_REMCSUM_TX] &&
 	    nla_get_u8(data[IFLA_VXLAN_REMCSUM_TX]))
 		vxlan->flags |= VXLAN_F_REMCSUM_TX;
@@ -2778,7 +2774,6 @@ static int vxlan_newlink(struct net *src_net, struct net_device *dev,
 
 	if (vxlan_find_vni(src_net, vni, use_ipv6 ? AF_INET6 : AF_INET,
 			   vxlan->dst_port, vxlan->flags)) {
->>>>>>> linux-next/akpm-base
 		pr_info("duplicate VNI %u\n", vni);
 		return -EEXIST;
 	}
