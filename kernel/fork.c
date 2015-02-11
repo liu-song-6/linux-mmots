@@ -608,10 +608,10 @@ static void check_mm(struct mm_struct *mm)
 	}
 
 	if (atomic_long_read(&mm->nr_ptes))
-		pr_alert("BUG: non-zero nr_ptes on freeing mm: %ld",
+		pr_alert("BUG: non-zero nr_ptes on freeing mm: %ld\n",
 				atomic_long_read(&mm->nr_ptes));
 	if (mm_nr_pmds(mm))
-		pr_alert("BUG: non-zero nr_pmds on freeing mm: %ld",
+		pr_alert("BUG: non-zero nr_pmds on freeing mm: %ld\n",
 				mm_nr_pmds(mm));
 
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) && !USE_SPLIT_PMD_PTLOCKS
