@@ -3326,17 +3326,18 @@ int __pmd_alloc(struct mm_struct *mm, pud_t *pud, unsigned long address)
 	smp_wmb(); /* See comment in __pte_alloc */
 
 	spin_lock(&mm->page_table_lock);
-	mm_inc_nr_pmds(mm);
 #ifndef __ARCH_HAS_4LEVEL_HACK
-	if (pud_present(*pud))		/* Another has populated it */
-		pmd_free(mm, new);
-	else
+	if (!pud_present(*pud)) {
+		mm_inc_nr_pmds(mm);
 		pud_populate(mm, pud, new);
-#else
-	if (pgd_present(*pud))		/* Another has populated it */
+	} else	/* Another has populated it */
 		pmd_free(mm, new);
-	else
+#else
+	if (!pgd_present(*pud)) {
+		mm_inc_nr_pmds(mm);
 		pgd_populate(mm, pud, new);
+	} else /* Another has populated it */
+		pmd_free(mm, new);
 #endif /* __ARCH_HAS_4LEVEL_HACK */
 	spin_unlock(&mm->page_table_lock);
 	return 0;
