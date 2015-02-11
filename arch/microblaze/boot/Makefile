@@ -34,4 +34,8 @@ $(obj)/simpleImage.%: vmlinux FORCE
 	$(call if_changed,strip)
 	@echo 'Kernel: $@ is ready' ' (#'`cat .version`')'
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> linux-next/akpm-base
 clean-files += simpleImage.*.unstrip linux.bin.ub dts/*.dtb
