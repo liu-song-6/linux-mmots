@@ -296,9 +296,12 @@ static void line6_data_received(struct urb *urb)
 	line6_start_listen(line6);
 }
 
+<<<<<<< HEAD
 #define LINE6_READ_WRITE_STATUS_DELAY 2  /* milliseconds */
 #define LINE6_READ_WRITE_MAX_RETRIES 50
 
+=======
+>>>>>>> linux-next/akpm-base
 /*
 	Read data from device.
 */
@@ -308,7 +311,10 @@ int line6_read_data(struct usb_line6 *line6, int address, void *data,
 	struct usb_device *usbdev = line6->usbdev;
 	int ret;
 	unsigned char len;
+<<<<<<< HEAD
 	unsigned count;
+=======
+>>>>>>> linux-next/akpm-base
 
 	/* query the serial number: */
 	ret = usb_control_msg(usbdev, usb_sndctrlpipe(usbdev, 0), 0x67,
@@ -322,9 +328,13 @@ int line6_read_data(struct usb_line6 *line6, int address, void *data,
 	}
 
 	/* Wait for data length. We'll get 0xff until length arrives. */
+<<<<<<< HEAD
 	for (count = 0; count < LINE6_READ_WRITE_MAX_RETRIES; count++) {
 		mdelay(LINE6_READ_WRITE_STATUS_DELAY);
 
+=======
+	do {
+>>>>>>> linux-next/akpm-base
 		ret = usb_control_msg(usbdev, usb_rcvctrlpipe(usbdev, 0), 0x67,
 				      USB_TYPE_VENDOR | USB_RECIP_DEVICE |
 				      USB_DIR_IN,
@@ -335,6 +345,7 @@ int line6_read_data(struct usb_line6 *line6, int address, void *data,
 				"receive length failed (error %d)\n", ret);
 			return ret;
 		}
+<<<<<<< HEAD
 
 		if (len != 0xff)
 			break;
@@ -345,11 +356,20 @@ int line6_read_data(struct usb_line6 *line6, int address, void *data,
 			count);
 		return -EIO;
 	} else if (len != datalen) {
+=======
+	} while (len == 0xff);
+
+	if (len != datalen) {
+>>>>>>> linux-next/akpm-base
 		/* should be equal or something went wrong */
 		dev_err(line6->ifcdev,
 			"length mismatch (expected %d, got %d)\n",
 			(int)datalen, (int)len);
+<<<<<<< HEAD
 		return -EIO;
+=======
+		return -EINVAL;
+>>>>>>> linux-next/akpm-base
 	}
 
 	/* receive the result: */
@@ -376,7 +396,10 @@ int line6_write_data(struct usb_line6 *line6, int address, void *data,
 	struct usb_device *usbdev = line6->usbdev;
 	int ret;
 	unsigned char status;
+<<<<<<< HEAD
 	int count;
+=======
+>>>>>>> linux-next/akpm-base
 
 	ret = usb_control_msg(usbdev, usb_sndctrlpipe(usbdev, 0), 0x67,
 			      USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_DIR_OUT,
@@ -389,9 +412,13 @@ int line6_write_data(struct usb_line6 *line6, int address, void *data,
 		return ret;
 	}
 
+<<<<<<< HEAD
 	for (count = 0; count < LINE6_READ_WRITE_MAX_RETRIES; count++) {
 		mdelay(LINE6_READ_WRITE_STATUS_DELAY);
 
+=======
+	do {
+>>>>>>> linux-next/akpm-base
 		ret = usb_control_msg(usbdev, usb_rcvctrlpipe(usbdev, 0),
 				      0x67,
 				      USB_TYPE_VENDOR | USB_RECIP_DEVICE |
@@ -404,6 +431,7 @@ int line6_write_data(struct usb_line6 *line6, int address, void *data,
 				"receiving status failed (error %d)\n", ret);
 			return ret;
 		}
+<<<<<<< HEAD
 
 		if (status != 0xff)
 			break;
@@ -416,6 +444,13 @@ int line6_write_data(struct usb_line6 *line6, int address, void *data,
 	} else if (status != 0) {
 		dev_err(line6->ifcdev, "write failed (error %d)\n", ret);
 		return -EIO;
+=======
+	} while (status == 0xff);
+
+	if (status != 0) {
+		dev_err(line6->ifcdev, "write failed (error %d)\n", ret);
+		return -EINVAL;
+>>>>>>> linux-next/akpm-base
 	}
 
 	return 0;
@@ -426,7 +461,11 @@ EXPORT_SYMBOL_GPL(line6_write_data);
 	Read Line 6 device serial number.
 	(POD, TonePort, GuitarPort)
 */
+<<<<<<< HEAD
 int line6_read_serial_number(struct usb_line6 *line6, u32 *serial_number)
+=======
+int line6_read_serial_number(struct usb_line6 *line6, int *serial_number)
+>>>>>>> linux-next/akpm-base
 {
 	return line6_read_data(line6, 0x80d0, serial_number,
 			       sizeof(*serial_number));

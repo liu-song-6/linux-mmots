@@ -1351,6 +1351,7 @@ int sst_hsw_stream_commit(struct sst_hsw *hsw, struct sst_hsw_stream *stream)
 	return 0;
 }
 
+<<<<<<< HEAD
 snd_pcm_uframes_t sst_hsw_stream_get_old_position(struct sst_hsw *hsw,
 	struct sst_hsw_stream *stream)
 {
@@ -1375,6 +1376,8 @@ void sst_hsw_stream_set_silence_start(struct sst_hsw *hsw,
 	stream->play_silence = val;
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 /* Stream Information - these calls could be inline but we want the IPC
  ABI to be opaque to client PCM drivers to cope with any future ABI changes */
 int sst_hsw_mixer_get_info(struct sst_hsw *hsw)

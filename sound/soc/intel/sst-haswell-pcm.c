@@ -582,15 +582,22 @@ static int hsw_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	struct hsw_priv_data *pdata =
 		snd_soc_platform_get_drvdata(rtd->platform);
 	struct hsw_pcm_data *pcm_data;
+<<<<<<< HEAD
 	struct sst_hsw_stream *sst_stream;
 	struct sst_hsw *hsw = pdata->hsw;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	snd_pcm_uframes_t pos;
+=======
+	struct sst_hsw *hsw = pdata->hsw;
+>>>>>>> linux-next/akpm-base
 	int dai;
 
 	dai = mod_map[rtd->cpu_dai->id].dai_id;
 	pcm_data = &pdata->pcm[dai][substream->stream];
+<<<<<<< HEAD
 	sst_stream = pcm_data->stream;
+=======
+>>>>>>> linux-next/akpm-base
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:

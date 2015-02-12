@@ -327,8 +327,13 @@ static int octeon_write_config(struct pci_bus *bus, unsigned int devfn,
 
 
 static struct pci_ops octeon_pci_ops = {
+<<<<<<< HEAD
 	.read = octeon_read_config,
 	.write = octeon_write_config,
+=======
+	.read	= octeon_read_config,
+	.write	= octeon_write_config,
+>>>>>>> linux-next/akpm-base
 };
 
 static struct resource octeon_pci_mem_resource = {

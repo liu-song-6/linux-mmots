@@ -74,13 +74,21 @@ static int versatile_pci_parse_request_of_pci_ranges(struct device *dev,
 	int err, mem = 1, res_valid = 0;
 	struct device_node *np = dev->of_node;
 	resource_size_t iobase;
+<<<<<<< HEAD
 	struct resource_entry *win;
+=======
+	struct pci_host_bridge_window *win;
+>>>>>>> linux-next/akpm-base
 
 	err = of_pci_get_host_bridge_resources(np, 0, 0xff, res, &iobase);
 	if (err)
 		return err;
 
+<<<<<<< HEAD
 	resource_list_for_each_entry(win, res, list) {
+=======
+	list_for_each_entry(win, res, list) {
+>>>>>>> linux-next/akpm-base
 		struct resource *parent, *res = win->res;
 
 		switch (resource_type(res)) {

@@ -426,6 +426,7 @@ int sst_hsw_stream_set_pmemory_info(struct sst_hsw *hsw,
 	struct sst_hsw_stream *stream, u32 offset, u32 size);
 int sst_hsw_stream_set_smemory_info(struct sst_hsw *hsw,
 	struct sst_hsw_stream *stream, u32 offset, u32 size);
+<<<<<<< HEAD
 snd_pcm_uframes_t sst_hsw_stream_get_old_position(struct sst_hsw *hsw,
 	struct sst_hsw_stream *stream);
 void sst_hsw_stream_set_old_position(struct sst_hsw *hsw,
@@ -434,6 +435,8 @@ bool sst_hsw_stream_get_silence_start(struct sst_hsw *hsw,
 	struct sst_hsw_stream *stream);
 void sst_hsw_stream_set_silence_start(struct sst_hsw *hsw,
 	struct sst_hsw_stream *stream, bool val);
+=======
+>>>>>>> linux-next/akpm-base
 int sst_hsw_mixer_get_info(struct sst_hsw *hsw);
 
 /* Stream ALSA trigger operations */

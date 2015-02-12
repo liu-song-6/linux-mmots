@@ -1138,9 +1138,13 @@ void __init swap_setup(void)
 #ifdef CONFIG_SWAP
 	int i;
 
+<<<<<<< HEAD
 	if (bdi_init(swapper_spaces[0].backing_dev_info))
 		panic("Failed to init swap bdi");
 	for (i = 0; i < MAX_SWAPFILES; i++)
+=======
+	for (i = 0; i < MAX_SWAPFILES; i++) {
+>>>>>>> linux-next/akpm-base
 		spin_lock_init(&swapper_spaces[i].tree_lock);
 #endif
 

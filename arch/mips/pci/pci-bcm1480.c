@@ -173,8 +173,13 @@ static int bcm1480_pcibios_write(struct pci_bus *bus, unsigned int devfn,
 }
 
 struct pci_ops bcm1480_pci_ops = {
+<<<<<<< HEAD
 	.read = bcm1480_pcibios_read,
 	.write = bcm1480_pcibios_write,
+=======
+	.read	= bcm1480_pcibios_read,
+	.write	= bcm1480_pcibios_write,
+>>>>>>> linux-next/akpm-base
 };
 
 static struct resource bcm1480_mem_resource = {
