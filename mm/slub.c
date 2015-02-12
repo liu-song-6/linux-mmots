@@ -3376,17 +3376,18 @@ int __kmem_cache_shrink(struct kmem_cache *s)
 	struct kmem_cache_node *n;
 	struct page *page;
 	struct page *t;
-	LIST_HEAD(discard);
+	struct list_head discard;
 	struct list_head promote[SHRINK_PROMOTE_MAX];
 	unsigned long flags;
-
-	for (i = 0; i < SHRINK_PROMOTE_MAX; i++)
-		INIT_LIST_HEAD(promote + i);
 
 	flush_all(s);
 	for_each_kmem_cache_node(s, node, n) {
 		if (!n->nr_partial)
 			continue;
+
+		INIT_LIST_HEAD(&discard);
+		for (i = 0; i < SHRINK_PROMOTE_MAX; i++)
+			INIT_LIST_HEAD(promote + i);
 
 		spin_lock_irqsave(&n->list_lock, flags);
 
@@ -3417,7 +3418,7 @@ int __kmem_cache_shrink(struct kmem_cache *s)
 		 * partial list.
 		 */
 		for (i = SHRINK_PROMOTE_MAX - 1; i >= 0; i--)
-			list_splice_init(promote + i, &n->partial);
+			list_splice(promote + i, &n->partial);
 
 		spin_unlock_irqrestore(&n->list_lock, flags);
 
