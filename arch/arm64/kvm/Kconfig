@@ -29,6 +29,7 @@ config KVM
 	select KVM_ARM_TIMER
 	select KVM_GENERIC_DIRTYLOG_READ_PROTECT
 	select SRCU
+	select KVM_GENERIC_DIRTYLOG_READ_PROTECT
 	---help---
 	  Support hosting virtualized guest machines.
 
