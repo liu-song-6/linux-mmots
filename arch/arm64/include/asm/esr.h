@@ -96,6 +96,10 @@
 #define ESR_ELx_COND_SHIFT	(20)
 #define ESR_ELx_COND_MASK	(UL(0xF) << ESR_ELx_COND_SHIFT)
 #define ESR_ELx_WFx_ISS_WFE	(UL(1) << 0)
+<<<<<<< HEAD
+=======
+#define ESR_ELx_xVC_IMM_MASK	((1UL << 16) - 1)
+>>>>>>> linux-next/akpm-base
 
 #ifndef __ASSEMBLY__
 #include <asm/types.h>

@@ -12,6 +12,10 @@
 #include "exynos4412.dtsi"
 
 / {
+	chosen {
+		stdout-path = &serial_1;
+	};
+
 	firmware@0204F000 {
 		compatible = "samsung,secure-firmware";
 		reg = <0x0204F000 0x1000>;
@@ -71,10 +75,18 @@
 		};
 	};
 
+	emmc_pwrseq: pwrseq {
+		pinctrl-0 = <&sd1_cd>;
+		pinctrl-names = "default";
+		compatible = "mmc-pwrseq-emmc";
+		reset-gpios = <&gpk1 2 1>;
+	};
+
 	mmc@12550000 {
 		pinctrl-0 = <&sd4_clk &sd4_cmd &sd4_bus4 &sd4_bus8>;
 		pinctrl-names = "default";
 		vmmc-supply = <&ldo20_reg &buck8_reg>;
+		mmc-pwrseq = <&emmc_pwrseq>;
 		status = "okay";
 
 		num-slots = <1>;
@@ -398,6 +410,7 @@
 	};
 
 	hsotg@12480000 {
+		dr_mode = "peripheral";
 		status = "okay";
 		vusb_d-supply = <&ldo15_reg>;
 		vusb_a-supply = <&ldo12_reg>;
@@ -406,6 +419,12 @@
 	ehci: ehci@12580000 {
 		status = "okay";
 	};
+};
+
+/* RSTN signal for eMMC */
+&sd1_cd {
+	samsung,pin-pud = <0>;
+	samsung,pin-drv = <0>;
 };
 
 &pinctrl_1 {
