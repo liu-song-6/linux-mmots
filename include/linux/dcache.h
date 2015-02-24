@@ -539,7 +539,28 @@ static inline struct inode *d_backing_inode(const struct dentry *upper)
 }
 
 /**
+<<<<<<< HEAD
  * d_backing_dentry - Get upper or lower dentry we should be using
+=======
+ * dentry_inode_once - Get upper or lower inode we should be using with ACCESS_ONCE()
+ * @upper: The upper layer
+ *
+ * This is the helper that should be used to get at the inode that will be used
+ * if this dentry were to be opened as a file.  The inode may be on the upper
+ * dentry or it may be on a lower dentry pinned by the upper.
+ *
+ * Normal filesystems should not use this to access their own inodes.
+ */
+static inline struct inode *dentry_inode_once(const struct dentry *upper)
+{
+	struct inode *inode = ACCESS_ONCE(upper->d_inode);
+
+	return inode;
+}
+
+/**
+ * d_dentry - Get upper or lower dentry we should be using
+>>>>>>> linux-next/akpm-base
  * @upper: The upper layer
  *
  * This is the helper that should be used to get the dentry of the inode that
@@ -548,7 +569,11 @@ static inline struct inode *d_backing_inode(const struct dentry *upper)
  *
  * Normal filesystems should not use this to access their own dentries.
  */
+<<<<<<< HEAD
 static inline struct dentry *d_backing_dentry(struct dentry *upper)
+=======
+static inline struct dentry *d_dentry(struct dentry *upper)
+>>>>>>> linux-next/akpm-base
 {
 	return upper;
 }
