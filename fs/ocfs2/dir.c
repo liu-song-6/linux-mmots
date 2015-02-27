@@ -1703,14 +1703,14 @@ int __ocfs2_add_entry(handle_t *handle,
 								 insert_bh,
 					      OCFS2_JOURNAL_ACCESS_WRITE);
 
-				if (ocfs2_dir_indexed(dir)) {
+				if (!retval && ocfs2_dir_indexed(dir))
 					retval = ocfs2_dx_dir_insert(dir,
 								handle,
 								lookup);
-					if (retval)
-						goto bail;
-				}
 			}
+
+			if (retval)
+				goto bail;
 
 			/* By now the buffer is marked for journaling */
 			offset += le16_to_cpu(de->rec_len);
