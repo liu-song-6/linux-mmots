@@ -1689,10 +1689,8 @@ int __ocfs2_add_entry(handle_t *handle,
 		if (ocfs2_dirent_would_fit(de, rec_len)) {
 			dir->i_mtime = dir->i_ctime = CURRENT_TIME;
 			retval = ocfs2_mark_inode_dirty(handle, dir, parent_fe_bh);
-			if (retval < 0) {
-				mlog_errno(retval);
+			if (retval < 0)
 				goto bail;
-			}
 
 			if (insert_bh == parent_fe_bh)
 				retval = ocfs2_journal_access_di(handle,
@@ -1709,10 +1707,8 @@ int __ocfs2_add_entry(handle_t *handle,
 					retval = ocfs2_dx_dir_insert(dir,
 								handle,
 								lookup);
-					if (retval) {
-						mlog_errno(retval);
+					if (retval)
 						goto bail;
-					}
 				}
 			}
 
