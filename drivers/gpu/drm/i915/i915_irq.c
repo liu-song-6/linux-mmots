@@ -492,31 +492,6 @@ static void i915_enable_asle_pipestat(struct drm_device *dev)
 	spin_unlock_irq(&dev_priv->irq_lock);
 }
 
-/**
- * i915_pipe_enabled - check if a pipe is enabled
- * @dev: DRM device
- * @pipe: pipe to check
- *
- * Reading certain registers when the pipe is disabled can hang the chip.
- * Use this routine to make sure the PLL is running and the pipe is active
- * before reading such registers if unsure.
- */
-static int
-i915_pipe_enabled(struct drm_device *dev, int pipe)
-{
-	struct drm_i915_private *dev_priv = dev->dev_private;
-
-	if (drm_core_check_feature(dev, DRIVER_MODESET)) {
-		/* Locking is horribly broken here, but whatever. */
-		struct drm_crtc *crtc = dev_priv->pipe_to_crtc_mapping[pipe];
-		struct intel_crtc *intel_crtc = to_intel_crtc(crtc);
-
-		return intel_crtc->active;
-	} else {
-		return I915_READ(PIPECONF(pipe)) & PIPECONF_ENABLE;
-	}
-}
-
 /*
  * This timing diagram depicts the video signal in and
  * around the vertical blanking period.
@@ -582,34 +557,16 @@ static u32 i915_get_vblank_counter(struct drm_device *dev, int pipe)
 	unsigned long high_frame;
 	unsigned long low_frame;
 	u32 high1, high2, low, pixel, vbl_start, hsync_start, htotal;
+	struct intel_crtc *intel_crtc =
+		to_intel_crtc(dev_priv->pipe_to_crtc_mapping[pipe]);
+	const struct drm_display_mode *mode =
+		&intel_crtc->config->base.adjusted_mode;
 
-	if (!i915_pipe_enabled(dev, pipe)) {
-		DRM_DEBUG_DRIVER("trying to get vblank count for disabled "
-				"pipe %c\n", pipe_name(pipe));
-		return 0;
-	}
-
-	if (drm_core_check_feature(dev, DRIVER_MODESET)) {
-		struct intel_crtc *intel_crtc =
-			to_intel_crtc(dev_priv->pipe_to_crtc_mapping[pipe]);
-		const struct drm_display_mode *mode =
-			&intel_crtc->config->base.adjusted_mode;
-
-		htotal = mode->crtc_htotal;
-		hsync_start = mode->crtc_hsync_start;
-		vbl_start = mode->crtc_vblank_start;
-		if (mode->flags & DRM_MODE_FLAG_INTERLACE)
-			vbl_start = DIV_ROUND_UP(vbl_start, 2);
-	} else {
-		enum transcoder cpu_transcoder = (enum transcoder) pipe;
-
-		htotal = ((I915_READ(HTOTAL(cpu_transcoder)) >> 16) & 0x1fff) + 1;
-		hsync_start = (I915_READ(HSYNC(cpu_transcoder))  & 0x1fff) + 1;
-		vbl_start = (I915_READ(VBLANK(cpu_transcoder)) & 0x1fff) + 1;
-		if ((I915_READ(PIPECONF(cpu_transcoder)) &
-		     PIPECONF_INTERLACE_MASK) != PIPECONF_PROGRESSIVE)
-			vbl_start = DIV_ROUND_UP(vbl_start, 2);
-	}
+	htotal = mode->crtc_htotal;
+	hsync_start = mode->crtc_hsync_start;
+	vbl_start = mode->crtc_vblank_start;
+	if (mode->flags & DRM_MODE_FLAG_INTERLACE)
+		vbl_start = DIV_ROUND_UP(vbl_start, 2);
 
 	/* Convert to pixel count */
 	vbl_start *= htotal;
@@ -647,12 +604,6 @@ static u32 gm45_get_vblank_counter(struct drm_device *dev, int pipe)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	int reg = PIPE_FRMCOUNT_GM45(pipe);
-
-	if (!i915_pipe_enabled(dev, pipe)) {
-		DRM_DEBUG_DRIVER("trying to get vblank count for disabled "
-				 "pipe %c\n", pipe_name(pipe));
-		return 0;
-	}
 
 	return I915_READ(reg);
 }
@@ -1243,10 +1194,7 @@ static void gen6_pm_rps_work(struct work_struct *work)
 
 	dev_priv->rps.last_adj = new_delay - dev_priv->rps.cur_freq;
 
-	if (IS_VALLEYVIEW(dev_priv->dev))
-		valleyview_set_rps(dev_priv->dev, new_delay);
-	else
-		gen6_set_rps(dev_priv->dev, new_delay);
+	intel_set_rps(dev_priv->dev, new_delay);
 
 	mutex_unlock(&dev_priv->rps.hw_lock);
 }
@@ -1892,6 +1840,9 @@ static irqreturn_t valleyview_irq_handler(int irq, void *arg)
 	u32 iir, gt_iir, pm_iir;
 	irqreturn_t ret = IRQ_NONE;
 
+	if (!intel_irqs_enabled(dev_priv))
+		return IRQ_NONE;
+
 	while (true) {
 		/* Find, clear, then process each source of interrupt */
 
@@ -1935,6 +1886,9 @@ static irqreturn_t cherryview_irq_handler(int irq, void *arg)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	u32 master_ctl, iir;
 	irqreturn_t ret = IRQ_NONE;
+
+	if (!intel_irqs_enabled(dev_priv))
+		return IRQ_NONE;
 
 	for (;;) {
 		master_ctl = I915_READ(GEN8_MASTER_IRQ) & ~GEN8_MASTER_IRQ_CONTROL;
@@ -2208,6 +2162,9 @@ static irqreturn_t ironlake_irq_handler(int irq, void *arg)
 	u32 de_iir, gt_iir, de_ier, sde_ier = 0;
 	irqreturn_t ret = IRQ_NONE;
 
+	if (!intel_irqs_enabled(dev_priv))
+		return IRQ_NONE;
+
 	/* We get interrupts on unclaimed registers, so check for this before we
 	 * do any I915_{READ,WRITE}. */
 	intel_uncore_check_errors(dev);
@@ -2278,6 +2235,9 @@ static irqreturn_t gen8_irq_handler(int irq, void *arg)
 	uint32_t tmp = 0;
 	enum pipe pipe;
 	u32 aux_mask = GEN8_AUX_CHANNEL_A;
+
+	if (!intel_irqs_enabled(dev_priv))
+		return IRQ_NONE;
 
 	if (IS_GEN9(dev))
 		aux_mask |=  GEN9_AUX_CHANNEL_B | GEN9_AUX_CHANNEL_C |
@@ -2650,9 +2610,6 @@ static int i915_enable_vblank(struct drm_device *dev, int pipe)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	unsigned long irqflags;
 
-	if (!i915_pipe_enabled(dev, pipe))
-		return -EINVAL;
-
 	spin_lock_irqsave(&dev_priv->irq_lock, irqflags);
 	if (INTEL_INFO(dev)->gen >= 4)
 		i915_enable_pipestat(dev_priv, pipe,
@@ -2672,9 +2629,6 @@ static int ironlake_enable_vblank(struct drm_device *dev, int pipe)
 	uint32_t bit = (INTEL_INFO(dev)->gen >= 7) ? DE_PIPE_VBLANK_IVB(pipe) :
 						     DE_PIPE_VBLANK(pipe);
 
-	if (!i915_pipe_enabled(dev, pipe))
-		return -EINVAL;
-
 	spin_lock_irqsave(&dev_priv->irq_lock, irqflags);
 	ironlake_enable_display_irq(dev_priv, bit);
 	spin_unlock_irqrestore(&dev_priv->irq_lock, irqflags);
@@ -2686,9 +2640,6 @@ static int valleyview_enable_vblank(struct drm_device *dev, int pipe)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	unsigned long irqflags;
-
-	if (!i915_pipe_enabled(dev, pipe))
-		return -EINVAL;
 
 	spin_lock_irqsave(&dev_priv->irq_lock, irqflags);
 	i915_enable_pipestat(dev_priv, pipe,
@@ -2702,9 +2653,6 @@ static int gen8_enable_vblank(struct drm_device *dev, int pipe)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	unsigned long irqflags;
-
-	if (!i915_pipe_enabled(dev, pipe))
-		return -EINVAL;
 
 	spin_lock_irqsave(&dev_priv->irq_lock, irqflags);
 	dev_priv->de_irq_mask[pipe] &= ~GEN8_PIPE_VBLANK;
@@ -2756,9 +2704,6 @@ static void gen8_disable_vblank(struct drm_device *dev, int pipe)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	unsigned long irqflags;
-
-	if (!i915_pipe_enabled(dev, pipe))
-		return;
 
 	spin_lock_irqsave(&dev_priv->irq_lock, irqflags);
 	dev_priv->de_irq_mask[pipe] |= GEN8_PIPE_VBLANK;
@@ -3771,6 +3716,9 @@ static irqreturn_t i8xx_irq_handler(int irq, void *arg)
 		I915_DISPLAY_PLANE_A_FLIP_PENDING_INTERRUPT |
 		I915_DISPLAY_PLANE_B_FLIP_PENDING_INTERRUPT;
 
+	if (!intel_irqs_enabled(dev_priv))
+		return IRQ_NONE;
+
 	iir = I915_READ16(IIR);
 	if (iir == 0)
 		return IRQ_NONE;
@@ -3950,6 +3898,9 @@ static irqreturn_t i915_irq_handler(int irq, void *arg)
 		I915_DISPLAY_PLANE_A_FLIP_PENDING_INTERRUPT |
 		I915_DISPLAY_PLANE_B_FLIP_PENDING_INTERRUPT;
 	int pipe, ret = IRQ_NONE;
+
+	if (!intel_irqs_enabled(dev_priv))
+		return IRQ_NONE;
 
 	iir = I915_READ(IIR);
 	do {
@@ -4171,6 +4122,9 @@ static irqreturn_t i965_irq_handler(int irq, void *arg)
 		I915_DISPLAY_PLANE_A_FLIP_PENDING_INTERRUPT |
 		I915_DISPLAY_PLANE_B_FLIP_PENDING_INTERRUPT;
 
+	if (!intel_irqs_enabled(dev_priv))
+		return IRQ_NONE;
+
 	iir = I915_READ(IIR);
 
 	for (;;) {
@@ -4371,10 +4325,8 @@ void intel_irq_init(struct drm_i915_private *dev_priv)
 	if (!IS_GEN2(dev_priv))
 		dev->vblank_disable_immediate = true;
 
-	if (drm_core_check_feature(dev, DRIVER_MODESET)) {
-		dev->driver->get_vblank_timestamp = i915_get_vblank_timestamp;
-		dev->driver->get_scanout_position = i915_get_crtc_scanoutpos;
-	}
+	dev->driver->get_vblank_timestamp = i915_get_vblank_timestamp;
+	dev->driver->get_scanout_position = i915_get_crtc_scanoutpos;
 
 	if (IS_CHERRYVIEW(dev_priv)) {
 		dev->driver->irq_handler = cherryview_irq_handler;
@@ -4520,6 +4472,7 @@ void intel_runtime_pm_disable_interrupts(struct drm_i915_private *dev_priv)
 {
 	dev_priv->dev->driver->irq_uninstall(dev_priv->dev);
 	dev_priv->pm.irqs_enabled = false;
+	synchronize_irq(dev_priv->dev->irq);
 }
 
 /**
