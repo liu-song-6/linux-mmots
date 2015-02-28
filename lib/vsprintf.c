@@ -1320,24 +1320,27 @@ static noinline_for_stack
 char *clock(char *buf, char *end, struct clk *clk, struct printf_spec spec,
 	    const char *fmt)
 {
-	if (!clk)
-		return string(buf, end, NULL, spec);
+#ifdef CONFIG_HAVE_CLK
+	if (clk) {
+		switch (fmt[1]) {
+		case 'r':
+			return number(buf, end, clk_get_rate(clk), spec);
 
-	switch (fmt[1]) {
-	case 'r':
-		return number(buf, end, clk_get_rate(clk), spec);
-
-	case 'n':
-	default:
+		case 'n':
+		default:
 #ifdef CONFIG_COMMON_CLK
-		return string(buf, end, __clk_get_name(clk), spec);
+			return string(buf, end, __clk_get_name(clk), spec);
 #else
-		spec.base = 16;
-		spec.field_width = sizeof(unsigned long) * 2 + 2;
-		spec.flags |= SPECIAL | SMALL | ZEROPAD;
-		return number(buf, end, (unsigned long)clk, spec);
+			spec.base = 16;
+			spec.field_width = sizeof(unsigned long) * 2 + 2;
+			spec.flags |= SPECIAL | SMALL | ZEROPAD;
+			return number(buf, end, (unsigned long)clk, spec);
 #endif
+		}
 	}
+#endif	/* CONFIG_HAVE_CLK */
+
+	return string(buf, end, NULL, spec);
 }
 
 int kptr_restrict __read_mostly;
