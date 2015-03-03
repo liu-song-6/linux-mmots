@@ -503,8 +503,8 @@ enum bcmgenet_version {
  */
 struct bcmgenet_hw_params {
 	u8		tx_queues;
+	u8		tx_bds_per_q;
 	u8		rx_queues;
-	u8		bds_cnt;
 	u8		bp_in_en_shift;
 	u32		bp_in_mask;
 	u8		hfb_filter_cnt;
@@ -520,6 +520,7 @@ struct bcmgenet_hw_params {
 
 struct bcmgenet_tx_ring {
 	spinlock_t	lock;		/* ring lock */
+	struct napi_struct napi;	/* NAPI per tx queue */
 	unsigned int	index;		/* ring index */
 	unsigned int	queue;		/* queue index */
 	struct enet_cb	*cbs;		/* tx ring buffer control block*/
@@ -534,6 +535,7 @@ struct bcmgenet_tx_ring {
 			   struct bcmgenet_tx_ring *);
 	void (*int_disable)(struct bcmgenet_priv *priv,
 			    struct bcmgenet_tx_ring *);
+	struct bcmgenet_priv *priv;
 };
 
 /* device context */
