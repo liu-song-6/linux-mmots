@@ -236,12 +236,10 @@ config ARCH_WANT_GENERAL_HUGETLB
 	def_bool y
 
 config ZONE_DMA32
-	bool
-	default X86_64
+	def_bool y if X86_64
 
 config AUDIT_ARCH
-	bool
-	default X86_64
+	def_bool y if X86_64
 
 config ARCH_SUPPORTS_OPTIMIZED_INLINING
 	def_bool y
@@ -626,7 +624,7 @@ config X86_32_IRIS
 
 config SCHED_OMIT_FRAME_POINTER
 	def_bool y
-	prompt "Single-depth WCHAN output"
+	prompt "Single-depth WCHAN output" if !LTO && !FRAME_POINTER
 	depends on X86
 	---help---
 	  Calculate simpler /proc/<PID>/wchan values. If this option
@@ -897,7 +895,8 @@ config UP_LATE_INIT
        depends on !SMP && X86_LOCAL_APIC
 
 config X86_UP_APIC
-	bool "Local APIC support on uniprocessors"
+	bool "Local APIC support on uniprocessors" if !PCI_MSI
+	default PCI_MSI
 	depends on X86_32 && !SMP && !X86_32_NON_STANDARD
 	---help---
 	  A local APIC (Advanced Programmable Interrupt Controller) is an
@@ -908,10 +907,6 @@ config X86_UP_APIC
 	  all. The local APIC supports CPU-generated self-interrupts (timer,
 	  performance counters), and the NMI watchdog which detects hard
 	  lockups.
-
-config X86_UP_APIC_MSI
-	def_bool y
-	select X86_UP_APIC if X86_32 && !SMP && !X86_32_NON_STANDARD && PCI_MSI
 
 config X86_UP_IOAPIC
 	bool "IO-APIC support on uniprocessors"
@@ -931,8 +926,8 @@ config X86_LOCAL_APIC
 	select GENERIC_IRQ_LEGACY_ALLOC_HWIRQ
 
 config X86_IO_APIC
-	def_bool X86_64 || SMP || X86_32_NON_STANDARD || X86_UP_IOAPIC
-	depends on X86_LOCAL_APIC
+	def_bool y
+	depends on X86_LOCAL_APIC || X86_UP_IOAPIC
 	select IRQ_DOMAIN
 
 config X86_REROUTE_FOR_BROKEN_BOOT_IRQS
@@ -1151,10 +1146,10 @@ config MICROCODE_OLD_INTERFACE
 	depends on MICROCODE
 
 config MICROCODE_INTEL_EARLY
-	def_bool n
+	bool
 
 config MICROCODE_AMD_EARLY
-	def_bool n
+	bool
 
 config MICROCODE_EARLY
 	bool "Early load microcode"

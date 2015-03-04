@@ -2865,7 +2865,6 @@ static void skb_ts_finish(struct ts_config *conf, struct ts_state *state)
  * @from: search offset
  * @to: search limit
  * @config: textsearch configuration
- * @state: uninitialized textsearch state variable
  *
  * Finds a pattern in the skb data according to the specified
  * textsearch configuration. Use textsearch_next() to retrieve
@@ -2873,17 +2872,17 @@ static void skb_ts_finish(struct ts_config *conf, struct ts_state *state)
  * to the first occurrence or UINT_MAX if no match was found.
  */
 unsigned int skb_find_text(struct sk_buff *skb, unsigned int from,
-			   unsigned int to, struct ts_config *config,
-			   struct ts_state *state)
+			   unsigned int to, struct ts_config *config)
 {
+	struct ts_state state;
 	unsigned int ret;
 
 	config->get_next_block = skb_ts_get_next_block;
 	config->finish = skb_ts_finish;
 
-	skb_prepare_seq_read(skb, from, to, TS_SKB_CB(state));
+	skb_prepare_seq_read(skb, from, to, TS_SKB_CB(&state));
 
-	ret = textsearch_find(config, state);
+	ret = textsearch_find(config, &state);
 	return (ret <= to - from ? ret : UINT_MAX);
 }
 EXPORT_SYMBOL(skb_find_text);
@@ -3621,13 +3620,14 @@ struct sk_buff *sock_dequeue_err_skb(struct sock *sk)
 {
 	struct sk_buff_head *q = &sk->sk_error_queue;
 	struct sk_buff *skb, *skb_next;
+	unsigned long flags;
 	int err = 0;
 
-	spin_lock_bh(&q->lock);
+	spin_lock_irqsave(&q->lock, flags);
 	skb = __skb_dequeue(q);
 	if (skb && (skb_next = skb_peek(q)))
 		err = SKB_EXT_ERR(skb_next)->ee.ee_errno;
-	spin_unlock_bh(&q->lock);
+	spin_unlock_irqrestore(&q->lock, flags);
 
 	sk->sk_err = err;
 	if (err)

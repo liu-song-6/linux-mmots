@@ -35,7 +35,7 @@
  */
 #define DEBUG_SUBSYSTEM S_CLASS
 
-#include <asm/statfs.h>
+#include <linux/statfs.h>
 #include "../include/lprocfs_status.h"
 #include "../include/obd_class.h"
 #include <linux/seq_file.h>
@@ -270,7 +270,7 @@ LPROC_SEQ_FOPS_RO_TYPE(lov, kbytestotal);
 LPROC_SEQ_FOPS_RO_TYPE(lov, kbytesfree);
 LPROC_SEQ_FOPS_RO_TYPE(lov, kbytesavail);
 
-struct lprocfs_vars lprocfs_lov_obd_vars[] = {
+static struct lprocfs_vars lprocfs_lov_obd_vars[] = {
 	{ "uuid",	  &lov_uuid_fops,	  NULL, 0 },
 	{ "stripesize",   &lov_stripesize_fops,   NULL },
 	{ "stripeoffset", &lov_stripeoffset_fops, NULL },

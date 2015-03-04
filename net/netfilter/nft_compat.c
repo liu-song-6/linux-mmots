@@ -20,6 +20,7 @@
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 #include <linux/netfilter_bridge/ebtables.h>
+#include <linux/netfilter_arp/arp_tables.h>
 #include <net/netfilter/nf_tables.h>
 
 static int nft_compat_chain_validate_dependency(const char *tablename,
@@ -42,6 +43,7 @@ union nft_entry {
 	struct ipt_entry e4;
 	struct ip6t_entry e6;
 	struct ebt_entry ebt;
+	struct arpt_entry arp;
 };
 
 static inline void
@@ -139,6 +141,8 @@ nft_target_set_tgchk_param(struct xt_tgchk_param *par,
 	case NFPROTO_BRIDGE:
 		entry->ebt.ethproto = proto;
 		entry->ebt.invflags = inv ? EBT_IPROTO : 0;
+		break;
+	case NFPROTO_ARP:
 		break;
 	}
 	par->entryinfo	= entry;
@@ -351,6 +355,8 @@ nft_match_set_mtchk_param(struct xt_mtchk_param *par, const struct nft_ctx *ctx,
 		entry->ebt.ethproto = proto;
 		entry->ebt.invflags = inv ? EBT_IPROTO : 0;
 		break;
+	case NFPROTO_ARP:
+		break;
 	}
 	par->entryinfo	= entry;
 	par->match	= match;
@@ -537,6 +543,9 @@ nfnl_compat_get(struct sock *nfnl, struct sk_buff *skb,
 	case NFPROTO_BRIDGE:
 		fmt = "ebt_%s";
 		break;
+	case NFPROTO_ARP:
+		fmt = "arpt_%s";
+		break;
 	default:
 		pr_err("nft_compat: unsupported protocol %d\n",
 			nfmsg->nfgen_family);
@@ -625,8 +634,12 @@ nft_match_select_ops(const struct nft_ctx *ctx,
 		struct xt_match *match = nft_match->ops.data;
 
 		if (strcmp(match->name, mt_name) == 0 &&
-		    match->revision == rev && match->family == family)
+		    match->revision == rev && match->family == family) {
+			if (!try_module_get(match->me))
+				return ERR_PTR(-ENOENT);
+
 			return &nft_match->ops;
+		}
 	}
 
 	match = xt_request_find_match(family, mt_name, rev);
@@ -695,8 +708,12 @@ nft_target_select_ops(const struct nft_ctx *ctx,
 		struct xt_target *target = nft_target->ops.data;
 
 		if (strcmp(target->name, tg_name) == 0 &&
-		    target->revision == rev && target->family == family)
+		    target->revision == rev && target->family == family) {
+			if (!try_module_get(target->me))
+				return ERR_PTR(-ENOENT);
+
 			return &nft_target->ops;
+		}
 	}
 
 	target = xt_request_find_target(family, tg_name, rev);
