@@ -1280,15 +1280,9 @@ static void rocker_port_set_enable(struct rocker_port *rocker_port, bool enable)
 	u64 val = rocker_read64(rocker_port->rocker, PORT_PHYS_ENABLE);
 
 	if (enable)
-<<<<<<< HEAD
-		val |= 1ULL << rocker_port->lport;
-	else
-		val &= ~(1ULL << rocker_port->lport);
-=======
 		val |= 1ULL << rocker_port->pport;
 	else
 		val &= ~(1ULL << rocker_port->pport);
->>>>>>> linux-next/akpm-base
 	rocker_write64(rocker_port->rocker, PORT_PHYS_ENABLE, val);
 }
 
