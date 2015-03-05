@@ -464,25 +464,23 @@ dtb-$(CONFIG_ARCH_S5PV210) += \
 	s5pv210-smdkv210.dtb \
 	s5pv210-torbreck.dtb
 dtb-$(CONFIG_ARCH_SHMOBILE_LEGACY) += \
-	r8a73a4-ape6evm.dtb \
-	r8a73a4-ape6evm-reference.dtb \
 	r8a7740-armadillo800eva.dtb \
 	r8a7778-bockw.dtb \
 	r8a7778-bockw-reference.dtb \
 	r8a7779-marzen.dtb \
-	sh7372-mackerel.dtb \
-	sh73a0-kzm9g.dtb \
-	sh73a0-kzm9g-reference.dtb
+	sh73a0-kzm9g.dtb
 dtb-$(CONFIG_ARCH_SHMOBILE_MULTI) += \
 	emev2-kzm9d.dtb \
 	r7s72100-genmai.dtb \
 	r8a73a4-ape6evm.dtb \
 	r8a7740-armadillo800eva.dtb \
+	r8a7778-bockw.dtb \
 	r8a7779-marzen.dtb \
 	r8a7790-lager.dtb \
 	r8a7791-henninger.dtb \
 	r8a7791-koelsch.dtb \
-	r8a7794-alt.dtb
+	r8a7794-alt.dtb \
+	sh73a0-kzm9g.dtb
 dtb-$(CONFIG_ARCH_SOCFPGA) += \
 	socfpga_arria5_socdk.dtb \
 	socfpga_arria10_socdk.dtb \
@@ -514,13 +512,14 @@ dtb-$(CONFIG_MACH_SUN4I) += \
 	sun4i-a10-ba10-tvbox.dtb \
 	sun4i-a10-chuwi-v7-cw0825.dtb \
 	sun4i-a10-cubieboard.dtb \
+	sun4i-a10-gemei-g9.dtb \
+	sun4i-a10-hackberry.dtb \
+	sun4i-a10-hyundai-a7hd.dtb \
+	sun4i-a10-inet97fv2.dtb \
 	sun4i-a10-marsboard.dtb \
 	sun4i-a10-mini-xplus.dtb \
 	sun4i-a10-mk802.dtb \
 	sun4i-a10-mk802ii.dtb \
-	sun4i-a10-hackberry.dtb \
-	sun4i-a10-hyundai-a7hd.dtb \
-	sun4i-a10-inet97fv2.dtb \
 	sun4i-a10-olinuxino-lime.dtb \
 	sun4i-a10-pcduino.dtb
 dtb-$(CONFIG_MACH_SUN5I) += \
@@ -534,6 +533,7 @@ dtb-$(CONFIG_MACH_SUN6I) += \
 	sun6i-a31-app4-evb1.dtb \
 	sun6i-a31-colombus.dtb \
 	sun6i-a31-hummingbird.dtb \
+	sun6i-a31-i7.dtb \
 	sun6i-a31-m9.dtb \
 	sun6i-a31s-cs908.dtb
 dtb-$(CONFIG_MACH_SUN7I) += \
@@ -547,7 +547,8 @@ dtb-$(CONFIG_MACH_SUN7I) += \
 	sun7i-a20-olinuxino-lime.dtb \
 	sun7i-a20-olinuxino-lime2.dtb \
 	sun7i-a20-olinuxino-micro.dtb \
-	sun7i-a20-pcduino3.dtb
+	sun7i-a20-pcduino3.dtb \
+	sun7i-a20-pcduino3-nano.dtb
 dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-a23-ippo-q8h-v5.dtb \
 	sun8i-a23-ippo-q8h-v1.2.dtb
@@ -629,6 +630,7 @@ dtb-$(CONFIG_MACH_ARMADA_XP) += \
 	armada-xp-db.dtb \
 	armada-xp-gp.dtb \
 	armada-xp-lenovo-ix4-300d.dtb \
+	armada-xp-linksys-mamba.dtb \
 	armada-xp-matrix.dtb \
 	armada-xp-netgear-rn2120.dtb \
 	armada-xp-openblocks-ax3-4.dtb \

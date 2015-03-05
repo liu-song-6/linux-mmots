@@ -53,7 +53,6 @@ struct fence;
 #define DRM_MODE_OBJECT_FB 0xfbfbfbfb
 #define DRM_MODE_OBJECT_BLOB 0xbbbbbbbb
 #define DRM_MODE_OBJECT_PLANE 0xeeeeeeee
-#define DRM_MODE_OBJECT_BRIDGE 0xbdbdbdbd
 #define DRM_MODE_OBJECT_ANY 0
 
 struct drm_mode_object {
@@ -202,6 +201,7 @@ struct drm_framebuffer {
 	const struct drm_framebuffer_funcs *funcs;
 	unsigned int pitches[4];
 	unsigned int offsets[4];
+	uint64_t modifier[4];
 	unsigned int width;
 	unsigned int height;
 	/* depth can be 15 or 16 */
@@ -1154,6 +1154,9 @@ struct drm_mode_config {
 
 	/* whether async page flip is supported or not */
 	bool async_page_flip;
+
+	/* whether the driver supports fb modifiers */
+	bool allow_fb_modifiers;
 
 	/* cursor size */
 	uint32_t cursor_width, cursor_height;
