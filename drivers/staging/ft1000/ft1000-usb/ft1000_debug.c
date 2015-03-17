@@ -317,9 +317,8 @@ static int ft1000_open(struct inode *inode, struct file *file)
 
 	/* Search for available application info block */
 	for (i = 0; i < MAX_NUM_APP; i++) {
-		if ((dev->app_info[i].fileobject == NULL)) {
+		if ((dev->app_info[i].fileobject == NULL))
 			break;
-		}
 	}
 
 	/* Fail due to lack of application info block */
@@ -413,7 +412,6 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 	int i;
 	u16 tempword;
 	unsigned long flags;
-	struct timeval tv;
 	struct IOCTL_GET_VER get_ver_data;
 	struct IOCTL_GET_DSP_STAT get_stat_data;
 	u8 ConnectionMsg[] = {0x00, 0x44, 0x10, 0x20, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x93, 0x64,
@@ -511,8 +509,7 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 		get_stat_data.nRxPkts = info->stats.rx_packets;
 		get_stat_data.nTxBytes = info->stats.tx_bytes;
 		get_stat_data.nRxBytes = info->stats.rx_bytes;
-		do_gettimeofday(&tv);
-		get_stat_data.ConTm = (u32)(tv.tv_sec - info->ConTm);
+		get_stat_data.ConTm = ktime_get_seconds() - info->ConTm;
 		pr_debug("Connection Time = %d\n", (int)get_stat_data.ConTm);
 		if (copy_to_user(argp, &get_stat_data, sizeof(get_stat_data))) {
 			pr_debug("copy fault occurred\n");
@@ -545,7 +542,7 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 		if (ft1000dev->fProvComplete == 0)
 			return -EACCES;
 
-		ft1000dev->fAppMsgPend = 1;
+		ft1000dev->fAppMsgPend = true;
 
 		if (info->CardReady) {
 
@@ -575,9 +572,8 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 			} else {
 				/* Check if this message came from a registered application */
 				for (i = 0; i < MAX_NUM_APP; i++) {
-					if (ft1000dev->app_info[i].fileobject == &file->f_owner) {
+					if (ft1000dev->app_info[i].fileobject == &file->f_owner)
 						break;
-					}
 				}
 				if (i == MAX_NUM_APP) {
 					pr_debug("No matching application fileobject\n");
@@ -629,9 +625,8 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 						pmsg = (u16 *)&dpram_data->pseudohdr;
 						ppseudo_hdr = (struct pseudo_hdr *)pmsg;
 						total_len = msgsz+2;
-						if (total_len & 0x1) {
+						if (total_len & 0x1)
 							total_len++;
-						}
 
 						/* Insert slow queue sequence number */
 						ppseudo_hdr->seq_num = info->squeseqnum++;
@@ -722,7 +717,7 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 		result = -ENOTTY;
 		break;
 	}
-	ft1000dev->fAppMsgPend = 0;
+	ft1000dev->fAppMsgPend = false;
 	return result;
 }
 

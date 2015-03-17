@@ -50,6 +50,7 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 	struct snd_soc_dapm_context *dapm = w->dapm;
 	struct snd_soc_card *card = dapm->card;
 	struct snd_soc_dai *codec_dai;
+	int ret;
 
 	codec_dai = cht_get_codec_dai(card);
 	if (!codec_dai) {
@@ -57,17 +58,31 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 		return -EIO;
 	}
 
-	if (!SND_SOC_DAPM_EVENT_OFF(event))
-		return 0;
+	if (SND_SOC_DAPM_EVENT_ON(event)) {
+		/* set codec PLL source to the 19.2MHz platform clock (MCLK) */
+		ret = snd_soc_dai_set_pll(codec_dai, 0, RT5670_PLL1_S_MCLK,
+				CHT_PLAT_CLK_3_HZ, 48000 * 512);
+		if (ret < 0) {
+			dev_err(card->dev, "can't set codec pll: %d\n", ret);
+			return ret;
+		}
 
-	/* Set codec sysclk source to its internal clock because codec PLL will
-	 * be off when idle and MCLK will also be off by ACPI when codec is
-	 * runtime suspended. Codec needs clock for jack detection and button
-	 * press.
-	 */
-	snd_soc_dai_set_sysclk(codec_dai, RT5670_SCLK_S_RCCLK,
-			       0, SND_SOC_CLOCK_IN);
-
+		/* set codec sysclk source to PLL */
+		ret = snd_soc_dai_set_sysclk(codec_dai, RT5670_SCLK_S_PLL1,
+			48000 * 512, SND_SOC_CLOCK_IN);
+		if (ret < 0) {
+			dev_err(card->dev, "can't set codec sysclk: %d\n", ret);
+			return ret;
+		}
+	} else {
+		/* Set codec sysclk source to its internal clock because codec
+		 * PLL will be off when idle and MCLK will also be off by ACPI
+		 * when codec is runtime suspended. Codec needs clock for jack
+		 * detection and button press.
+		 */
+		snd_soc_dai_set_sysclk(codec_dai, RT5670_SCLK_S_RCCLK,
+				       48000 * 512, SND_SOC_CLOCK_IN);
+	}
 	return 0;
 }
 
@@ -77,7 +92,8 @@ static const struct snd_soc_dapm_widget cht_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 	SND_SOC_DAPM_SUPPLY("Platform Clock", SND_SOC_NOPM, 0, 0,
-			platform_clock_control, SND_SOC_DAPM_POST_PMD),
+			platform_clock_control, SND_SOC_DAPM_PRE_PMU |
+			SND_SOC_DAPM_POST_PMD),
 };
 
 static const struct snd_soc_dapm_route cht_audio_map[] = {
@@ -178,9 +194,7 @@ static int cht_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 	channels->min = channels->max = 2;
 
 	/* set SSP2 to 24-bit */
-	snd_mask_set(&params->masks[SNDRV_PCM_HW_PARAM_FORMAT -
-				    SNDRV_PCM_HW_PARAM_FIRST_MASK],
-				    SNDRV_PCM_FORMAT_S24_LE);
+	params_set_format(params, SNDRV_PCM_FORMAT_S24_LE);
 	return 0;
 }
 
@@ -217,7 +231,7 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
 		.platform_name = "sst-mfld-platform",
-		.ignore_suspend = 1,
+		.nonatomic = true,
 		.dynamic = 1,
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
@@ -240,13 +254,13 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.cpu_dai_name = "ssp2-port",
 		.platform_name = "sst-mfld-platform",
 		.no_pcm = 1,
+		.nonatomic = true,
 		.codec_dai_name = "rt5670-aif1",
 		.codec_name = "i2c-10EC5670:00",
 		.dai_fmt = SND_SOC_DAIFMT_DSP_B | SND_SOC_DAIFMT_IB_NF
 					| SND_SOC_DAIFMT_CBS_CFS,
 		.init = cht_codec_init,
 		.be_hw_params_fixup = cht_codec_fixup,
-		.ignore_suspend = 1,
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
 		.ops = &cht_be_ssp2_ops,
@@ -285,7 +299,6 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 static struct platform_driver snd_cht_mc_driver = {
 	.driver = {
 		.name = "cht-bsw-rt5672",
-		.pm = &snd_soc_pm_ops,
 	},
 	.probe = snd_cht_mc_probe,
 };
