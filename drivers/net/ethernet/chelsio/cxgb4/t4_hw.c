@@ -867,7 +867,7 @@ static int flash_wait_op(struct adapter *adapter, int attempts, int delay)
  *	Read the specified number of 32-bit words from the serial flash.
  *	If @byte_oriented is set the read data is stored as a byte array
  *	(i.e., big-endian), otherwise as 32-bit words in the platform's
- *	natural endianess.
+ *	natural endianness.
  */
 int t4_read_flash(struct adapter *adapter, unsigned int addr,
 		  unsigned int nwords, u32 *data, int byte_oriented)
@@ -1120,7 +1120,7 @@ int t4_prep_fw(struct adapter *adap, struct fw_info *fw_info,
 		}
 
 		/* Installed successfully, update the cached header too. */
-		memcpy(card_fw, fs_fw, sizeof(*card_fw));
+		*card_fw = *fs_fw;
 		card_fw_usable = 1;
 		*reset = 0;	/* already reset as part of load_fw */
 	}
@@ -3558,7 +3558,7 @@ int t4_fixup_host_params(struct adapter *adap, unsigned int page_size,
 	 * For the single-MTU buffers in unpacked mode we need to include
 	 * space for the SGE Control Packet Shift, 14 byte Ethernet header,
 	 * possible 4 byte VLAN tag, all rounded up to the next Ingress Packet
-	 * Padding boundry.  All of these are accommodated in the Factory
+	 * Padding boundary.  All of these are accommodated in the Factory
 	 * Default Firmware Configuration File but we need to adjust it for
 	 * this host's cache line size.
 	 */
@@ -4529,7 +4529,7 @@ int t4_init_tp_params(struct adapter *adap)
 							       PROTOCOL_F);
 
 	/* If TP_INGRESS_CONFIG.VNID == 0, then TP_VLAN_PRI_MAP.VNIC_ID
-	 * represents the presense of an Outer VLAN instead of a VNIC ID.
+	 * represents the presence of an Outer VLAN instead of a VNIC ID.
 	 */
 	if ((adap->params.tp.ingress_config & VNIC_F) == 0)
 		adap->params.tp.vnic_shift = -1;

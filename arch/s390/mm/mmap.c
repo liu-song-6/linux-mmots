@@ -314,5 +314,3 @@ static int __init setup_mmap_rnd(void)
 	return 0;
 }
 early_initcall(setup_mmap_rnd);
-
-#endif

@@ -247,6 +247,16 @@ static u32 vm_generation(struct virtio_device *vdev)
 		return readl(vm_dev->base + VIRTIO_MMIO_CONFIG_GENERATION);
 }
 
+static u32 vm_generation(struct virtio_device *vdev)
+{
+	struct virtio_mmio_device *vm_dev = to_virtio_mmio_device(vdev);
+
+	if (vm_dev->version == 1)
+		return 0;
+	else
+		return readl(vm_dev->base + VIRTIO_MMIO_CONFIG_GENERATION);
+}
+
 static u8 vm_get_status(struct virtio_device *vdev)
 {
 	struct virtio_mmio_device *vm_dev = to_virtio_mmio_device(vdev);

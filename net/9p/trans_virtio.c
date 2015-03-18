@@ -659,6 +659,10 @@ static void p9_virtio_remove(struct virtio_device *vdev)
 {
 	struct virtio_chan *chan = vdev->priv;
 	unsigned long warning_time;
+<<<<<<< HEAD
+=======
+	bool inuse;
+>>>>>>> linux-next/akpm-base
 
 	mutex_lock(&virtio_9p_lock);
 
@@ -670,11 +674,19 @@ static void p9_virtio_remove(struct virtio_device *vdev)
 	while (chan->inuse) {
 		mutex_unlock(&virtio_9p_lock);
 		msleep(250);
+<<<<<<< HEAD
 		if (time_after(jiffies, warning_time + 10 * HZ)) {
 			dev_emerg(&vdev->dev,
 				  "p9_virtio_remove: waiting for device in use.\n");
 			warning_time = jiffies;
 		}
+=======
+               if (time_after(jiffies, warning_time + 10 * HZ)) {
+			dev_emerg(&vdev->dev, "p9_virtio_remove: "
+				  "waiting for device in use.\n");
+			warning_time = jiffies;
+               }
+>>>>>>> linux-next/akpm-base
 		mutex_lock(&virtio_9p_lock);
 	}
 
