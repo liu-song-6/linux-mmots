@@ -29,6 +29,7 @@
 #include <drm/drm_vma_manager.h>
 #include <drm/i915_drm.h>
 #include "i915_drv.h"
+#include "i915_vgpu.h"
 #include "i915_trace.h"
 #include "intel_drv.h"
 #include <linux/oom.h>
@@ -350,7 +351,7 @@ i915_gem_phys_pwrite(struct drm_i915_gem_object *obj,
 	struct drm_device *dev = obj->base.dev;
 	void *vaddr = obj->phys_handle->vaddr + args->offset;
 	char __user *user_data = to_user_ptr(args->data_ptr);
-	int ret;
+	int ret = 0;
 
 	/* We manually control the domain here and pretend that it
 	 * remains coherent i.e. in the GTT domain, like shmem_pwrite.
@@ -359,6 +360,7 @@ i915_gem_phys_pwrite(struct drm_i915_gem_object *obj,
 	if (ret)
 		return ret;
 
+	intel_fb_obj_invalidate(obj, NULL, ORIGIN_CPU);
 	if (__copy_from_user_inatomic_nocache(vaddr, user_data, args->size)) {
 		unsigned long unwritten;
 
@@ -369,13 +371,18 @@ i915_gem_phys_pwrite(struct drm_i915_gem_object *obj,
 		mutex_unlock(&dev->struct_mutex);
 		unwritten = copy_from_user(vaddr, user_data, args->size);
 		mutex_lock(&dev->struct_mutex);
-		if (unwritten)
-			return -EFAULT;
+		if (unwritten) {
+			ret = -EFAULT;
+			goto out;
+		}
 	}
 
 	drm_clflush_virt_range(vaddr, args->size);
 	i915_gem_chipset_flush(dev);
-	return 0;
+
+out:
+	intel_fb_obj_flush(obj, false);
+	return ret;
 }
 
 void *i915_gem_object_alloc(struct drm_device *dev)
@@ -809,6 +816,8 @@ i915_gem_gtt_pwrite_fast(struct drm_device *dev,
 
 	offset = i915_gem_obj_ggtt_offset(obj) + args->offset;
 
+	intel_fb_obj_invalidate(obj, NULL, ORIGIN_GTT);
+
 	while (remain > 0) {
 		/* Operation in this page
 		 *
@@ -829,7 +838,7 @@ i915_gem_gtt_pwrite_fast(struct drm_device *dev,
 		if (fast_user_write(dev_priv->gtt.mappable, page_base,
 				    page_offset, user_data, page_length)) {
 			ret = -EFAULT;
-			goto out_unpin;
+			goto out_flush;
 		}
 
 		remain -= page_length;
@@ -837,6 +846,8 @@ i915_gem_gtt_pwrite_fast(struct drm_device *dev,
 		offset += page_length;
 	}
 
+out_flush:
+	intel_fb_obj_flush(obj, false);
 out_unpin:
 	i915_gem_object_ggtt_unpin(obj);
 out:
@@ -951,6 +962,8 @@ i915_gem_shmem_pwrite(struct drm_device *dev,
 	if (ret)
 		return ret;
 
+	intel_fb_obj_invalidate(obj, NULL, ORIGIN_CPU);
+
 	i915_gem_object_pin_pages(obj);
 
 	offset = args->offset;
@@ -1029,6 +1042,7 @@ out:
 	if (needs_clflush_after)
 		i915_gem_chipset_flush(dev);
 
+	intel_fb_obj_flush(obj, false);
 	return ret;
 }
 
@@ -2492,6 +2506,8 @@ int __i915_add_request(struct intel_engine_cs *ring,
 		list_add_tail(&request->client_list,
 			      &file_priv->mm.request_list);
 		spin_unlock(&file_priv->mm.lock);
+
+		request->pid = get_pid(task_pid(current));
 	}
 
 	trace_i915_gem_request_add(request);
@@ -2571,6 +2587,8 @@ static void i915_gem_free_request(struct drm_i915_gem_request *request)
 {
 	list_del(&request->list);
 	i915_gem_request_remove_from_client(request);
+
+	put_pid(request->pid);
 
 	i915_gem_request_unreference(request);
 }
@@ -2757,7 +2775,6 @@ i915_gem_retire_requests_ring(struct intel_engine_cs *ring)
 
 	while (!list_empty(&ring->request_list)) {
 		struct drm_i915_gem_request *request;
-		struct intel_ringbuffer *ringbuf;
 
 		request = list_first_entry(&ring->request_list,
 					   struct drm_i915_gem_request,
@@ -2768,23 +2785,12 @@ i915_gem_retire_requests_ring(struct intel_engine_cs *ring)
 
 		trace_i915_gem_request_retire(request);
 
-		/* This is one of the few common intersection points
-		 * between legacy ringbuffer submission and execlists:
-		 * we need to tell them apart in order to find the correct
-		 * ringbuffer to which the request belongs to.
-		 */
-		if (i915.enable_execlists) {
-			struct intel_context *ctx = request->ctx;
-			ringbuf = ctx->engine[ring->id].ringbuf;
-		} else
-			ringbuf = ring->buffer;
-
 		/* We know the GPU must have read the request to have
 		 * sent us the seqno + interrupt, so use the position
 		 * of tail of the request to update the last known position
 		 * of the GPU head.
 		 */
-		ringbuf->last_retired_head = request->postfix;
+		request->ringbuf->last_retired_head = request->postfix;
 
 		i915_gem_free_request(request);
 	}
@@ -3512,9 +3518,9 @@ static bool i915_gem_valid_gtt_space(struct i915_vma *vma,
 static struct i915_vma *
 i915_gem_object_bind_to_vm(struct drm_i915_gem_object *obj,
 			   struct i915_address_space *vm,
+			   const struct i915_ggtt_view *ggtt_view,
 			   unsigned alignment,
-			   uint64_t flags,
-			   const struct i915_ggtt_view *view)
+			   uint64_t flags)
 {
 	struct drm_device *dev = obj->base.dev;
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -3525,6 +3531,9 @@ i915_gem_object_bind_to_vm(struct drm_i915_gem_object *obj,
 		flags & PIN_MAPPABLE ? dev_priv->gtt.mappable_end : vm->total;
 	struct i915_vma *vma;
 	int ret;
+
+	if(WARN_ON(i915_is_ggtt(vm) != !!ggtt_view))
+		return ERR_PTR(-EINVAL);
 
 	fence_size = i915_gem_get_gtt_size(dev,
 					   obj->base.size,
@@ -3564,7 +3573,9 @@ i915_gem_object_bind_to_vm(struct drm_i915_gem_object *obj,
 
 	i915_gem_object_pin_pages(obj);
 
-	vma = i915_gem_obj_lookup_or_create_vma_view(obj, vm, view);
+	vma = ggtt_view ? i915_gem_obj_lookup_or_create_ggtt_vma(obj, ggtt_view) :
+			  i915_gem_obj_lookup_or_create_vma(obj, vm);
+
 	if (IS_ERR(vma))
 		goto err_unpin;
 
@@ -3764,7 +3775,7 @@ i915_gem_object_set_to_gtt_domain(struct drm_i915_gem_object *obj, bool write)
 	}
 
 	if (write)
-		intel_fb_obj_invalidate(obj, NULL);
+		intel_fb_obj_invalidate(obj, NULL, ORIGIN_GTT);
 
 	trace_i915_gem_object_change_domain(obj,
 					    old_read_domains,
@@ -4079,7 +4090,7 @@ i915_gem_object_set_to_cpu_domain(struct drm_i915_gem_object *obj, bool write)
 	}
 
 	if (write)
-		intel_fb_obj_invalidate(obj, NULL);
+		intel_fb_obj_invalidate(obj, NULL, ORIGIN_CPU);
 
 	trace_i915_gem_object_change_domain(obj,
 					    old_read_domains,
@@ -4161,12 +4172,12 @@ i915_vma_misplaced(struct i915_vma *vma, uint32_t alignment, uint64_t flags)
 	return false;
 }
 
-int
-i915_gem_object_pin_view(struct drm_i915_gem_object *obj,
-			 struct i915_address_space *vm,
-			 uint32_t alignment,
-			 uint64_t flags,
-			 const struct i915_ggtt_view *view)
+static int
+i915_gem_object_do_pin(struct drm_i915_gem_object *obj,
+		       struct i915_address_space *vm,
+		       const struct i915_ggtt_view *ggtt_view,
+		       uint32_t alignment,
+		       uint64_t flags)
 {
 	struct drm_i915_private *dev_priv = obj->base.dev->dev_private;
 	struct i915_vma *vma;
@@ -4182,17 +4193,29 @@ i915_gem_object_pin_view(struct drm_i915_gem_object *obj,
 	if (WARN_ON((flags & (PIN_MAPPABLE | PIN_GLOBAL)) == PIN_MAPPABLE))
 		return -EINVAL;
 
-	vma = i915_gem_obj_to_vma_view(obj, vm, view);
+	if (WARN_ON(i915_is_ggtt(vm) != !!ggtt_view))
+		return -EINVAL;
+
+	vma = ggtt_view ? i915_gem_obj_to_ggtt_view(obj, ggtt_view) :
+			  i915_gem_obj_to_vma(obj, vm);
+
+	if (IS_ERR(vma))
+		return PTR_ERR(vma);
+
 	if (vma) {
 		if (WARN_ON(vma->pin_count == DRM_I915_GEM_OBJECT_MAX_PIN_COUNT))
 			return -EBUSY;
 
 		if (i915_vma_misplaced(vma, alignment, flags)) {
+			unsigned long offset;
+			offset = ggtt_view ? i915_gem_obj_ggtt_offset_view(obj, ggtt_view->type) :
+					     i915_gem_obj_offset(obj, vm);
 			WARN(vma->pin_count,
-			     "bo is already pinned with incorrect alignment:"
+			     "bo is already pinned in %s with incorrect alignment:"
 			     " offset=%lx, req.alignment=%x, req.map_and_fenceable=%d,"
 			     " obj->map_and_fenceable=%d\n",
-			     i915_gem_obj_offset_view(obj, vm, view->type),
+			     ggtt_view ? "ggtt" : "ppgtt",
+			     offset,
 			     alignment,
 			     !!(flags & PIN_MAPPABLE),
 			     obj->map_and_fenceable);
@@ -4206,8 +4229,8 @@ i915_gem_object_pin_view(struct drm_i915_gem_object *obj,
 
 	bound = vma ? vma->bound : 0;
 	if (vma == NULL || !drm_mm_node_allocated(&vma->node)) {
-		vma = i915_gem_object_bind_to_vm(obj, vm, alignment,
-						 flags, view);
+		vma = i915_gem_object_bind_to_vm(obj, vm, ggtt_view, alignment,
+						 flags);
 		if (IS_ERR(vma))
 			return PTR_ERR(vma);
 	}
@@ -4233,7 +4256,7 @@ i915_gem_object_pin_view(struct drm_i915_gem_object *obj,
 		fenceable = (vma->node.size == fence_size &&
 			     (vma->node.start & (fence_alignment - 1)) == 0);
 
-		mappable = (vma->node.start + obj->base.size <=
+		mappable = (vma->node.start + fence_size <=
 			    dev_priv->gtt.mappable_end);
 
 		obj->map_and_fenceable = mappable && fenceable;
@@ -4246,6 +4269,30 @@ i915_gem_object_pin_view(struct drm_i915_gem_object *obj,
 		obj->pin_mappable |= true;
 
 	return 0;
+}
+
+int
+i915_gem_object_pin(struct drm_i915_gem_object *obj,
+		    struct i915_address_space *vm,
+		    uint32_t alignment,
+		    uint64_t flags)
+{
+	return i915_gem_object_do_pin(obj, vm,
+				      i915_is_ggtt(vm) ? &i915_ggtt_view_normal : NULL,
+				      alignment, flags);
+}
+
+int
+i915_gem_object_ggtt_pin(struct drm_i915_gem_object *obj,
+			 const struct i915_ggtt_view *view,
+			 uint32_t alignment,
+			 uint64_t flags)
+{
+	if (WARN_ONCE(!view, "no view specified"))
+		return -EINVAL;
+
+	return i915_gem_object_do_pin(obj, i915_obj_to_ggtt(obj), view,
+				      alignment, flags);
 }
 
 void
@@ -4553,15 +4600,32 @@ void i915_gem_free_object(struct drm_gem_object *gem_obj)
 	intel_runtime_pm_put(dev_priv);
 }
 
-struct i915_vma *i915_gem_obj_to_vma_view(struct drm_i915_gem_object *obj,
-					  struct i915_address_space *vm,
-					  const struct i915_ggtt_view *view)
+struct i915_vma *i915_gem_obj_to_vma(struct drm_i915_gem_object *obj,
+				     struct i915_address_space *vm)
 {
 	struct i915_vma *vma;
-	list_for_each_entry(vma, &obj->vma_list, vma_link)
-		if (vma->vm == vm && vma->ggtt_view.type == view->type)
+	list_for_each_entry(vma, &obj->vma_list, vma_link) {
+		if (i915_is_ggtt(vma->vm) &&
+		    vma->ggtt_view.type != I915_GGTT_VIEW_NORMAL)
+			continue;
+		if (vma->vm == vm)
 			return vma;
+	}
+	return NULL;
+}
 
+struct i915_vma *i915_gem_obj_to_ggtt_view(struct drm_i915_gem_object *obj,
+					   const struct i915_ggtt_view *view)
+{
+	struct i915_address_space *ggtt = i915_obj_to_ggtt(obj);
+	struct i915_vma *vma;
+
+	if (WARN_ONCE(!view, "no view specified"))
+		return ERR_PTR(-EINVAL);
+
+	list_for_each_entry(vma, &obj->vma_list, vma_link)
+		if (vma->vm == ggtt && vma->ggtt_view.type == view->type)
+			return vma;
 	return NULL;
 }
 
@@ -4607,10 +4671,6 @@ i915_gem_suspend(struct drm_device *dev)
 		goto err;
 
 	i915_gem_retire_requests(dev);
-
-	/* Under UMS, be paranoid and evict. */
-	if (!drm_core_check_feature(dev, DRIVER_MODESET))
-		i915_gem_evict_everything(dev);
 
 	i915_gem_stop_ringbuffers(dev);
 	mutex_unlock(&dev->struct_mutex);
@@ -4982,17 +5042,7 @@ i915_gem_load(struct drm_device *dev)
 			  i915_gem_idle_work_handler);
 	init_waitqueue_head(&dev_priv->gpu_error.reset_queue);
 
-	/* On GEN3 we really need to make sure the ARB C3 LP bit is set */
-	if (!drm_core_check_feature(dev, DRIVER_MODESET) && IS_GEN3(dev)) {
-		I915_WRITE(MI_ARB_STATE,
-			   _MASKED_BIT_ENABLE(MI_ARB_C3_LP_WRITE_ENABLE));
-	}
-
 	dev_priv->relative_constants_mode = I915_EXEC_CONSTANTS_REL_GENERAL;
-
-	/* Old X drivers will take 0-2 for front, back, depth buffers */
-	if (!drm_core_check_feature(dev, DRIVER_MODESET))
-		dev_priv->fence_reg_start = 3;
 
 	if (INTEL_INFO(dev)->gen >= 7 && !IS_VALLEYVIEW(dev))
 		dev_priv->num_fence_regs = 32;
@@ -5000,6 +5050,10 @@ i915_gem_load(struct drm_device *dev)
 		dev_priv->num_fence_regs = 16;
 	else
 		dev_priv->num_fence_regs = 8;
+
+	if (intel_vgpu_active(dev))
+		dev_priv->num_fence_regs =
+				I915_READ(vgtif_reg(avail_rs.fence_num));
 
 	/* Initialize fence registers to zero */
 	INIT_LIST_HEAD(&dev_priv->mm.fence_list);
@@ -5180,9 +5234,9 @@ i915_gem_shrinker_count(struct shrinker *shrinker, struct shrink_control *sc)
 }
 
 /* All the new VM stuff */
-unsigned long i915_gem_obj_offset_view(struct drm_i915_gem_object *o,
-				       struct i915_address_space *vm,
-				       enum i915_ggtt_view_type view)
+unsigned long
+i915_gem_obj_offset(struct drm_i915_gem_object *o,
+		    struct i915_address_space *vm)
 {
 	struct drm_i915_private *dev_priv = o->base.dev->dev_private;
 	struct i915_vma *vma;
@@ -5190,23 +5244,58 @@ unsigned long i915_gem_obj_offset_view(struct drm_i915_gem_object *o,
 	WARN_ON(vm == &dev_priv->mm.aliasing_ppgtt->base);
 
 	list_for_each_entry(vma, &o->vma_list, vma_link) {
-		if (vma->vm == vm && vma->ggtt_view.type == view)
+		if (i915_is_ggtt(vma->vm) &&
+		    vma->ggtt_view.type != I915_GGTT_VIEW_NORMAL)
+			continue;
+		if (vma->vm == vm)
 			return vma->node.start;
-
 	}
+
 	WARN(1, "%s vma for this object not found.\n",
 	     i915_is_ggtt(vm) ? "global" : "ppgtt");
 	return -1;
 }
 
-bool i915_gem_obj_bound_view(struct drm_i915_gem_object *o,
-			     struct i915_address_space *vm,
-			     enum i915_ggtt_view_type view)
+unsigned long
+i915_gem_obj_ggtt_offset_view(struct drm_i915_gem_object *o,
+			      enum i915_ggtt_view_type view)
 {
+	struct drm_i915_private *dev_priv = o->base.dev->dev_private;
+	struct i915_address_space *ggtt = i915_obj_to_ggtt(o);
 	struct i915_vma *vma;
 
 	list_for_each_entry(vma, &o->vma_list, vma_link)
-		if (vma->vm == vm &&
+		if (vma->vm == ggtt && vma->ggtt_view.type == view)
+			return vma->node.start;
+
+	WARN(1, "global vma for this object not found.\n");
+	return -1;
+}
+
+bool i915_gem_obj_bound(struct drm_i915_gem_object *o,
+			struct i915_address_space *vm)
+{
+	struct i915_vma *vma;
+
+	list_for_each_entry(vma, &o->vma_list, vma_link) {
+		if (i915_is_ggtt(vma->vm) &&
+		    vma->ggtt_view.type != I915_GGTT_VIEW_NORMAL)
+			continue;
+		if (vma->vm == vm && drm_mm_node_allocated(&vma->node))
+			return true;
+	}
+
+	return false;
+}
+
+bool i915_gem_obj_ggtt_bound_view(struct drm_i915_gem_object *o,
+				  enum i915_ggtt_view_type view)
+{
+	struct i915_address_space *ggtt = i915_obj_to_ggtt(o);
+	struct i915_vma *vma;
+
+	list_for_each_entry(vma, &o->vma_list, vma_link)
+		if (vma->vm == ggtt &&
 		    vma->ggtt_view.type == view &&
 		    drm_mm_node_allocated(&vma->node))
 			return true;
@@ -5235,10 +5324,13 @@ unsigned long i915_gem_obj_size(struct drm_i915_gem_object *o,
 
 	BUG_ON(list_empty(&o->vma_list));
 
-	list_for_each_entry(vma, &o->vma_list, vma_link)
+	list_for_each_entry(vma, &o->vma_list, vma_link) {
+		if (i915_is_ggtt(vma->vm) &&
+		    vma->ggtt_view.type != I915_GGTT_VIEW_NORMAL)
+			continue;
 		if (vma->vm == vm)
 			return vma->node.size;
-
+	}
 	return 0;
 }
 
@@ -5338,15 +5430,16 @@ i915_gem_shrinker_oom(struct notifier_block *nb, unsigned long event, void *ptr)
 	return NOTIFY_DONE;
 }
 
-struct i915_vma *i915_gem_obj_to_ggtt(struct drm_i915_gem_object *obj)
+bool i915_gem_obj_is_pinned(struct drm_i915_gem_object *obj)
 {
-	struct i915_address_space *ggtt = i915_obj_to_ggtt(obj);
 	struct i915_vma *vma;
-
-	list_for_each_entry(vma, &obj->vma_list, vma_link)
-		if (vma->vm == ggtt &&
-		    vma->ggtt_view.type == I915_GGTT_VIEW_NORMAL)
-			return vma;
-
-	return NULL;
+	list_for_each_entry(vma, &obj->vma_list, vma_link) {
+		if (i915_is_ggtt(vma->vm) &&
+		    vma->ggtt_view.type != I915_GGTT_VIEW_NORMAL)
+			continue;
+		if (vma->pin_count > 0)
+			return true;
+	}
+	return false;
 }
+
