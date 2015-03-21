@@ -119,7 +119,10 @@ static void dw8250_serial_out(struct uart_port *p, int offset, int value)
 			dw8250_force_idle(p);
 			writeb(value, p->membase + (UART_LCR << p->regshift));
 		}
-		dev_err(p->dev, "Couldn't set LCR to %d\n", value);
+		/*
+		 * FIXME: this deadlocks if port->lock is already held
+		 * dev_err(p->dev, "Couldn't set LCR to %d\n", value);
+		 */
 	}
 }
 
@@ -163,7 +166,10 @@ static void dw8250_serial_outq(struct uart_port *p, int offset, int value)
 			__raw_writeq(value & 0xff,
 				     p->membase + (UART_LCR << p->regshift));
 		}
-		dev_err(p->dev, "Couldn't set LCR to %d\n", value);
+		/*
+		 * FIXME: this deadlocks if port->lock is already held
+		 * dev_err(p->dev, "Couldn't set LCR to %d\n", value);
+		 */
 	}
 }
 #endif /* CONFIG_64BIT */
@@ -187,7 +193,10 @@ static void dw8250_serial_out32(struct uart_port *p, int offset, int value)
 			dw8250_force_idle(p);
 			writel(value, p->membase + (UART_LCR << p->regshift));
 		}
-		dev_err(p->dev, "Couldn't set LCR to %d\n", value);
+		/*
+		 * FIXME: this deadlocks if port->lock is already held
+		 * dev_err(p->dev, "Couldn't set LCR to %d\n", value);
+		 */
 	}
 }
 
@@ -416,18 +425,24 @@ static int dw8250_probe(struct platform_device *pdev)
 {
 	struct uart_8250_port uart = {};
 	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	int irq = platform_get_irq(pdev, 0);
 	struct dw8250_data *data;
 	int err;
 
-	if (!regs || !irq) {
-		dev_err(&pdev->dev, "no registers/irq defined\n");
+	if (!regs) {
+		dev_err(&pdev->dev, "no registers defined\n");
 		return -EINVAL;
+	}
+
+	if (irq < 0) {
+		if (irq != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "cannot get irq\n");
+		return irq;
 	}
 
 	spin_lock_init(&uart.port.lock);
 	uart.port.mapbase = regs->start;
-	uart.port.irq = irq->start;
+	uart.port.irq = irq;
 	uart.port.handle_irq = dw8250_handle_irq;
 	uart.port.pm = dw8250_do_pm;
 	uart.port.type = PORT_8250;
@@ -640,3 +655,4 @@ module_platform_driver(dw8250_platform_driver);
 MODULE_AUTHOR("Jamie Iles");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Synopsys DesignWare 8250 serial port driver");
+MODULE_ALIAS("platform:dw-apb-uart");
