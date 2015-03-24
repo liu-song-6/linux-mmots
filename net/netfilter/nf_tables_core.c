@@ -108,43 +108,6 @@ struct nft_jumpstack {
 	int			rulenum;
 };
 
-<<<<<<< HEAD
-enum nft_trace {
-	NFT_TRACE_RULE,
-	NFT_TRACE_RETURN,
-	NFT_TRACE_POLICY,
-};
-
-static const char *const comments[] = {
-	[NFT_TRACE_RULE]	= "rule",
-	[NFT_TRACE_RETURN]	= "return",
-	[NFT_TRACE_POLICY]	= "policy",
-};
-
-static struct nf_loginfo trace_loginfo = {
-	.type = NF_LOG_TYPE_LOG,
-	.u = {
-		.log = {
-			.level = 4,
-			.logflags = NF_LOG_MASK,
-	        },
-	},
-};
-
-static void nft_trace_packet(const struct nft_pktinfo *pkt,
-			     const struct nft_chain *chain,
-			     int rulenum, enum nft_trace type)
-{
-	struct net *net = dev_net(pkt->in ? pkt->in : pkt->out);
-
-	nf_log_trace(net, pkt->xt.family, pkt->ops->hooknum, pkt->skb, pkt->in,
-		     pkt->out, &trace_loginfo, "TRACE: %s:%s:%s:%u ",
-		     chain->table->name, chain->name, comments[type],
-		     rulenum);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 unsigned int
 nft_do_chain(struct nft_pktinfo *pkt, const struct nf_hook_ops *ops)
 {
