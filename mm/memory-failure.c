@@ -522,49 +522,49 @@ static const char *action_name[] = {
 };
 
 enum page_type {
-	KERNEL,
-	KERNEL_HIGH_ORDER,
-	SLAB,
-	DIFFERENT_COMPOUND,
-	POISONED_HUGE,
-	HUGE,
-	FREE_HUGE,
-	UNMAP_FAILED,
-	DIRTY_SWAPCACHE,
-	CLEAN_SWAPCACHE,
-	DIRTY_MLOCKED_LRU,
-	CLEAN_MLOCKED_LRU,
-	DIRTY_UNEVICTABLE_LRU,
-	CLEAN_UNEVICTABLE_LRU,
-	DIRTY_LRU,
-	CLEAN_LRU,
-	TRUNCATED_LRU,
-	BUDDY,
-	BUDDY_2ND,
-	UNKNOWN,
+	MSG_KERNEL,
+	MSG_KERNEL_HIGH_ORDER,
+	MSG_SLAB,
+	MSG_DIFFERENT_COMPOUND,
+	MSG_POISONED_HUGE,
+	MSG_HUGE,
+	MSG_FREE_HUGE,
+	MSG_UNMAP_FAILED,
+	MSG_DIRTY_SWAPCACHE,
+	MSG_CLEAN_SWAPCACHE,
+	MSG_DIRTY_MLOCKED_LRU,
+	MSG_CLEAN_MLOCKED_LRU,
+	MSG_DIRTY_UNEVICTABLE_LRU,
+	MSG_CLEAN_UNEVICTABLE_LRU,
+	MSG_DIRTY_LRU,
+	MSG_CLEAN_LRU,
+	MSG_TRUNCATED_LRU,
+	MSG_BUDDY,
+	MSG_BUDDY_2ND,
+	MSG_UNKNOWN,
 };
 
 static const char *action_page_type[] = {
-	[KERNEL]		= "reserved kernel page",
-	[KERNEL_HIGH_ORDER]	= "high-order kernel page",
-	[SLAB]			= "kernel slab page",
-	[DIFFERENT_COMPOUND]	= "different compound page after locking",
-	[POISONED_HUGE]		= "huge page already hardware poisoned",
-	[HUGE]			= "huge page",
-	[FREE_HUGE]		= "free huge page",
-	[UNMAP_FAILED]		= "unmapping failed page",
-	[DIRTY_SWAPCACHE]	= "dirty swapcache page",
-	[CLEAN_SWAPCACHE]	= "clean swapcache page",
-	[DIRTY_MLOCKED_LRU]	= "dirty mlocked LRU page",
-	[CLEAN_MLOCKED_LRU]	= "clean mlocked LRU page",
-	[DIRTY_UNEVICTABLE_LRU]	= "dirty unevictable LRU page",
-	[CLEAN_UNEVICTABLE_LRU]	= "clean unevictable LRU page",
-	[DIRTY_LRU]		= "dirty LRU page",
-	[CLEAN_LRU]		= "clean LRU page",
-	[TRUNCATED_LRU]		= "already truncated LRU page",
-	[BUDDY]			= "free buddy page",
-	[BUDDY_2ND]		= "free buddy page (2nd try)",
-	[UNKNOWN]		= "unknown page",
+	[MSG_KERNEL]			= "reserved kernel page",
+	[MSG_KERNEL_HIGH_ORDER]		= "high-order kernel page",
+	[MSG_SLAB]			= "kernel slab page",
+	[MSG_DIFFERENT_COMPOUND]	= "different compound page after locking",
+	[MSG_POISONED_HUGE]		= "huge page already hardware poisoned",
+	[MSG_HUGE]			= "huge page",
+	[MSG_FREE_HUGE]			= "free huge page",
+	[MSG_UNMAP_FAILED]		= "unmapping failed page",
+	[MSG_DIRTY_SWAPCACHE]		= "dirty swapcache page",
+	[MSG_CLEAN_SWAPCACHE]		= "clean swapcache page",
+	[MSG_DIRTY_MLOCKED_LRU]		= "dirty mlocked LRU page",
+	[MSG_CLEAN_MLOCKED_LRU]		= "clean mlocked LRU page",
+	[MSG_DIRTY_UNEVICTABLE_LRU]	= "dirty unevictable LRU page",
+	[MSG_CLEAN_UNEVICTABLE_LRU]	= "clean unevictable LRU page",
+	[MSG_DIRTY_LRU]			= "dirty LRU page",
+	[MSG_CLEAN_LRU]			= "clean LRU page",
+	[MSG_TRUNCATED_LRU]		= "already truncated LRU page",
+	[MSG_BUDDY]			= "free buddy page",
+	[MSG_BUDDY_2ND]			= "free buddy page (2nd try)",
+	[MSG_UNKNOWN]			= "unknown page",
 };
 
 /*
@@ -826,7 +826,7 @@ static struct page_state {
 	int type;
 	int (*action)(struct page *p, unsigned long pfn);
 } error_states[] = {
-	{ reserved,	reserved,	KERNEL,	me_kernel },
+	{ reserved,	reserved,	MSG_KERNEL,	me_kernel },
 	/*
 	 * free pages are specially detected outside this table:
 	 * PG_buddy pages only make a small fraction of all free pages.
@@ -837,31 +837,31 @@ static struct page_state {
 	 * currently unused objects without touching them. But just
 	 * treat it as standard kernel for now.
 	 */
-	{ slab,		slab,		SLAB,	me_kernel },
+	{ slab,		slab,		MSG_SLAB,	me_kernel },
 
 #ifdef CONFIG_PAGEFLAGS_EXTENDED
-	{ head,		head,		HUGE,		me_huge_page },
-	{ tail,		tail,		HUGE,		me_huge_page },
+	{ head,		head,		MSG_HUGE,		me_huge_page },
+	{ tail,		tail,		MSG_HUGE,		me_huge_page },
 #else
-	{ compound,	compound,	HUGE,		me_huge_page },
+	{ compound,	compound,	MSG_HUGE,		me_huge_page },
 #endif
 
-	{ sc|dirty,	sc|dirty,	DIRTY_SWAPCACHE,	me_swapcache_dirty },
-	{ sc|dirty,	sc,		CLEAN_SWAPCACHE,	me_swapcache_clean },
+	{ sc|dirty,	sc|dirty,	MSG_DIRTY_SWAPCACHE,	me_swapcache_dirty },
+	{ sc|dirty,	sc,		MSG_CLEAN_SWAPCACHE,	me_swapcache_clean },
 
-	{ mlock|dirty,	mlock|dirty,	DIRTY_MLOCKED_LRU,	me_pagecache_dirty },
-	{ mlock|dirty,	mlock,		CLEAN_MLOCKED_LRU,	me_pagecache_clean },
+	{ mlock|dirty,	mlock|dirty,	MSG_DIRTY_MLOCKED_LRU,	me_pagecache_dirty },
+	{ mlock|dirty,	mlock,		MSG_CLEAN_MLOCKED_LRU,	me_pagecache_clean },
 
-	{ unevict|dirty, unevict|dirty,	DIRTY_UNEVICTABLE_LRU,	me_pagecache_dirty },
-	{ unevict|dirty, unevict,	DIRTY_UNEVICTABLE_LRU,	me_pagecache_clean },
+	{ unevict|dirty, unevict|dirty,	MSG_DIRTY_UNEVICTABLE_LRU,	me_pagecache_dirty },
+	{ unevict|dirty, unevict,	MSG_DIRTY_UNEVICTABLE_LRU,	me_pagecache_clean },
 
-	{ lru|dirty,	lru|dirty,	DIRTY_LRU,	me_pagecache_dirty },
-	{ lru|dirty,	lru,		CLEAN_LRU,	me_pagecache_clean },
+	{ lru|dirty,	lru|dirty,	MSG_DIRTY_LRU,	me_pagecache_dirty },
+	{ lru|dirty,	lru,		MSG_CLEAN_LRU,	me_pagecache_clean },
 
 	/*
 	 * Catchall entry: must be at end.
 	 */
-	{ 0,		0,		UNKNOWN,	me_unknown },
+	{ 0,		0,		MSG_UNKNOWN,	me_unknown },
 };
 
 #undef dirty
@@ -1152,7 +1152,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	if (!(flags & MF_COUNT_INCREASED) &&
 		!get_page_unless_zero(hpage)) {
 		if (is_free_buddy_page(p)) {
-			action_result(pfn, BUDDY, DELAYED);
+			action_result(pfn, MSG_BUDDY, DELAYED);
 			return 0;
 		} else if (PageHuge(hpage)) {
 			/*
@@ -1169,12 +1169,12 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 			}
 			set_page_hwpoison_huge_page(hpage);
 			res = dequeue_hwpoisoned_huge_page(hpage);
-			action_result(pfn, FREE_HUGE,
+			action_result(pfn, MSG_FREE_HUGE,
 				      res ? IGNORED : DELAYED);
 			unlock_page(hpage);
 			return res;
 		} else {
-			action_result(pfn, KERNEL_HIGH_ORDER, IGNORED);
+			action_result(pfn, MSG_KERNEL_HIGH_ORDER, IGNORED);
 			return -EBUSY;
 		}
 	}
@@ -1196,9 +1196,10 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 			 */
 			if (is_free_buddy_page(p)) {
 				if (flags & MF_COUNT_INCREASED)
-					action_result(pfn, BUDDY, DELAYED);
+					action_result(pfn, MSG_BUDDY, DELAYED);
 				else
-					action_result(pfn, BUDDY_2ND, DELAYED);
+					action_result(pfn, MSG_BUDDY_2ND,
+						      DELAYED);
 				return 0;
 			}
 		}
@@ -1211,7 +1212,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	 * If this happens just bail out.
 	 */
 	if (compound_head(p) != hpage) {
-		action_result(pfn, DIFFERENT_COMPOUND, IGNORED);
+		action_result(pfn, MSG_DIFFERENT_COMPOUND, IGNORED);
 		res = -EBUSY;
 		goto out;
 	}
@@ -1251,7 +1252,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	 * on the head page to show that the hugepage is hwpoisoned
 	 */
 	if (PageHuge(p) && PageTail(p) && TestSetPageHWPoison(hpage)) {
-		action_result(pfn, POISONED_HUGE, IGNORED);
+		action_result(pfn, MSG_POISONED_HUGE, IGNORED);
 		unlock_page(hpage);
 		put_page(hpage);
 		return 0;
@@ -1280,7 +1281,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	 */
 	if (hwpoison_user_mappings(p, pfn, trapno, flags, &hpage)
 	    != SWAP_SUCCESS) {
-		action_result(pfn, UNMAP_FAILED, IGNORED);
+		action_result(pfn, MSG_UNMAP_FAILED, IGNORED);
 		res = -EBUSY;
 		goto out;
 	}
@@ -1289,7 +1290,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	 * Torn down by someone else?
 	 */
 	if (PageLRU(p) && !PageSwapCache(p) && p->mapping == NULL) {
-		action_result(pfn, TRUNCATED_LRU, IGNORED);
+		action_result(pfn, MSG_TRUNCATED_LRU, IGNORED);
 		res = -EBUSY;
 		goto out;
 	}
