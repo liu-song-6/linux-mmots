@@ -1577,17 +1577,11 @@ static int palmas_regulators_probe(struct platform_device *pdev)
 	if (!pmic)
 		return -ENOMEM;
 
-<<<<<<< HEAD
-	if (of_device_is_compatible(node, "ti,tps659038-pmic"))
-		palmas_generic_regs_info[PALMAS_REG_REGEN2].ctrl_addr =
-							TPS659038_REGEN2_CTRL;
-=======
 	if (of_device_is_compatible(node, "ti,tps659038-pmic")) {
 		palmas_generic_regs_info[PALMAS_REG_REGEN2].ctrl_addr =
 							TPS659038_REGEN2_CTRL;
 		palmas_ddata.has_regen3 = false;
 	}
->>>>>>> linux-next/akpm-base
 
 	pmic->dev = &pdev->dev;
 	pmic->palmas = palmas;
