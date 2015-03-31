@@ -76,7 +76,7 @@ int mwifiex_init_priv(struct mwifiex_private *priv)
 	u32 i;
 
 	priv->media_connected = false;
-	memset(priv->curr_addr, 0xff, ETH_ALEN);
+	eth_broadcast_addr(priv->curr_addr);
 
 	priv->pkt_tx_ctrl = 0;
 	priv->bss_mode = NL80211_IFTYPE_UNSPECIFIED;
@@ -296,10 +296,9 @@ static void mwifiex_init_adapter(struct mwifiex_adapter *adapter)
 	memset(&adapter->arp_filter, 0, sizeof(adapter->arp_filter));
 	adapter->arp_filter_size = 0;
 	adapter->max_mgmt_ie_index = MAX_MGMT_IE_INDEX;
-	adapter->ext_scan = false;
 	adapter->key_api_major_ver = 0;
 	adapter->key_api_minor_ver = 0;
-	memset(adapter->perm_addr, 0xff, ETH_ALEN);
+	eth_broadcast_addr(adapter->perm_addr);
 	adapter->iface_limit.sta_intf = MWIFIEX_MAX_STA_NUM;
 	adapter->iface_limit.uap_intf = MWIFIEX_MAX_UAP_NUM;
 	adapter->iface_limit.p2p_intf = MWIFIEX_MAX_P2P_NUM;
@@ -482,6 +481,7 @@ int mwifiex_init_lock_list(struct mwifiex_adapter *adapter)
 	spin_lock_init(&adapter->rx_proc_lock);
 
 	skb_queue_head_init(&adapter->rx_data_q);
+	skb_queue_head_init(&adapter->tx_data_q);
 
 	for (i = 0; i < adapter->priv_num; ++i) {
 		INIT_LIST_HEAD(&adapter->bss_prio_tbl[i].bss_prio_head);
@@ -688,6 +688,10 @@ mwifiex_shutdown_drv(struct mwifiex_adapter *adapter)
 			mwifiex_delete_bss_prio_tbl(priv);
 		}
 	}
+
+	atomic_set(&adapter->tx_queued, 0);
+	while ((skb = skb_dequeue(&adapter->tx_data_q)))
+		mwifiex_write_data_complete(adapter, skb, 0, 0);
 
 	spin_lock_irqsave(&adapter->rx_proc_lock, flags);
 
