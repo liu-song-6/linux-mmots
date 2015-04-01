@@ -2664,7 +2664,7 @@ static struct pci_driver ipmi_pci_driver = {
 };
 #endif /* CONFIG_PCI */
 
-static struct of_device_id ipmi_match[];
+static const struct of_device_id ipmi_match[];
 static int ipmi_probe(struct platform_device *dev)
 {
 #ifdef CONFIG_OF
@@ -2761,7 +2761,7 @@ static int ipmi_remove(struct platform_device *dev)
 	return 0;
 }
 
-static struct of_device_id ipmi_match[] =
+static const struct of_device_id ipmi_match[] =
 {
 	{ .type = "ipmi", .compatible = "ipmi-kcs",
 	  .data = (void *)(unsigned long) SI_KCS },
@@ -2987,7 +2987,7 @@ static int smi_type_proc_show(struct seq_file *m, void *v)
 
 	seq_printf(m, "%s\n", si_to_str[smi->si_type]);
 
-	return seq_has_overflowed(m);
+	return 0;
 }
 
 static int smi_type_proc_open(struct inode *inode, struct file *file)
@@ -3060,7 +3060,7 @@ static int smi_params_proc_show(struct seq_file *m, void *v)
 		   smi->irq,
 		   smi->slave_addr);
 
-	return seq_has_overflowed(m);
+	return 0;
 }
 
 static int smi_params_proc_open(struct inode *inode, struct file *file)
