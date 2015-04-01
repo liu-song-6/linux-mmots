@@ -269,6 +269,15 @@ struct va_format:
 
 	Passed by reference.
 
+bitmap and its derivatives such as cpumask and nodemask:
+
+	%*pb	0779
+	%*pbl	0,3-6,8-10
+
+	For printing bitmap and its derivatives such as cpumask and nodemask,
+	%*pb output the bitmap with field width as the number of bits and %*pbl
+	output the bitmap as range list with field width as the number of bits.
+
 struct clk:
 
 	%pC	pll1
