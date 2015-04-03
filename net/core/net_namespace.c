@@ -236,10 +236,6 @@ static __net_init int setup_net(struct net *net, struct user_namespace *user_ns)
 	net->user_ns = user_ns;
 	idr_init(&net->netns_ids);
 
-#ifdef NETNS_REFCNT_DEBUG
-	atomic_set(&net->use_count, 0);
-#endif
-
 	list_for_each_entry(ops, &pernet_list, list) {
 		error = ops_init(ops, net);
 		if (error < 0)
@@ -294,13 +290,6 @@ out_free:
 
 static void net_free(struct net *net)
 {
-#ifdef NETNS_REFCNT_DEBUG
-	if (unlikely(atomic_read(&net->use_count) != 0)) {
-		pr_emerg("network namespace not free! Usage: %d\n",
-			 atomic_read(&net->use_count));
-		return;
-	}
-#endif
 	kfree(rcu_access_pointer(net->gen));
 	kmem_cache_free(net_cachep, net);
 }
@@ -349,7 +338,7 @@ static LIST_HEAD(cleanup_list);  /* Must hold cleanup_list_lock to touch */
 static void cleanup_net(struct work_struct *work)
 {
 	const struct pernet_operations *ops;
-	struct net *net, *tmp;
+	struct net *net, *tmp, *peer;
 	struct list_head net_kill_list;
 	LIST_HEAD(net_exit_list);
 
@@ -365,14 +354,6 @@ static void cleanup_net(struct work_struct *work)
 	list_for_each_entry(net, &net_kill_list, cleanup_list) {
 		list_del_rcu(&net->list);
 		list_add_tail(&net->exit_list, &net_exit_list);
-		for_each_net(tmp) {
-			int id = __peernet2id(tmp, net, false);
-
-			if (id >= 0)
-				idr_remove(&tmp->netns_ids, id);
-		}
-		idr_destroy(&net->netns_ids);
-
 	}
 	rtnl_unlock();
 
@@ -398,12 +379,26 @@ static void cleanup_net(struct work_struct *work)
 	 */
 	rcu_barrier();
 
+	rtnl_lock();
 	/* Finally it is safe to free my network namespace structure */
 	list_for_each_entry_safe(net, tmp, &net_exit_list, exit_list) {
+		/* Unreference net from all peers (no need to loop over
+		 * net_exit_list because idr_destroy() will be called for each
+		 * element of this list.
+		 */
+		for_each_net(peer) {
+			int id = __peernet2id(peer, net, false);
+
+			if (id >= 0)
+				idr_remove(&peer->netns_ids, id);
+		}
+		idr_destroy(&net->netns_ids);
+
 		list_del_init(&net->exit_list);
 		put_user_ns(net->user_ns);
 		net_drop_ns(net);
 	}
+	rtnl_unlock();
 }
 static DECLARE_WORK(net_cleanup_work, cleanup_net);
 

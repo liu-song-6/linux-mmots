@@ -1499,6 +1499,15 @@ static struct mlx4_cmd_info cmd_info[] = {
 		.verify = NULL,
 		.wrapper = mlx4_ACCESS_REG_wrapper,
 	},
+	{
+		.opcode = MLX4_CMD_CONGESTION_CTRL_OPCODE,
+		.has_inbox = false,
+		.has_outbox = false,
+		.out_is_imm = false,
+		.encode_slave_id = false,
+		.verify = NULL,
+		.wrapper = mlx4_CMD_EPERM_wrapper,
+	},
 	/* Native multicast commands are not available for guests */
 	{
 		.opcode = MLX4_CMD_QP_ATTACH,
@@ -1993,7 +2002,6 @@ static void mlx4_master_do_cmd(struct mlx4_dev *dev, int slave, u8 cmd,
 			goto reset_slave;
 		slave_state[slave].vhcr_dma = ((u64) param) << 48;
 		priv->mfunc.master.slave_state[slave].cookie = 0;
-		mutex_init(&priv->mfunc.master.gen_eqe_mutex[slave]);
 		break;
 	case MLX4_COMM_CMD_VHCR1:
 		if (slave_state[slave].last_cmd != MLX4_COMM_CMD_VHCR0)
@@ -2225,6 +2233,7 @@ int mlx4_multi_func_init(struct mlx4_dev *dev)
 		for (i = 0; i < dev->num_slaves; ++i) {
 			s_state = &priv->mfunc.master.slave_state[i];
 			s_state->last_cmd = MLX4_COMM_CMD_RESET;
+			mutex_init(&priv->mfunc.master.gen_eqe_mutex[i]);
 			for (j = 0; j < MLX4_EVENT_TYPES_NUM; ++j)
 				s_state->event_eq[j].eqn = -1;
 			__raw_writel((__force u32) 0,
