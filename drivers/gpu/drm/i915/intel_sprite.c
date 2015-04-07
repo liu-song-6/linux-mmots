@@ -1119,35 +1119,7 @@ int intel_sprite_set_colorkey(struct drm_device *dev, void *data,
 	}
 
 	intel_plane = to_intel_plane(plane);
-<<<<<<< HEAD
-	ret = intel_plane->update_colorkey(plane, set);
-
-out_unlock:
-	drm_modeset_unlock_all(dev);
-	return ret;
-}
-
-int intel_sprite_get_colorkey(struct drm_device *dev, void *data,
-			      struct drm_file *file_priv)
-{
-	struct drm_intel_sprite_colorkey *get = data;
-	struct drm_plane *plane;
-	struct intel_plane *intel_plane;
-	int ret = 0;
-
-	if (!drm_core_check_feature(dev, DRIVER_MODESET))
-		return -ENODEV;
-
-	drm_modeset_lock_all(dev);
-
-	plane = drm_plane_find(dev, get->plane_id);
-	if (!plane || plane->type != DRM_PLANE_TYPE_OVERLAY) {
-		ret = -ENOENT;
-		goto out_unlock;
-	}
-=======
 	intel_plane->ckey = *set;
->>>>>>> linux-next/akpm-base
 
 	/*
 	 * The only way this could fail would be due to

@@ -1468,11 +1468,7 @@ void tcp_v4_early_demux(struct sk_buff *skb)
 	if (sk) {
 		skb->sk = sk;
 		skb->destructor = sock_edemux;
-<<<<<<< HEAD
-		if (sk->sk_state != TCP_TIME_WAIT) {
-=======
 		if (sk_fullsock(sk)) {
->>>>>>> linux-next/akpm-base
 			struct dst_entry *dst = READ_ONCE(sk->sk_rx_dst);
 
 			if (dst)
