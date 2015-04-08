@@ -1645,6 +1645,7 @@ static int vpfe_enum_size(struct file *file, void  *priv,
 	fse.index = fsize->index;
 	fse.pad = 0;
 	fse.code = mbus.code;
+	fse.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 	ret = v4l2_subdev_call(sdinfo->sd, pad, enum_frame_size, NULL, &fse);
 	if (ret)
 		return -EINVAL;
@@ -2327,6 +2328,7 @@ vpfe_async_bound(struct v4l2_async_notifier *notifier,
 
 		memset(&mbus_code, 0, sizeof(mbus_code));
 		mbus_code.index = j;
+		mbus_code.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 		ret = v4l2_subdev_call(subdev, pad, enum_mbus_code,
 			       NULL, &mbus_code);
 		if (ret)
@@ -2504,7 +2506,6 @@ vpfe_get_pdata(struct platform_device *pdev)
 					     GFP_KERNEL);
 		pdata->asd[i]->match_type = V4L2_ASYNC_MATCH_OF;
 		pdata->asd[i]->match.of.node = rem;
-		of_node_put(endpoint);
 		of_node_put(rem);
 	}
 

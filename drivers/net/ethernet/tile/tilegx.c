@@ -40,6 +40,7 @@
 #include <linux/tcp.h>
 #include <linux/net_tstamp.h>
 #include <linux/ptp_clock_kernel.h>
+#include <linux/tick.h>
 
 #include <asm/checksum.h>
 #include <asm/homecache.h>
@@ -838,7 +839,8 @@ static int ptp_mpipe_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	return ret;
 }
 
-static int ptp_mpipe_gettime(struct ptp_clock_info *ptp, struct timespec *ts)
+static int ptp_mpipe_gettime(struct ptp_clock_info *ptp,
+			     struct timespec64 *ts)
 {
 	int ret = 0;
 	struct mpipe_data *md = container_of(ptp, struct mpipe_data, caps);
@@ -850,7 +852,7 @@ static int ptp_mpipe_gettime(struct ptp_clock_info *ptp, struct timespec *ts)
 }
 
 static int ptp_mpipe_settime(struct ptp_clock_info *ptp,
-			     const struct timespec *ts)
+			     const struct timespec64 *ts)
 {
 	int ret = 0;
 	struct mpipe_data *md = container_of(ptp, struct mpipe_data, caps);
@@ -876,8 +878,8 @@ static struct ptp_clock_info ptp_mpipe_caps = {
 	.pps		= 0,
 	.adjfreq	= ptp_mpipe_adjfreq,
 	.adjtime	= ptp_mpipe_adjtime,
-	.gettime	= ptp_mpipe_gettime,
-	.settime	= ptp_mpipe_settime,
+	.gettime64	= ptp_mpipe_gettime,
+	.settime64	= ptp_mpipe_settime,
 	.enable		= ptp_mpipe_enable,
 };
 
@@ -2271,8 +2273,10 @@ static int __init tile_net_init_module(void)
 	for (i = 0; gxio_mpipe_link_enumerate_mac(i, name, mac) >= 0; i++)
 		tile_net_dev_init(name, mac);
 
-	if (!network_cpus_init())
+	if (!network_cpus_init()) {
 		network_cpus_map = *cpu_online_mask;
+		tick_nohz_full_clear_cpus(&network_cpus_map);
+	}
 
 	return 0;
 }
