@@ -13,7 +13,6 @@
 #include <linux/module.h>
 #include <linux/pagemap.h>
 #include <linux/mpage.h>
-#include <linux/aio.h>
 #include <linux/vfs.h>
 #include <linux/seq_file.h>
 #include <linux/parser.h>
