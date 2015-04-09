@@ -140,8 +140,7 @@ int cifs_posix_open(char *full_path, struct inode **pinode,
 	posix_flags = cifs_posix_convert_flags(f_flags);
 	rc = CIFSPOSIXCreate(xid, tcon, posix_flags, mode, pnetfid, presp_data,
 			     poplock, full_path, cifs_sb->local_nls,
-			     cifs_sb->mnt_cifs_flags &
-					CIFS_MOUNT_MAP_SPECIAL_CHR);
+			     cifs_remap(cifs_sb));
 	cifs_put_tlink(tlink);
 
 	if (rc)
@@ -3877,8 +3876,7 @@ void cifs_oplock_break(struct work_struct *work)
  * Direct IO is not yet supported in the cached mode. 
  */
 static ssize_t
-cifs_direct_io(int rw, struct kiocb *iocb, struct iov_iter *iter,
-               loff_t pos)
+cifs_direct_io(struct kiocb *iocb, struct iov_iter *iter, loff_t pos)
 {
         /*
          * FIXME
