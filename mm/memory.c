@@ -2555,9 +2555,15 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 
 	inc_mm_counter_fast(mm, MM_ANONPAGES);
 	dec_mm_counter_fast(mm, MM_SWAPENTS);
-	pte = mk_pte(page, vma->vm_page_prot);
+
+	/*
+	 * The page is swapping in now was dirty before it was swapped out
+	 * so restore the state again(ie, pte_mkdirty) because MADV_FREE
+	 * relies on the dirty bit on page table.
+	 */
+	pte = pte_mkdirty(mk_pte(page, vma->vm_page_prot));
 	if ((flags & FAULT_FLAG_WRITE) && reuse_swap_page(page)) {
-		pte = maybe_mkwrite(pte_mkdirty(pte), vma);
+		pte = maybe_mkwrite(pte, vma);
 		flags &= ~FAULT_FLAG_WRITE;
 		ret |= VM_FAULT_WRITE;
 		exclusive = 1;
