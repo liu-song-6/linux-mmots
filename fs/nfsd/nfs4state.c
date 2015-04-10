@@ -4049,7 +4049,6 @@ nfsd4_process_open2(struct svc_rqst *rqstp, struct svc_fh *current_fh, struct nf
 		status = nfserr_bad_stateid;
 		if (nfsd4_is_deleg_cur(open))
 			goto out;
-		status = nfserr_jukebox;
 	}
 
 	/*
@@ -4118,7 +4117,7 @@ out:
 }
 
 void nfsd4_cleanup_open_state(struct nfsd4_compound_state *cstate,
-			      struct nfsd4_open *open, __be32 status)
+			      struct nfsd4_open *open)
 {
 	if (open->op_openowner) {
 		struct nfs4_stateowner *so = &open->op_openowner->oo_owner;
@@ -4932,20 +4931,22 @@ nfs4_transform_lock_offset(struct file_lock *lock)
 		lock->fl_end = OFFSET_MAX;
 }
 
-static void nfsd4_fl_get_owner(struct file_lock *dst, struct file_lock *src)
+static fl_owner_t
+nfsd4_fl_get_owner(fl_owner_t owner)
 {
-	struct nfs4_lockowner *lo = (struct nfs4_lockowner *)src->fl_owner;
-	dst->fl_owner = (fl_owner_t)lockowner(nfs4_get_stateowner(&lo->lo_owner));
+	struct nfs4_lockowner *lo = (struct nfs4_lockowner *)owner;
+
+	nfs4_get_stateowner(&lo->lo_owner);
+	return owner;
 }
 
-static void nfsd4_fl_put_owner(struct file_lock *fl)
+static void
+nfsd4_fl_put_owner(fl_owner_t owner)
 {
-	struct nfs4_lockowner *lo = (struct nfs4_lockowner *)fl->fl_owner;
+	struct nfs4_lockowner *lo = (struct nfs4_lockowner *)owner;
 
-	if (lo) {
+	if (lo)
 		nfs4_put_stateowner(&lo->lo_owner);
-		fl->fl_owner = NULL;
-	}
 }
 
 static const struct lock_manager_operations nfsd_posix_mng_ops  = {
