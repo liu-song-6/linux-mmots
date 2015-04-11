@@ -325,7 +325,6 @@ static int madvise_free_pte_range(pmd_t *pmd, unsigned long addr,
 				continue;
 			}
 
-			ClearPageDirty(page);
 			unlock_page(page);
 		}
 

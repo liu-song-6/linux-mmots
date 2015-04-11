@@ -805,8 +805,7 @@ static enum page_references page_check_references(struct page *page,
 		return PAGEREF_KEEP;
 	}
 
-	if (PageAnon(page) && !pte_dirty && !PageSwapCache(page) &&
-			!PageDirty(page))
+	if (PageAnon(page) && !pte_dirty && !PageSwapCache(page))
 		*freeable = true;
 
 	/* Reclaim if clean, defer dirty pages to writeback */
