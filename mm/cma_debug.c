@@ -42,7 +42,7 @@ static int cma_used_get(void *data, u64 *val)
 	/* pages counter is smaller than sizeof(int) */
 	used = bitmap_weight(cma->bitmap, (int)cma->count);
 	mutex_unlock(&cma->lock);
-	*val = used << cma->order_per_bit;
+	*val = (u64)used << cma->order_per_bit;
 
 	return 0;
 }
@@ -64,7 +64,7 @@ static int cma_maxchunk_get(void *data, u64 *val)
 		maxchunk = max(end - start, maxchunk);
 	}
 	mutex_unlock(&cma->lock);
-	*val = maxchunk << cma->order_per_bit;
+	*val = (u64)maxchunk << cma->order_per_bit;
 
 	return 0;
 }
