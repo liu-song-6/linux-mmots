@@ -57,7 +57,7 @@ static int rtc_suspend(struct device *dev)
 
 	rtc->valid_alarm = !rtc_read_alarm(rtc, &rtc->alarm);
 
-	if (has_persistent_clock())
+	if (timekeeping_rtc_skipsuspend())
 		return 0;
 
 	if (strcmp(dev_name(&rtc->dev), CONFIG_RTC_HCTOSYS_DEVICE) != 0)
@@ -125,7 +125,7 @@ static int rtc_resume(struct device *dev)
 			rtc->ops->set_alarm(rtc->dev.parent, &rtc->alarm);
 	}
 
-	if (has_persistent_clock())
+	if (timekeeping_rtc_skipresume())
 		return 0;
 
 	rtc_hctosys_ret = -ENODEV;
@@ -140,10 +140,6 @@ static int rtc_resume(struct device *dev)
 		return 0;
 	}
 
-	if (rtc_valid_tm(&tm) != 0) {
-		pr_debug("%s:  bogus resume time\n", dev_name(&rtc->dev));
-		return 0;
-	}
 	new_rtc.tv_sec = rtc_tm_to_time64(&tm);
 	new_rtc.tv_nsec = 0;
 
