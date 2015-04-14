@@ -1256,28 +1256,28 @@ TRACE_EVENT(drv_set_rekey_data,
 		  LOCAL_PR_ARG, VIF_PR_ARG)
 );
 
-TRACE_EVENT(drv_rssi_callback,
+TRACE_EVENT(drv_event_callback,
 	TP_PROTO(struct ieee80211_local *local,
 		 struct ieee80211_sub_if_data *sdata,
-		 enum ieee80211_rssi_event rssi_event),
+		 const struct ieee80211_event *_event),
 
-	TP_ARGS(local, sdata, rssi_event),
+	TP_ARGS(local, sdata, _event),
 
 	TP_STRUCT__entry(
 		LOCAL_ENTRY
 		VIF_ENTRY
-		__field(u32, rssi_event)
+		__field(u32, type)
 	),
 
 	TP_fast_assign(
 		LOCAL_ASSIGN;
 		VIF_ASSIGN;
-		__entry->rssi_event = rssi_event;
+		__entry->type = _event->type;
 	),
 
 	TP_printk(
-		LOCAL_PR_FMT VIF_PR_FMT " rssi_event:%d",
-		LOCAL_PR_ARG, VIF_PR_ARG, __entry->rssi_event
+		LOCAL_PR_FMT VIF_PR_FMT " event:%d",
+		LOCAL_PR_ARG, VIF_PR_ARG, __entry->type
 	)
 );
 
@@ -2311,44 +2311,6 @@ TRACE_EVENT(drv_tdls_recv_channel_switch,
 		CHANDEF_PR_ARG, STA_PR_ARG
 	)
 );
-
-#ifdef CONFIG_MAC80211_MESSAGE_TRACING
-#undef TRACE_SYSTEM
-#define TRACE_SYSTEM mac80211_msg
-
-#define MAX_MSG_LEN	100
-
-DECLARE_EVENT_CLASS(mac80211_msg_event,
-	TP_PROTO(struct va_format *vaf),
-
-	TP_ARGS(vaf),
-
-	TP_STRUCT__entry(
-		__dynamic_array(char, msg, MAX_MSG_LEN)
-	),
-
-	TP_fast_assign(
-		WARN_ON_ONCE(vsnprintf(__get_dynamic_array(msg),
-				       MAX_MSG_LEN, vaf->fmt,
-				       *vaf->va) >= MAX_MSG_LEN);
-	),
-
-	TP_printk("%s", __get_str(msg))
-);
-
-DEFINE_EVENT(mac80211_msg_event, mac80211_info,
-	TP_PROTO(struct va_format *vaf),
-	TP_ARGS(vaf)
-);
-DEFINE_EVENT(mac80211_msg_event, mac80211_dbg,
-	TP_PROTO(struct va_format *vaf),
-	TP_ARGS(vaf)
-);
-DEFINE_EVENT(mac80211_msg_event, mac80211_err,
-	TP_PROTO(struct va_format *vaf),
-	TP_ARGS(vaf)
-);
-#endif
 
 #endif /* !__MAC80211_DRIVER_TRACE || TRACE_HEADER_MULTI_READ */
 

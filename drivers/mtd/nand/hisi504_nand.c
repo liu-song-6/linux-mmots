@@ -737,7 +737,6 @@ static int hisi_nfc_probe(struct platform_device *pdev)
 	}
 
 	mtd->priv		= chip;
-	mtd->owner		= THIS_MODULE;
 	mtd->name		= "hisi_nand";
 	mtd->dev.parent         = &pdev->dev;
 
@@ -758,8 +757,7 @@ static int hisi_nfc_probe(struct platform_device *pdev)
 
 	hisi_nfc_host_init(host);
 
-	ret = devm_request_irq(dev, irq, hinfc_irq_handle, IRQF_DISABLED,
-				"nandc", host);
+	ret = devm_request_irq(dev, irq, hinfc_irq_handle, 0x0, "nandc", host);
 	if (ret) {
 		dev_err(dev, "failed to request IRQ\n");
 		goto err_res;

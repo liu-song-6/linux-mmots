@@ -770,7 +770,7 @@ static void spinand_cmdfunc(struct mtd_info *mtd, unsigned int command,
 		break;
 	case NAND_CMD_READID:
 		state->buf_ptr = 0;
-		spinand_read_id(info->spi, (u8 *)state->buf);
+		spinand_read_id(info->spi, state->buf);
 		break;
 	case NAND_CMD_PARAM:
 		state->buf_ptr = 0;
@@ -912,8 +912,7 @@ static int spinand_probe(struct spi_device *spi_nand)
 	dev_set_drvdata(&spi_nand->dev, mtd);
 
 	mtd->priv = chip;
-	mtd->name = dev_name(&spi_nand->dev);
-	mtd->owner = THIS_MODULE;
+	mtd->dev.parent = &spi_nand->dev;
 	mtd->oobsize = 64;
 
 	if (nand_scan(mtd, 1))
