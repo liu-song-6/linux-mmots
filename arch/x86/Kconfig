@@ -22,6 +22,7 @@ config X86_64
 ### Arch settings
 config X86
 	def_bool y
+	select ACPI_SYSTEM_POWER_STATES_SUPPORT if ACPI
 	select ARCH_MIGHT_HAVE_ACPI_PDC if ACPI
 	select ARCH_HAS_DEBUG_STRICT_USER_COPY_CHECKS
 	select ARCH_HAS_FAST_MULTIPLIER
@@ -625,7 +626,7 @@ config X86_32_IRIS
 
 config SCHED_OMIT_FRAME_POINTER
 	def_bool y
-	prompt "Single-depth WCHAN output"
+	prompt "Single-depth WCHAN output" if !LTO && !FRAME_POINTER
 	depends on X86
 	---help---
 	  Calculate simpler /proc/<PID>/wchan values. If this option
@@ -1420,6 +1421,16 @@ config ILLEGAL_POINTER_VALUE
        default 0xdead000000000000 if X86_64
 
 source "mm/Kconfig"
+
+config X86_PMEM_LEGACY
+	bool "Support non-standard NVDIMMs and ADR protected memory"
+	help
+	  Treat memory marked using the non-standard e820 type of 12 as used
+	  by the Intel Sandy Bridge-EP reference BIOS as protected memory.
+	  The kernel will offer these regions to the 'pmem' driver so
+	  they can be used for persistent storage.
+
+	  Say Y if unsure.
 
 config HIGHPTE
 	bool "Allocate 3rd-level pagetables from highmem"
