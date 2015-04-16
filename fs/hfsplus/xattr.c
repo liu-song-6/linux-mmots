@@ -440,7 +440,7 @@ int hfsplus_setxattr(struct dentry *dentry, const char *name,
 		return -ENOMEM;
 	strcpy(xattr_name, prefix);
 	strcpy(xattr_name + prefixlen, name);
-	res = __hfsplus_setxattr(dentry->d_inode, xattr_name, value, size,
+	res = __hfsplus_setxattr(d_inode(dentry), xattr_name, value, size,
 				 flags);
 	kfree(xattr_name);
 	return res;
@@ -600,7 +600,7 @@ ssize_t hfsplus_getxattr(struct dentry *dentry, const char *name,
 	strcpy(xattr_name, prefix);
 	strcpy(xattr_name + prefixlen, name);
 
-	res = __hfsplus_getxattr(dentry->d_inode, xattr_name, value, size);
+	res = __hfsplus_getxattr(d_inode(dentry), xattr_name, value, size);
 	kfree(xattr_name);
 	return res;
 
@@ -868,7 +868,7 @@ static int hfsplus_osx_getxattr(struct dentry *dentry, const char *name,
 	 * creates), so we pass the name through unmodified (after
 	 * ensuring it doesn't conflict with another namespace).
 	 */
-	return __hfsplus_getxattr(dentry->d_inode, name, buffer, size);
+	return __hfsplus_getxattr(d_inode(dentry), name, buffer, size);
 }
 
 static int hfsplus_osx_setxattr(struct dentry *dentry, const char *name,
@@ -890,7 +890,7 @@ static int hfsplus_osx_setxattr(struct dentry *dentry, const char *name,
 	 * creates), so we pass the name through unmodified (after
 	 * ensuring it doesn't conflict with another namespace).
 	 */
-	return __hfsplus_setxattr(dentry->d_inode, name, buffer, size, flags);
+	return __hfsplus_setxattr(d_inode(dentry), name, buffer, size, flags);
 }
 
 static size_t hfsplus_osx_listxattr(struct dentry *dentry, char *list,
