@@ -30,7 +30,12 @@ struct nft_rbtree_elem {
 };
 
 
+<<<<<<< HEAD
 static bool nft_rbtree_lookup(const struct nft_set *set, const u32 *key,
+=======
+static bool nft_rbtree_lookup(const struct nft_set *set,
+			      const struct nft_data *key,
+>>>>>>> linux-next/akpm-base
 			      const struct nft_set_ext **ext)
 {
 	const struct nft_rbtree *priv = nft_set_priv(set);
@@ -44,7 +49,11 @@ static bool nft_rbtree_lookup(const struct nft_set *set, const u32 *key,
 	while (parent != NULL) {
 		rbe = rb_entry(parent, struct nft_rbtree_elem, node);
 
+<<<<<<< HEAD
 		d = memcmp(nft_set_ext_key(&rbe->ext), key, set->klen);
+=======
+		d = nft_data_cmp(nft_set_ext_key(&rbe->ext), key, set->klen);
+>>>>>>> linux-next/akpm-base
 		if (d < 0) {
 			parent = parent->rb_left;
 			interval = rbe;
@@ -90,9 +99,15 @@ static int __nft_rbtree_insert(const struct nft_set *set,
 	while (*p != NULL) {
 		parent = *p;
 		rbe = rb_entry(parent, struct nft_rbtree_elem, node);
+<<<<<<< HEAD
 		d = memcmp(nft_set_ext_key(&rbe->ext),
 			   nft_set_ext_key(&new->ext),
 			   set->klen);
+=======
+		d = nft_data_cmp(nft_set_ext_key(&rbe->ext),
+				 nft_set_ext_key(&new->ext),
+				 set->klen);
+>>>>>>> linux-next/akpm-base
 		if (d < 0)
 			p = &parent->rb_left;
 		else if (d > 0)
@@ -152,8 +167,13 @@ static void *nft_rbtree_deactivate(const struct nft_set *set,
 	while (parent != NULL) {
 		rbe = rb_entry(parent, struct nft_rbtree_elem, node);
 
+<<<<<<< HEAD
 		d = memcmp(nft_set_ext_key(&rbe->ext), &elem->key.val,
 					   set->klen);
+=======
+		d = nft_data_cmp(nft_set_ext_key(&rbe->ext), &elem->key,
+				 set->klen);
+>>>>>>> linux-next/akpm-base
 		if (d < 0)
 			parent = parent->rb_left;
 		else if (d > 0)

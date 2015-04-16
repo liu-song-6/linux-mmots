@@ -2661,8 +2661,13 @@ static int nf_tables_newset(struct sock *nlsk, struct sk_buff *skb,
 	if (nla[NFTA_SET_FLAGS] != NULL) {
 		flags = ntohl(nla_get_be32(nla[NFTA_SET_FLAGS]));
 		if (flags & ~(NFT_SET_ANONYMOUS | NFT_SET_CONSTANT |
+<<<<<<< HEAD
 			      NFT_SET_INTERVAL | NFT_SET_TIMEOUT |
 			      NFT_SET_MAP | NFT_SET_EVAL))
+=======
+			      NFT_SET_INTERVAL | NFT_SET_MAP |
+			      NFT_SET_TIMEOUT))
+>>>>>>> linux-next/akpm-base
 			return -EINVAL;
 		/* Only one of both operations is supported */
 		if ((flags & (NFT_SET_MAP | NFT_SET_EVAL)) ==
@@ -2846,10 +2851,16 @@ static int nf_tables_bind_check_setelem(const struct nft_ctx *ctx,
 	enum nft_registers dreg;
 
 	dreg = nft_type_to_reg(set->dtype);
+<<<<<<< HEAD
 	return nft_validate_register_store(ctx, dreg, nft_set_ext_data(ext),
 					   set->dtype == NFT_DATA_VERDICT ?
 					   NFT_DATA_VERDICT : NFT_DATA_VALUE,
 					   set->dlen);
+=======
+	return nft_validate_data_load(ctx, dreg, nft_set_ext_data(ext),
+				      set->dtype == NFT_DATA_VERDICT ?
+				      NFT_DATA_VERDICT : NFT_DATA_VALUE);
+>>>>>>> linux-next/akpm-base
 }
 
 int nf_tables_bind_set(const struct nft_ctx *ctx, struct nft_set *set,
@@ -2903,6 +2914,7 @@ void nf_tables_unbind_set(const struct nft_ctx *ctx, struct nft_set *set,
 
 const struct nft_set_ext_type nft_set_ext_types[] = {
 	[NFT_SET_EXT_KEY]		= {
+<<<<<<< HEAD
 		.align	= __alignof__(u32),
 	},
 	[NFT_SET_EXT_DATA]		= {
@@ -2910,6 +2922,14 @@ const struct nft_set_ext_type nft_set_ext_types[] = {
 	},
 	[NFT_SET_EXT_EXPR]		= {
 		.align	= __alignof__(struct nft_expr),
+=======
+		.len	= sizeof(struct nft_data),
+		.align	= __alignof__(struct nft_data),
+	},
+	[NFT_SET_EXT_DATA]		= {
+		.len	= sizeof(struct nft_data),
+		.align	= __alignof__(struct nft_data),
+>>>>>>> linux-next/akpm-base
 	},
 	[NFT_SET_EXT_FLAGS]		= {
 		.len	= sizeof(u8),
@@ -2997,10 +3017,13 @@ static int nf_tables_fill_setelem(struct sk_buff *skb,
 			  set->dlen) < 0)
 		goto nla_put_failure;
 
+<<<<<<< HEAD
 	if (nft_set_ext_exists(ext, NFT_SET_EXT_EXPR) &&
 	    nft_expr_dump(skb, NFTA_SET_ELEM_EXPR, nft_set_ext_expr(ext)) < 0)
 		goto nla_put_failure;
 
+=======
+>>>>>>> linux-next/akpm-base
 	if (nft_set_ext_exists(ext, NFT_SET_EXT_FLAGS) &&
 	    nla_put_be32(skb, NFTA_SET_ELEM_FLAGS,
 		         htonl(*nft_set_ext_flags(ext))))
@@ -3255,7 +3278,12 @@ static struct nft_trans *nft_trans_elem_alloc(struct nft_ctx *ctx,
 
 void *nft_set_elem_init(const struct nft_set *set,
 			const struct nft_set_ext_tmpl *tmpl,
+<<<<<<< HEAD
 			const u32 *key, const u32 *data,
+=======
+			const struct nft_data *key,
+			const struct nft_data *data,
+>>>>>>> linux-next/akpm-base
 			u64 timeout, gfp_t gfp)
 {
 	struct nft_set_ext *ext;
@@ -3287,8 +3315,11 @@ void nft_set_elem_destroy(const struct nft_set *set, void *elem)
 	nft_data_uninit(nft_set_ext_key(ext), NFT_DATA_VALUE);
 	if (nft_set_ext_exists(ext, NFT_SET_EXT_DATA))
 		nft_data_uninit(nft_set_ext_data(ext), set->dtype);
+<<<<<<< HEAD
 	if (nft_set_ext_exists(ext, NFT_SET_EXT_EXPR))
 		nf_tables_expr_destroy(NULL, nft_set_ext_expr(ext));
+=======
+>>>>>>> linux-next/akpm-base
 
 	kfree(elem);
 }
@@ -3326,10 +3357,17 @@ static int nft_add_set_elem(struct nft_ctx *ctx, struct nft_set *set,
 	if (nla[NFTA_SET_ELEM_FLAGS] != NULL) {
 		flags = ntohl(nla_get_be32(nla[NFTA_SET_ELEM_FLAGS]));
 		if (flags & ~NFT_SET_ELEM_INTERVAL_END)
+<<<<<<< HEAD
 			return -EINVAL;
 		if (!(set->flags & NFT_SET_INTERVAL) &&
 		    flags & NFT_SET_ELEM_INTERVAL_END)
 			return -EINVAL;
+=======
+			return -EINVAL;
+		if (!(set->flags & NFT_SET_INTERVAL) &&
+		    flags & NFT_SET_ELEM_INTERVAL_END)
+			return -EINVAL;
+>>>>>>> linux-next/akpm-base
 		if (flags != 0)
 			nft_set_ext_add(&tmpl, NFT_SET_EXT_FLAGS);
 	}
@@ -3355,15 +3393,23 @@ static int nft_add_set_elem(struct nft_ctx *ctx, struct nft_set *set,
 		timeout = set->timeout;
 	}
 
+<<<<<<< HEAD
 	err = nft_data_init(ctx, &elem.key.val, sizeof(elem.key), &d1,
 			    nla[NFTA_SET_ELEM_KEY]);
+=======
+	err = nft_data_init(ctx, &elem.key, &d1, nla[NFTA_SET_ELEM_KEY]);
+>>>>>>> linux-next/akpm-base
 	if (err < 0)
 		goto err1;
 	err = -EINVAL;
 	if (d1.type != NFT_DATA_VALUE || d1.len != set->klen)
 		goto err2;
 
+<<<<<<< HEAD
 	nft_set_ext_add_length(&tmpl, NFT_SET_EXT_KEY, d1.len);
+=======
+	nft_set_ext_add(&tmpl, NFT_SET_EXT_KEY);
+>>>>>>> linux-next/akpm-base
 	if (timeout > 0) {
 		nft_set_ext_add(&tmpl, NFT_SET_EXT_EXPIRATION);
 		if (timeout != set->timeout)
@@ -3371,8 +3417,12 @@ static int nft_add_set_elem(struct nft_ctx *ctx, struct nft_set *set,
 	}
 
 	if (nla[NFTA_SET_ELEM_DATA] != NULL) {
+<<<<<<< HEAD
 		err = nft_data_init(ctx, &data, sizeof(data), &d2,
 				    nla[NFTA_SET_ELEM_DATA]);
+=======
+		err = nft_data_init(ctx, &data, &d2, nla[NFTA_SET_ELEM_DATA]);
+>>>>>>> linux-next/akpm-base
 		if (err < 0)
 			goto err2;
 
@@ -3391,14 +3441,23 @@ static int nft_add_set_elem(struct nft_ctx *ctx, struct nft_set *set,
 			if (!(binding->flags & NFT_SET_MAP))
 				continue;
 
+<<<<<<< HEAD
 			err = nft_validate_register_store(&bind_ctx, dreg,
 							  &data,
 							  d2.type, d2.len);
+=======
+			err = nft_validate_data_load(&bind_ctx, dreg,
+						     &data, d2.type);
+>>>>>>> linux-next/akpm-base
 			if (err < 0)
 				goto err3;
 		}
 
+<<<<<<< HEAD
 		nft_set_ext_add_length(&tmpl, NFT_SET_EXT_DATA, d2.len);
+=======
+		nft_set_ext_add(&tmpl, NFT_SET_EXT_DATA);
+>>>>>>> linux-next/akpm-base
 	}
 
 	/* The full maximum length of userdata can exceed the maximum
@@ -3414,7 +3473,11 @@ static int nft_add_set_elem(struct nft_ctx *ctx, struct nft_set *set,
 	}
 
 	err = -ENOMEM;
+<<<<<<< HEAD
 	elem.priv = nft_set_elem_init(set, &tmpl, elem.key.val.data, data.data,
+=======
+	elem.priv = nft_set_elem_init(set, &tmpl, &elem.key, &data,
+>>>>>>> linux-next/akpm-base
 				      timeout, GFP_KERNEL);
 	if (elem.priv == NULL)
 		goto err3;
@@ -4107,10 +4170,17 @@ static int nf_tables_loop_check_setelem(const struct nft_ctx *ctx,
 		return 0;
 
 	data = nft_set_ext_data(ext);
+<<<<<<< HEAD
 	switch (data->verdict.code) {
 	case NFT_JUMP:
 	case NFT_GOTO:
 		return nf_tables_check_loops(ctx, data->verdict.chain);
+=======
+	switch (data->verdict) {
+	case NFT_JUMP:
+	case NFT_GOTO:
+		return nf_tables_check_loops(ctx, data->chain);
+>>>>>>> linux-next/akpm-base
 	default:
 		return 0;
 	}

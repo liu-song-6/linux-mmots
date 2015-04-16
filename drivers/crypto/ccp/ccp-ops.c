@@ -12,8 +12,6 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/pci.h>
-#include <linux/pci_ids.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
@@ -26,7 +24,6 @@
 #include <crypto/sha.h>
 
 #include "ccp-dev.h"
-
 
 enum ccp_memtype {
 	CCP_MEMTYPE_SYSTEM = 0,
@@ -515,7 +512,6 @@ static int ccp_init_sg_workarea(struct ccp_sg_workarea *wa, struct device *dev,
 	if (!wa->dma_count)
 		return -ENOMEM;
 
-
 	return 0;
 }
 
@@ -763,8 +759,9 @@ static void ccp_prepare_data(struct ccp_data *src, struct ccp_data *dst,
 		sg_dst_len = sg_dma_len(dst->sg_wa.sg) - dst->sg_wa.sg_used;
 		sg_dst_len = min_t(u64, src->sg_wa.bytes_left, sg_dst_len);
 		op_len = min(sg_src_len, sg_dst_len);
-	} else
+	} else {
 		op_len = sg_src_len;
+	}
 
 	/* The data operation length will be at least block_size in length
 	 * or the smaller of available sg room remaining for the source or
@@ -1131,9 +1128,9 @@ static int ccp_run_aes_cmd(struct ccp_cmd_queue *cmd_q, struct ccp_cmd *cmd)
 	if (ret)
 		goto e_ctx;
 
-	if (in_place)
+	if (in_place) {
 		dst = src;
-	else {
+	} else {
 		ret = ccp_init_data(&dst, cmd_q, aes->dst, aes->src_len,
 				    AES_BLOCK_SIZE, DMA_FROM_DEVICE);
 		if (ret)
@@ -1304,9 +1301,9 @@ static int ccp_run_xts_aes_cmd(struct ccp_cmd_queue *cmd_q,
 	if (ret)
 		goto e_ctx;
 
-	if (in_place)
+	if (in_place) {
 		dst = src;
-	else {
+	} else {
 		ret = ccp_init_data(&dst, cmd_q, xts->dst, xts->src_len,
 				    unit_size, DMA_FROM_DEVICE);
 		if (ret)
@@ -1451,8 +1448,9 @@ static int ccp_run_sha_cmd(struct ccp_cmd_queue *cmd_q, struct ccp_cmd *cmd)
 			goto e_ctx;
 		}
 		memcpy(ctx.address, init, CCP_SHA_CTXSIZE);
-	} else
+	} else {
 		ccp_set_dm_area(&ctx, 0, sha->ctx, 0, sha->ctx_len);
+	}
 
 	ret = ccp_copy_to_ksb(cmd_q, &ctx, op.jobid, op.ksb_ctx,
 			      CCP_PASSTHRU_BYTESWAP_256BIT);
@@ -1732,9 +1730,9 @@ static int ccp_run_passthru_cmd(struct ccp_cmd_queue *cmd_q,
 	if (ret)
 		goto e_mask;
 
-	if (in_place)
+	if (in_place) {
 		dst = src;
-	else {
+	} else {
 		ret = ccp_init_data(&dst, cmd_q, pt->dst, pt->src_len,
 				    CCP_PASSTHRU_MASKSIZE, DMA_FROM_DEVICE);
 		if (ret)
@@ -1974,7 +1972,7 @@ static int ccp_run_ecc_pm_cmd(struct ccp_cmd_queue *cmd_q, struct ccp_cmd *cmd)
 	src.address += CCP_ECC_OPERAND_SIZE;
 
 	/* Set the first point Z coordianate to 1 */
-	*(src.address) = 0x01;
+	*src.address = 0x01;
 	src.address += CCP_ECC_OPERAND_SIZE;
 
 	if (ecc->function == CCP_ECC_FUNCTION_PADD_384BIT) {
@@ -1989,7 +1987,7 @@ static int ccp_run_ecc_pm_cmd(struct ccp_cmd_queue *cmd_q, struct ccp_cmd *cmd)
 		src.address += CCP_ECC_OPERAND_SIZE;
 
 		/* Set the second point Z coordianate to 1 */
-		*(src.address) = 0x01;
+		*src.address = 0x01;
 		src.address += CCP_ECC_OPERAND_SIZE;
 	} else {
 		/* Copy the Domain "a" parameter */

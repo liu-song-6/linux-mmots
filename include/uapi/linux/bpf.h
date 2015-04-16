@@ -118,6 +118,8 @@ enum bpf_map_type {
 enum bpf_prog_type {
 	BPF_PROG_TYPE_UNSPEC,
 	BPF_PROG_TYPE_SOCKET_FILTER,
+	BPF_PROG_TYPE_SCHED_CLS,
+	BPF_PROG_TYPE_SCHED_ACT,
 	BPF_PROG_TYPE_KPROBE,
 	BPF_PROG_TYPE_SCHED_CLS,
 	BPF_PROG_TYPE_SCHED_ACT,
@@ -168,6 +170,45 @@ enum bpf_func_id {
 	BPF_FUNC_map_lookup_elem, /* void *map_lookup_elem(&map, &key) */
 	BPF_FUNC_map_update_elem, /* int map_update_elem(&map, &key, &value, flags) */
 	BPF_FUNC_map_delete_elem, /* int map_delete_elem(&map, &key) */
+	BPF_FUNC_get_prandom_u32, /* u32 prandom_u32(void) */
+	BPF_FUNC_get_smp_processor_id, /* u32 raw_smp_processor_id(void) */
+
+	/**
+	 * skb_store_bytes(skb, offset, from, len, flags) - store bytes into packet
+	 * @skb: pointer to skb
+	 * @offset: offset within packet from skb->data
+	 * @from: pointer where to copy bytes from
+	 * @len: number of bytes to store into packet
+	 * @flags: bit 0 - if true, recompute skb->csum
+	 *         other bits - reserved
+	 * Return: 0 on success
+	 */
+	BPF_FUNC_skb_store_bytes,
+
+	/**
+	 * l3_csum_replace(skb, offset, from, to, flags) - recompute IP checksum
+	 * @skb: pointer to skb
+	 * @offset: offset within packet where IP checksum is located
+	 * @from: old value of header field
+	 * @to: new value of header field
+	 * @flags: bits 0-3 - size of header field
+	 *         other bits - reserved
+	 * Return: 0 on success
+	 */
+	BPF_FUNC_l3_csum_replace,
+
+	/**
+	 * l4_csum_replace(skb, offset, from, to, flags) - recompute TCP/UDP checksum
+	 * @skb: pointer to skb
+	 * @offset: offset within packet where TCP/UDP checksum is located
+	 * @from: old value of header field
+	 * @to: new value of header field
+	 * @flags: bits 0-3 - size of header field
+	 *         bit 4 - is pseudo header
+	 *         other bits - reserved
+	 * Return: 0 on success
+	 */
+	BPF_FUNC_l4_csum_replace,
 	BPF_FUNC_probe_read,      /* int bpf_probe_read(void *dst, int size, void *src) */
 	BPF_FUNC_ktime_get_ns,    /* u64 bpf_ktime_get_ns(void) */
 	BPF_FUNC_trace_printk,    /* int bpf_trace_printk(const char *fmt, int fmt_size, ...) */

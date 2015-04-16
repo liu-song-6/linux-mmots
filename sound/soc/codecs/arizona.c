@@ -840,8 +840,8 @@ int arizona_hp_ev(struct snd_soc_dapm_widget *w,
 	priv->arizona->hp_ena &= ~mask;
 	priv->arizona->hp_ena |= val;
 
-	/* Force off if HPDET magic is active */
-	if (priv->arizona->hpdet_magic)
+	/* Force off if HPDET clamp is active */
+	if (priv->arizona->hpdet_clamp)
 		val = 0;
 
 	regmap_update_bits_async(arizona->regmap, ARIZONA_OUTPUT_ENABLES_1,
@@ -1902,7 +1902,7 @@ static int arizona_is_enabled_fll(struct arizona_fll *fll)
 static int arizona_enable_fll(struct arizona_fll *fll)
 {
 	struct arizona *arizona = fll->arizona;
-	int ret;
+	unsigned long time_left;
 	bool use_sync = false;
 	int already_enabled = arizona_is_enabled_fll(fll);
 	struct arizona_fll_cfg cfg;
@@ -1978,9 +1978,9 @@ static int arizona_enable_fll(struct arizona_fll *fll)
 		regmap_update_bits_async(arizona->regmap, fll->base + 1,
 					 ARIZONA_FLL1_FREERUN, 0);
 
-	ret = wait_for_completion_timeout(&fll->ok,
+	time_left = wait_for_completion_timeout(&fll->ok,
 					  msecs_to_jiffies(250));
-	if (ret == 0)
+	if (time_left == 0)
 		arizona_fll_warn(fll, "Timed out waiting for lock\n");
 
 	return 0;

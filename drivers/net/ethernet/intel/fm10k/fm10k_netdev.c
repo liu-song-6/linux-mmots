@@ -970,7 +970,18 @@ static void fm10k_set_rx_mode(struct net_device *dev)
 
 	fm10k_mbx_lock(interface);
 
+<<<<<<< HEAD
 	/* update xcast mode first, but only if it changed */
+=======
+	/* synchronize all of the addresses */
+	if (xcast_mode != FM10K_XCAST_MODE_PROMISC) {
+		__dev_uc_sync(dev, fm10k_uc_sync, fm10k_uc_unsync);
+		if (xcast_mode != FM10K_XCAST_MODE_ALLMULTI)
+			__dev_mc_sync(dev, fm10k_mc_sync, fm10k_mc_unsync);
+	}
+
+	/* if we aren't changing modes there is nothing to do */
+>>>>>>> linux-next/akpm-base
 	if (interface->xcast_mode != xcast_mode) {
 		/* update VLAN table */
 		if (xcast_mode == FM10K_XCAST_MODE_PROMISC)
@@ -1051,9 +1062,12 @@ void fm10k_restore_rx_state(struct fm10k_intfc *interface)
 					   vid, true, 0);
 	}
 
+<<<<<<< HEAD
 	/* update xcast mode before syncronizing addresses */
 	hw->mac.ops.update_xcast_mode(hw, glort, xcast_mode);
 
+=======
+>>>>>>> linux-next/akpm-base
 	/* synchronize all of the addresses */
 	if (xcast_mode != FM10K_XCAST_MODE_PROMISC) {
 		__dev_uc_sync(netdev, fm10k_uc_sync, fm10k_uc_unsync);
@@ -1382,9 +1396,12 @@ static const struct net_device_ops fm10k_netdev_ops = {
 	.ndo_do_ioctl		= fm10k_ioctl,
 	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,
 	.ndo_dfwd_del_station	= fm10k_dfwd_del_station,
+<<<<<<< HEAD
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= fm10k_netpoll,
 #endif
+=======
+>>>>>>> linux-next/akpm-base
 	.ndo_features_check	= fm10k_features_check,
 };
 

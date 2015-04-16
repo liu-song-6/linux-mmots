@@ -238,7 +238,10 @@ enum nft_rule_compat_attributes {
  * @NFT_SET_INTERVAL: set contains intervals
  * @NFT_SET_MAP: set is used as a dictionary
  * @NFT_SET_TIMEOUT: set uses timeouts
+<<<<<<< HEAD
  * @NFT_SET_EVAL: set contains expressions for evaluation
+=======
+>>>>>>> linux-next/akpm-base
  */
 enum nft_set_flags {
 	NFT_SET_ANONYMOUS		= 0x1,
@@ -246,7 +249,10 @@ enum nft_set_flags {
 	NFT_SET_INTERVAL		= 0x4,
 	NFT_SET_MAP			= 0x8,
 	NFT_SET_TIMEOUT			= 0x10,
+<<<<<<< HEAD
 	NFT_SET_EVAL			= 0x20,
+=======
+>>>>>>> linux-next/akpm-base
 };
 
 /**
@@ -324,7 +330,10 @@ enum nft_set_elem_flags {
  * @NFTA_SET_ELEM_TIMEOUT: timeout value (NLA_U64)
  * @NFTA_SET_ELEM_EXPIRATION: expiration time (NLA_U64)
  * @NFTA_SET_ELEM_USERDATA: user data (NLA_BINARY)
+<<<<<<< HEAD
  * @NFTA_SET_ELEM_EXPR: expression (NLA_NESTED: nft_expr_attributes)
+=======
+>>>>>>> linux-next/akpm-base
  */
 enum nft_set_elem_attributes {
 	NFTA_SET_ELEM_UNSPEC,
@@ -334,7 +343,10 @@ enum nft_set_elem_attributes {
 	NFTA_SET_ELEM_TIMEOUT,
 	NFTA_SET_ELEM_EXPIRATION,
 	NFTA_SET_ELEM_USERDATA,
+<<<<<<< HEAD
 	NFTA_SET_ELEM_EXPR,
+=======
+>>>>>>> linux-next/akpm-base
 	__NFTA_SET_ELEM_MAX
 };
 #define NFTA_SET_ELEM_MAX	(__NFTA_SET_ELEM_MAX - 1)
@@ -567,7 +579,10 @@ enum nft_dynset_ops {
  * @NFTA_DYNSET_SREG_KEY: source register of the key (NLA_U32)
  * @NFTA_DYNSET_SREG_DATA: source register of the data (NLA_U32)
  * @NFTA_DYNSET_TIMEOUT: timeout value for the new element (NLA_U64)
+<<<<<<< HEAD
  * @NFTA_DYNSET_EXPR: expression (NLA_NESTED: nft_expr_attributes)
+=======
+>>>>>>> linux-next/akpm-base
  */
 enum nft_dynset_attributes {
 	NFTA_DYNSET_UNSPEC,
@@ -577,7 +592,10 @@ enum nft_dynset_attributes {
 	NFTA_DYNSET_SREG_KEY,
 	NFTA_DYNSET_SREG_DATA,
 	NFTA_DYNSET_TIMEOUT,
+<<<<<<< HEAD
 	NFTA_DYNSET_EXPR,
+=======
+>>>>>>> linux-next/akpm-base
 	__NFTA_DYNSET_MAX,
 };
 #define NFTA_DYNSET_MAX		(__NFTA_DYNSET_MAX - 1)

@@ -154,7 +154,11 @@ void nft_meta_get_eval(const struct nft_expr *expr,
 		}
 		break;
 	case NFT_META_CPU:
+<<<<<<< HEAD
 		*dest = raw_smp_processor_id();
+=======
+		dest->data[0] = raw_smp_processor_id();
+>>>>>>> linux-next/akpm-base
 		break;
 	case NFT_META_IIFGROUP:
 		if (in == NULL)
@@ -169,7 +173,11 @@ void nft_meta_get_eval(const struct nft_expr *expr,
 	case NFT_META_CGROUP:
 		if (skb->sk == NULL || !sk_fullsock(skb->sk))
 			goto err;
+<<<<<<< HEAD
 		*dest = skb->sk->sk_classid;
+=======
+		dest->data[0] = skb->sk->sk_classid;
+>>>>>>> linux-next/akpm-base
 		break;
 	default:
 		WARN_ON(1);

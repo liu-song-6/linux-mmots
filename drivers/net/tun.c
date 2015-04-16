@@ -1014,7 +1014,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 		linear = len;
 
 	skb = sock_alloc_send_pskb(sk, prepad + linear, len - linear, noblock,
-				   &err, 0);
+				   &err, 1);
 	if (!skb)
 		return ERR_PTR(err);
 
@@ -2223,8 +2223,6 @@ static void tun_chr_show_fdinfo(struct seq_file *m, struct file *f)
 static const struct file_operations tun_fops = {
 	.owner	= THIS_MODULE,
 	.llseek = no_llseek,
-	.read  = new_sync_read,
-	.write = new_sync_write,
 	.read_iter  = tun_chr_read_iter,
 	.write_iter = tun_chr_write_iter,
 	.poll	= tun_chr_poll,

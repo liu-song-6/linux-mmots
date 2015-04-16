@@ -555,7 +555,7 @@ static inline struct sk_buff *macvtap_alloc_skb(struct sock *sk, size_t prepad,
 		linear = len;
 
 	skb = sock_alloc_send_pskb(sk, prepad + linear, len - linear, noblock,
-				   err, 0);
+				   err, 1);
 	if (!skb)
 		return NULL;
 
@@ -1118,8 +1118,6 @@ static const struct file_operations macvtap_fops = {
 	.owner		= THIS_MODULE,
 	.open		= macvtap_open,
 	.release	= macvtap_release,
-	.read		= new_sync_read,
-	.write		= new_sync_write,
 	.read_iter	= macvtap_read_iter,
 	.write_iter	= macvtap_write_iter,
 	.poll		= macvtap_poll,

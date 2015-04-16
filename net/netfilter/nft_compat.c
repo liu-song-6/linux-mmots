@@ -323,10 +323,17 @@ static void nft_match_eval(const struct nft_expr *expr,
 
 	switch (ret ? 1 : 0) {
 	case 1:
+<<<<<<< HEAD
 		regs->verdict.code = NFT_CONTINUE;
 		break;
 	case 0:
 		regs->verdict.code = NFT_BREAK;
+=======
+		data[NFT_REG_VERDICT].verdict = NFT_CONTINUE;
+		break;
+	case 0:
+		data[NFT_REG_VERDICT].verdict = NFT_BREAK;
+>>>>>>> linux-next/akpm-base
 		break;
 	}
 }

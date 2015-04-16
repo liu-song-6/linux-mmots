@@ -25,6 +25,10 @@
 
 int btbcm_check_bdaddr(struct hci_dev *hdev);
 int btbcm_set_bdaddr(struct hci_dev *hdev, const bdaddr_t *bdaddr);
+<<<<<<< HEAD
+=======
+int btbcm_patchram(struct hci_dev *hdev, const char *firmware);
+>>>>>>> linux-next/akpm-base
 
 int btbcm_setup_patchram(struct hci_dev *hdev);
 int btbcm_setup_apple(struct hci_dev *hdev);
@@ -41,6 +45,14 @@ static inline int btbcm_set_bdaddr(struct hci_dev *hdev, const bdaddr_t *bdaddr)
 	return -EOPNOTSUPP;
 }
 
+<<<<<<< HEAD
+=======
+static inline int btbcm_patchram(struct hci_dev *hdev, const char *firmware)
+{
+	return -EOPNOTSUPP;
+}
+
+>>>>>>> linux-next/akpm-base
 static inline int btbcm_setup_patchram(struct hci_dev *hdev)
 {
 	return 0;

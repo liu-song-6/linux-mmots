@@ -541,7 +541,7 @@ struct clk_gpio {
 
 extern const struct clk_ops clk_gpio_gate_ops;
 struct clk *clk_register_gpio_gate(struct device *dev, const char *name,
-		const char *parent_name, struct gpio_desc *gpio,
+		const char *parent_name, unsigned gpio, bool active_low,
 		unsigned long flags);
 
 void of_gpio_clk_gate_setup(struct device_node *node);
@@ -589,6 +589,7 @@ long __clk_mux_determine_rate_closest(struct clk_hw *hw, unsigned long rate,
 			      unsigned long max_rate,
 			      unsigned long *best_parent_rate,
 			      struct clk_hw **best_parent_p);
+void clk_hw_reparent(struct clk_hw *hw, struct clk_hw *new_parent);
 
 static inline void __clk_hw_set_clk(struct clk_hw *dst, struct clk_hw *src)
 {
