@@ -164,7 +164,11 @@ next_rule:
 	case NF_DROP:
 	case NF_QUEUE:
 		nft_trace_packet(pkt, chain, rulenum, NFT_TRACE_RULE);
+<<<<<<< HEAD
 		return regs.verdict.code;
+=======
+		return data[NFT_REG_VERDICT].verdict;
+>>>>>>> linux-next/akpm-base
 	}
 
 	switch (regs.verdict.code) {

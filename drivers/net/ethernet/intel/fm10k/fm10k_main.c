@@ -764,6 +764,7 @@ __be16 fm10k_tx_encap_offload(struct sk_buff *skb)
 		break;
 	case htons(ETH_P_IPV6):
 		inner_l4_hdr = inner_ipv6_hdr(skb)->nexthdr;
+<<<<<<< HEAD
 		break;
 	default:
 		return 0;
@@ -775,11 +776,27 @@ __be16 fm10k_tx_encap_offload(struct sk_buff *skb)
 		break;
 	case IPPROTO_UDP:
 		inner_l4_hlen = 8;
+=======
+>>>>>>> linux-next/akpm-base
 		break;
 	default:
 		return 0;
 	}
 
+<<<<<<< HEAD
+=======
+	switch (inner_l4_hdr) {
+	case IPPROTO_TCP:
+		inner_l4_hlen = inner_tcp_hdrlen(skb);
+		break;
+	case IPPROTO_UDP:
+		inner_l4_hlen = 8;
+		break;
+	default:
+		return 0;
+	}
+
+>>>>>>> linux-next/akpm-base
 	/* The hardware allows tunnel offloads only if the combined inner and
 	 * outer header is 184 bytes or less
 	 */

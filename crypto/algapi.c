@@ -524,6 +524,12 @@ int crypto_register_instance(struct crypto_template *tmpl,
 	err = crypto_check_alg(&inst->alg);
 	if (err)
 		return err;
+<<<<<<< HEAD
+=======
+
+	if (unlikely(!crypto_mod_get(&inst->alg)))
+		return -EAGAIN;
+>>>>>>> linux-next/akpm-base
 
 	inst->alg.cra_module = tmpl->module;
 	inst->alg.cra_flags |= CRYPTO_ALG_INSTANCE;

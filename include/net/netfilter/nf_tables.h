@@ -159,10 +159,14 @@ struct nft_userdata {
  *	@priv: element private data and extensions
  */
 struct nft_set_elem {
+<<<<<<< HEAD
 	union {
 		u32		buf[NFT_DATA_VALUE_MAXLEN / sizeof(u32)];
 		struct nft_data	val;
 	} key;
+=======
+	struct nft_data		key;
+>>>>>>> linux-next/akpm-base
 	void			*priv;
 };
 
@@ -237,6 +241,7 @@ struct nft_expr;
  */
 struct nft_set_ops {
 	bool				(*lookup)(const struct nft_set *set,
+<<<<<<< HEAD
 						  const u32 *key,
 						  const struct nft_set_ext **ext);
 	bool				(*update)(struct nft_set *set,
@@ -246,6 +251,17 @@ struct nft_set_ops {
 							       struct nft_regs *),
 						  const struct nft_expr *expr,
 						  struct nft_regs *regs,
+=======
+						  const struct nft_data *key,
+						  const struct nft_set_ext **ext);
+	bool				(*update)(struct nft_set *set,
+						  const struct nft_data *key,
+						  void *(*new)(struct nft_set *,
+							       const struct nft_expr *,
+							       struct nft_data []),
+						  const struct nft_expr *expr,
+						  struct nft_data data[],
+>>>>>>> linux-next/akpm-base
 						  const struct nft_set_ext **ext);
 
 	int				(*insert)(const struct nft_set *set,
@@ -371,7 +387,10 @@ void nf_tables_unbind_set(const struct nft_ctx *ctx, struct nft_set *set,
  *	@NFT_SET_EXT_TIMEOUT: element timeout
  *	@NFT_SET_EXT_EXPIRATION: element expiration time
  *	@NFT_SET_EXT_USERDATA: user data associated with the element
+<<<<<<< HEAD
  *	@NFT_SET_EXT_EXPR: expression assiociated with the element
+=======
+>>>>>>> linux-next/akpm-base
  *	@NFT_SET_EXT_NUM: number of extension types
  */
 enum nft_set_extensions {
@@ -381,7 +400,10 @@ enum nft_set_extensions {
 	NFT_SET_EXT_TIMEOUT,
 	NFT_SET_EXT_EXPIRATION,
 	NFT_SET_EXT_USERDATA,
+<<<<<<< HEAD
 	NFT_SET_EXT_EXPR,
+=======
+>>>>>>> linux-next/akpm-base
 	NFT_SET_EXT_NUM
 };
 
@@ -493,11 +515,14 @@ static inline struct nft_userdata *nft_set_ext_userdata(const struct nft_set_ext
 	return nft_set_ext(ext, NFT_SET_EXT_USERDATA);
 }
 
+<<<<<<< HEAD
 static inline struct nft_expr *nft_set_ext_expr(const struct nft_set_ext *ext)
 {
 	return nft_set_ext(ext, NFT_SET_EXT_EXPR);
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 static inline bool nft_set_elem_expired(const struct nft_set_ext *ext)
 {
 	return nft_set_ext_exists(ext, NFT_SET_EXT_EXPIRATION) &&
@@ -512,7 +537,12 @@ static inline struct nft_set_ext *nft_set_elem_ext(const struct nft_set *set,
 
 void *nft_set_elem_init(const struct nft_set *set,
 			const struct nft_set_ext_tmpl *tmpl,
+<<<<<<< HEAD
 			const u32 *key, const u32 *data,
+=======
+			const struct nft_data *key,
+			const struct nft_data *data,
+>>>>>>> linux-next/akpm-base
 			u64 timeout, gfp_t gfp);
 void nft_set_elem_destroy(const struct nft_set *set, void *elem);
 

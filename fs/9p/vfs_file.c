@@ -151,7 +151,7 @@ static int v9fs_file_do_lock(struct file *filp, int cmd, struct file_lock *fl)
 {
 	struct p9_flock flock;
 	struct p9_fid *fid;
-	uint8_t status;
+	uint8_t status = P9_LOCK_ERROR;
 	int res = 0;
 	unsigned char fl_type;
 
@@ -196,7 +196,7 @@ static int v9fs_file_do_lock(struct file *filp, int cmd, struct file_lock *fl)
 	for (;;) {
 		res = p9_client_lock_dotl(fid, &flock, &status);
 		if (res < 0)
-			break;
+			goto out_unlock;
 
 		if (status != P9_LOCK_BLOCKED)
 			break;
@@ -214,14 +214,16 @@ static int v9fs_file_do_lock(struct file *filp, int cmd, struct file_lock *fl)
 	case P9_LOCK_BLOCKED:
 		res = -EAGAIN;
 		break;
+	default:
+		WARN_ONCE(1, "unknown lock status code: %d\n", status);
+		/* fallthough */
 	case P9_LOCK_ERROR:
 	case P9_LOCK_GRACE:
 		res = -ENOLCK;
 		break;
-	default:
-		BUG();
 	}
 
+out_unlock:
 	/*
 	 * incase server returned error for lock request, revert
 	 * it locally
@@ -380,10 +382,17 @@ v9fs_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
 	struct p9_fid *fid = iocb->ki_filp->private_data;
 	int ret, err;
+<<<<<<< HEAD
 
 	p9_debug(P9_DEBUG_VFS, "count %zu offset %lld\n",
 		 iov_iter_count(to), iocb->ki_pos);
 
+=======
+
+	p9_debug(P9_DEBUG_VFS, "count %zu offset %lld\n",
+		 iov_iter_count(to), iocb->ki_pos);
+
+>>>>>>> linux-next/akpm-base
 	ret = p9_client_read(fid, iocb->ki_pos, to, &err);
 	if (!ret)
 		return err;
@@ -404,6 +413,7 @@ static ssize_t
 v9fs_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
 	struct file *file = iocb->ki_filp;
+<<<<<<< HEAD
 	ssize_t retval = 0;
 	loff_t origin = iocb->ki_pos;
 	size_t count = iov_iter_count(from);
@@ -419,6 +429,18 @@ v9fs_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 		return 0;
 
 	retval = p9_client_write(file->private_data, origin, from, &err);
+=======
+	ssize_t retval;
+	loff_t origin;
+	int err = 0;
+
+	retval = generic_write_checks(iocb, from);
+	if (retval <= 0)
+		return retval;
+
+	origin = iocb->ki_pos;
+	retval = p9_client_write(file->private_data, iocb->ki_pos, from, &err);
+>>>>>>> linux-next/akpm-base
 	if (retval > 0) {
 		struct inode *inode = file_inode(file);
 		loff_t i_size;
@@ -428,12 +450,20 @@ v9fs_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 		if (inode->i_mapping && inode->i_mapping->nrpages)
 			invalidate_inode_pages2_range(inode->i_mapping,
 						      pg_start, pg_end);
+<<<<<<< HEAD
 		origin += retval;
 		i_size = i_size_read(inode);
 		iocb->ki_pos = origin;
 		if (origin > i_size) {
 			inode_add_bytes(inode, origin - i_size);
 			i_size_write(inode, origin);
+=======
+		iocb->ki_pos += retval;
+		i_size = i_size_read(inode);
+		if (iocb->ki_pos > i_size) {
+			inode_add_bytes(inode, iocb->ki_pos - i_size);
+			i_size_write(inode, iocb->ki_pos);
+>>>>>>> linux-next/akpm-base
 		}
 		return retval;
 	}

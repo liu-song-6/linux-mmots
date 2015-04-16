@@ -228,7 +228,7 @@ UUID/GUID addresses:
 	lower ('l') or upper case ('L') hex characters - and big endian order
 	in lower ('b') or upper case ('B') hex characters.
 
-	Where no additional specifiers are used the default little endian
+	Where no additional specifiers are used the default big endian
 	order with lower case hex characters will be printed.
 
 	Passed by reference.
@@ -275,9 +275,25 @@ struct clk:
 	%pCn	pll1
 	%pCr	1560000000
 
+<<<<<<< HEAD
 	For printing struct clk structures. '%pC' and '%pCn' print the name
 	(Common Clock Framework) or address (legacy clock framework) of the
 	structure; '%pCr' prints the current clock rate.
+=======
+bitmap and its derivatives such as cpumask and nodemask:
+
+	%*pb	0779
+	%*pbl	0,3-6,8-10
+
+	For printing bitmap and its derivatives such as cpumask and nodemask,
+	%*pb output the bitmap with field width as the number of bits and %*pbl
+	output the bitmap as range list with field width as the number of bits.
+
+If <type> is dependent on a config option for its size (e.g., sector_t,
+blkcnt_t) or is architecture-dependent for its size (e.g., tcflag_t), use a
+format specifier of its largest possible type and explicitly cast to it.
+Example:
+>>>>>>> linux-next/akpm-base
 
 	Passed by reference.
 

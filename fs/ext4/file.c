@@ -20,7 +20,6 @@
 
 #include <linux/time.h>
 #include <linux/fs.h>
-#include <linux/jbd2.h>
 #include <linux/mount.h>
 #include <linux/path.h>
 #include <linux/quotaops.h>
@@ -28,6 +27,7 @@
 #include <linux/uio.h>
 #include "ext4.h"
 #include "ext4_jbd2.h"
+#include "ext4_crypto.h"
 #include "xattr.h"
 #include "acl.h"
 
@@ -95,11 +95,9 @@ ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	struct inode *inode = file_inode(iocb->ki_filp);
 	struct mutex *aio_mutex = NULL;
 	struct blk_plug plug;
-	int o_direct = io_is_direct(file);
+	int o_direct = iocb->ki_flags & IOCB_DIRECT;
 	int overwrite = 0;
-	size_t length = iov_iter_count(from);
 	ssize_t ret;
-	loff_t pos = iocb->ki_pos;
 
 	/*
 	 * Unaligned direct AIO must be serialized; see comment above
@@ -108,16 +106,17 @@ ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	if (o_direct &&
 	    ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS) &&
 	    !is_sync_kiocb(iocb) &&
-	    (file->f_flags & O_APPEND ||
-	     ext4_unaligned_aio(inode, from, pos))) {
+	    (iocb->ki_flags & IOCB_APPEND ||
+	     ext4_unaligned_aio(inode, from, iocb->ki_pos))) {
 		aio_mutex = ext4_aio_mutex(inode);
 		mutex_lock(aio_mutex);
 		ext4_unwritten_wait(inode);
 	}
 
 	mutex_lock(&inode->i_mutex);
-	if (file->f_flags & O_APPEND)
-		iocb->ki_pos = pos = i_size_read(inode);
+	ret = generic_write_checks(iocb, from);
+	if (ret <= 0)
+		goto out;
 
 	/*
 	 * If we have encountered a bitmap-format file, the size limit
@@ -126,21 +125,18 @@ ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	if (!(ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))) {
 		struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
 
-		if ((pos > sbi->s_bitmap_maxbytes) ||
-		    (pos == sbi->s_bitmap_maxbytes && length > 0)) {
-			mutex_unlock(&inode->i_mutex);
+		if (iocb->ki_pos >= sbi->s_bitmap_maxbytes) {
 			ret = -EFBIG;
-			goto errout;
+			goto out;
 		}
-
-		if (pos + length > sbi->s_bitmap_maxbytes)
-			iov_iter_truncate(from, sbi->s_bitmap_maxbytes - pos);
+		iov_iter_truncate(from, sbi->s_bitmap_maxbytes - iocb->ki_pos);
 	}
 
 	iocb->private = &overwrite;
 	if (o_direct) {
+		size_t length = iov_iter_count(from);
+		loff_t pos = iocb->ki_pos;
 		blk_start_plug(&plug);
-
 
 		/* check whether we do a DIO overwrite or not */
 		if (ext4_should_dioread_nolock(inode) && !aio_mutex &&
@@ -185,7 +181,12 @@ ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	if (o_direct)
 		blk_finish_plug(&plug);
 
-errout:
+	if (aio_mutex)
+		mutex_unlock(aio_mutex);
+	return ret;
+
+out:
+	mutex_unlock(&inode->i_mutex);
 	if (aio_mutex)
 		mutex_unlock(aio_mutex);
 	return ret;
@@ -220,6 +221,13 @@ static const struct vm_operations_struct ext4_file_vm_ops = {
 
 static int ext4_file_mmap(struct file *file, struct vm_area_struct *vma)
 {
+	struct inode *inode = file->f_mapping->host;
+
+	if (ext4_encrypted_inode(inode)) {
+		int err = ext4_generate_encryption_key(inode);
+		if (err)
+			return 0;
+	}
 	file_accessed(file);
 	if (IS_DAX(file_inode(file))) {
 		vma->vm_ops = &ext4_dax_vm_ops;
@@ -237,6 +245,7 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 	struct vfsmount *mnt = filp->f_path.mnt;
 	struct path path;
 	char buf[64], *cp;
+	int ret;
 
 	if (unlikely(!(sbi->s_mount_flags & EXT4_MF_MNTDIR_SAMPLED) &&
 		     !(sb->s_flags & MS_RDONLY))) {
@@ -275,11 +284,17 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 	 * writing and the journal is present
 	 */
 	if (filp->f_mode & FMODE_WRITE) {
-		int ret = ext4_inode_attach_jinode(inode);
+		ret = ext4_inode_attach_jinode(inode);
 		if (ret < 0)
 			return ret;
 	}
-	return dquot_file_open(inode, filp);
+	ret = dquot_file_open(inode, filp);
+	if (!ret && ext4_encrypted_inode(inode)) {
+		ret = ext4_generate_encryption_key(inode);
+		if (ret)
+			ret = -EACCES;
+	}
+	return ret;
 }
 
 /*
@@ -623,6 +638,27 @@ const struct file_operations ext4_file_operations = {
 	.fallocate	= ext4_fallocate,
 };
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_FS_DAX
+const struct file_operations ext4_dax_file_operations = {
+	.llseek		= ext4_llseek,
+	.read_iter	= generic_file_read_iter,
+	.write_iter	= ext4_file_write_iter,
+	.unlocked_ioctl = ext4_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl	= ext4_compat_ioctl,
+#endif
+	.mmap		= ext4_file_mmap,
+	.open		= ext4_file_open,
+	.release	= ext4_release_file,
+	.fsync		= ext4_sync_file,
+	/* Splice not yet supported with DAX */
+	.fallocate	= ext4_fallocate,
+};
+#endif
+
+>>>>>>> linux-next/akpm-base
 const struct inode_operations ext4_file_inode_operations = {
 	.setattr	= ext4_setattr,
 	.getattr	= ext4_getattr,

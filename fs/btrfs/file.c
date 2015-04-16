@@ -273,11 +273,7 @@ void btrfs_cleanup_defrag_inodes(struct btrfs_fs_info *fs_info)
 		defrag = rb_entry(node, struct inode_defrag, rb_node);
 		kmem_cache_free(btrfs_inode_defrag_cachep, defrag);
 
-		if (need_resched()) {
-			spin_unlock(&fs_info->defrag_inodes_lock);
-			cond_resched();
-			spin_lock(&fs_info->defrag_inodes_lock);
-		}
+		cond_resched_lock(&fs_info->defrag_inodes_lock);
 
 		node = rb_first(&fs_info->defrag_inodes);
 	}
@@ -868,7 +864,7 @@ next_slot:
 
 			memcpy(&new_key, &key, sizeof(new_key));
 			new_key.offset = end;
-			btrfs_set_item_key_safe(root, path, &new_key);
+			btrfs_set_item_key_safe(root->fs_info, path, &new_key);
 
 			extent_offset += end - key.offset;
 			btrfs_set_file_extent_offset(leaf, fi, extent_offset);
@@ -1126,7 +1122,7 @@ again:
 				     ino, bytenr, orig_offset,
 				     &other_start, &other_end)) {
 			new_key.offset = end;
-			btrfs_set_item_key_safe(root, path, &new_key);
+			btrfs_set_item_key_safe(root->fs_info, path, &new_key);
 			fi = btrfs_item_ptr(leaf, path->slots[0],
 					    struct btrfs_file_extent_item);
 			btrfs_set_file_extent_generation(leaf, fi,
@@ -1160,7 +1156,7 @@ again:
 							 trans->transid);
 			path->slots[0]++;
 			new_key.offset = start;
-			btrfs_set_item_key_safe(root, path, &new_key);
+			btrfs_set_item_key_safe(root->fs_info, path, &new_key);
 
 			fi = btrfs_item_ptr(leaf, path->slots[0],
 					    struct btrfs_file_extent_item);
@@ -1485,7 +1481,7 @@ static noinline ssize_t __btrfs_buffered_write(struct file *file,
 			PAGE_CACHE_SIZE / (sizeof(struct page *)));
 	nrptrs = min(nrptrs, current->nr_dirtied_pause - current->nr_dirtied);
 	nrptrs = max(nrptrs, 8);
-	pages = kmalloc(nrptrs * sizeof(struct page *), GFP_KERNEL);
+	pages = kmalloc_array(nrptrs, sizeof(struct page *), GFP_KERNEL);
 	if (!pages)
 		return -ENOMEM;
 
@@ -1635,8 +1631,8 @@ again:
 			btrfs_end_write_no_snapshoting(root);
 
 		if (only_release_metadata && copied > 0) {
-			u64 lockstart = round_down(pos, root->sectorsize);
-			u64 lockend = lockstart +
+			lockstart = round_down(pos, root->sectorsize);
+			lockend = lockstart +
 				(dirty_pages << PAGE_CACHE_SHIFT) - 1;
 
 			set_extent_bit(&BTRFS_I(inode)->io_tree, lockstart,
@@ -1739,27 +1735,19 @@ static ssize_t btrfs_file_write_iter(struct kiocb *iocb,
 	u64 start_pos;
 	u64 end_pos;
 	ssize_t num_written = 0;
-	ssize_t err = 0;
-	size_t count = iov_iter_count(from);
 	bool sync = (file->f_flags & O_DSYNC) || IS_SYNC(file->f_mapping->host);
-	loff_t pos = iocb->ki_pos;
+	ssize_t err;
+	loff_t pos;
+	size_t count;
 
 	mutex_lock(&inode->i_mutex);
+	err = generic_write_checks(iocb, from);
+	if (err <= 0) {
+		mutex_unlock(&inode->i_mutex);
+		return err;
+	}
 
 	current->backing_dev_info = inode_to_bdi(inode);
-	err = generic_write_checks(file, &pos, &count, S_ISBLK(inode->i_mode));
-	if (err) {
-		mutex_unlock(&inode->i_mutex);
-		goto out;
-	}
-
-	if (count == 0) {
-		mutex_unlock(&inode->i_mutex);
-		goto out;
-	}
-
-	iov_iter_truncate(from, count);
-
 	err = file_remove_suid(file);
 	if (err) {
 		mutex_unlock(&inode->i_mutex);
@@ -1786,6 +1774,8 @@ static ssize_t btrfs_file_write_iter(struct kiocb *iocb,
 	 */
 	update_time_for_write(inode);
 
+	pos = iocb->ki_pos;
+	count = iov_iter_count(from);
 	start_pos = round_down(pos, root->sectorsize);
 	if (start_pos > i_size_read(inode)) {
 		/* Expand hole size to cover write data, preventing empty gap */
@@ -1800,7 +1790,7 @@ static ssize_t btrfs_file_write_iter(struct kiocb *iocb,
 	if (sync)
 		atomic_inc(&BTRFS_I(inode)->sync_writers);
 
-	if (file->f_flags & O_DIRECT) {
+	if (iocb->ki_flags & IOCB_DIRECT) {
 		num_written = __btrfs_direct_write(iocb, from, pos);
 	} else {
 		num_written = __btrfs_buffered_write(file, from, pos);
@@ -1815,7 +1805,9 @@ static ssize_t btrfs_file_write_iter(struct kiocb *iocb,
 	 * otherwise subsequent syncs to a file that's been synced in this
 	 * transaction will appear to have already occured.
 	 */
+	spin_lock(&BTRFS_I(inode)->lock);
 	BTRFS_I(inode)->last_sub_trans = root->log_transid;
+	spin_unlock(&BTRFS_I(inode)->lock);
 	if (num_written > 0) {
 		err = generic_write_sync(file, pos, num_written);
 		if (err < 0)
@@ -1870,7 +1862,7 @@ static int start_ordered_ops(struct inode *inode, loff_t start, loff_t end)
 int btrfs_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 {
 	struct dentry *dentry = file->f_path.dentry;
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct btrfs_root *root = BTRFS_I(inode)->root;
 	struct btrfs_trans_handle *trans;
 	struct btrfs_log_ctx ctx;
@@ -2168,7 +2160,7 @@ static int fill_holes(struct btrfs_trans_handle *trans, struct inode *inode,
 		u64 num_bytes;
 
 		key.offset = offset;
-		btrfs_set_item_key_safe(root, path, &key);
+		btrfs_set_item_key_safe(root->fs_info, path, &key);
 		fi = btrfs_item_ptr(leaf, path->slots[0],
 				    struct btrfs_file_extent_item);
 		num_bytes = btrfs_file_extent_num_bytes(leaf, fi) + end -
@@ -2673,23 +2665,34 @@ static long btrfs_fallocate(struct file *file, int mode,
 							1 << inode->i_blkbits,
 							offset + len,
 							&alloc_hint);
-
-			if (ret < 0) {
-				free_extent_map(em);
-				break;
-			}
 		} else if (actual_end > inode->i_size &&
 			   !(mode & FALLOC_FL_KEEP_SIZE)) {
+			struct btrfs_trans_handle *trans;
+
 			/*
 			 * We didn't need to allocate any more space, but we
 			 * still extended the size of the file so we need to
-			 * update i_size.
+			 * update i_size and the inode item.
 			 */
-			inode->i_ctime = CURRENT_TIME;
-			i_size_write(inode, actual_end);
-			btrfs_ordered_update_i_size(inode, actual_end, NULL);
+			trans = btrfs_start_transaction(root, 1);
+			if (IS_ERR(trans)) {
+				ret = PTR_ERR(trans);
+			} else {
+				inode->i_ctime = CURRENT_TIME;
+				i_size_write(inode, actual_end);
+				btrfs_ordered_update_i_size(inode, actual_end,
+							    NULL);
+				ret = btrfs_update_inode(trans, root, inode);
+				if (ret)
+					btrfs_end_transaction(trans, root);
+				else
+					ret = btrfs_end_transaction(trans,
+								    root);
+			}
 		}
 		free_extent_map(em);
+		if (ret < 0)
+			break;
 
 		cur_offset = last_byte;
 		if (cur_offset >= alloc_end) {
