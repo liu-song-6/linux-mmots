@@ -14,6 +14,7 @@
 #include <linux/pagemap.h>
 #include <linux/mpage.h>
 #include <linux/vfs.h>
+#include <linux/seq_file.h>
 #include <linux/parser.h>
 #include <linux/blkdev.h>
 #include <asm/unaligned.h>
