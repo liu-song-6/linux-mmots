@@ -12,7 +12,7 @@
  *  affs regular file handling primitives
  */
 
-#include <linux/aio.h>
+#include <linux/uio.h>
 #include "affs.h"
 
 static struct buffer_head *affs_get_extblock_slow(struct inode *inode, u32 ext);
@@ -969,9 +969,7 @@ int affs_file_fsync(struct file *filp, loff_t start, loff_t end, int datasync)
 }
 const struct file_operations affs_file_operations = {
 	.llseek		= generic_file_llseek,
-	.read		= new_sync_read,
 	.read_iter	= generic_file_read_iter,
-	.write		= new_sync_write,
 	.write_iter	= generic_file_write_iter,
 	.mmap		= generic_file_mmap,
 	.open		= affs_file_open,

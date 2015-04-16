@@ -27,7 +27,6 @@
 #include <linux/namei.h>
 #include <linux/log2.h>
 #include <linux/cleancache.h>
-#include <linux/aio.h>
 #include <asm/uaccess.h>
 #include "internal.h"
 
@@ -1660,8 +1659,6 @@ const struct file_operations def_blk_fops = {
 	.open		= blkdev_open,
 	.release	= blkdev_close,
 	.llseek		= block_llseek,
-	.read		= new_sync_read,
-	.write		= new_sync_write,
 	.read_iter	= blkdev_read_iter,
 	.write_iter	= blkdev_write_iter,
 	.mmap		= generic_file_mmap,
