@@ -172,10 +172,6 @@ static void intel_plane_atomic_update(struct drm_plane *plane,
 	struct intel_plane_state *intel_state =
 		to_intel_plane_state(plane->state);
 
-	/* Don't disable an already disabled plane */
-	if (!plane->state->fb && !old_state->fb)
-		return;
-
 	intel_plane->commit_plane(plane, intel_state);
 }
 
@@ -203,16 +199,8 @@ intel_plane_atomic_get_property(struct drm_plane *plane,
 				struct drm_property *property,
 				uint64_t *val)
 {
-	struct drm_mode_config *config = &plane->dev->mode_config;
-
-	if (property == config->rotation_property) {
-		*val = state->rotation;
-	} else {
-		DRM_DEBUG_KMS("Unknown plane property '%s'\n", property->name);
-		return -EINVAL;
-	}
-
-	return 0;
+	DRM_DEBUG_KMS("Unknown plane property '%s'\n", property->name);
+	return -EINVAL;
 }
 
 /**
@@ -233,14 +221,6 @@ intel_plane_atomic_set_property(struct drm_plane *plane,
 				struct drm_property *property,
 				uint64_t val)
 {
-	struct drm_mode_config *config = &plane->dev->mode_config;
-
-	if (property == config->rotation_property) {
-		state->rotation = val;
-	} else {
-		DRM_DEBUG_KMS("Unknown plane property '%s'\n", property->name);
-		return -EINVAL;
-	}
-
-	return 0;
+	DRM_DEBUG_KMS("Unknown plane property '%s'\n", property->name);
+	return -EINVAL;
 }

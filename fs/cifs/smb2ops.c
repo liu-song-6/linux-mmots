@@ -524,7 +524,7 @@ smb2_print_stats(struct seq_file *m, struct cifs_tcon *tcon)
 static void
 smb2_set_fid(struct cifsFileInfo *cfile, struct cifs_fid *fid, __u32 oplock)
 {
-	struct cifsInodeInfo *cinode = CIFS_I(cfile->dentry->d_inode);
+	struct cifsInodeInfo *cinode = CIFS_I(d_inode(cfile->dentry));
 	struct TCP_Server_Info *server = tlink_tcon(cfile->tlink)->ses->server;
 
 	cfile->fid.persistent_fid = fid->persistent_fid;
@@ -793,7 +793,7 @@ smb2_set_file_size(const unsigned int xid, struct cifs_tcon *tcon,
 	 * If extending file more than one page make sparse. Many Linux fs
 	 * make files sparse by default when extending via ftruncate
 	 */
-	inode = cfile->dentry->d_inode;
+	inode = d_inode(cfile->dentry);
 
 	if (!set_alloc && (size > inode->i_size + 8192)) {
 		__u8 set_sparse = 1;
@@ -1032,7 +1032,7 @@ static long smb3_zero_range(struct file *file, struct cifs_tcon *tcon,
 
 	xid = get_xid();
 
-	inode = cfile->dentry->d_inode;
+	inode = d_inode(cfile->dentry);
 	cifsi = CIFS_I(inode);
 
 	/* if file not oplocked can't be sure whether asking to extend size */
@@ -1083,7 +1083,7 @@ static long smb3_punch_hole(struct file *file, struct cifs_tcon *tcon,
 
 	xid = get_xid();
 
-	inode = cfile->dentry->d_inode;
+	inode = d_inode(cfile->dentry);
 	cifsi = CIFS_I(inode);
 
 	/* Need to make file sparse, if not already, before freeing range. */
@@ -1115,7 +1115,7 @@ static long smb3_simple_falloc(struct file *file, struct cifs_tcon *tcon,
 
 	xid = get_xid();
 
-	inode = cfile->dentry->d_inode;
+	inode = d_inode(cfile->dentry);
 	cifsi = CIFS_I(inode);
 
 	/* if file not oplocked can't be sure whether asking to extend size */
@@ -1714,3 +1714,25 @@ struct smb_version_values smb302_values = {
 	.signing_required = SMB2_NEGOTIATE_SIGNING_REQUIRED,
 	.create_lease_size = sizeof(struct create_lease_v2),
 };
+
+#ifdef CONFIG_CIFS_SMB31
+struct smb_version_values smb31_values = {
+	.version_string = SMB31_VERSION_STRING,
+	.protocol_id = SMB31_PROT_ID,
+	.req_capabilities = SMB2_GLOBAL_CAP_DFS | SMB2_GLOBAL_CAP_LEASING | SMB2_GLOBAL_CAP_LARGE_MTU,
+	.large_lock_type = 0,
+	.exclusive_lock_type = SMB2_LOCKFLAG_EXCLUSIVE_LOCK,
+	.shared_lock_type = SMB2_LOCKFLAG_SHARED_LOCK,
+	.unlock_lock_type = SMB2_LOCKFLAG_UNLOCK,
+	.header_size = sizeof(struct smb2_hdr),
+	.max_header_size = MAX_SMB2_HDR_SIZE,
+	.read_rsp_size = sizeof(struct smb2_read_rsp) - 1,
+	.lock_cmd = SMB2_LOCK,
+	.cap_unix = 0,
+	.cap_nt_find = SMB2_NT_FIND,
+	.cap_large_files = SMB2_LARGE_FILES,
+	.signing_enabled = SMB2_NEGOTIATE_SIGNING_ENABLED | SMB2_NEGOTIATE_SIGNING_REQUIRED,
+	.signing_required = SMB2_NEGOTIATE_SIGNING_REQUIRED,
+	.create_lease_size = sizeof(struct create_lease_v2),
+};
+#endif /* SMB31 */
