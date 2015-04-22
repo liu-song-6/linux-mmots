@@ -43,9 +43,6 @@ static const char *default_compressor = "lzo";
 /* Module params (documentation at end) */
 static unsigned int num_devices = 1;
 
-#define ZRAM_CTL_ADD		1
-#define ZRAM_CTL_REMOVE		2
-
 static inline void deprecated_attr_warn(const char *name)
 {
 	pr_warn_once("%d (%s) Attribute %s (and others) will be removed. %s\n",
@@ -1268,79 +1265,7 @@ static struct zram *zram_lookup(int dev_id)
 	return ERR_PTR(-ENODEV);
 }
 
-/* common zram-control add/remove handler */
-static int zram_control(int cmd, const char *buf)
-{
-	struct zram *zram;
-	int ret = -ENOSYS, err, dev_id;
-
-	/* dev_id is gendisk->first_minor, which is `int' */
-	ret = kstrtoint(buf, 10, &dev_id);
-	if (ret || dev_id < 0)
-		return ret;
-
-	mutex_lock(&zram_index_mutex);
-	zram = zram_lookup(dev_id);
-
-	switch (cmd) {
-	case ZRAM_CTL_ADD:
-		if (!IS_ERR(zram)) {
-			ret = -EEXIST;
-			break;
-		}
-		ret = zram_add(dev_id);
-		break;
-	case ZRAM_CTL_REMOVE:
-		if (IS_ERR(zram)) {
-			ret = PTR_ERR(zram);
-			break;
-		}
-
-		/*
-		 * First, make ->disksize device attr RO, closing
-		 * ZRAM_CTL_REMOVE vs disksize_store() race window
-		 */
-		ret = sysfs_chmod_file(&disk_to_dev(zram->disk)->kobj,
-				&dev_attr_disksize.attr, S_IRUGO);
-		if (ret)
-			break;
-
-		ret = zram_reset_device(zram);
-		if (ret == 0) {
-			/* ->disksize is RO and there are no ->bd_openers */
-			zram_remove(zram);
-			break;
-		}
-
-		/*
-		 * If there are still device bd_openers, try to make ->disksize
-		 * RW again and return. even if we fail to make ->disksize RW,
-		 * user still has RW ->reset attr. so it's possible to destroy
-		 * that device.
-		 */
-		err = sysfs_chmod_file(&disk_to_dev(zram->disk)->kobj,
-				&dev_attr_disksize.attr,
-				S_IWUSR | S_IRUGO);
-		if (err)
-			ret = err;
-		break;
-	}
-	mutex_unlock(&zram_index_mutex);
-
-	return ret;
-}
-
 /* zram module control sysfs attributes */
-static ssize_t zram_add_store(struct class *class,
-			struct class_attribute *attr,
-			const char *buf,
-			size_t count)
-{
-	int ret = zram_control(ZRAM_CTL_ADD, buf);
-
-	return ret ? ret : count;
-}
-
 static ssize_t zram_add_show(struct class *class,
 			struct class_attribute *attr,
 			char *buf)
@@ -1348,10 +1273,7 @@ static ssize_t zram_add_show(struct class *class,
 	int ret;
 
 	mutex_lock(&zram_index_mutex);
-	/*
-	 * read operation on zram_add is - pick up device_id automatically, add
-	 * corresponding device and return that device_id back to user
-	 */
+	/* pick up available device_id */
 	ret = zram_add(-1);
 	mutex_unlock(&zram_index_mutex);
 
@@ -1365,13 +1287,59 @@ static ssize_t zram_remove_store(struct class *class,
 			const char *buf,
 			size_t count)
 {
-	int ret = zram_control(ZRAM_CTL_REMOVE, buf);
+	struct zram *zram;
+	int ret, err, dev_id;
 
+	mutex_lock(&zram_index_mutex);
+
+	/* dev_id is gendisk->first_minor, which is `int' */
+	ret = kstrtoint(buf, 10, &dev_id);
+	if (ret || dev_id < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	zram = zram_lookup(dev_id);
+	if (IS_ERR(zram)) {
+		ret = PTR_ERR(zram);
+		goto out;
+	}
+
+	/*
+	 * First, make ->disksize device attr RO, closing
+	 * ZRAM_CTL_REMOVE vs disksize_store() race window
+	 */
+	ret = sysfs_chmod_file(&disk_to_dev(zram->disk)->kobj,
+			&dev_attr_disksize.attr, S_IRUGO);
+	if (ret)
+		goto out;
+
+	ret = zram_reset_device(zram);
+	if (ret == 0) {
+		/* ->disksize is RO and there are no ->bd_openers */
+		zram_remove(zram);
+		goto out;
+	}
+
+	/*
+	 * If there are still device bd_openers, try to make ->disksize
+	 * RW again and return. even if we fail to make ->disksize RW,
+	 * user still has RW ->reset attr. so it's possible to destroy
+	 * that device.
+	 */
+	err = sysfs_chmod_file(&disk_to_dev(zram->disk)->kobj,
+			&dev_attr_disksize.attr,
+			S_IWUSR | S_IRUGO);
+	if (err)
+		ret = err;
+
+out:
+	mutex_unlock(&zram_index_mutex);
 	return ret ? ret : count;
 }
 
 static struct class_attribute zram_control_class_attrs[] = {
-	__ATTR_RW(zram_add),
+	__ATTR_RO(zram_add),
 	__ATTR_WO(zram_remove),
 	__ATTR_NULL,
 };
