@@ -1128,6 +1128,8 @@ static struct attribute_group zram_disk_attr_group = {
 	.attrs = zram_disk_attrs,
 };
 
+/* allocate and initialize new zram device. the function returns
+ * '>= 0' device_id upon success, and negative value otherwise. */
 static int zram_add(int device_id)
 {
 	struct zram *zram;
@@ -1214,7 +1216,7 @@ static int zram_add(int device_id)
 	zram->max_comp_streams = 1;
 
 	pr_info("Added device: %s\n", zram->disk->disk_name);
-	return 0;
+	return device_id;
 
 out_free_disk:
 	del_gendisk(zram->disk);
@@ -1389,7 +1391,7 @@ static int __init zram_init(void)
 		mutex_lock(&zram_index_mutex);
 		ret = zram_add(dev_id);
 		mutex_unlock(&zram_index_mutex);
-		if (ret != 0)
+		if (ret < 0)
 			goto out_error;
 	}
 
