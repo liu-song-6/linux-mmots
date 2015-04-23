@@ -1323,11 +1323,18 @@ L:	linux-soc@vger.kernel.org
 S:	Maintained
 F:	arch/arm/mach-qcom/
 F:	drivers/soc/qcom/
+<<<<<<< HEAD
+=======
+F:	drivers/firmware/qcom_scm.c
+>>>>>>> linux-next/akpm-base
 F:	drivers/tty/serial/msm_serial.h
 F:	drivers/tty/serial/msm_serial.c
 F:	drivers/*/pm8???-*
 F:	drivers/mfd/ssbi.c
+<<<<<<< HEAD
 F:	drivers/firmware/qcom_scm.c
+=======
+>>>>>>> linux-next/akpm-base
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/galak/linux-qcom.git
 
 ARM/RADISYS ENP2611 MACHINE SUPPORT
@@ -3066,9 +3073,15 @@ F:	drivers/net/fddi/defxx.*
 
 DELL LAPTOP DRIVER
 M:	Matthew Garrett <mjg59@srcf.ucam.org>
+M:	Pali Rohár <pali.rohar@gmail.com>
 L:	platform-driver-x86@vger.kernel.org
 S:	Maintained
 F:	drivers/platform/x86/dell-laptop.c
+
+DELL LAPTOP FREEFALL DRIVER
+M:	Pali Rohár <pali.rohar@gmail.com>
+S:	Maintained
+F:	drivers/platform/x86/dell-smo8800.c
 
 DELL LAPTOP SMM DRIVER
 M:	Guenter Roeck <linux@roeck-us.net>
@@ -3084,6 +3097,7 @@ F:	drivers/firmware/dcdbas.*
 
 DELL WMI EXTRAS DRIVER
 M:	Matthew Garrett <mjg59@srcf.ucam.org>
+M:	Pali Rohár <pali.rohar@gmail.com>
 S:	Maintained
 F:	drivers/platform/x86/dell-wmi.c
 
@@ -3270,12 +3284,6 @@ S:	Maintained
 F:	drivers/firmware/dmi-id.c
 F:	drivers/firmware/dmi_scan.c
 F:	include/linux/dmi.h
-
-DOCKING STATION DRIVER
-M:	Shaohua Li <shaohua.li@intel.com>
-L:	linux-acpi@vger.kernel.org
-S:	Supported
-F:	drivers/acpi/dock.c
 
 DOCUMENTATION
 M:	Jonathan Corbet <corbet@lwn.net>
@@ -5009,6 +5017,11 @@ W:	http://industrypack.sourceforge.net
 S:	Maintained
 F:	drivers/ipack/
 
+INGENIC JZ4780 DMA Driver
+M:	Zubair Lutfullah Kakakhel <Zubair.Kakakhel@imgtec.com>
+S:	Maintained
+F:	drivers/dma/dma-jz4780.c
+
 INTEGRITY MEASUREMENT ARCHITECTURE (IMA)
 M:	Mimi Zohar <zohar@linux.vnet.ibm.com>
 M:	Dmitry Kasatkin <dmitry.kasatkin@gmail.com>
@@ -5555,6 +5568,19 @@ T:	git git://gitorious.org/linux-kconfig/linux-kconfig
 S:	Maintained
 F:	Documentation/kbuild/kconfig-language.txt
 F:	scripts/kconfig/
+
+KDBUS
+M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+M:	Daniel Mack <daniel@zonque.org>
+M:	David Herrmann <dh.herrmann@googlemail.com>
+M:	Djalal Harouni <tixxdz@opendz.org>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+F:	ipc/kdbus/*
+F:	samples/kdbus/*
+F:	Documentation/kdbus/*
+F:	include/uapi/linux/kdbus.h
+F:	tools/testing/selftests/kdbus/
 
 KDUMP
 M:	Vivek Goyal <vgoyal@redhat.com>
@@ -7533,7 +7559,6 @@ S:	Maintained
 F:	drivers/pci/host/pci-exynos.c
 
 PCI DRIVER FOR SYNOPSIS DESIGNWARE
-M:	Mohit Kumar <mohit.kumar@st.com>
 M:	Jingoo Han <jg1.han@samsung.com>
 L:	linux-pci@vger.kernel.org
 S:	Maintained
@@ -7548,9 +7573,8 @@ F:	Documentation/devicetree/bindings/pci/host-generic-pci.txt
 F:	drivers/pci/host/pci-host-generic.c
 
 PCIE DRIVER FOR ST SPEAR13XX
-M:	Mohit Kumar <mohit.kumar@st.com>
 L:	linux-pci@vger.kernel.org
-S:	Maintained
+S:	Orphan
 F:	drivers/pci/host/*spear*
 
 PCMCIA SUBSYSTEM
@@ -8805,6 +8829,15 @@ W:	http://www.emulex.com
 S:	Supported
 F:	drivers/net/ethernet/emulex/benet/
 
+EMULEX ONECONNECT ROCE DRIVER
+M:	Selvin Xavier <selvin.xavier@emulex.com>
+M:	Devesh Sharma <devesh.sharma@emulex.com>
+M:	Mitesh Ahuja <mitesh.ahuja@emulex.com>
+L:	linux-rdma@vger.kernel.org
+W:	http://www.emulex.com
+S:	Supported
+F:	drivers/infiniband/hw/ocrdma/
+
 SFC NETWORK DRIVER
 M:	Solarflare linux maintainers <linux-net-drivers@solarflare.com>
 M:	Shradha Shah <sshah@solarflare.com>
@@ -9937,9 +9970,22 @@ S:	Maintained
 F:	drivers/platform/x86/topstar-laptop.c
 
 TOSHIBA ACPI EXTRAS DRIVER
+M:	Azael Avalos <coproscefalo@gmail.com>
 L:	platform-driver-x86@vger.kernel.org
-S:	Orphan
+S:	Maintained
 F:	drivers/platform/x86/toshiba_acpi.c
+
+TOSHIBA BLUETOOTH DRIVER
+M:	Azael Avalos <coproscefalo@gmail.com>
+L:	platform-driver-x86@vger.kernel.org
+S:	Maintained
+F:	drivers/platform/x86/toshiba_bluetooth.c
+
+TOSHIBA HDD ACTIVE PROTECTION SENSOR DRIVER
+M:	Azael Avalos <coproscefalo@gmail.com>
+L:	platform-driver-x86@vger.kernel.org
+S:	Maintained
+F:	drivers/platform/x86/toshiba_haps.c
 
 TOSHIBA SMM DRIVER
 M:	Jonathan Buzzard <jonathan@buzzard.org.uk>
@@ -10516,6 +10562,12 @@ L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/vhost/
 F:	include/uapi/linux/vhost.h
+
+VIRTIO INPUT DRIVER
+M:	Gerd Hoffmann <kraxel@redhat.com>
+S:	Maintained
+F:	drivers/virtio/virtio_input.c
+F:	include/uapi/linux/virtio_input.h
 
 VIA RHINE NETWORK DRIVER
 M:	Roger Luethi <rl@hellgate.ch>

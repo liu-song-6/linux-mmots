@@ -7,9 +7,15 @@ obj-$(CONFIG_ARM_CCI)		+= arm-cci.o
 obj-$(CONFIG_ARM_CCN)		+= arm-ccn.o
 
 obj-$(CONFIG_BRCMSTB_GISB_ARB)	+= brcmstb_gisb.o
+<<<<<<< HEAD
 obj-$(CONFIG_IMX_WEIM)		+= imx-weim.o
 obj-$(CONFIG_MIPS_CDMM)		+= mips_cdmm.o
 obj-$(CONFIG_MVEBU_MBUS) 	+= mvebu-mbus.o
+=======
+obj-$(CONFIG_IMX_WEIM)	+= imx-weim.o
+obj-$(CONFIG_MIPS_CDMM) += mips_cdmm.o
+obj-$(CONFIG_MVEBU_MBUS) += mvebu-mbus.o
+>>>>>>> linux-next/akpm-base
 
 # Interconnect bus driver for OMAP SoCs.
 obj-$(CONFIG_OMAP_INTERCONNECT)	+= omap_l3_smx.o omap_l3_noc.o
