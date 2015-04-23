@@ -1323,18 +1323,11 @@ L:	linux-soc@vger.kernel.org
 S:	Maintained
 F:	arch/arm/mach-qcom/
 F:	drivers/soc/qcom/
-<<<<<<< HEAD
-=======
 F:	drivers/firmware/qcom_scm.c
->>>>>>> linux-next/akpm-base
 F:	drivers/tty/serial/msm_serial.h
 F:	drivers/tty/serial/msm_serial.c
 F:	drivers/*/pm8???-*
 F:	drivers/mfd/ssbi.c
-<<<<<<< HEAD
-F:	drivers/firmware/qcom_scm.c
-=======
->>>>>>> linux-next/akpm-base
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/galak/linux-qcom.git
 
 ARM/RADISYS ENP2611 MACHINE SUPPORT
