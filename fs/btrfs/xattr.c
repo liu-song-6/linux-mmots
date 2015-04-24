@@ -261,7 +261,7 @@ out:
 ssize_t btrfs_listxattr(struct dentry *dentry, char *buffer, size_t size)
 {
 	struct btrfs_key key, found_key;
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	struct btrfs_root *root = BTRFS_I(inode)->root;
 	struct btrfs_path *path;
 	struct extent_buffer *leaf;
@@ -411,13 +411,21 @@ ssize_t btrfs_getxattr(struct dentry *dentry, const char *name,
 	ret = btrfs_is_valid_xattr(name);
 	if (ret)
 		return ret;
+<<<<<<< HEAD
 	return __btrfs_getxattr(dentry->d_inode, name, buffer, size);
+=======
+	return __btrfs_getxattr(d_inode(dentry), name, buffer, size);
+>>>>>>> linux-next/akpm-base
 }
 
 int btrfs_setxattr(struct dentry *dentry, const char *name, const void *value,
 		   size_t size, int flags)
 {
+<<<<<<< HEAD
 	struct btrfs_root *root = BTRFS_I(dentry->d_inode)->root;
+=======
+	struct btrfs_root *root = BTRFS_I(d_inode(dentry))->root;
+>>>>>>> linux-next/akpm-base
 	int ret;
 
 	/*
@@ -440,19 +448,23 @@ int btrfs_setxattr(struct dentry *dentry, const char *name, const void *value,
 		return ret;
 
 	if (!strncmp(name, XATTR_BTRFS_PREFIX, XATTR_BTRFS_PREFIX_LEN))
-		return btrfs_set_prop(dentry->d_inode, name,
+		return btrfs_set_prop(d_inode(dentry), name,
 				      value, size, flags);
 
 	if (size == 0)
 		value = "";  /* empty EA, do not remove */
 
-	return __btrfs_setxattr(NULL, dentry->d_inode, name, value, size,
+	return __btrfs_setxattr(NULL, d_inode(dentry), name, value, size,
 				flags);
 }
 
 int btrfs_removexattr(struct dentry *dentry, const char *name)
 {
+<<<<<<< HEAD
 	struct btrfs_root *root = BTRFS_I(dentry->d_inode)->root;
+=======
+	struct btrfs_root *root = BTRFS_I(d_inode(dentry))->root;
+>>>>>>> linux-next/akpm-base
 	int ret;
 
 	/*
@@ -475,10 +487,10 @@ int btrfs_removexattr(struct dentry *dentry, const char *name)
 		return ret;
 
 	if (!strncmp(name, XATTR_BTRFS_PREFIX, XATTR_BTRFS_PREFIX_LEN))
-		return btrfs_set_prop(dentry->d_inode, name,
+		return btrfs_set_prop(d_inode(dentry), name,
 				      NULL, 0, XATTR_REPLACE);
 
-	return __btrfs_setxattr(NULL, dentry->d_inode, name, NULL, 0,
+	return __btrfs_setxattr(NULL, d_inode(dentry), name, NULL, 0,
 				XATTR_REPLACE);
 }
 
