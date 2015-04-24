@@ -953,11 +953,7 @@ xfs_vn_setattr(
 		uint		iolock = XFS_IOLOCK_EXCL;
 
 		xfs_ilock(ip, iolock);
-<<<<<<< HEAD
-		error = xfs_break_layouts(dentry->d_inode, &iolock, true);
-=======
 		error = xfs_break_layouts(d_inode(dentry), &iolock, true);
->>>>>>> linux-next/akpm-base
 		if (!error) {
 			xfs_ilock(ip, XFS_MMAPLOCK_EXCL);
 			iolock |= XFS_MMAPLOCK_EXCL;

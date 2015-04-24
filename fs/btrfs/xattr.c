@@ -411,21 +411,13 @@ ssize_t btrfs_getxattr(struct dentry *dentry, const char *name,
 	ret = btrfs_is_valid_xattr(name);
 	if (ret)
 		return ret;
-<<<<<<< HEAD
-	return __btrfs_getxattr(dentry->d_inode, name, buffer, size);
-=======
 	return __btrfs_getxattr(d_inode(dentry), name, buffer, size);
->>>>>>> linux-next/akpm-base
 }
 
 int btrfs_setxattr(struct dentry *dentry, const char *name, const void *value,
 		   size_t size, int flags)
 {
-<<<<<<< HEAD
-	struct btrfs_root *root = BTRFS_I(dentry->d_inode)->root;
-=======
 	struct btrfs_root *root = BTRFS_I(d_inode(dentry))->root;
->>>>>>> linux-next/akpm-base
 	int ret;
 
 	/*
@@ -460,11 +452,7 @@ int btrfs_setxattr(struct dentry *dentry, const char *name, const void *value,
 
 int btrfs_removexattr(struct dentry *dentry, const char *name)
 {
-<<<<<<< HEAD
-	struct btrfs_root *root = BTRFS_I(dentry->d_inode)->root;
-=======
 	struct btrfs_root *root = BTRFS_I(d_inode(dentry))->root;
->>>>>>> linux-next/akpm-base
 	int ret;
 
 	/*
