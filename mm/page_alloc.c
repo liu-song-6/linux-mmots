@@ -1061,7 +1061,6 @@ void __defermem_init deferred_init_memmap(int nid)
 {
 	unsigned long start = jiffies;
 	struct mminit_pfnnid_cache nid_init_state = { };
-
 	pg_data_t *pgdat = NODE_DATA(nid);
 	int zid;
 	unsigned long first_init_pfn = pgdat->first_deferred_pfn;
