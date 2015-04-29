@@ -359,14 +359,14 @@ int unregister_cpu_under_node(unsigned int cpu, unsigned int nid)
 #ifdef CONFIG_MEMORY_HOTPLUG_SPARSE
 #define page_initialized(page)  (page->lru.next)
 
-static int get_nid_for_pfn(struct pglist_data *pgdat, unsigned long pfn)
+static int __init_refok get_nid_for_pfn(unsigned long pfn)
 {
 	struct page *page;
 
 	if (!pfn_valid_within(pfn))
 		return -1;
 #ifdef CONFIG_DEFERRED_STRUCT_PAGE_INIT
-	if (pgdat && pfn >= pgdat->first_deferred_pfn)
+	if (system_state == SYSTEM_BOOTING)
 		return early_pfn_to_nid(pfn);
 #endif
 	page = pfn_to_page(pfn);
@@ -380,7 +380,6 @@ int register_mem_sect_under_node(struct memory_block *mem_blk, int nid)
 {
 	int ret;
 	unsigned long pfn, sect_start_pfn, sect_end_pfn;
-	struct pglist_data *pgdat = NODE_DATA(nid);
 
 	if (!mem_blk)
 		return -EFAULT;
@@ -393,7 +392,7 @@ int register_mem_sect_under_node(struct memory_block *mem_blk, int nid)
 	for (pfn = sect_start_pfn; pfn <= sect_end_pfn; pfn++) {
 		int page_nid;
 
-		page_nid = get_nid_for_pfn(pgdat, pfn);
+		page_nid = get_nid_for_pfn(pfn);
 		if (page_nid < 0)
 			continue;
 		if (page_nid != nid)
@@ -432,7 +431,7 @@ int unregister_mem_sect_under_nodes(struct memory_block *mem_blk,
 	for (pfn = sect_start_pfn; pfn <= sect_end_pfn; pfn++) {
 		int nid;
 
-		nid = get_nid_for_pfn(NULL, pfn);
+		nid = get_nid_for_pfn(pfn);
 		if (nid < 0)
 			continue;
 		if (!node_online(nid))
