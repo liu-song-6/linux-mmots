@@ -908,7 +908,7 @@ void __init __free_pages_bootmem(struct page *page, unsigned long pfn,
 }
 
 #if defined(CONFIG_HAVE_ARCH_EARLY_PFN_TO_NID) || \
-        defined(CONFIG_HAVE_MEMBLOCK_NODE_MAP)
+	defined(CONFIG_HAVE_MEMBLOCK_NODE_MAP)
 /* Only safe to use early in boot when initialisation is single-threaded */
 struct __meminitdata mminit_pfnnid_cache global_init_state;
 int __meminit early_pfn_to_nid(unsigned long pfn)
