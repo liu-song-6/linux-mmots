@@ -746,6 +746,13 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 	cpuidle.off=1	[CPU_IDLE]
 			disable the cpuidle sub-system
 
+	cpu_init_mdelay=N
+			[X86] Delay for N millisec between assert and de-assert
+			of APIC INIT to start processor.  In most configurations,
+			this occurs once for every CPU upon boot, and online,
+			such as resume from suspend and resume from hibernate.
+			Default: 10
+
 	cpcihp_generic=	[HW,PCI] Generic port I/O CompactPCI driver
 			Format:
 			<first_slot>,<last_slot>,<port>,<enum_bit>[,<debug>]
@@ -3787,6 +3794,8 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 					READ_CAPACITY_16 command);
 				f = NO_REPORT_OPCODES (don't use report opcodes
 					command, uas only);
+				g = MAX_SECTORS_240 (don't transfer more than
+					240 sectors at a time, uas only);
 				h = CAPACITY_HEURISTICS (decrease the
 					reported device capacity by one
 					sector if the number is odd);
