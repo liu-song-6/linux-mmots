@@ -662,6 +662,8 @@ void be_link_status_update(struct be_adapter *adapter, u8 link_status)
 		netif_carrier_on(netdev);
 	else
 		netif_carrier_off(netdev);
+
+	netdev_info(netdev, "Link is %s\n", link_status ? "Up" : "Down");
 }
 
 static void be_tx_stats_update(struct be_tx_obj *txo, struct sk_buff *skb)
@@ -4846,7 +4848,8 @@ err:
 }
 
 static int be_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
-				 struct net_device *dev, u32 filter_mask)
+				 struct net_device *dev, u32 filter_mask,
+				 int nlflags)
 {
 	struct be_adapter *adapter = netdev_priv(dev);
 	int status = 0;
@@ -4868,7 +4871,7 @@ static int be_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev,
 				       hsw_mode == PORT_FWD_TYPE_VEPA ?
 				       BRIDGE_MODE_VEPA : BRIDGE_MODE_VEB,
-				       0, 0);
+				       0, 0, nlflags);
 }
 
 #ifdef CONFIG_BE2NET_VXLAN
