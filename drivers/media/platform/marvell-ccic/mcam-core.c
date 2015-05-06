@@ -772,13 +772,6 @@ static void mcam_ctlr_image(struct mcam_camera *cam)
 	case V4L2_PIX_FMT_YUYV:
 		mcam_reg_write_mask(cam, REG_CTRL0,
 			C0_DF_YUV | C0_YUV_PACKED | C0_YUVE_NOSWAP, C0_DF_MASK);
-<<<<<<< HEAD
-		break;
-	case V4L2_PIX_FMT_YVYU:
-		mcam_reg_write_mask(cam, REG_CTRL0,
-			C0_DF_YUV | C0_YUV_PACKED | C0_YUVE_SWAP24, C0_DF_MASK);
-=======
->>>>>>> linux-next/akpm-base
 		break;
 	case V4L2_PIX_FMT_YVYU:
 		mcam_reg_write_mask(cam, REG_CTRL0,
