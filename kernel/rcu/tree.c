@@ -169,8 +169,6 @@ static int kthread_prio = IS_ENABLED(CONFIG_RCU_BOOST) ? 1 : 0;
 module_param(kthread_prio, int, 0644);
 
 /* Delay in jiffies for grace-period initialization delays, debug only. */
-<<<<<<< HEAD
-=======
 
 #ifdef CONFIG_RCU_TORTURE_TEST_SLOW_PREINIT
 static int gp_preinit_delay = CONFIG_RCU_TORTURE_TEST_SLOW_PREINIT_DELAY;
@@ -179,16 +177,12 @@ module_param(gp_preinit_delay, int, 0644);
 static const int gp_preinit_delay;
 #endif /* #else #ifdef CONFIG_RCU_TORTURE_TEST_SLOW_PREINIT */
 
->>>>>>> linux-next/akpm-base
 #ifdef CONFIG_RCU_TORTURE_TEST_SLOW_INIT
 static int gp_init_delay = CONFIG_RCU_TORTURE_TEST_SLOW_INIT_DELAY;
 module_param(gp_init_delay, int, 0644);
 #else /* #ifdef CONFIG_RCU_TORTURE_TEST_SLOW_INIT */
 static const int gp_init_delay;
 #endif /* #else #ifdef CONFIG_RCU_TORTURE_TEST_SLOW_INIT */
-<<<<<<< HEAD
-#define PER_RCU_NODE_PERIOD 10	/* Number of grace periods between delays. */
-=======
 
 #ifdef CONFIG_RCU_TORTURE_TEST_SLOW_CLEANUP
 static int gp_cleanup_delay = CONFIG_RCU_TORTURE_TEST_SLOW_CLEANUP_DELAY;
@@ -207,7 +201,6 @@ static const int gp_cleanup_delay;
  * need for fast grace periods to increase other race probabilities.
  */
 #define PER_RCU_NODE_PERIOD 3	/* Number of grace periods between delays. */
->>>>>>> linux-next/akpm-base
 
 /*
  * Track the rcutorture test sequence number and the update version
@@ -1894,14 +1887,7 @@ static int rcu_gp_init(struct rcu_state *rsp)
 					    rnp->grphi, rnp->qsmask);
 		raw_spin_unlock_irq(&rnp->lock);
 		cond_resched_rcu_qs();
-<<<<<<< HEAD
-		ACCESS_ONCE(rsp->gp_activity) = jiffies;
-		if (gp_init_delay > 0 &&
-		    !(rsp->gpnum % (rcu_num_nodes * PER_RCU_NODE_PERIOD)))
-			schedule_timeout_uninterruptible(gp_init_delay);
-=======
 		WRITE_ONCE(rsp->gp_activity, jiffies);
->>>>>>> linux-next/akpm-base
 	}
 
 	return 1;
