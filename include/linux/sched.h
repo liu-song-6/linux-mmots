@@ -1461,7 +1461,7 @@ struct task_struct {
 				       it with task_lock())
 				     - initialized normally by setup_new_exec */
 /* file system info */
-	int link_count, total_link_count;
+	struct nameidata *nameidata;
 #ifdef CONFIG_SYSVIPC
 /* ipc stuff */
 	struct sysv_sem sysvsem;
@@ -2365,7 +2365,6 @@ extern void sched_dead(struct task_struct *p);
 
 extern void proc_caches_init(void);
 extern void flush_signals(struct task_struct *);
-extern void __flush_signals(struct task_struct *);
 extern void ignore_signals(struct task_struct *);
 extern void flush_signal_handlers(struct task_struct *, int force_default);
 extern int dequeue_signal(struct task_struct *tsk, sigset_t *mask, siginfo_t *info);
