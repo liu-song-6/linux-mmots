@@ -15,6 +15,7 @@
  */
 
 #include <linux/extcon.h>
+#include <linux/gpio/consumer.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -119,6 +120,18 @@ static int usb_extcon_probe(struct platform_device *pdev)
 		return PTR_ERR(info->id_gpiod);
 	}
 
+	info->edev = devm_extcon_dev_allocate(dev, usb_extcon_cable);
+	if (IS_ERR(info->edev)) {
+		dev_err(dev, "failed to allocate extcon device\n");
+		return -ENOMEM;
+	}
+
+	ret = devm_extcon_dev_register(dev, info->edev);
+	if (ret < 0) {
+		dev_err(dev, "failed to register extcon device\n");
+		return ret;
+	}
+
 	ret = gpiod_set_debounce(info->id_gpiod,
 				 USB_GPIO_DEBOUNCE_MS * 1000);
 	if (ret < 0)
@@ -139,18 +152,6 @@ static int usb_extcon_probe(struct platform_device *pdev)
 					pdev->name, info);
 	if (ret < 0) {
 		dev_err(dev, "failed to request handler for ID IRQ\n");
-		return ret;
-	}
-
-	info->edev = devm_extcon_dev_allocate(dev, usb_extcon_cable);
-	if (IS_ERR(info->edev)) {
-		dev_err(dev, "failed to allocate extcon device\n");
-		return -ENOMEM;
-	}
-
-	ret = devm_extcon_dev_register(dev, info->edev);
-	if (ret < 0) {
-		dev_err(dev, "failed to register extcon device\n");
 		return ret;
 	}
 
