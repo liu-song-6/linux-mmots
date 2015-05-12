@@ -17,8 +17,9 @@
 #include <linux/err.h>
 #include <linux/bug.h>
 #include <linux/completion.h>
+#include <linux/crypto.h>
 #include <linux/ieee802154.h>
-#include <crypto/algapi.h>
+#include <crypto/aead.h>
 
 #include "ieee802154_i.h"
 #include "llsec.h"
@@ -134,7 +135,7 @@ llsec_key_alloc(const struct ieee802154_llsec_key *template)
 	for (i = 0; i < ARRAY_SIZE(key->tfm); i++) {
 		key->tfm[i] = crypto_alloc_aead("ccm(aes)", 0,
 						CRYPTO_ALG_ASYNC);
-		if (!key->tfm[i])
+		if (IS_ERR(key->tfm[i]))
 			goto err_tfm;
 		if (crypto_aead_setkey(key->tfm[i], template->key,
 				       IEEE802154_LLSEC_KEY_SIZE))
@@ -144,7 +145,7 @@ llsec_key_alloc(const struct ieee802154_llsec_key *template)
 	}
 
 	key->tfm0 = crypto_alloc_blkcipher("ctr(aes)", 0, CRYPTO_ALG_ASYNC);
-	if (!key->tfm0)
+	if (IS_ERR(key->tfm0))
 		goto err_tfm;
 
 	if (crypto_blkcipher_setkey(key->tfm0, template->key,

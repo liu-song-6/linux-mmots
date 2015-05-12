@@ -11,6 +11,8 @@ struct nameidata;
 
 enum { MAX_NESTED_LINKS = 8 };
 
+#define MAXSYMLINKS 40
+
 /*
  * Type of the last component on LOOKUP_PARENT
  */
@@ -62,6 +64,7 @@ extern struct dentry *kern_path_locked(const char *, struct path *);
 extern int kern_path_mountpoint(int, const char *, struct path *, unsigned int);
 
 extern struct dentry *lookup_one_len(const char *, struct dentry *, int);
+extern struct dentry *lookup_one_len_unlocked(const char *, struct dentry *, int);
 
 extern int follow_down_one(struct path *);
 extern int follow_down(struct path *);
@@ -70,9 +73,7 @@ extern int follow_up(struct path *);
 extern struct dentry *lock_rename(struct dentry *, struct dentry *);
 extern void unlock_rename(struct dentry *, struct dentry *);
 
-extern void nd_jump_link(struct nameidata *nd, struct path *path);
-extern void nd_set_link(struct nameidata *nd, char *path);
-extern char *nd_get_link(struct nameidata *nd);
+extern void nd_jump_link(struct path *path);
 
 static inline void nd_terminate_link(void *name, size_t len, size_t maxlen)
 {

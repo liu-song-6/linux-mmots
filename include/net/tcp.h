@@ -527,7 +527,7 @@ int tcp_fragment(struct sock *, struct sk_buff *, u32, unsigned int, gfp_t);
 
 void tcp_send_probe0(struct sock *);
 void tcp_send_partial(struct sock *);
-int tcp_write_wakeup(struct sock *);
+int tcp_write_wakeup(struct sock *, int mib);
 void tcp_send_fin(struct sock *sk);
 void tcp_send_active_reset(struct sock *sk, gfp_t priority);
 int tcp_send_synack(struct sock *);
@@ -576,7 +576,7 @@ static inline int tcp_bound_to_half_wnd(struct tcp_sock *tp, int pktsize)
 }
 
 /* tcp.c */
-void tcp_get_info(const struct sock *, struct tcp_info *);
+void tcp_get_info(struct sock *, struct tcp_info *);
 
 /* Read 'sendfile()'-style from a TCP socket */
 typedef int (*sk_read_actor_t)(read_descriptor_t *, struct sk_buff *,
@@ -804,6 +804,8 @@ enum tcp_ca_ack_event_flags {
 /* Requires ECN/ECT set on all packets */
 #define TCP_CONG_NEEDS_ECN	0x2
 
+union tcp_cc_info;
+
 struct tcp_congestion_ops {
 	struct list_head	list;
 	u32 key;
@@ -829,7 +831,8 @@ struct tcp_congestion_ops {
 	/* hook for packet ack accounting (optional) */
 	void (*pkts_acked)(struct sock *sk, u32 num_acked, s32 rtt_us);
 	/* get info for inet_diag (optional) */
-	int (*get_info)(struct sock *sk, u32 ext, struct sk_buff *skb);
+	size_t (*get_info)(struct sock *sk, u32 ext, int *attr,
+			   union tcp_cc_info *info);
 
 	char 		name[TCP_CA_NAME_MAX];
 	struct module 	*owner;
@@ -1040,14 +1043,31 @@ static inline bool tcp_is_cwnd_limited(const struct sock *sk)
 	return tp->is_cwnd_limited;
 }
 
+/* Something is really bad, we could not queue an additional packet,
+ * because qdisc is full or receiver sent a 0 window.
+ * We do not want to add fuel to the fire, or abort too early,
+ * so make sure the timer we arm now is at least 200ms in the future,
+ * regardless of current icsk_rto value (as it could be ~2ms)
+ */
+static inline unsigned long tcp_probe0_base(const struct sock *sk)
+{
+	return max_t(unsigned long, inet_csk(sk)->icsk_rto, TCP_RTO_MIN);
+}
+
+/* Variant of inet_csk_rto_backoff() used for zero window probes */
+static inline unsigned long tcp_probe0_when(const struct sock *sk,
+					    unsigned long max_when)
+{
+	u64 when = (u64)tcp_probe0_base(sk) << inet_csk(sk)->icsk_backoff;
+
+	return (unsigned long)min_t(u64, when, max_when);
+}
+
 static inline void tcp_check_probe_timer(struct sock *sk)
 {
-	const struct tcp_sock *tp = tcp_sk(sk);
-	const struct inet_connection_sock *icsk = inet_csk(sk);
-
-	if (!tp->packets_out && !icsk->icsk_pending)
+	if (!tcp_sk(sk)->packets_out && !inet_csk(sk)->icsk_pending)
 		inet_csk_reset_xmit_timer(sk, ICSK_TIME_PROBE0,
-					  icsk->icsk_rto, TCP_RTO_MAX);
+					  tcp_probe0_base(sk), TCP_RTO_MAX);
 }
 
 static inline void tcp_init_wl(struct tcp_sock *tp, u32 seq)
