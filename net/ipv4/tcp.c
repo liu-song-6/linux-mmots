@@ -252,6 +252,7 @@
 #include <linux/types.h>
 #include <linux/fcntl.h>
 #include <linux/poll.h>
+#include <linux/inet_diag.h>
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/skbuff.h>
@@ -2481,6 +2482,13 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 			icsk->icsk_syn_retries = val;
 		break;
 
+	case TCP_SAVE_SYN:
+		if (val < 0 || val > 1)
+			err = -EINVAL;
+		else
+			tp->save_syn = val;
+		break;
+
 	case TCP_LINGER2:
 		if (val < 0)
 			tp->linger2 = -1;
@@ -2592,7 +2600,7 @@ EXPORT_SYMBOL(compat_tcp_setsockopt);
 #endif
 
 /* Return information about state of tcp endpoint in API format. */
-void tcp_get_info(const struct sock *sk, struct tcp_info *info)
+void tcp_get_info(struct sock *sk, struct tcp_info *info)
 {
 	const struct tcp_sock *tp = tcp_sk(sk);
 	const struct inet_connection_sock *icsk = inet_csk(sk);
@@ -2663,6 +2671,11 @@ void tcp_get_info(const struct sock *sk, struct tcp_info *info)
 
 	rate = READ_ONCE(sk->sk_max_pacing_rate);
 	info->tcpi_max_pacing_rate = rate != ~0U ? rate : ~0ULL;
+
+	spin_lock_bh(&sk->sk_lock.slock);
+	info->tcpi_bytes_acked = tp->bytes_acked;
+	info->tcpi_bytes_received = tp->bytes_received;
+	spin_unlock_bh(&sk->sk_lock.slock);
 }
 EXPORT_SYMBOL_GPL(tcp_get_info);
 
@@ -2734,6 +2747,26 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 			return -EFAULT;
 		return 0;
 	}
+	case TCP_CC_INFO: {
+		const struct tcp_congestion_ops *ca_ops;
+		union tcp_cc_info info;
+		size_t sz = 0;
+		int attr;
+
+		if (get_user(len, optlen))
+			return -EFAULT;
+
+		ca_ops = icsk->icsk_ca_ops;
+		if (ca_ops && ca_ops->get_info)
+			sz = ca_ops->get_info(sk, ~0U, &attr, &info);
+
+		len = min_t(unsigned int, len, sz);
+		if (put_user(len, optlen))
+			return -EFAULT;
+		if (copy_to_user(optval, &info, len))
+			return -EFAULT;
+		return 0;
+	}
 	case TCP_QUICKACK:
 		val = !icsk->icsk_ack.pingpong;
 		break;
@@ -2792,6 +2825,34 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 	case TCP_NOTSENT_LOWAT:
 		val = tp->notsent_lowat;
 		break;
+	case TCP_SAVE_SYN:
+		val = tp->save_syn;
+		break;
+	case TCP_SAVED_SYN: {
+		if (get_user(len, optlen))
+			return -EFAULT;
+
+		lock_sock(sk);
+		if (tp->saved_syn) {
+			len = min_t(unsigned int, tp->saved_syn[0], len);
+			if (put_user(len, optlen)) {
+				release_sock(sk);
+				return -EFAULT;
+			}
+			if (copy_to_user(optval, tp->saved_syn + 1, len)) {
+				release_sock(sk);
+				return -EFAULT;
+			}
+			tcp_saved_syn_free(tp);
+			release_sock(sk);
+		} else {
+			release_sock(sk);
+			len = 0;
+			if (put_user(len, optlen))
+				return -EFAULT;
+		}
+		return 0;
+	}
 	default:
 		return -ENOPROTOOPT;
 	}

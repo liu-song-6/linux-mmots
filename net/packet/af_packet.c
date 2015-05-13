@@ -2311,11 +2311,14 @@ static int tpacket_snd(struct packet_sock *po, struct msghdr *msg)
 		tlen = dev->needed_tailroom;
 		skb = sock_alloc_send_skb(&po->sk,
 				hlen + tlen + sizeof(struct sockaddr_ll),
-				0, &err);
+				!need_wait, &err);
 
-		if (unlikely(skb == NULL))
+		if (unlikely(skb == NULL)) {
+			/* we assume the socket was initially writeable ... */
+			if (likely(len_sum > 0))
+				err = len_sum;
 			goto out_status;
-
+		}
 		tp_len = tpacket_fill_skb(po, skb, ph, dev, size_max, proto,
 					  addr, hlen);
 		if (tp_len > dev->mtu + dev->hard_header_len) {
@@ -2832,7 +2835,7 @@ static int packet_create(struct net *net, struct socket *sock, int protocol,
 	sock->state = SS_UNCONNECTED;
 
 	err = -ENOBUFS;
-	sk = sk_alloc(net, PF_PACKET, GFP_KERNEL, &packet_proto);
+	sk = sk_alloc(net, PF_PACKET, GFP_KERNEL, &packet_proto, kern);
 	if (sk == NULL)
 		goto out;
 
