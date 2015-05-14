@@ -172,20 +172,14 @@ struct codel_stats {
 	u32		ce_mark;
 };
 
-<<<<<<< HEAD
-=======
 #define CODEL_DISABLED_THRESHOLD INT_MAX
 
->>>>>>> linux-next/akpm-base
 static void codel_params_init(struct codel_params *params,
 			      const struct Qdisc *sch)
 {
 	params->interval = MS2TIME(100);
 	params->target = MS2TIME(5);
-<<<<<<< HEAD
-=======
 	params->ce_threshold = CODEL_DISABLED_THRESHOLD;
->>>>>>> linux-next/akpm-base
 	params->mtu = psched_mtu(qdisc_dev(sch));
 	params->ecn = false;
 }

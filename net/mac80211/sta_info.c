@@ -162,17 +162,10 @@ struct sta_info *sta_info_get(struct ieee80211_sub_if_data *sdata,
 	struct sta_info *sta;
 	struct rhash_head *tmp;
 	const struct bucket_table *tbl;
-<<<<<<< HEAD
 
 	rcu_read_lock();
 	tbl = rht_dereference_rcu(local->sta_hash.tbl, &local->sta_hash);
 
-=======
-
-	rcu_read_lock();
-	tbl = rht_dereference_rcu(local->sta_hash.tbl, &local->sta_hash);
-
->>>>>>> linux-next/akpm-base
 	for_each_sta_info(local, tbl, addr, sta, tmp) {
 		if (sta->sdata == sdata) {
 			rcu_read_unlock();

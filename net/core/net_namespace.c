@@ -641,11 +641,7 @@ static int rtnl_net_getid(struct sk_buff *skb, struct nlmsghdr *nlh)
 
 	id = peernet2id(net, peer);
 	err = rtnl_net_fill(msg, NETLINK_CB(skb).portid, nlh->nlmsg_seq, 0,
-<<<<<<< HEAD
-			    RTM_NEWNSID, net, peer, -1);
-=======
 			    RTM_NEWNSID, net, id);
->>>>>>> linux-next/akpm-base
 	if (err < 0)
 		goto err_out;
 

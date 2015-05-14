@@ -912,15 +912,9 @@ qca_spi_probe(struct spi_device *spi)
 	qca->spi_dev = spi;
 	qca->legacy_mode = legacy_mode;
 
-<<<<<<< HEAD
-	spi_set_drvdata(spi_device, qcaspi_devs);
-
-	mac = of_get_mac_address(spi_device->dev.of_node);
-=======
 	spi_set_drvdata(spi, qcaspi_devs);
 
 	mac = of_get_mac_address(spi->dev.of_node);
->>>>>>> linux-next/akpm-base
 
 	if (mac)
 		ether_addr_copy(qca->net_dev->dev_addr, mac);
