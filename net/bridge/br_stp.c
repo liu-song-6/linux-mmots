@@ -41,10 +41,10 @@ void br_set_state(struct net_bridge_port *p, unsigned int state)
 {
 	struct switchdev_attr attr = {
 		.id = SWITCHDEV_ATTR_PORT_STP_STATE,
-		.stp_state = state,
 	};
 	int err;
 
+	attr.stp_state = state;		/* Old gcc has initializer problems */
 	p->state = state;
 	err = switchdev_port_attr_set(p->dev, &attr);
 	if (err && err != -EOPNOTSUPP)
