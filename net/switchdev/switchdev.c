@@ -641,20 +641,22 @@ static struct net_device *switchdev_get_dev_by_nhs(struct fib_info *fi)
 int switchdev_fib_ipv4_add(u32 dst, int dst_len, struct fib_info *fi,
 			   u8 tos, u8 type, u32 nlflags, u32 tb_id)
 {
+	struct switchdev_obj_ipv4_fib ipv4_fib = {
+		.dst = htonl(dst),
+		.dst_len = dst_len,
+		.fi = fi,
+		.tos = tos,
+		.type = type,
+		.nlflags = nlflags,
+		.tb_id = tb_id,
+	};
 	struct switchdev_obj fib_obj = {
 		.id = SWITCHDEV_OBJ_IPV4_FIB,
-		.ipv4_fib = {
-			.dst = htonl(dst),
-			.dst_len = dst_len,
-			.fi = fi,
-			.tos = tos,
-			.type = type,
-			.nlflags = nlflags,
-			.tb_id = tb_id,
-		},
 	};
 	struct net_device *dev;
 	int err = 0;
+
+	fib_obj.ipv4_fib = ipv4_fib;
 
 	/* Don't offload route if using custom ip rules or if
 	 * IPv4 FIB offloading has been disabled completely.
@@ -695,20 +697,22 @@ EXPORT_SYMBOL_GPL(switchdev_fib_ipv4_add);
 int switchdev_fib_ipv4_del(u32 dst, int dst_len, struct fib_info *fi,
 			   u8 tos, u8 type, u32 tb_id)
 {
+	struct switchdev_obj_ipv4_fib ipv4_fib = {
+		.dst = htonl(dst),
+		.dst_len = dst_len,
+		.fi = fi,
+		.tos = tos,
+		.type = type,
+		.nlflags = 0,
+		.tb_id = tb_id,
+	};
 	struct switchdev_obj fib_obj = {
 		.id = SWITCHDEV_OBJ_IPV4_FIB,
-		.ipv4_fib = {
-			.dst = htonl(dst),
-			.dst_len = dst_len,
-			.fi = fi,
-			.tos = tos,
-			.type = type,
-			.nlflags = 0,
-			.tb_id = tb_id,
-		},
 	};
 	struct net_device *dev;
 	int err = 0;
+
+	fib_obj.ipv4_fib = ipv4_fib;
 
 	if (!(fi->fib_flags & RTNH_F_EXTERNAL))
 		return 0;
