@@ -158,6 +158,16 @@ typedef u32 phys_cpuid_t;
 #define PHYS_CPUID_INVALID (phys_cpuid_t)(-1)
 #endif
 
+static inline bool invalid_logical_cpuid(u32 cpuid)
+{
+	return (int)cpuid < 0;
+}
+
+static inline bool invalid_phys_cpuid(phys_cpuid_t phys_id)
+{
+	return phys_id == PHYS_CPUID_INVALID;
+}
+
 #ifdef CONFIG_ACPI_HOTPLUG_CPU
 /* Arch dependent functions for cpu hotplug support */
 int acpi_map_cpu(acpi_handle handle, phys_cpuid_t physid, int *pcpu);
@@ -721,6 +731,8 @@ static inline void acpi_dev_remove_driver_gpios(struct acpi_device *adev)
 	if (adev)
 		adev->driver_gpios = NULL;
 }
+
+int acpi_dev_gpio_irq_get(struct acpi_device *adev, int index);
 #else
 static inline int acpi_dev_add_driver_gpios(struct acpi_device *adev,
 			      const struct acpi_gpio_mapping *gpios)
@@ -728,6 +740,11 @@ static inline int acpi_dev_add_driver_gpios(struct acpi_device *adev,
 	return -ENXIO;
 }
 static inline void acpi_dev_remove_driver_gpios(struct acpi_device *adev) {}
+
+static inline int acpi_dev_gpio_irq_get(struct acpi_device *adev, int index)
+{
+	return -ENXIO;
+}
 #endif
 
 /* Device properties */
