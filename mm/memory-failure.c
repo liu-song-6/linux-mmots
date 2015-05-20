@@ -916,6 +916,7 @@ int get_hwpoison_page(struct page *page)
 
 	return get_page_unless_zero(page);
 }
+EXPORT_SYMBOL_GPL(get_hwpoison_page);
 
 /*
  * Do all that is necessary to remove user space mappings. Unmap
