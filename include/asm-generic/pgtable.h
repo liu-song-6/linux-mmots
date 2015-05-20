@@ -195,7 +195,12 @@ static inline pmd_t pmdp_collapse_flush(struct vm_area_struct *vma,
 					unsigned long address,
 					pmd_t *pmdp)
 {
-	return pmdp_clear_flush(vma, address, pmdp);
+	pmd_t pmd;
+	VM_BUG_ON(address & ~HPAGE_PMD_MASK);
+	VM_BUG_ON(pmd_trans_huge(*pmdp));
+	pmd = pmdp_get_and_clear(vma->vm_mm, address, pmdp);
+	flush_tlb_range(vma, address, address + HPAGE_PMD_SIZE);
+	return pmd;
 }
 #define pmdp_collapse_flush pmdp_collapse_flush
 #else
