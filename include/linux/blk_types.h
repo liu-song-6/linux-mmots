@@ -16,6 +16,7 @@ struct io_context;
 struct cgroup_subsys_state;
 typedef void (bio_end_io_t) (struct bio *, int);
 typedef void (bio_destructor_t) (struct bio *);
+typedef void (bio_discard_completion_t) (struct bio *, void *);
 
 /*
  * was unsigned short, but we might as well be ready for > 64kB I/O pages
@@ -65,7 +66,7 @@ struct bio {
 	unsigned int		bi_seg_front_size;
 	unsigned int		bi_seg_back_size;
 
-	atomic_t		bi_remaining;
+	atomic_t		__bi_remaining;
 
 	bio_end_io_t		*bi_end_io;
 
@@ -92,7 +93,7 @@ struct bio {
 
 	unsigned short		bi_max_vecs;	/* max bvl_vecs we can hold */
 
-	atomic_t		bi_cnt;		/* pin count */
+	atomic_t		__bi_cnt;	/* pin count */
 
 	struct bio_vec		*bi_io_vec;	/* the actual vec list */
 
@@ -122,6 +123,8 @@ struct bio {
 #define BIO_NULL_MAPPED 8	/* contains invalid user pages */
 #define BIO_QUIET	9	/* Make BIO Quiet */
 #define BIO_SNAP_STABLE	10	/* bio data must be snapshotted during write */
+#define BIO_CHAIN	11	/* chained bio, ->bi_remaining in effect */
+#define BIO_REFFED	12	/* bio has elevated ->bi_cnt */
 
 /*
  * Flags starting here get preserved by bio_reset() - this includes
@@ -193,6 +196,7 @@ enum rq_flag_bits {
 	__REQ_HASHED,		/* on IO scheduler merge hash */
 	__REQ_MQ_INFLIGHT,	/* track inflight for MQ */
 	__REQ_NO_TIMEOUT,	/* requests may never expire */
+	__REQ_CLONE,		/* cloned bios */
 	__REQ_NR_BITS,		/* stops here */
 };
 
@@ -247,5 +251,6 @@ enum rq_flag_bits {
 #define REQ_HASHED		(1ULL << __REQ_HASHED)
 #define REQ_MQ_INFLIGHT		(1ULL << __REQ_MQ_INFLIGHT)
 #define REQ_NO_TIMEOUT		(1ULL << __REQ_NO_TIMEOUT)
+#define REQ_CLONE		(1ULL << __REQ_CLONE)
 
 #endif /* __LINUX_BLK_TYPES_H */
