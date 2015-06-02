@@ -97,7 +97,7 @@ static inline void inc_frontswap_invalidates(void) { }
  *
  * Obviously the opposite (unloading the backend) must be done after all
  * the frontswap_[store|load|invalidate_area|invalidate_page] start
- * ignorning or failing the requests.  However, there is currently no way
+ * ignoring or failing the requests.  However, there is currently no way
  * to unload a backend once it is registered.
  */
 
@@ -118,10 +118,11 @@ void frontswap_register_ops(struct frontswap_ops *ops)
 	}
 	spin_unlock(&swap_lock);
 
-	for (i = find_first_bit(a, MAX_SWAPFILES);
-	     i < MAX_SWAPFILES;
-	     i = find_next_bit(a, MAX_SWAPFILES, i + 1))
+	i = find_first_bit(a, MAX_SWAPFILES);
+	while (i < MAX_SWAPFILES) {
 		ops->init(i);
+		i = find_next_bit(a, MAX_SWAPFILES, i + 1);
+	}
 
 	do {
 		ops->next = frontswap_ops;
@@ -233,8 +234,12 @@ int __frontswap_store(struct page *page)
 	BUG_ON(!PageLocked(page));
 	BUG_ON(sis == NULL);
 	dup = __frontswap_test(sis, offset);
-	for (ops = frontswap_ops, ret = -1; ops && ret; ops = ops->next)
+	ret = -1;
+	for (ops = frontswap_ops; ops; ops = ops->next) {
 		ret = ops->store(type, offset, page);
+		if (!ret)
+			break;
+	}
 	if (ret == 0) {
 		set_bit(offset, sis->frontswap_map);
 		inc_frontswap_succ_stores();
@@ -279,8 +284,12 @@ int __frontswap_load(struct page *page)
 	BUG_ON(sis == NULL);
 	if (!__frontswap_test(sis, offset))
 		return -1;
-	for (ops = frontswap_ops, ret = -1; ops && ret; ops = ops->next)
+	ret = -1;
+	for (ops = frontswap_ops; ops; ops = ops->next) {
 		ret = ops->load(type, offset, page);
+		if (!ret)
+			break;
+	}
 	if (ret == 0) {
 		inc_frontswap_loads();
 		if (frontswap_tmem_exclusive_gets_enabled) {
