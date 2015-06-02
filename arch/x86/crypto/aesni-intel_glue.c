@@ -32,7 +32,7 @@
 #include <crypto/lrw.h>
 #include <crypto/xts.h>
 #include <asm/cpu_device_id.h>
-#include <asm/i387.h>
+#include <asm/fpu/api.h>
 #include <asm/crypto/aes.h>
 #include <crypto/ablk_helper.h>
 #include <crypto/scatterwalk.h>
@@ -807,8 +807,9 @@ static int rfc4106_init(struct crypto_tfm *tfm)
 	child_ctx = aesni_rfc4106_gcm_ctx_get(cryptd_child);
 	memcpy(child_ctx, ctx, sizeof(*ctx));
 	ctx->cryptd_tfm = cryptd_tfm;
-	tfm->crt_aead.reqsize = sizeof(struct aead_request)
-		+ crypto_aead_reqsize(&cryptd_tfm->base);
+	crypto_aead_set_reqsize(__crypto_aead_cast(tfm),
+		sizeof(struct aead_request) +
+		crypto_aead_reqsize(&cryptd_tfm->base));
 	return 0;
 }
 

@@ -406,6 +406,21 @@ static inline int desc_to_gpio(const struct gpio_desc *desc)
 	return -EINVAL;
 }
 
+/* Child properties interface */
+struct fwnode_handle;
+
+static inline struct gpio_desc *fwnode_get_named_gpiod(
+	struct fwnode_handle *fwnode, const char *propname)
+{
+	return ERR_PTR(-ENOSYS);
+}
+
+static inline struct gpio_desc *devm_get_gpiod_from_child(
+	struct device *dev, const char *con_id, struct fwnode_handle *child)
+{
+	return ERR_PTR(-ENOSYS);
+}
+
 #endif /* CONFIG_GPIOLIB */
 
 /*
@@ -449,7 +464,6 @@ static inline int desc_to_gpio(const struct gpio_desc *desc)
 int gpiod_export(struct gpio_desc *desc, bool direction_may_change);
 int gpiod_export_link(struct device *dev, const char *name,
 		      struct gpio_desc *desc);
-int gpiod_sysfs_set_active_low(struct gpio_desc *desc, int value);
 void gpiod_unexport(struct gpio_desc *desc);
 
 #else  /* CONFIG_GPIOLIB && CONFIG_GPIO_SYSFS */
@@ -462,11 +476,6 @@ static inline int gpiod_export(struct gpio_desc *desc,
 
 static inline int gpiod_export_link(struct device *dev, const char *name,
 				    struct gpio_desc *desc)
-{
-	return -ENOSYS;
-}
-
-static inline int gpiod_sysfs_set_active_low(struct gpio_desc *desc, int value)
 {
 	return -ENOSYS;
 }
