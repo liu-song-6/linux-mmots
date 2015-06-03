@@ -260,23 +260,6 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
 		     (unsigned char *)esph - skb->data,
 		     assoclen + ivlen + clen + alen);
 
-<<<<<<< HEAD
-	if ((x->props.flags & XFRM_STATE_ESN)) {
-		sg_init_table(asg, 3);
-		sg_set_buf(asg, &esph->spi, sizeof(__be32));
-		*seqhi = htonl(XFRM_SKB_CB(skb)->seq.output.hi);
-		sg_set_buf(asg + 1, seqhi, seqhilen);
-		sg_set_buf(asg + 2, &esph->seq_no, sizeof(__be32));
-	} else
-		sg_init_one(asg, esph, sizeof(*esph));
-
-	aead_givcrypt_set_callback(req, 0, esp_output_done, skb);
-	aead_givcrypt_set_crypt(req, sg, sg, clen, iv);
-	aead_givcrypt_set_assoc(req, asg, assoclen);
-	aead_givcrypt_set_giv(req, esph->enc_data,
-			      XFRM_SKB_CB(skb)->seq.output.low +
-			      ((u64)XFRM_SKB_CB(skb)->seq.output.hi << 32));
-=======
 	aead_request_set_crypt(req, sg, sg, ivlen + clen, iv);
 	aead_request_set_ad(req, assoclen);
 
@@ -286,7 +269,6 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
 	memset(iv, 0, ivlen);
 	memcpy(iv + ivlen - min(ivlen, 8), (u8 *)&seqno + 8 - min(ivlen, 8),
 	       min(ivlen, 8));
->>>>>>> linux-next/akpm-base
 
 	ESP_SKB_CB(skb)->tmp = tmp;
 	err = crypto_aead_encrypt(req);

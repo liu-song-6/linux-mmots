@@ -422,12 +422,8 @@ struct ieee80211_ba_event {
  * @type: The event itself. See &enum ieee80211_event_type.
  * @rssi: relevant if &type is %RSSI_EVENT
  * @mlme: relevant if &type is %AUTH_EVENT
-<<<<<<< HEAD
- * @u:    union holding the above two fields
-=======
  * @ba: relevant if &type is %BAR_RX_EVENT or %BA_FRAME_TIMEOUT
  * @u:union holding the fields above
->>>>>>> linux-next/akpm-base
  */
 struct ieee80211_event {
 	enum ieee80211_event_type type;
