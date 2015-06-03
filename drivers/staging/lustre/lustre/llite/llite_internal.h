@@ -57,12 +57,6 @@
 #define VM_FAULT_RETRY 0
 #endif
 
-/* Kernel 3.1 kills LOOKUP_CONTINUE, LOOKUP_PARENT is equivalent to it.
- * seem kernel commit 49084c3bb2055c401f3493c13edae14d49128ca0 */
-#ifndef LOOKUP_CONTINUE
-#define LOOKUP_CONTINUE LOOKUP_PARENT
-#endif
-
 /** Only used on client-side for indicating the tail of dir hash/offset. */
 #define LL_DIR_END_OFF	  0x7fffffffffffffffULL
 #define LL_DIR_END_OFF_32BIT    0x7fffffffUL
@@ -727,11 +721,7 @@ int ll_readahead(const struct lu_env *env, struct cl_io *io,
 		 struct ll_readahead_state *ras, struct address_space *mapping,
 		 struct cl_page_list *queue, int flags);
 
-#ifndef MS_HAS_NEW_AOPS
 extern const struct address_space_operations ll_aops;
-#else
-extern const struct address_space_operations_ext ll_aops;
-#endif
 
 /* llite/file.c */
 extern struct file_operations ll_file_operations;

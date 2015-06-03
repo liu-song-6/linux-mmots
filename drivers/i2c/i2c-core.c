@@ -107,7 +107,7 @@ static int acpi_i2c_add_resource(struct acpi_resource *ares, void *data)
 			if (sb->access_mode == ACPI_I2C_10BIT_MODE)
 				info->flags |= I2C_CLIENT_TEN;
 		}
-	} else if (info->irq < 0) {
+	} else if (!info->irq) {
 		struct resource r;
 
 		if (acpi_dev_resource_interrupt(ares, 0, &r))
@@ -134,7 +134,6 @@ static acpi_status acpi_i2c_add_device(acpi_handle handle, u32 level,
 
 	memset(&info, 0, sizeof(info));
 	info.fwnode = acpi_fwnode_handle(adev);
-	info.irq = -1;
 
 	INIT_LIST_HEAD(&resource_list);
 	ret = acpi_dev_get_resources(adev, &resource_list,
@@ -632,8 +631,13 @@ static int i2c_device_probe(struct device *dev)
 	if (!client)
 		return 0;
 
-	if (!client->irq && dev->of_node) {
-		int irq = of_irq_get(dev->of_node, 0);
+	if (!client->irq) {
+		int irq = -ENOENT;
+
+		if (dev->of_node)
+			irq = of_irq_get(dev->of_node, 0);
+		else if (ACPI_COMPANION(dev))
+			irq = acpi_dev_gpio_irq_get(ACPI_COMPANION(dev), 0);
 
 		if (irq == -EPROBE_DEFER)
 			return irq;
@@ -1272,7 +1276,7 @@ static struct i2c_client *of_i2c_register_device(struct i2c_adapter *adap,
 	}
 
 	addr = of_get_property(node, "reg", &len);
-	if (!addr || (len < sizeof(int))) {
+	if (!addr || (len < sizeof(*addr))) {
 		dev_err(&adap->dev, "of_i2c: invalid reg on %s\n",
 			node->full_name);
 		return ERR_PTR(-EINVAL);
@@ -1673,7 +1677,7 @@ void i2c_del_adapter(struct i2c_adapter *adap)
 	 * FIXME: This is old code and should ideally be replaced by an
 	 * alternative which results in decoupling the lifetime of the struct
 	 * device from the i2c_adapter, like spi or netdev do. Any solution
-	 * should be throughly tested with DEBUG_KOBJECT_RELEASE enabled!
+	 * should be thoroughly tested with DEBUG_KOBJECT_RELEASE enabled!
 	 */
 	init_completion(&adap->dev_released);
 	device_unregister(&adap->dev);
@@ -2914,18 +2918,24 @@ int i2c_slave_register(struct i2c_client *client, i2c_slave_cb_t slave_cb)
 {
 	int ret;
 
-	if (!client || !slave_cb)
+	if (!client || !slave_cb) {
+		WARN(1, "insufficent data\n");
 		return -EINVAL;
+	}
 
 	if (!(client->flags & I2C_CLIENT_TEN)) {
 		/* Enforce stricter address checking */
 		ret = i2c_check_addr_validity(client->addr);
-		if (ret)
+		if (ret) {
+			dev_err(&client->dev, "%s: invalid address\n", __func__);
 			return ret;
+		}
 	}
 
-	if (!client->adapter->algo->reg_slave)
+	if (!client->adapter->algo->reg_slave) {
+		dev_err(&client->dev, "%s: not supported by adapter\n", __func__);
 		return -EOPNOTSUPP;
+	}
 
 	client->slave_cb = slave_cb;
 
@@ -2933,8 +2943,10 @@ int i2c_slave_register(struct i2c_client *client, i2c_slave_cb_t slave_cb)
 	ret = client->adapter->algo->reg_slave(client);
 	i2c_unlock_adapter(client->adapter);
 
-	if (ret)
+	if (ret) {
 		client->slave_cb = NULL;
+		dev_err(&client->dev, "%s: adapter returned error %d\n", __func__, ret);
+	}
 
 	return ret;
 }
@@ -2944,8 +2956,10 @@ int i2c_slave_unregister(struct i2c_client *client)
 {
 	int ret;
 
-	if (!client->adapter->algo->unreg_slave)
+	if (!client->adapter->algo->unreg_slave) {
+		dev_err(&client->dev, "%s: not supported by adapter\n", __func__);
 		return -EOPNOTSUPP;
+	}
 
 	i2c_lock_adapter(client->adapter);
 	ret = client->adapter->algo->unreg_slave(client);
@@ -2953,6 +2967,8 @@ int i2c_slave_unregister(struct i2c_client *client)
 
 	if (ret == 0)
 		client->slave_cb = NULL;
+	else
+		dev_err(&client->dev, "%s: adapter returned error %d\n", __func__, ret);
 
 	return ret;
 }
