@@ -38,7 +38,9 @@ config ARMADA375_USBCLUSTER_PHY
 config PHY_DM816X_USB
 	tristate "TI dm816x USB PHY driver"
 	depends on ARCH_OMAP2PLUS
+	depends on USB_SUPPORT
 	select GENERIC_PHY
+	select USB_PHY
 	help
 	  Enable this for dm816x USB to work.
 
@@ -97,8 +99,9 @@ config OMAP_CONTROL_PHY
 config OMAP_USB2
 	tristate "OMAP USB2 PHY Driver"
 	depends on ARCH_OMAP2PLUS
-	depends on USB_PHY
+	depends on USB_SUPPORT
 	select GENERIC_PHY
+	select USB_PHY
 	select OMAP_CONTROL_PHY
 	depends on OMAP_OCP2SCP
 	help
@@ -122,8 +125,9 @@ config TI_PIPE3
 config TWL4030_USB
 	tristate "TWL4030 USB Transceiver Driver"
 	depends on TWL4030_CORE && REGULATOR_TWL4030 && USB_MUSB_OMAP2PLUS
-	depends on USB_PHY
+	depends on USB_SUPPORT
 	select GENERIC_PHY
+	select USB_PHY
 	help
 	  Enable this to support the USB OTG transceiver on TWL4030
 	  family chips (including the TWL5030 and TPS659x0 devices).
@@ -243,6 +247,13 @@ config PHY_EXYNOS5_USBDRD
 	  This driver provides PHY interface for USB 3.0 DRD controller
 	  present on Exynos5 SoC series.
 
+config PHY_PISTACHIO_USB
+	tristate "IMG Pistachio USB2.0 PHY driver"
+	depends on MACH_PISTACHIO
+	select GENERIC_PHY
+	help
+	  Enable this to support the USB2.0 PHY on the IMG Pistachio SoC.
+
 config PHY_QCOM_APQ8064_SATA
 	tristate "Qualcomm APQ8064 SATA SerDes/PHY driver"
 	depends on ARCH_QCOM
@@ -304,9 +315,25 @@ config PHY_STIH41X_USB
 
 config PHY_QCOM_UFS
 	tristate "Qualcomm UFS PHY driver"
-	depends on OF && ARCH_MSM
+	depends on OF && ARCH_QCOM
 	select GENERIC_PHY
 	help
 	  Support for UFS PHY on QCOM chipsets.
+
+config PHY_TUSB1210
+	tristate "TI TUSB1210 ULPI PHY module"
+	depends on USB_ULPI_BUS
+	select GENERIC_PHY
+	help
+	  Support for TI TUSB1210 USB ULPI PHY.
+
+config PHY_BRCMSTB_SATA
+	tristate "Broadcom STB SATA PHY driver"
+	depends on ARCH_BRCMSTB
+	depends on OF
+	select GENERIC_PHY
+	help
+	  Enable this to support the SATA3 PHY on 28nm Broadcom STB SoCs.
+	  Likely useful only with CONFIG_SATA_BRCMSTB enabled.
 
 endmenu
