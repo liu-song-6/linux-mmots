@@ -2003,28 +2003,6 @@ intel_get_excl_constraints(struct cpu_hw_events *cpuc, struct perf_event *event,
 	 */
 	if (WARN_ON_ONCE(!excl_cntrs))
 		return c;
-<<<<<<< HEAD
-	/*
-	 * event requires exclusive counter access
-	 * across HT threads
-	 */
-	is_excl = c->flags & PERF_X86_EVENT_EXCL;
-	if (is_excl && !(event->hw.flags & PERF_X86_EVENT_EXCL_ACCT)) {
-		event->hw.flags |= PERF_X86_EVENT_EXCL_ACCT;
-		if (!cpuc->n_excl++)
-			WRITE_ONCE(excl_cntrs->has_exclusive[tid], 1);
-	}
-
-	/*
-	 * xl = state of current HT
-	 * xlo = state of sibling HT
-	 */
-	xl = &excl_cntrs->states[tid];
-	xlo = &excl_cntrs->states[o_tid];
-
-	cx = c;
-=======
->>>>>>> linux-next/akpm-base
 
 	/*
 	 * because we modify the constraint, we need
@@ -2162,11 +2140,6 @@ static void intel_put_excl_constraints(struct cpu_hw_events *cpuc,
 	if (WARN_ON_ONCE(!excl_cntrs))
 		return;
 
-<<<<<<< HEAD
-	xl = &excl_cntrs->states[tid];
-	xlo = &excl_cntrs->states[o_tid];
-=======
->>>>>>> linux-next/akpm-base
 	if (hwc->flags & PERF_X86_EVENT_EXCL_ACCT) {
 		hwc->flags &= ~PERF_X86_EVENT_EXCL_ACCT;
 		if (!--cpuc->n_excl)
@@ -2222,44 +2195,6 @@ static void intel_put_event_constraints(struct cpu_hw_events *cpuc,
 	 */
 	if (cpuc->excl_cntrs)
 		intel_put_excl_constraints(cpuc, event);
-<<<<<<< HEAD
-}
-
-static void intel_commit_scheduling(struct cpu_hw_events *cpuc, int idx, int cntr)
-{
-	struct intel_excl_cntrs *excl_cntrs = cpuc->excl_cntrs;
-	struct event_constraint *c = cpuc->event_constraint[idx];
-	struct intel_excl_states *xlo, *xl;
-	int tid = cpuc->excl_thread_id;
-	int o_tid = 1 - tid;
-	int is_excl;
-
-	if (cpuc->is_fake || !c)
-		return;
-
-	is_excl = c->flags & PERF_X86_EVENT_EXCL;
-
-	if (!(c->flags & PERF_X86_EVENT_DYNAMIC))
-		return;
-
-	WARN_ON_ONCE(!excl_cntrs);
-
-	if (!excl_cntrs)
-		return;
-
-	xl = &excl_cntrs->states[tid];
-	xlo = &excl_cntrs->states[o_tid];
-
-	WARN_ON_ONCE(!raw_spin_is_locked(&excl_cntrs->lock));
-
-	if (cntr >= 0) {
-		if (is_excl)
-			xlo->init_state[cntr] = INTEL_EXCL_EXCLUSIVE;
-		else
-			xlo->init_state[cntr] = INTEL_EXCL_SHARED;
-	}
-=======
->>>>>>> linux-next/akpm-base
 }
 
 static void intel_pebs_aliases_core2(struct perf_event *event)
@@ -2652,11 +2587,7 @@ static void intel_pmu_cpu_starting(int cpu)
 		cpuc->lbr_sel = &cpuc->shared_regs->regs[EXTRA_REG_LBR];
 
 	if (x86_pmu.flags & PMU_FL_EXCL_CNTRS) {
-<<<<<<< HEAD
-		for_each_cpu(i, topology_thread_cpumask(cpu)) {
-=======
 		for_each_cpu(i, topology_sibling_cpumask(cpu)) {
->>>>>>> linux-next/akpm-base
 			struct intel_excl_cntrs *c;
 
 			c = per_cpu(cpu_hw_events, i).excl_cntrs;

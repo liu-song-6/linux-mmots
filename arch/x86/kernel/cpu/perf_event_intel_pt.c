@@ -613,12 +613,6 @@ static int pt_buffer_reset_markers(struct pt_buffer *buf,
 {
 	unsigned long head = local64_read(&buf->head);
 	unsigned long idx, npages, wakeup;
-<<<<<<< HEAD
-
-	if (buf->snapshot)
-		return 0;
-=======
->>>>>>> linux-next/akpm-base
 
 	/* can't stop in the middle of an output region */
 	if (buf->output_off + handle->size + 1 <

@@ -1030,8 +1030,6 @@ static int skl_init_workarounds(struct intel_engine_cs *ring)
 				  HDC_FENCE_DEST_SLM_DISABLE |
 				  HDC_BARRIER_PERFORMANCE_DISABLE);
 
-<<<<<<< HEAD
-=======
 	if (INTEL_REVID(dev) <= SKL_REVID_D0) {
 		/*
 		 *Use Force Non-Coherent whenever executing a 3D context. This
@@ -1043,7 +1041,6 @@ static int skl_init_workarounds(struct intel_engine_cs *ring)
 				  HDC_FORCE_NON_COHERENT);
 	}
 
->>>>>>> linux-next/akpm-base
 	return skl_tune_iz_hashing(ring);
 }
 

@@ -4,11 +4,7 @@ include ../lib.mk
 
 .PHONY: all all_32 all_64 warn_32bit_failure clean
 
-<<<<<<< HEAD
-TARGETS_C_BOTHBITS := sigreturn single_step_syscall
-=======
 TARGETS_C_BOTHBITS := sigreturn single_step_syscall sysret_ss_attrs
->>>>>>> linux-next/akpm-base
 TARGETS_C_32BIT_ONLY := entry_from_vm86
 
 TARGETS_C_32BIT_ALL := $(TARGETS_C_BOTHBITS) $(TARGETS_C_32BIT_ONLY)

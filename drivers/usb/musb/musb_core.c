@@ -2032,11 +2032,7 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 	if (musb->ops->quirks)
 		musb->io.quirks = musb->ops->quirks;
 
-<<<<<<< HEAD
-	/* Most devices use indexed offset or flat offset */
-=======
 	/* Set default ep access to indexed offset or flat offset ops */
->>>>>>> linux-next/akpm-base
 	if (musb->io.quirks & MUSB_INDEXED_EP) {
 		musb->io.ep_offset = musb_indexed_ep_offset;
 		musb->io.ep_select = musb_indexed_ep_select;

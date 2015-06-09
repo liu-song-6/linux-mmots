@@ -1259,23 +1259,11 @@ __acquires(&uap->port.lock)
 	spin_lock(&uap->port.lock);
 }
 
-<<<<<<< HEAD
-/*
- * Transmit a character
- *
- * Returns true if the character was successfully queued to the FIFO.
- * Returns false otherwise.
- */
-static bool pl011_tx_char(struct uart_amba_port *uap, unsigned char c)
-{
-	if (readw(uap->port.membase + UART01x_FR) & UART01x_FR_TXFF)
-=======
 static bool pl011_tx_char(struct uart_amba_port *uap, unsigned char c,
 			  bool from_irq)
 {
 	if (unlikely(!from_irq) &&
 	    readw(uap->port.membase + UART01x_FR) & UART01x_FR_TXFF)
->>>>>>> linux-next/akpm-base
 		return false; /* unable to transmit character */
 
 	writew(c, uap->port.membase + UART01x_DR);
@@ -1290,13 +1278,8 @@ static void pl011_tx_chars(struct uart_amba_port *uap, bool from_irq)
 	int count = uap->fifosize >> 1;
 
 	if (uap->port.x_char) {
-<<<<<<< HEAD
-		if (!pl011_tx_char(uap, uap->port.x_char))
-			goto done;
-=======
 		if (!pl011_tx_char(uap, uap->port.x_char, from_irq))
 			return;
->>>>>>> linux-next/akpm-base
 		uap->port.x_char = 0;
 		--count;
 	}

@@ -526,11 +526,6 @@ struct x86_pmu {
 	void		(*put_event_constraints)(struct cpu_hw_events *cpuc,
 						 struct perf_event *event);
 
-<<<<<<< HEAD
-	void		(*commit_scheduling)(struct cpu_hw_events *cpuc, int idx, int cntr);
-
-=======
->>>>>>> linux-next/akpm-base
 	void		(*start_scheduling)(struct cpu_hw_events *cpuc);
 
 	void		(*commit_scheduling)(struct cpu_hw_events *cpuc, int idx, int cntr);
