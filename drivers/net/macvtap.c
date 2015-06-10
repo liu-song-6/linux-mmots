@@ -48,15 +48,70 @@ struct macvtap_queue {
 #define MACVTAP_FEATURES (IFF_VNET_HDR | IFF_MULTI_QUEUE)
 
 #define MACVTAP_VNET_LE 0x80000000
+#define MACVTAP_VNET_BE 0x40000000
+
+#ifdef CONFIG_TUN_VNET_CROSS_LE
+static inline bool macvtap_legacy_is_little_endian(struct macvtap_queue *q)
+{
+	return q->flags & MACVTAP_VNET_BE ? false :
+		virtio_legacy_is_little_endian();
+}
+
+static long macvtap_get_vnet_be(struct macvtap_queue *q, int __user *sp)
+{
+	int s = !!(q->flags & MACVTAP_VNET_BE);
+
+	if (put_user(s, sp))
+		return -EFAULT;
+
+	return 0;
+}
+
+static long macvtap_set_vnet_be(struct macvtap_queue *q, int __user *sp)
+{
+	int s;
+
+	if (get_user(s, sp))
+		return -EFAULT;
+
+	if (s)
+		q->flags |= MACVTAP_VNET_BE;
+	else
+		q->flags &= ~MACVTAP_VNET_BE;
+
+	return 0;
+}
+#else
+static inline bool macvtap_legacy_is_little_endian(struct macvtap_queue *q)
+{
+	return virtio_legacy_is_little_endian();
+}
+
+static long macvtap_get_vnet_be(struct macvtap_queue *q, int __user *argp)
+{
+	return -EINVAL;
+}
+
+static long macvtap_set_vnet_be(struct macvtap_queue *q, int __user *argp)
+{
+	return -EINVAL;
+}
+#endif /* CONFIG_TUN_VNET_CROSS_LE */
+
+static inline bool macvtap_is_little_endian(struct macvtap_queue *q)
+{
+	return q->flags & MACVTAP_VNET_LE ||
+		macvtap_legacy_is_little_endian(q);
+}
 
 static inline u16 macvtap16_to_cpu(struct macvtap_queue *q, __virtio16 val)
 {
-	return __virtio16_to_cpu(q->flags & MACVTAP_VNET_LE, val);
+	return __virtio16_to_cpu(macvtap_is_little_endian(q), val);
 }
 
 static inline __virtio16 cpu_to_macvtap16(struct macvtap_queue *q, u16 val)
 {
-	return __cpu_to_virtio16(q->flags & MACVTAP_VNET_LE, val);
+	return __cpu_to_virtio16(macvtap_is_little_endian(q), val);
 }
 
 static struct proto macvtap_proto = {
@@ -476,7 +531,7 @@ static int macvtap_open(struct inode *inode, struct file *file)
 
 	err = -ENOMEM;
 	q = (struct macvtap_queue *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
-					     &macvtap_proto);
+					     &macvtap_proto, 0);
 	if (!q)
 		goto out;
 
@@ -555,7 +610,7 @@ static inline struct sk_buff *macvtap_alloc_skb(struct sock *sk, size_t prepad,
 		linear = len;
 
 	skb = sock_alloc_send_pskb(sk, prepad + linear, len - linear, noblock,
-				   err, 0);
+				   err, 1);
 	if (!skb)
 		return NULL;
 
@@ -1006,6 +1061,7 @@ static long macvtap_ioctl(struct file *file, unsigned int cmd,
 	unsigned int __user *up = argp;
 	unsigned short u;
 	int __user *sp = argp;
+	struct sockaddr sa;
 	int s;
 	int ret;
 
@@ -1090,6 +1146,12 @@ static long macvtap_ioctl(struct file *file, unsigned int cmd,
 			q->flags &= ~MACVTAP_VNET_LE;
 		return 0;
 
+	case TUNGETVNETBE:
+		return macvtap_get_vnet_be(q, sp);
+
+	case TUNSETVNETBE:
+		return macvtap_set_vnet_be(q, sp);
+
 	case TUNSETOFFLOAD:
 		/* let the user check for future flags */
 		if (arg & ~(TUN_F_CSUM | TUN_F_TSO4 | TUN_F_TSO6 |
@@ -1098,6 +1160,37 @@ static long macvtap_ioctl(struct file *file, unsigned int cmd,
 
 		rtnl_lock();
 		ret = set_offload(q, arg);
+		rtnl_unlock();
+		return ret;
+
+	case SIOCGIFHWADDR:
+		rtnl_lock();
+		vlan = macvtap_get_vlan(q);
+		if (!vlan) {
+			rtnl_unlock();
+			return -ENOLINK;
+		}
+		ret = 0;
+		u = vlan->dev->type;
+		if (copy_to_user(&ifr->ifr_name, vlan->dev->name, IFNAMSIZ) ||
+		    copy_to_user(&ifr->ifr_hwaddr.sa_data, vlan->dev->dev_addr, ETH_ALEN) ||
+		    put_user(u, &ifr->ifr_hwaddr.sa_family))
+			ret = -EFAULT;
+		macvtap_put_vlan(vlan);
+		rtnl_unlock();
+		return ret;
+
+	case SIOCSIFHWADDR:
+		if (copy_from_user(&sa, &ifr->ifr_hwaddr, sizeof(sa)))
+			return -EFAULT;
+		rtnl_lock();
+		vlan = macvtap_get_vlan(q);
+		if (!vlan) {
+			rtnl_unlock();
+			return -ENOLINK;
+		}
+		ret = dev_set_mac_address(vlan->dev, &sa);
+		macvtap_put_vlan(vlan);
 		rtnl_unlock();
 		return ret;
 
