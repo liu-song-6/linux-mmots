@@ -45,39 +45,12 @@ typedef __kernel_old_gid_t	old_gid_t;
 typedef __kernel_loff_t		loff_t;
 #endif
 
-/*
- * The following typedefs are also protected by individual ifdefs for
- * historical reasons:
- */
-#ifndef _SIZE_T
-#define _SIZE_T
 typedef __kernel_size_t		size_t;
-#endif
-
-#ifndef _SSIZE_T
-#define _SSIZE_T
 typedef __kernel_ssize_t	ssize_t;
-#endif
-
-#ifndef _PTRDIFF_T
-#define _PTRDIFF_T
 typedef __kernel_ptrdiff_t	ptrdiff_t;
-#endif
-
-#ifndef _TIME_T
-#define _TIME_T
 typedef __kernel_time_t		time_t;
-#endif
-
-#ifndef _CLOCK_T
-#define _CLOCK_T
 typedef __kernel_clock_t	clock_t;
-#endif
-
-#ifndef _CADDR_T
-#define _CADDR_T
 typedef __kernel_caddr_t	caddr_t;
-#endif
 
 /* bsd */
 typedef unsigned char		u_char;
