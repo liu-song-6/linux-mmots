@@ -7577,7 +7577,7 @@ void mgmt_new_ltk(struct hci_dev *hdev, struct smp_ltk *key, bool persistent)
 	memset(&ev, 0, sizeof(ev));
 
 	/* Devices using resolvable or non-resolvable random addresses
-	 * without providing an indentity resolving key don't require
+	 * without providing an identity resolving key don't require
 	 * to store long term keys. Their addresses will change the
 	 * next time around.
 	 *
@@ -7603,7 +7603,12 @@ void mgmt_new_ltk(struct hci_dev *hdev, struct smp_ltk *key, bool persistent)
 	if (key->type == SMP_LTK)
 		ev.key.master = 1;
 
-	memcpy(ev.key.val, key->val, sizeof(key->val));
+	/* Make sure we copy only the significant bytes based on the
+	 * encryption key size, and set the rest of the value to zeroes.
+	 */
+	memcpy(ev.key.val, key->val, sizeof(key->enc_size));
+	memset(ev.key.val + key->enc_size, 0,
+	       sizeof(ev.key.val) - key->enc_size);
 
 	mgmt_event(MGMT_EV_NEW_LONG_TERM_KEY, hdev, &ev, sizeof(ev), NULL);
 }
@@ -7617,7 +7622,7 @@ void mgmt_new_irk(struct hci_dev *hdev, struct smp_irk *irk)
 	/* For identity resolving keys from devices that are already
 	 * using a public address or static random address, do not
 	 * ask for storing this key. The identity resolving key really
-	 * is only mandatory for devices using resovlable random
+	 * is only mandatory for devices using resolvable random
 	 * addresses.
 	 *
 	 * Storing all identity resolving keys has the downside that
@@ -7646,7 +7651,7 @@ void mgmt_new_csrk(struct hci_dev *hdev, struct smp_csrk *csrk,
 	memset(&ev, 0, sizeof(ev));
 
 	/* Devices using resolvable or non-resolvable random addresses
-	 * without providing an indentity resolving key don't require
+	 * without providing an identity resolving key don't require
 	 * to store signature resolving keys. Their addresses will change
 	 * the next time around.
 	 *
