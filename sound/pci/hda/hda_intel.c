@@ -1981,16 +1981,11 @@ static int azx_probe_continue(struct azx *chip)
 	 * display codec needs the power and it can be released after probe.
 	 */
 	if (chip->driver_caps & AZX_DCAPS_I915_POWERWELL) {
-<<<<<<< HEAD
-#ifdef CONFIG_SND_HDA_I915
-		err = hda_i915_init(hda);
-=======
 		/* HSW/BDW controllers need this power */
 		if (CONTROLLER_IN_GPU(pci))
 			hda->need_i915_power = 1;
 
 		err = snd_hdac_i915_init(bus);
->>>>>>> linux-next/akpm-base
 		if (err < 0) {
 			/* if the controller is bound only with HDMI/DP
 			 * (for HSW and BDW), we need to abort the probe;
@@ -2002,12 +1997,8 @@ static int azx_probe_continue(struct azx *chip)
 			else
 				goto skip_i915;
 		}
-<<<<<<< HEAD
-		err = hda_display_power(hda, true);
-=======
 
 		err = snd_hdac_display_power(bus, true);
->>>>>>> linux-next/akpm-base
 		if (err < 0) {
 			dev_err(chip->card->dev,
 				"Cannot turn on display power on i915\n");

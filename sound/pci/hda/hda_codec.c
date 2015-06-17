@@ -437,11 +437,7 @@ static unsigned int get_num_devices(struct hda_codec *codec, hda_nid_t nid)
 		return 0;
 
 	parm = snd_hdac_read_parm_uncached(&codec->core, nid, AC_PAR_DEVLIST_LEN);
-<<<<<<< HEAD
-	if (parm == -1 && codec->bus->rirb_error)
-=======
 	if (parm == -1)
->>>>>>> linux-next/akpm-base
 		parm = 0;
 	return parm & AC_DEV_LIST_LEN_MASK;
 }
