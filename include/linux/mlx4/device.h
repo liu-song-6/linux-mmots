@@ -46,8 +46,9 @@
 
 #define MAX_MSIX_P_PORT		17
 #define MAX_MSIX		64
-#define MSIX_LEGACY_SZ		4
 #define MIN_MSIX_P_PORT		5
+#define MLX4_IS_LEGACY_EQ_MODE(dev_cap) ((dev_cap).num_comp_vectors < \
+					 (dev_cap).num_ports * MIN_MSIX_P_PORT)
 
 #define MLX4_MAX_100M_UNITS_VAL		255	/*
 						 * work around: can't set values
@@ -528,7 +529,6 @@ struct mlx4_caps {
 	int			num_eqs;
 	int			reserved_eqs;
 	int			num_comp_vectors;
-	int			comp_pool;
 	int			num_mpts;
 	int			max_fmr_maps;
 	int			num_mtts;
@@ -827,6 +827,12 @@ struct mlx4_dev {
 	u64			regid_promisc_array[MLX4_MAX_PORTS + 1];
 	u64			regid_allmulti_array[MLX4_MAX_PORTS + 1];
 	struct mlx4_vf_dev     *dev_vfs;
+};
+
+struct mlx4_clock_params {
+	u64 offset;
+	u8 bar;
+	u8 size;
 };
 
 struct mlx4_eqe {
@@ -1332,10 +1338,13 @@ void mlx4_fmr_unmap(struct mlx4_dev *dev, struct mlx4_fmr *fmr,
 int mlx4_fmr_free(struct mlx4_dev *dev, struct mlx4_fmr *fmr);
 int mlx4_SYNC_TPT(struct mlx4_dev *dev);
 int mlx4_test_interrupts(struct mlx4_dev *dev);
-int mlx4_assign_eq(struct mlx4_dev *dev, char *name, struct cpu_rmap *rmap,
-		   int *vector);
+u32 mlx4_get_eqs_per_port(struct mlx4_dev *dev, u8 port);
+bool mlx4_is_eq_vector_valid(struct mlx4_dev *dev, u8 port, int vector);
+struct cpu_rmap *mlx4_get_cpu_rmap(struct mlx4_dev *dev, int port);
+int mlx4_assign_eq(struct mlx4_dev *dev, u8 port, int *vector);
 void mlx4_release_eq(struct mlx4_dev *dev, int vec);
 
+int mlx4_is_eq_shared(struct mlx4_dev *dev, int vector);
 int mlx4_eq_get_irq(struct mlx4_dev *dev, int vec);
 
 int mlx4_get_phys_port_id(struct mlx4_dev *dev);
@@ -1484,5 +1493,8 @@ struct mlx4_ptys_reg {
 int mlx4_ACCESS_PTYS_REG(struct mlx4_dev *dev,
 			 enum mlx4_access_reg_method method,
 			 struct mlx4_ptys_reg *ptys_reg);
+
+int mlx4_get_internal_clock_params(struct mlx4_dev *dev,
+				   struct mlx4_clock_params *params);
 
 #endif /* MLX4_DEVICE_H */
