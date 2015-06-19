@@ -4,7 +4,9 @@ TARGETS += efivarfs
 TARGETS += exec
 TARGETS += firmware
 TARGETS += ftrace
+TARGETS += futex
 TARGETS += kcmp
+TARGETS += kdbus
 TARGETS += memfd
 TARGETS += memory-hotplug
 TARGETS += mount
@@ -12,6 +14,7 @@ TARGETS += mqueue
 TARGETS += net
 TARGETS += powerpc
 TARGETS += ptrace
+TARGETS += seccomp
 TARGETS += size
 TARGETS += sysctl
 TARGETS += timers
@@ -27,7 +30,7 @@ TARGETS_HOTPLUG += memory-hotplug
 # Makefile to avoid test build failures when test
 # Makefile doesn't have explicit build rules.
 ifeq (1,$(MAKELEVEL))
-undefine LDFLAGS
+override LDFLAGS =
 override MAKEFLAGS =
 endif
 
