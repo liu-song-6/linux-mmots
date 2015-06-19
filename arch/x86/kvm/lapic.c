@@ -1582,19 +1582,22 @@ void kvm_lapic_reset(struct kvm_vcpu *vcpu, bool init_event)
 	/* Stop the timer in case it's a reset to an active apic */
 	hrtimer_cancel(&apic->lapic_timer.timer);
 
-	kvm_apic_set_id(apic, vcpu->vcpu_id);
+	if (!init_event)
+		kvm_apic_set_id(apic, vcpu->vcpu_id);
 	kvm_apic_set_version(apic->vcpu);
 
 	for (i = 0; i < APIC_LVT_NUM; i++)
 		apic_set_reg(apic, APIC_LVTT + 0x10 * i, APIC_LVT_MASKED);
 	apic->lapic_timer.timer_mode = 0;
-	apic_set_reg(apic, APIC_LVT0,
-		     SET_APIC_DELIVERY_MODE(0, APIC_MODE_EXTINT));
+	if (!(vcpu->kvm->arch.disabled_quirks & KVM_QUIRK_LINT0_REENABLED))
+		apic_set_reg(apic, APIC_LVT0,
+			     SET_APIC_DELIVERY_MODE(0, APIC_MODE_EXTINT));
 
 	apic_set_reg(apic, APIC_DFR, 0xffffffffU);
 	apic_set_spiv(apic, 0xff);
 	apic_set_reg(apic, APIC_TASKPRI, 0);
-	kvm_apic_set_ldr(apic, 0);
+	if (!apic_x2apic_mode(apic))
+		kvm_apic_set_ldr(apic, 0);
 	apic_set_reg(apic, APIC_ESR, 0);
 	apic_set_reg(apic, APIC_ICR, 0);
 	apic_set_reg(apic, APIC_ICR2, 0);
