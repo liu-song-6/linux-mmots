@@ -174,6 +174,9 @@ static void __init do_add_efi_memmap(void)
 		case EFI_UNUSABLE_MEMORY:
 			e820_type = E820_UNUSABLE;
 			break;
+		case EFI_PERSISTENT_MEMORY:
+			e820_type = E820_PMEM;
+			break;
 		default:
 			/*
 			 * EFI_RESERVED_TYPE EFI_RUNTIME_SERVICES_CODE
@@ -522,6 +525,8 @@ void __init efi_init(void)
 
 	if (efi_enabled(EFI_DBG))
 		print_efi_memmap();
+
+	efi_esrt_init();
 }
 
 void __init efi_late_init(void)
