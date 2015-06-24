@@ -36,11 +36,6 @@
  * Of course, your mileage may vary.
  */
 
-<<<<<<< HEAD
-#define MAX_RCU_LVLS 4
-
-=======
->>>>>>> linux-next/akpm-base
 #ifdef CONFIG_RCU_FANOUT
 #define RCU_FANOUT CONFIG_RCU_FANOUT
 #else /* #ifdef CONFIG_RCU_FANOUT */

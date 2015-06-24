@@ -16,11 +16,8 @@
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #include <linux/uaccess.h>
-<<<<<<< HEAD
-=======
 #include <asm/fpu/api.h>
 #include <asm/fpu/internal.h>
->>>>>>> linux-next/akpm-base
 #include <asm/user.h>
 #include <asm/fpu/xstate.h>
 #include "cpuid.h"

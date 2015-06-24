@@ -3044,11 +3044,7 @@ static void __sched __schedule(void)
 		raw_spin_unlock_irq(&rq->lock);
 	}
 
-<<<<<<< HEAD
-	post_schedule(rq);
-=======
 	balance_callback(rq);
->>>>>>> linux-next/akpm-base
 }
 
 static inline void sched_submit_work(struct task_struct *tsk)

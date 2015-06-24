@@ -4089,7 +4089,6 @@ static int amd_ir_set_affinity(struct irq_data *data,
 	struct irq_cfg *cfg = irqd_cfg(data);
 	struct irq_data *parent = data->parent_data;
 	int ret;
-<<<<<<< HEAD
 
 	ret = parent->chip->irq_set_affinity(parent, mask, force);
 	if (ret < 0 || ret == IRQ_SET_MASK_OK_DONE)
@@ -4110,28 +4109,6 @@ static int amd_ir_set_affinity(struct irq_data *data,
 	 */
 	send_cleanup_vector(cfg);
 
-=======
-
-	ret = parent->chip->irq_set_affinity(parent, mask, force);
-	if (ret < 0 || ret == IRQ_SET_MASK_OK_DONE)
-		return ret;
-
-	/*
-	 * Atomically updates the IRTE with the new destination, vector
-	 * and flushes the interrupt entry cache.
-	 */
-	ir_data->irte_entry.fields.vector = cfg->vector;
-	ir_data->irte_entry.fields.destination = cfg->dest_apicid;
-	modify_irte(irte_info->devid, irte_info->index, ir_data->irte_entry);
-
-	/*
-	 * After this point, all the interrupts will start arriving
-	 * at the new destination. So, time to cleanup the previous
-	 * vector allocation.
-	 */
-	send_cleanup_vector(cfg);
-
->>>>>>> linux-next/akpm-base
 	return IRQ_SET_MASK_OK_DONE;
 }
 

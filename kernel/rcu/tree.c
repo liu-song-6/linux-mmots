@@ -1173,17 +1173,11 @@ static void rcu_check_gp_kthread_starvation(struct rcu_state *rsp)
 	j = jiffies;
 	gpa = READ_ONCE(rsp->gp_activity);
 	if (j - gpa > 2 * HZ)
-<<<<<<< HEAD
-		pr_err("%s kthread starved for %ld jiffies! g%lu c%lu f%#x\n",
-		       rsp->name, j - gpa,
-		       rsp->gpnum, rsp->completed, rsp->gp_flags);
-=======
 		pr_err("%s kthread starved for %ld jiffies! g%lu c%lu f%#x s%d ->state=%#lx\n",
 		       rsp->name, j - gpa,
 		       rsp->gpnum, rsp->completed,
 		       rsp->gp_flags, rsp->gp_state,
 		       rsp->gp_kthread ? rsp->gp_kthread->state : 0);
->>>>>>> linux-next/akpm-base
 }
 
 /*
@@ -4025,15 +4019,9 @@ static void __init rcu_init_levelspread(int *levelspread, const int *levelcnt)
 	int i;
 
 	if (rcu_fanout_exact) {
-<<<<<<< HEAD
-		rsp->levelspread[rcu_num_lvls - 1] = rcu_fanout_leaf;
-		for (i = rcu_num_lvls - 2; i >= 0; i--)
-			rsp->levelspread[i] = RCU_FANOUT;
-=======
 		levelspread[rcu_num_lvls - 1] = rcu_fanout_leaf;
 		for (i = rcu_num_lvls - 2; i >= 0; i--)
 			levelspread[i] = RCU_FANOUT;
->>>>>>> linux-next/akpm-base
 	} else {
 		int ccur;
 		int cprv;
@@ -4159,19 +4147,6 @@ static void __init rcu_init_geometry(void)
 		rcu_fanout_leaf, nr_cpu_ids);
 
 	/*
-<<<<<<< HEAD
-	 * Compute number of nodes that can be handled an rcu_node tree
-	 * with the given number of levels.  Setting rcu_capacity[0] makes
-	 * some of the arithmetic easier.
-	 */
-	rcu_capacity[0] = 1;
-	rcu_capacity[1] = rcu_fanout_leaf;
-	for (i = 2; i <= MAX_RCU_LVLS; i++)
-		rcu_capacity[i] = rcu_capacity[i - 1] * RCU_FANOUT;
-
-	/*
-=======
->>>>>>> linux-next/akpm-base
 	 * The boot-time rcu_fanout_leaf parameter is only permitted
 	 * to increase the leaf-level fanout, not decrease it.  Of course,
 	 * the leaf-level fanout cannot exceed the number of bits in
@@ -4179,13 +4154,8 @@ static void __init rcu_init_geometry(void)
 	 * time values if these limits are exceeded.
 	 */
 	if (rcu_fanout_leaf < RCU_FANOUT_LEAF ||
-<<<<<<< HEAD
-	    rcu_fanout_leaf > sizeof(unsigned long) * 8 ||
-	    n > rcu_capacity[MAX_RCU_LVLS]) {
-=======
 	    rcu_fanout_leaf > sizeof(unsigned long) * 8) {
 		rcu_fanout_leaf = RCU_FANOUT_LEAF;
->>>>>>> linux-next/akpm-base
 		WARN_ON(1);
 		return;
 	}

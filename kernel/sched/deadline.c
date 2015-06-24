@@ -548,9 +548,6 @@ static int start_dl_timer(struct task_struct *p)
 	if (ktime_us_delta(act, now) < 0)
 		return 0;
 
-<<<<<<< HEAD
-	hrtimer_start(&dl_se->dl_timer, act, HRTIMER_MODE_ABS);
-=======
 	/*
 	 * !enqueued will guarantee another callback; even if one is already in
 	 * progress. This ensures a balanced {get,put}_task_struct().
@@ -564,7 +561,6 @@ static int start_dl_timer(struct task_struct *p)
 		get_task_struct(p);
 		hrtimer_start(timer, act, HRTIMER_MODE_ABS);
 	}
->>>>>>> linux-next/akpm-base
 
 	return 1;
 }

@@ -1646,11 +1646,7 @@ int dmar_set_interrupt(struct intel_iommu *iommu)
 	if (irq > 0) {
 		iommu->irq = irq;
 	} else {
-<<<<<<< HEAD
-		pr_err("IOMMU: no free vectors\n");
-=======
 		pr_err("No free IRQ vectors\n");
->>>>>>> linux-next/akpm-base
 		return -EINVAL;
 	}
 

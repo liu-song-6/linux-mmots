@@ -1,4 +1,4 @@
-/*
+q/*
  * Read-Copy Update mechanism for mutual exclusion (tree-based version)
  * Internal non-public definitions that provide either classic
  * or preemptible semantics.
@@ -82,15 +82,8 @@ static void __init rcu_bootup_announce_oddness(void)
 		pr_info("\tRCU lockdep checking is enabled.\n");
 	if (IS_ENABLED(CONFIG_RCU_TORTURE_TEST_RUNNABLE))
 		pr_info("\tRCU torture testing starts during boot.\n");
-<<<<<<< HEAD
-	if (IS_ENABLED(CONFIG_RCU_CPU_STALL_INFO))
-		pr_info("\tAdditional per-CPU info printed with stalls.\n");
-	if (NUM_RCU_LVL_4 != 0)
-		pr_info("\tFour-level hierarchy is enabled.\n");
-=======
 	if (RCU_NUM_LVLS >= 4)
 		pr_info("\tFour(or more)-level hierarchy is enabled.\n");
->>>>>>> linux-next/akpm-base
 	if (RCU_FANOUT_LEAF != 16)
 		pr_info("\tBuild-time adjustment of leaf fanout to %d.\n",
 			RCU_FANOUT_LEAF);
@@ -725,12 +718,7 @@ void synchronize_rcu_expedited(void)
 	 */
 	while (!mutex_trylock(&sync_rcu_preempt_exp_mutex)) {
 		if (ULONG_CMP_LT(snap,
-<<<<<<< HEAD
-		    READ_ONCE(sync_rcu_preempt_exp_count))) {
-			put_online_cpus();
-=======
 		    READ_ONCE(sync_rcu_preempt_exp_count)))
->>>>>>> linux-next/akpm-base
 			goto mb_ret; /* Others did our work for us. */
 		if (trycount++ < 10) {
 			udelay(trycount * num_online_cpus());
@@ -739,12 +727,7 @@ void synchronize_rcu_expedited(void)
 			return;
 		}
 	}
-<<<<<<< HEAD
-	if (ULONG_CMP_LT(snap, READ_ONCE(sync_rcu_preempt_exp_count))) {
-		put_online_cpus();
-=======
 	if (ULONG_CMP_LT(snap, READ_ONCE(sync_rcu_preempt_exp_count)))
->>>>>>> linux-next/akpm-base
 		goto unlock_mb_ret; /* Others did our work for us. */
 
 	/* force all RCU readers onto ->blkd_tasks lists. */

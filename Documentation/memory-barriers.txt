@@ -718,11 +718,7 @@ equal to zero, in which case the compiler is within its rights to
 transform the above code into the following:
 
 	q = READ_ONCE_CTRL(a);
-<<<<<<< HEAD
-	ACCESS_ONCE(b) = p;
-=======
 	WRITE_ONCE(b, p);
->>>>>>> linux-next/akpm-base
 	do_something_else();
 
 Given this transformation, the CPU is not required to respect the ordering
@@ -750,24 +746,15 @@ You must also be careful not to rely too much on boolean short-circuit
 evaluation.  Consider this example:
 
 	q = READ_ONCE_CTRL(a);
-<<<<<<< HEAD
-	if (a || 1 > 0)
-		ACCESS_ONCE(b) = 1;
-=======
 	if (q || 1 > 0)
 		WRITE_ONCE(b, 1);
->>>>>>> linux-next/akpm-base
 
 Because the first condition cannot fault and the second condition is
 always true, the compiler can transform this example as following,
 defeating control dependency:
 
 	q = READ_ONCE_CTRL(a);
-<<<<<<< HEAD
-	ACCESS_ONCE(b) = 1;
-=======
 	WRITE_ONCE(b, 1);
->>>>>>> linux-next/akpm-base
 
 This example underscores the need to ensure that the compiler cannot
 out-guess your code.  More generally, although READ_ONCE() does force
@@ -811,12 +798,7 @@ In summary:
 
   (*) Control dependencies must be headed by READ_ONCE_CTRL().
       Or, as a much less preferable alternative, interpose
-<<<<<<< HEAD
-      be headed by READ_ONCE() or an ACCESS_ONCE() read and must
-      have smp_read_barrier_depends() between this read and the
-=======
       smp_read_barrier_depends() between a READ_ONCE() and the
->>>>>>> linux-next/akpm-base
       control-dependent write.
 
   (*) Control dependencies can order prior loads against later stores.

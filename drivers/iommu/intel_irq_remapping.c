@@ -11,10 +11,7 @@
 #include <linux/irq.h>
 #include <linux/intel-iommu.h>
 #include <linux/acpi.h>
-<<<<<<< HEAD
-=======
 #include <linux/crash_dump.h>
->>>>>>> linux-next/akpm-base
 #include <linux/irqdomain.h>
 #include <asm/io_apic.h>
 #include <asm/smp.h>
@@ -84,8 +81,6 @@ static struct irq_domain_ops intel_ir_domain_ops;
 static void iommu_disable_irq_remapping(struct intel_iommu *iommu);
 static int __init parse_ioapics_under_ir(void);
 
-<<<<<<< HEAD
-=======
 static bool ir_pre_enabled(struct intel_iommu *iommu)
 {
 	return (iommu->flags & VTD_FLAG_IRQ_REMAP_PRE_ENABLED);
@@ -105,7 +100,6 @@ static void init_ir_status(struct intel_iommu *iommu)
 		iommu->flags |= VTD_FLAG_IRQ_REMAP_PRE_ENABLED;
 }
 
->>>>>>> linux-next/akpm-base
 static int alloc_irte(struct intel_iommu *iommu, int irq,
 		      struct irq_2_iommu *irq_iommu, u16 count)
 {
@@ -722,26 +716,6 @@ error:
  * Set Posted-Interrupts capability.
  */
 static inline void set_irq_posting_cap(void)
-<<<<<<< HEAD
-{
-	struct dmar_drhd_unit *drhd;
-	struct intel_iommu *iommu;
-
-	if (!disable_irq_post) {
-		intel_irq_remap_ops.capability |= 1 << IRQ_POSTING_CAP;
-
-		for_each_iommu(iommu, drhd)
-			if (!cap_pi_support(iommu->cap)) {
-				intel_irq_remap_ops.capability &=
-						~(1 << IRQ_POSTING_CAP);
-				break;
-			}
-	}
-}
-
-static int __init intel_enable_irq_remapping(void)
-=======
->>>>>>> linux-next/akpm-base
 {
 	struct dmar_drhd_unit *drhd;
 	struct intel_iommu *iommu;
@@ -1194,7 +1168,6 @@ static int intel_ir_set_vcpu_affinity(struct irq_data *data, void *info)
 
 	return 0;
 }
-<<<<<<< HEAD
 
 static struct irq_chip intel_ir_chip = {
 	.irq_ack = ir_ack_apic_edge,
@@ -1203,16 +1176,6 @@ static struct irq_chip intel_ir_chip = {
 	.irq_set_vcpu_affinity = intel_ir_set_vcpu_affinity,
 };
 
-=======
-
-static struct irq_chip intel_ir_chip = {
-	.irq_ack = ir_ack_apic_edge,
-	.irq_set_affinity = intel_ir_set_affinity,
-	.irq_compose_msi_msg = intel_ir_compose_msi_msg,
-	.irq_set_vcpu_affinity = intel_ir_set_vcpu_affinity,
-};
-
->>>>>>> linux-next/akpm-base
 static void intel_irq_remapping_prepare_irte(struct intel_ir_data *data,
 					     struct irq_cfg *irq_cfg,
 					     struct irq_alloc_info *info,

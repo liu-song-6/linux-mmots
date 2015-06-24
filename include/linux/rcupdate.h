@@ -624,24 +624,6 @@ static inline void rcu_preempt_sleep_check(void)
 #define RCU_INITIALIZER(v) (typeof(*(v)) __force __rcu *)(v)
 
 /**
-<<<<<<< HEAD
- * lockless_dereference() - safely load a pointer for later dereference
- * @p: The pointer to load
- *
- * Similar to rcu_dereference(), but for situations where the pointed-to
- * object's lifetime is managed by something other than RCU.  That
- * "something other" might be reference counting or simple immortality.
- */
-#define lockless_dereference(p) \
-({ \
-	typeof(p) _________p1 = READ_ONCE(p); \
-	smp_read_barrier_depends(); /* Dependency order vs. p above. */ \
-	(_________p1); \
-})
-
-/**
-=======
->>>>>>> linux-next/akpm-base
  * rcu_assign_pointer() - assign to RCU-protected pointer
  * @p: pointer to assign to
  * @v: value to assign (publish)
@@ -984,7 +966,7 @@ static inline notrace void rcu_read_lock_sched_notrace(void)
 /*
  * rcu_read_unlock_sched - marks the end of a RCU-classic critical section
  *
- * See rcu_read_lock_sched for more information.
+ * See rcu_read_loqck_sched for more information.
  */
 static inline void rcu_read_unlock_sched(void)
 {

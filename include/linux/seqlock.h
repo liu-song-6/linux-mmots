@@ -275,16 +275,12 @@ static inline void raw_write_seqcount_barrier(seqcount_t *s)
 	s->sequence++;
 }
 
-<<<<<<< HEAD
-/*
-=======
 static inline int raw_read_seqcount_latch(seqcount_t *s)
 {
 	return lockless_dereference(s->sequence);
 }
 
 /**
->>>>>>> linux-next/akpm-base
  * raw_write_seqcount_latch - redirect readers to even/odd copy
  * @s: pointer to seqcount_t
  *

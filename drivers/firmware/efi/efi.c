@@ -66,10 +66,6 @@ static int __init parse_efi_cmdline(char *str)
 early_param("efi", parse_efi_cmdline);
 
 struct kobject *efi_kobj;
-<<<<<<< HEAD
-static struct kobject *efivars_kobj;
-=======
->>>>>>> linux-next/akpm-base
 
 /*
  * Let's not leave out systab information that snuck into

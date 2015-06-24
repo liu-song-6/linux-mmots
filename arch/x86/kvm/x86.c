@@ -7479,17 +7479,11 @@ int kvm_arch_vcpu_ioctl_set_fpu(struct kvm_vcpu *vcpu, struct kvm_fpu *fpu)
 	return 0;
 }
 
-<<<<<<< HEAD
-static void fx_init(struct kvm_vcpu *vcpu)
-{
-	fpstate_init(&vcpu->arch.guest_fpu.state);
-=======
 static void fx_init(struct kvm_vcpu *vcpu, bool init_event)
 {
 	if (!init_event)
 		fpstate_init(&vcpu->arch.guest_fpu.state);
 
->>>>>>> linux-next/akpm-base
 	if (cpu_has_xsaves)
 		vcpu->arch.guest_fpu.state.xsave.header.xcomp_bv =
 			host_xcr0 | XSTATE_COMPACTION_ENABLED;
@@ -7848,11 +7842,7 @@ int kvm_arch_vcpu_init(struct kvm_vcpu *vcpu)
 		goto fail_free_mce_banks;
 	}
 
-<<<<<<< HEAD
-	fx_init(vcpu);
-=======
 	fx_init(vcpu, false);
->>>>>>> linux-next/akpm-base
 
 	vcpu->arch.ia32_tsc_adjust_msr = 0x0;
 	vcpu->arch.pv_time_enabled = false;
