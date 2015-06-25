@@ -6,7 +6,7 @@
  * This file may be distributed under the terms of the GNU General Public
  * License version 2.
  *
- * Copyright (c) 2010-14:  Borislav Petkov <bp@alien8.de>
+ * Copyright (c) 2010-15:  Borislav Petkov <bp@alien8.de>
  *			Advanced Micro Devices Inc.
  */
 
@@ -17,9 +17,16 @@
 #include <linux/cpu.h>
 #include <linux/string.h>
 #include <linux/uaccess.h>
+<<<<<<< HEAD
+=======
+#include <linux/pci.h>
+>>>>>>> linux-next/akpm-base
 #include <asm/mce.h>
+#include <asm/irq_vectors.h>
+#include <asm/amd_nb.h>
 
 #include "mce_amd.h"
+#include "amd64_edac.h"
 
 /*
  * Collect all the MCi_XXX settings
@@ -29,17 +36,31 @@ static struct dentry *dfs_inj;
 
 static u8 n_banks;
 
+<<<<<<< HEAD
 #define MAX_FLAG_OPT_SIZE	3
+=======
+#define MAX_FLAG_OPT_SIZE	4
+>>>>>>> linux-next/akpm-base
 
 enum injection_type {
 	SW_INJ = 0,	/* SW injection, simply decode the error */
 	HW_INJ,		/* Trigger a #MC */
+<<<<<<< HEAD
+=======
+	DFR_INT_INJ,	/* Trigger Deferred error interrupt */
+	THR_INT_INJ,	/* Trigger threshold interrupt */
+>>>>>>> linux-next/akpm-base
 	N_INJ_TYPES,
 };
 
 static const char * const flags_options[] = {
 	[SW_INJ] = "sw",
 	[HW_INJ] = "hw",
+<<<<<<< HEAD
+=======
+	[DFR_INT_INJ] = "dfr",
+	[THR_INT_INJ] = "thr",
+>>>>>>> linux-next/akpm-base
 	NULL
 };
 
@@ -103,6 +124,7 @@ static int toggle_hw_mce_inject(unsigned int cpu, bool enable)
 static int __set_inj(const char *buf)
 {
 	int i;
+<<<<<<< HEAD
 
 	for (i = 0; i < N_INJ_TYPES; i++) {
 		if (!strncmp(flags_options[i], buf, strlen(flags_options[i]))) {
@@ -119,6 +141,24 @@ static ssize_t flags_read(struct file *filp, char __user *ubuf,
 	char buf[MAX_FLAG_OPT_SIZE];
 	int n;
 
+=======
+
+	for (i = 0; i < N_INJ_TYPES; i++) {
+		if (!strncmp(flags_options[i], buf, strlen(flags_options[i]))) {
+			inj_type = i;
+			return 0;
+		}
+	}
+	return -EINVAL;
+}
+
+static ssize_t flags_read(struct file *filp, char __user *ubuf,
+			  size_t cnt, loff_t *ppos)
+{
+	char buf[MAX_FLAG_OPT_SIZE];
+	int n;
+
+>>>>>>> linux-next/akpm-base
 	n = sprintf(buf, "%s\n", flags_options[inj_type]);
 
 	return simple_read_from_buffer(ubuf, cnt, ppos, buf, n);
@@ -185,6 +225,55 @@ static void trigger_mce(void *info)
 	asm volatile("int $18");
 }
 
+static void trigger_dfr_int(void *info)
+{
+	asm volatile("int %0" :: "i" (DEFERRED_ERROR_VECTOR));
+}
+
+static void trigger_thr_int(void *info)
+{
+	asm volatile("int %0" :: "i" (THRESHOLD_APIC_VECTOR));
+}
+
+static u32 get_nbc_for_node(int node_id)
+{
+	struct cpuinfo_x86 *c = &boot_cpu_data;
+	u32 cores_per_node;
+
+	cores_per_node = c->x86_max_cores / amd_get_nodes_per_socket();
+
+	return cores_per_node * node_id;
+}
+
+static void toggle_nb_mca_mst_cpu(u16 nid)
+{
+	struct pci_dev *F3 = node_to_amd_nb(nid)->misc;
+	u32 val;
+	int err;
+
+	if (!F3)
+		return;
+
+	err = pci_read_config_dword(F3, NBCFG, &val);
+	if (err) {
+		pr_err("%s: Error reading F%dx%03x.\n",
+			__func__, PCI_FUNC(F3->devfn), NBCFG);
+		return;
+	}
+
+	if (val & BIT(27))
+		return;
+
+	pr_err("%s: Set D18F3x44[NbMcaToMstCpuEn] which BIOS hasn't done.\n",
+		__func__);
+
+	val |= BIT(27);
+	err = pci_write_config_dword(F3, NBCFG, val);
+	if (err)
+		pr_err("%s: Error writing F%dx%03x.\n",
+			__func__, PCI_FUNC(F3->devfn), NBCFG);
+}
+
 static void do_inject(void)
 {
 	u64 mcg_status = 0;
@@ -199,12 +288,45 @@ static void do_inject(void)
 		return;
 	}
 
+<<<<<<< HEAD
+=======
+	if (inj_type == DFR_INT_INJ) {
+		/*
+		 * Ensure necessary status bits for deferred errors:
+		 * a. MCi_STATUS[Deferred] is set -
+		 *	This is to ensure the error will be handled by the
+		 *	interrupt handler
+		 * b. unset MCi_STATUS[UC]
+		 *	As deferred errors are _not_ UC
+		 */
+		i_mce.status |= MCI_STATUS_DEFERRED;
+		i_mce.status &= ~MCI_STATUS_UC;
+	}
+
+>>>>>>> linux-next/akpm-base
 	/* prep MCE global settings for the injection */
 	mcg_status = MCG_STATUS_MCIP | MCG_STATUS_EIPV;
 
 	if (!(i_mce.status & MCI_STATUS_PCC))
 		mcg_status |= MCG_STATUS_RIPV;
 
+<<<<<<< HEAD
+=======
+	/*
+	 * For multi node CPUs, logging and reporting of bank 4 errors happens
+	 * only on the node base core. Refer to D18F3x44[NbMcaToMstCpuEn] for
+	 * Fam10h and later BKDGs.
+	 */
+	if (static_cpu_has(X86_FEATURE_AMD_DCM) && b == 4) {
+		/*
+		 * BIOS sets D18F3x44[NbMcaToMstCpuEn] by default. But make sure
+		 * of it here just in case.
+		 */
+		toggle_nb_mca_mst_cpu(amd_get_nb_id(cpu));
+		cpu = get_nbc_for_node(amd_get_nb_id(cpu));
+	}
+
+>>>>>>> linux-next/akpm-base
 	get_online_cpus();
 	if (!cpu_online(cpu))
 		goto err;
@@ -225,7 +347,16 @@ static void do_inject(void)
 
 	toggle_hw_mce_inject(cpu, false);
 
-	smp_call_function_single(cpu, trigger_mce, NULL, 0);
+	switch (inj_type) {
+	case DFR_INT_INJ:
+		smp_call_function_single(cpu, trigger_dfr_int, NULL, 0);
+		break;
+	case THR_INT_INJ:
+		smp_call_function_single(cpu, trigger_thr_int, NULL, 0);
+		break;
+	default:
+		smp_call_function_single(cpu, trigger_mce, NULL, 0);
+	}
 
 err:
 	put_online_cpus();
@@ -290,6 +421,13 @@ static const char readme_msg[] =
 "\t    handle the error. Be warned: might cause system panic if MCi_STATUS[PCC] \n"
 "\t    is set. Therefore, consider setting (debugfs_mountpoint)/mce/fake_panic \n"
 "\t    before injecting.\n"
+<<<<<<< HEAD
+=======
+"\t  - \"dfr\": Trigger Deferred error handled by the deferred error APIC handler \n"
+"\t    if the feature is present in HW.\n"
+"\t  - \"thr\": Trigger Thresholding error handled by the thresholding error \n"
+"\t    APIC handler.\n"
+>>>>>>> linux-next/akpm-base
 "\n";
 
 static ssize_t

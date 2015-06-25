@@ -632,7 +632,7 @@ F:	drivers/iommu/amd_iommu*.[ch]
 F:	include/linux/amd-iommu.h
 
 AMD KFD
-M:	Oded Gabbay <oded.gabbay@amd.com>
+M:	Oded Gabbay <oded.gabbay@gmail.com>
 L:	dri-devel@lists.freedesktop.org
 T:	git git://people.freedesktop.org/~gabbayo/linux.git
 S:	Supported
@@ -732,7 +732,7 @@ ANDROID DRIVERS
 M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 M:	Arve Hjønnevåg <arve@android.com>
 M:	Riley Andrews <riandrews@android.com>
-T:	git git://git.kernel.org/pub/scm/linux/kernel/gregkh/staging.git
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/gregkh/staging.git
 L:	devel@driverdev.osuosl.org
 S:	Supported
 F:	drivers/android/
@@ -984,6 +984,7 @@ L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 T:	git git://github.com/ulli-kroll/linux.git
 S:	Maintained
 F:	arch/arm/mach-gemini/
+F:	drivers/rtc/rtc-gemini.c
 
 ARM/CSR SIRFPRIMA2 MACHINE SUPPORT
 M:	Barry Song <baohua@kernel.org>
@@ -1042,7 +1043,7 @@ F:	arch/arm/include/asm/hardware/dec21285.h
 F:	arch/arm/mach-footbridge/
 
 ARM/FREESCALE IMX / MXC ARM ARCHITECTURE
-M:	Shawn Guo <shawn.guo@linaro.org>
+M:	Shawn Guo <shawnguo@kernel.org>
 M:	Sascha Hauer <kernel@pengutronix.de>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
@@ -1051,9 +1052,11 @@ F:	arch/arm/mach-imx/
 F:	arch/arm/mach-mxs/
 F:	arch/arm/boot/dts/imx*
 F:	arch/arm/configs/imx*_defconfig
+F:	drivers/clk/imx/
+F:	include/soc/imx/
 
 ARM/FREESCALE VYBRID ARM ARCHITECTURE
-M:	Shawn Guo <shawn.guo@linaro.org>
+M:	Shawn Guo <shawnguo@kernel.org>
 M:	Sascha Hauer <kernel@pengutronix.de>
 R:	Stefan Agner <stefan@agner.ch>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
@@ -1196,6 +1199,12 @@ M:	Lennert Buytenhek <kernel@wantstofly.org>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 
+ARM/LPC18XX ARCHITECTURE
+M:	Joachim Eastwood <manabian@gmail.com>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+N:	lpc18xx
+
 ARM/MAGICIAN MACHINE SUPPORT
 M:	Philipp Zabel <philipp.zabel@gmail.com>
 S:	Maintained
@@ -1242,6 +1251,13 @@ L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 W:	http://www.digriz.org.uk/ts78xx/kernel
 S:	Maintained
 F:	arch/arm/mach-orion5x/ts78xx-*
+
+ARM/Mediatek RTC DRIVER
+M:	Eddie Huang <eddie.huang@mediatek.com>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+L:	linux-mediatek@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	drivers/rtc/rtc-mt6397.c
 
 ARM/Mediatek SoC support
 M:	Matthias Brugger <matthias.bgg@gmail.com>
@@ -1392,6 +1408,7 @@ L:	linux-samsung-soc@vger.kernel.org (moderated for non-subscribers)
 S:	Maintained
 F:	arch/arm/boot/dts/s3c*
 F:	arch/arm/boot/dts/exynos*
+F:	arch/arm64/boot/dts/exynos/
 F:	arch/arm/plat-samsung/
 F:	arch/arm/mach-s3c24*/
 F:	arch/arm/mach-s3c64xx/
@@ -1503,6 +1520,14 @@ F:	drivers/usb/host/ohci-st.c
 F:	drivers/watchdog/st_lpc_wdt.c
 F:	drivers/ata/ahci_st.c
 
+ARM/STM32 ARCHITECTURE
+M:	Maxime Coquelin <mcoquelin.stm32@gmail.com>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/stm32.git
+N:	stm32
+F:	drivers/clocksource/armv7m_systick.c
+
 ARM/TECHNOLOGIC SYSTEMS TS7250 MACHINE SUPPORT
 M:	Lennert Buytenhek <kernel@wantstofly.org>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
@@ -1548,6 +1573,13 @@ F:	drivers/mfd/ab3100*
 F:	drivers/rtc/rtc-ab3100.c
 F:	drivers/rtc/rtc-coh901331.c
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git
+
+ARM/UNIPHIER ARCHITECTURE
+M:	Masahiro Yamada <yamada.masahiro@socionext.com>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	arch/arm/mach-uniphier/
+N:	uniphier
 
 ARM/Ux500 ARM ARCHITECTURE
 M:	Linus Walleij <linus.walleij@linaro.org>
@@ -1625,6 +1657,15 @@ L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 F:	arch/arm/mach-pxa/z2.c
 F:	arch/arm/mach-pxa/include/mach/z2.h
+
+ARM/ZTE ARCHITECTURE
+M:	Jun Nie <jun.nie@linaro.org>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	arch/arm/mach-zx/
+F:	drivers/clk/zte/
+F:	Documentation/devicetree/bindings/arm/zte.txt
+F:	Documentation/devicetree/bindings/clock/zx296702-clk.txt
 
 ARM/ZYNQ ARCHITECTURE
 M:	Michal Simek <michal.simek@xilinx.com>
@@ -1991,6 +2032,14 @@ W:	http://bcache.evilpiepirate.org
 S:	Maintained:
 F:	drivers/md/bcache/
 
+BDISP ST MEDIA DRIVER
+M:	Fabien Dessenne <fabien.dessenne@st.com>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+W:	http://linuxtv.org
+S:	Supported
+F:	drivers/media/platform/sti/bdisp
+
 BEFS FILE SYSTEM
 S:	Orphan
 F:	Documentation/filesystems/befs.txt
@@ -2075,6 +2124,7 @@ M:	Jens Axboe <axboe@kernel.dk>
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/axboe/linux-block.git
 S:	Maintained
 F:	block/
+F:	kernel/trace/blktrace.c
 
 BLOCK2MTD DRIVER
 M:	Joern Engel <joern@lazybastard.org>
@@ -2179,6 +2229,14 @@ F:	arch/mips/bcm3384/*
 F:	arch/mips/include/asm/mach-bcm3384/*
 F:	arch/mips/kernel/*bmips*
 
+BROADCOM BCM47XX MIPS ARCHITECTURE
+M:	Hauke Mehrtens <hauke@hauke-m.de>
+M:	Rafał Miłecki <zajec5@gmail.com>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/bcm47xx/*
+F:	arch/mips/include/asm/mach-bcm47xx/*
+
 BROADCOM BCM5301X ARM ARCHITECTURE
 M:	Hauke Mehrtens <hauke@hauke-m.de>
 L:	linux-arm-kernel@lists.infradead.org
@@ -2211,6 +2269,7 @@ S:	Maintained
 F:	arch/arm/mach-bcm/*brcmstb*
 F:	arch/arm/boot/dts/bcm7*.dts*
 F:	drivers/bus/brcmstb_gisb.c
+N:	brcmstb
 
 BROADCOM BMIPS MIPS ARCHITECTURE
 M:	Kevin Cernekee <cernekee@gmail.com>
@@ -2281,6 +2340,12 @@ L:	bcm-kernel-feedback-list@broadcom.com
 S:	Supported
 F:	drivers/gpio/gpio-bcm-kona.c
 F:	Documentation/devicetree/bindings/gpio/gpio-bcm-kona.txt
+
+BROADCOM NVRAM DRIVER
+M:	Rafał Miłecki <zajec5@gmail.com>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	drivers/firmware/broadcom/*
 
 BROADCOM STB NAND FLASH DRIVER
 M:	Brian Norris <computersforpeace@gmail.com>
@@ -2658,6 +2723,14 @@ L:	platform-driver-x86@vger.kernel.org
 S:	Supported
 F:	drivers/platform/x86/classmate-laptop.c
 
+COBALT MEDIA DRIVER
+M:	Hans Verkuil <hans.verkuil@cisco.com>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+W:	http://linuxtv.org
+S:	Supported
+F:	drivers/media/pci/cobalt/
+
 COCCINELLE/Semantic Patches (SmPL)
 M:	Julia Lawall <Julia.Lawall@lip6.fr>
 M:	Gilles Muller <Gilles.Muller@lip6.fr>
@@ -2690,7 +2763,7 @@ F:	Documentation/devicetree/bindings/media/coda.txt
 F:	drivers/media/platform/coda/
 
 COMMON CLK FRAMEWORK
-M:	Mike Turquette <mturquette@linaro.org>
+M:	Michael Turquette <mturquette@baylibre.com>
 M:	Stephen Boyd <sboyd@codeaurora.org>
 L:	linux-clk@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/clk/linux.git
@@ -2757,6 +2830,7 @@ F:	drivers/connector/
 CONTROL GROUP (CGROUP)
 M:	Tejun Heo <tj@kernel.org>
 M:	Li Zefan <lizefan@huawei.com>
+M:	Johannes Weiner <hannes@cmpxchg.org>
 L:	cgroups@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/cgroup.git
 S:	Maintained
@@ -2928,6 +3002,15 @@ W:	http://linuxtv.org
 S:	Maintained
 F:	drivers/media/common/cx2341x*
 F:	include/media/cx2341x*
+
+CX24120 MEDIA DRIVER
+M:	Jemma Denson <jdenson@gmail.com>
+M:	Patrick Boettcher <patrick.boettcher@posteo.de>
+L:	linux-media@vger.kernel.org
+W:	http://linuxtv.org/
+Q:	http://patchwork.linuxtv.org/project/linux-media/list/
+S:	Maintained
+F:	drivers/media/dvb-frontends/cx24120*
 
 CX88 VIDEO4LINUX DRIVER
 M:	Mauro Carvalho Chehab <mchehab@osg.samsung.com>
@@ -3133,15 +3216,20 @@ L:	platform-driver-x86@vger.kernel.org
 S:	Maintained
 F:	drivers/platform/x86/dell-laptop.c
 
+DELL LAPTOP RBTN DRIVER
+M:	Pali Rohár <pali.rohar@gmail.com>
+S:	Maintained
+F:	drivers/platform/x86/dell-rbtn.*
+
 DELL LAPTOP FREEFALL DRIVER
 M:	Pali Rohár <pali.rohar@gmail.com>
 S:	Maintained
 F:	drivers/platform/x86/dell-smo8800.c
 
 DELL LAPTOP SMM DRIVER
-M:	Guenter Roeck <linux@roeck-us.net>
+M:	Pali Rohár <pali.rohar@gmail.com>
 S:	Maintained
-F:	drivers/char/i8k.c
+F:	drivers/hwmon/dell-smm-hwmon.c
 F:	include/uapi/linux/i8k.h
 
 DELL SYSTEMS MANAGEMENT BASE DRIVER (dcdbas)
@@ -3336,6 +3424,8 @@ F:	drivers/hwmon/dme1737.c
 DMI/SMBIOS SUPPORT
 M:	Jean Delvare <jdelvare@suse.de>
 S:	Maintained
+T:	quilt http://jdelvare.nerim.net/devel/linux/jdelvare-dmi/
+F:	Documentation/ABI/testing/sysfs-firmware-dmi-tables
 F:	drivers/firmware/dmi-id.c
 F:	drivers/firmware/dmi_scan.c
 F:	include/linux/dmi.h
@@ -3380,16 +3470,17 @@ F:	drivers/block/drbd/
 F:	lib/lru_cache.c
 F:	Documentation/blockdev/drbd/
 
-DRIVER CORE, KOBJECTS, DEBUGFS AND SYSFS
+DRIVER CORE, KOBJECTS, DEBUGFS, KERNFS AND SYSFS
 M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/gregkh/driver-core.git
 S:	Supported
 F:	Documentation/kobject.txt
 F:	drivers/base/
-F:	fs/sysfs/
 F:	fs/debugfs/
-F:	include/linux/kobj*
+F:	fs/kernfs/
+F:	fs/sysfs/
 F:	include/linux/debugfs.h
+F:	include/linux/kobj*
 F:	lib/kobj*
 
 DRM DRIVERS
@@ -3494,6 +3585,14 @@ M:	Francois Romieu <romieu@fr.zoreil.com>
 L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/net/wan/dscc4.c
+
+DT3155 MEDIA DRIVER
+M:	Hans Verkuil <hverkuil@xs4all.nl>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+W:	http://linuxtv.org
+S:	Odd Fixes
+F:	drivers/media/pci/dt3155/
 
 DVB_USB_AF9015 MEDIA DRIVER
 M:	Antti Palosaari <crope@iki.fi>
@@ -4331,9 +4430,11 @@ FUSE: FILESYSTEM IN USERSPACE
 M:	Miklos Szeredi <miklos@szeredi.hu>
 L:	fuse-devel@lists.sourceforge.net
 W:	http://fuse.sourceforge.net/
-S:	Maintained
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mszeredi/fuse.git
+S:	Supported
 F:	fs/fuse/
 F:	include/uapi/linux/fuse.h
+F:	Documentation/filesystems/fuse.txt
 
 FUTURE DOMAIN TMC-16x0 SCSI DRIVER (16-bit)
 M:	Rik Faith <faith@cs.unc.edu>
@@ -4548,6 +4649,17 @@ L:	linux-media@vger.kernel.org
 T:	git git://linuxtv.org/media_tree.git
 S:	Maintained
 F:	drivers/media/usb/stk1160/
+
+H8/300 ARCHITECTURE
+M:	Yoshinori Sato <ysato@users.sourceforge.jp>
+L:	uclinux-h8-devel@lists.sourceforge.jp
+W:	http://uclinux-h8.sourceforge.jp
+T:	git git://git.sourceforge.jp/gitroot/uclinux-h8/linux.git
+S:	Maintained
+F:	arch/h8300/
+F:	drivers/clocksource/h8300_*.c
+F:	drivers/clk/h8300/
+F:	drivers/irqchip/irq-renesas-h8*.c
 
 HARD DRIVE ACTIVE PROTECTION SYSTEM (HDAPS) DRIVER
 M:	Frank Seidel <frank@f-seidel.de>
@@ -5355,6 +5467,7 @@ M:	Tomas Winkler <tomas.winkler@intel.com>
 L:	linux-kernel@vger.kernel.org
 S:	Supported
 F:	include/uapi/linux/mei.h
+F:	include/linux/mei_cl_bus.h
 F:	drivers/misc/mei/*
 F:	Documentation/misc-devices/mei/*
 
@@ -5660,6 +5773,19 @@ T:	git git://gitorious.org/linux-kconfig/linux-kconfig
 S:	Maintained
 F:	Documentation/kbuild/kconfig-language.txt
 F:	scripts/kconfig/
+
+KDBUS
+M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+M:	Daniel Mack <daniel@zonque.org>
+M:	David Herrmann <dh.herrmann@googlemail.com>
+M:	Djalal Harouni <tixxdz@opendz.org>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+F:	ipc/kdbus/*
+F:	samples/kdbus/*
+F:	Documentation/kdbus/*
+F:	include/uapi/linux/kdbus.h
+F:	tools/testing/selftests/kdbus/
 
 KDUMP
 M:	Vivek Goyal <vgoyal@redhat.com>
@@ -6420,6 +6546,15 @@ W:	http://linuxtv.org
 S:	Maintained
 F:	drivers/media/radio/radio-maxiradio*
 
+MEDIA DRIVERS FOR RENESAS - VSP1
+M:	Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+L:	linux-media@vger.kernel.org
+L:	linux-sh@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+S:	Supported
+F:	Documentation/devicetree/bindings/media/renesas,vsp1.txt
+F:	drivers/media/platform/vsp1/
+
 MEDIA INPUT INFRASTRUCTURE (V4L/DVB)
 M:	Mauro Carvalho Chehab <mchehab@osg.samsung.com>
 P:	LinuxTV.org Project
@@ -6639,9 +6774,8 @@ S:	Maintained
 F:	drivers/platform/x86/msi-laptop.c
 
 MSI WMI SUPPORT
-M:	Anisse Astier <anisse@astier.eu>
 L:	platform-driver-x86@vger.kernel.org
-S:	Supported
+S:	Orphan
 F:	drivers/platform/x86/msi-wmi.c
 
 MSI001 MEDIA DRIVER
@@ -7212,7 +7346,6 @@ M:	Ohad Ben-Cohen <ohad@wizery.com>
 L:	linux-omap@vger.kernel.org
 S:	Maintained
 F:	drivers/hwspinlock/omap_hwspinlock.c
-F:	arch/arm/mach-omap2/hwspinlock.c
 
 OMAP MMC SUPPORT
 M:	Jarkko Lavinen <jarkko.lavinen@nokia.com>
@@ -7474,13 +7607,16 @@ S:	Maintained
 F:	Documentation/mn10300/
 F:	arch/mn10300/
 
-PARALLEL PORT SUPPORT
+PARALLEL PORT SUBSYSTEM
+M:	Sudip Mukherjee <sudipm.mukherjee@gmail.com>
+M:	Sudip Mukherjee <sudip@vectorindia.org>
 L:	linux-parport@lists.infradead.org (subscribers-only)
-S:	Orphan
+S:	Maintained
 F:	drivers/parport/
 F:	include/linux/parport*.h
 F:	drivers/char/ppdev.c
 F:	include/uapi/linux/ppdev.h
+F:	Documentation/parport*.txt
 
 PARAVIRT_OPS INTERFACE
 M:	Jeremy Fitzhardinge <jeremy@goop.org>
@@ -7970,6 +8106,7 @@ F:	sound/ppc/snd_ps3*
 
 PS3VRAM DRIVER
 M:	Jim Paris <jim@jtan.com>
+M:	Geoff Levand <geoff@infradead.org>
 L:	linuxppc-dev@lists.ozlabs.org
 S:	Maintained
 F:	drivers/block/ps3vram.c
@@ -8055,6 +8192,7 @@ T:	git git://github.com/hzhuang1/linux.git
 T:	git git://github.com/rjarzmik/linux.git
 S:	Maintained
 F:	arch/arm/mach-pxa/
+F:	drivers/dma/pxa*
 F:	drivers/pcmcia/pxa2xx*
 F:	drivers/spi/spi-pxa2xx*
 F:	drivers/usb/gadget/udc/pxa2*
@@ -8323,6 +8461,7 @@ M:	Alessandro Zummo <a.zummo@towertech.it>
 M:	Alexandre Belloni <alexandre.belloni@free-electrons.com>
 L:	rtc-linux@googlegroups.com
 Q:	http://patchwork.ozlabs.org/project/rtc-linux/list/
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux.git
 S:	Maintained
 F:	Documentation/rtc.txt
 F:	drivers/rtc/
@@ -8866,6 +9005,7 @@ S:	Supported
 F:	kernel/seccomp.c
 F:	include/uapi/linux/seccomp.h
 F:	include/linux/seccomp.h
+F:	tools/testing/selftests/seccomp/*
 K:	\bsecure_computing
 K:	\bTIF_SECCOMP\b
 
@@ -9591,6 +9731,15 @@ M:	Forest Bond <forest@alittletooquiet.net>
 S:	Odd Fixes
 F:	drivers/staging/vt665?/
 
+STAGING - WILC1000 WIFI DRIVER
+M:	Johnny Kim <johnny.kim@atmel.com>
+M:	Rachel Kim <rachel.kim@atmel.com>
+M:	Dean Lee <dean.lee@atmel.com>
+M:	Chris Park <chris.park@atmel.com>
+L:	linux-wireless@vger.kernel.org
+S:	Supported
+F:	drivers/staging/wilc1000/
+
 STAGING - XGI Z7,Z9,Z11 PCI DISPLAY DRIVER
 M:	Arnaud Patard <arnaud.patard@rtp-net.org>
 S:	Odd Fixes
@@ -9673,6 +9822,13 @@ S:	Supported
 F:	arch/arc/
 F:	Documentation/devicetree/bindings/arc/
 F:	drivers/tty/serial/arc_uart.c
+
+SYNOPSYS ARC SDP platform support
+M:	Alexey Brodkin <abrodkin@synopsys.com>
+S:	Supported
+F:	arch/arc/plat-axs10x
+F:	arch/arc/boot/dts/ax*
+F:	Documentation/devicetree/bindings/arc/axs10*
 
 SYSTEM CONFIGURATION (SYSCON)
 M:	Lee Jones <lee.jones@linaro.org>
@@ -10022,6 +10178,12 @@ L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/net/ethernet/ti/netcp*
 
+TI TAS571X FAMILY ASoC CODEC DRIVER
+M:	Kevin Cernekee <cernekee@chromium.org>
+L:	alsa-devel@alsa-project.org (moderated for non-subscribers)
+S:	Odd Fixes
+F:	sound/soc/codecs/tas571x*
+
 TI TWL4030 SERIES SOC CODEC DRIVER
 M:	Peter Ujfalusi <peter.ujfalusi@ti.com>
 L:	alsa-devel@alsa-project.org (moderated for non-subscribers)
@@ -10196,6 +10358,7 @@ M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 M:	Jiri Slaby <jslaby@suse.cz>
 S:	Supported
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/gregkh/tty.git
+F:	Documentation/serial/
 F:	drivers/tty/
 F:	drivers/tty/serial/serial_core.c
 F:	include/linux/serial_core.h
@@ -10253,11 +10416,15 @@ S:	Maintained
 F:	Documentation/filesystems/ubifs.txt
 F:	fs/ubifs/
 
-UCLINUX (AND M68KNOMMU)
+UCLINUX (M68KNOMMU AND COLDFIRE)
 M:	Greg Ungerer <gerg@uclinux.org>
 W:	http://www.uclinux.org/
+L:	linux-m68k@lists.linux-m68k.org
 L:	uclinux-dev@uclinux.org  (subscribers-only)
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/gerg/m68knommu.git
 S:	Maintained
+F:	arch/m68k/coldfire/
+F:	arch/m68k/68*/
 F:	arch/m68k/*/*_no.*
 F:	arch/m68k/include/asm/*_no.*
 
@@ -10591,6 +10758,13 @@ S:	Maintained
 F:	Documentation/video4linux/zr364xx.txt
 F:	drivers/media/usb/zr364xx/
 
+ULPI BUS
+M:	Heikki Krogerus <heikki.krogerus@linux.intel.com>
+L:	linux-usb@vger.kernel.org
+S:	Maintained
+F:	drivers/usb/common/ulpi.c
+F:	include/linux/ulpi/
+
 USER-MODE LINUX (UML)
 M:	Jeff Dike <jdike@addtoit.com>
 M:	Richard Weinberger <richard@nod.at>
@@ -10643,6 +10817,12 @@ F:	drivers/vfio/
 F:	include/linux/vfio.h
 F:	include/uapi/linux/vfio.h
 
+VFIO PLATFORM DRIVER
+M:	Baptiste Reynal <b.reynal@virtualopensystems.com>
+L:	kvm@vger.kernel.org
+S:	Maintained
+F:	drivers/vfio/platform/
+
 VIDEOBUF2 FRAMEWORK
 M:	Pawel Osciak <pawel@osciak.com>
 M:	Marek Szyprowski <m.szyprowski@samsung.com>
@@ -10670,6 +10850,15 @@ F:	drivers/net/virtio_net.c
 F:	drivers/block/virtio_blk.c
 F:	include/linux/virtio_*.h
 F:	include/uapi/linux/virtio_*.h
+
+VIRTIO GPU DRIVER
+M:	David Airlie <airlied@linux.ie>
+M:	Gerd Hoffmann <kraxel@redhat.com>
+L:	dri-devel@lists.freedesktop.org
+L:	virtualization@lists.linux-foundation.org
+S:	Maintained
+F:	drivers/gpu/drm/virtio/
+F:	include/uapi/linux/virtio_gpu.h
 
 VIRTIO HOST (VHOST)
 M:	"Michael S. Tsirkin" <mst@redhat.com>
