@@ -17,10 +17,7 @@
 #include <linux/cpu.h>
 #include <linux/string.h>
 #include <linux/uaccess.h>
-<<<<<<< HEAD
-=======
 #include <linux/pci.h>
->>>>>>> linux-next/akpm-base
 #include <asm/mce.h>
 #include <asm/irq_vectors.h>
 #include <asm/amd_nb.h>
@@ -36,31 +33,21 @@ static struct dentry *dfs_inj;
 
 static u8 n_banks;
 
-<<<<<<< HEAD
-#define MAX_FLAG_OPT_SIZE	3
-=======
 #define MAX_FLAG_OPT_SIZE	4
->>>>>>> linux-next/akpm-base
 
 enum injection_type {
 	SW_INJ = 0,	/* SW injection, simply decode the error */
 	HW_INJ,		/* Trigger a #MC */
-<<<<<<< HEAD
-=======
 	DFR_INT_INJ,	/* Trigger Deferred error interrupt */
 	THR_INT_INJ,	/* Trigger threshold interrupt */
->>>>>>> linux-next/akpm-base
 	N_INJ_TYPES,
 };
 
 static const char * const flags_options[] = {
 	[SW_INJ] = "sw",
 	[HW_INJ] = "hw",
-<<<<<<< HEAD
-=======
 	[DFR_INT_INJ] = "dfr",
 	[THR_INT_INJ] = "thr",
->>>>>>> linux-next/akpm-base
 	NULL
 };
 
@@ -124,7 +111,6 @@ static int toggle_hw_mce_inject(unsigned int cpu, bool enable)
 static int __set_inj(const char *buf)
 {
 	int i;
-<<<<<<< HEAD
 
 	for (i = 0; i < N_INJ_TYPES; i++) {
 		if (!strncmp(flags_options[i], buf, strlen(flags_options[i]))) {
@@ -141,24 +127,6 @@ static ssize_t flags_read(struct file *filp, char __user *ubuf,
 	char buf[MAX_FLAG_OPT_SIZE];
 	int n;
 
-=======
-
-	for (i = 0; i < N_INJ_TYPES; i++) {
-		if (!strncmp(flags_options[i], buf, strlen(flags_options[i]))) {
-			inj_type = i;
-			return 0;
-		}
-	}
-	return -EINVAL;
-}
-
-static ssize_t flags_read(struct file *filp, char __user *ubuf,
-			  size_t cnt, loff_t *ppos)
-{
-	char buf[MAX_FLAG_OPT_SIZE];
-	int n;
-
->>>>>>> linux-next/akpm-base
 	n = sprintf(buf, "%s\n", flags_options[inj_type]);
 
 	return simple_read_from_buffer(ubuf, cnt, ppos, buf, n);
@@ -288,8 +256,6 @@ static void do_inject(void)
 		return;
 	}
 
-<<<<<<< HEAD
-=======
 	if (inj_type == DFR_INT_INJ) {
 		/*
 		 * Ensure necessary status bits for deferred errors:
@@ -303,15 +269,12 @@ static void do_inject(void)
 		i_mce.status &= ~MCI_STATUS_UC;
 	}
 
->>>>>>> linux-next/akpm-base
 	/* prep MCE global settings for the injection */
 	mcg_status = MCG_STATUS_MCIP | MCG_STATUS_EIPV;
 
 	if (!(i_mce.status & MCI_STATUS_PCC))
 		mcg_status |= MCG_STATUS_RIPV;
 
-<<<<<<< HEAD
-=======
 	/*
 	 * For multi node CPUs, logging and reporting of bank 4 errors happens
 	 * only on the node base core. Refer to D18F3x44[NbMcaToMstCpuEn] for
@@ -326,7 +289,6 @@ static void do_inject(void)
 		cpu = get_nbc_for_node(amd_get_nb_id(cpu));
 	}
 
->>>>>>> linux-next/akpm-base
 	get_online_cpus();
 	if (!cpu_online(cpu))
 		goto err;
@@ -421,13 +383,10 @@ static const char readme_msg[] =
 "\t    handle the error. Be warned: might cause system panic if MCi_STATUS[PCC] \n"
 "\t    is set. Therefore, consider setting (debugfs_mountpoint)/mce/fake_panic \n"
 "\t    before injecting.\n"
-<<<<<<< HEAD
-=======
 "\t  - \"dfr\": Trigger Deferred error handled by the deferred error APIC handler \n"
 "\t    if the feature is present in HW.\n"
 "\t  - \"thr\": Trigger Thresholding error handled by the thresholding error \n"
 "\t    APIC handler.\n"
->>>>>>> linux-next/akpm-base
 "\n";
 
 static ssize_t

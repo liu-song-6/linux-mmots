@@ -195,16 +195,11 @@ ieee802154_set_pan_id(struct wpan_phy *wpan_phy, struct wpan_dev *wpan_dev,
 	if (wpan_dev->pan_id == pan_id)
 		return 0;
 
-<<<<<<< HEAD
-	wpan_dev->pan_id = pan_id;
-	return 0;
-=======
 	ret = mac802154_wpan_update_llsec(wpan_dev->netdev);
 	if (!ret)
 		wpan_dev->pan_id = pan_id;
 
 	return ret;
->>>>>>> linux-next/akpm-base
 }
 
 static int

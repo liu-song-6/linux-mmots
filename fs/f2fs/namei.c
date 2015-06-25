@@ -916,12 +916,8 @@ static int f2fs_rename2(struct inode *old_dir, struct dentry *old_dentry,
 }
 
 #ifdef CONFIG_F2FS_FS_ENCRYPTION
-<<<<<<< HEAD
-static const char *f2fs_encrypted_follow_link(struct dentry *dentry, void **cookie)
-=======
 static const char *f2fs_encrypted_follow_link(struct dentry *dentry,
 						void **cookie)
->>>>>>> linux-next/akpm-base
 {
 	struct page *cpage = NULL;
 	char *caddr, *paddr = NULL;

@@ -29,11 +29,8 @@ config TILE
 	select HAVE_DEBUG_STACKOVERFLOW
 	select ARCH_WANT_FRAME_POINTERS
 	select HAVE_CONTEXT_TRACKING
-<<<<<<< HEAD
-=======
 	select GENERIC_STRNCPY_FROM_USER
 	select GENERIC_STRNLEN_USER
->>>>>>> linux-next/akpm-base
 	select EDAC_SUPPORT
 
 # FIXME: investigate whether we need/want these options.

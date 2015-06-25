@@ -314,16 +314,8 @@ static int mac802154_slave_close(struct net_device *dev)
 
 	clear_bit(SDATA_STATE_RUNNING, &sdata->state);
 
-<<<<<<< HEAD
-	if (!local->open_count) {
-		flush_workqueue(local->workqueue);
-		hrtimer_cancel(&local->ifs_timer);
-		drv_stop(local);
-	}
-=======
 	if (!local->open_count)
 		ieee802154_stop_device(local);
->>>>>>> linux-next/akpm-base
 
 	return 0;
 }
@@ -476,10 +468,7 @@ ieee802154_setup_sdata(struct ieee802154_sub_if_data *sdata,
 		       enum nl802154_iftype type)
 {
 	struct wpan_dev *wpan_dev = &sdata->wpan_dev;
-<<<<<<< HEAD
-=======
 	int ret;
->>>>>>> linux-next/akpm-base
 	u8 tmp;
 
 	/* set some type-dependent values */
