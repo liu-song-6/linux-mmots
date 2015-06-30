@@ -2763,7 +2763,7 @@ F:	Documentation/devicetree/bindings/media/coda.txt
 F:	drivers/media/platform/coda/
 
 COMMON CLK FRAMEWORK
-M:	Mike Turquette <mturquette@linaro.org>
+M:	Michael Turquette <mturquette@baylibre.com>
 M:	Stephen Boyd <sboyd@codeaurora.org>
 L:	linux-clk@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/clk/linux.git
@@ -3215,6 +3215,11 @@ M:	Pali Rohár <pali.rohar@gmail.com>
 L:	platform-driver-x86@vger.kernel.org
 S:	Maintained
 F:	drivers/platform/x86/dell-laptop.c
+
+DELL LAPTOP RBTN DRIVER
+M:	Pali Rohár <pali.rohar@gmail.com>
+S:	Maintained
+F:	drivers/platform/x86/dell-rbtn.*
 
 DELL LAPTOP FREEFALL DRIVER
 M:	Pali Rohár <pali.rohar@gmail.com>
@@ -4425,9 +4430,11 @@ FUSE: FILESYSTEM IN USERSPACE
 M:	Miklos Szeredi <miklos@szeredi.hu>
 L:	fuse-devel@lists.sourceforge.net
 W:	http://fuse.sourceforge.net/
-S:	Maintained
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mszeredi/fuse.git
+S:	Supported
 F:	fs/fuse/
 F:	include/uapi/linux/fuse.h
+F:	Documentation/filesystems/fuse.txt
 
 FUTURE DOMAIN TMC-16x0 SCSI DRIVER (16-bit)
 M:	Rik Faith <faith@cs.unc.edu>
@@ -5767,6 +5774,19 @@ S:	Maintained
 F:	Documentation/kbuild/kconfig-language.txt
 F:	scripts/kconfig/
 
+KDBUS
+M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+M:	Daniel Mack <daniel@zonque.org>
+M:	David Herrmann <dh.herrmann@googlemail.com>
+M:	Djalal Harouni <tixxdz@opendz.org>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+F:	ipc/kdbus/*
+F:	samples/kdbus/*
+F:	Documentation/kdbus/*
+F:	include/uapi/linux/kdbus.h
+F:	tools/testing/selftests/kdbus/
+
 KDUMP
 M:	Vivek Goyal <vgoyal@redhat.com>
 M:	Haren Myneni <hbabu@us.ibm.com>
@@ -6754,9 +6774,8 @@ S:	Maintained
 F:	drivers/platform/x86/msi-laptop.c
 
 MSI WMI SUPPORT
-M:	Anisse Astier <anisse@astier.eu>
 L:	platform-driver-x86@vger.kernel.org
-S:	Supported
+S:	Orphan
 F:	drivers/platform/x86/msi-wmi.c
 
 MSI001 MEDIA DRIVER
@@ -7327,7 +7346,6 @@ M:	Ohad Ben-Cohen <ohad@wizery.com>
 L:	linux-omap@vger.kernel.org
 S:	Maintained
 F:	drivers/hwspinlock/omap_hwspinlock.c
-F:	arch/arm/mach-omap2/hwspinlock.c
 
 OMAP MMC SUPPORT
 M:	Jarkko Lavinen <jarkko.lavinen@nokia.com>
@@ -9804,6 +9822,13 @@ S:	Supported
 F:	arch/arc/
 F:	Documentation/devicetree/bindings/arc/
 F:	drivers/tty/serial/arc_uart.c
+
+SYNOPSYS ARC SDP platform support
+M:	Alexey Brodkin <abrodkin@synopsys.com>
+S:	Supported
+F:	arch/arc/plat-axs10x
+F:	arch/arc/boot/dts/ax*
+F:	Documentation/devicetree/bindings/arc/axs10*
 
 SYSTEM CONFIGURATION (SYSCON)
 M:	Lee Jones <lee.jones@linaro.org>
