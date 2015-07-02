@@ -72,12 +72,7 @@
 #define smp_read_barrier_depends()	read_barrier_depends()
 #endif
 
-<<<<<<< HEAD
-#else	/* !CONFIG_SMP */
-
-=======
 #else
->>>>>>> linux-next/akpm-base
 #ifndef smp_mb
 #define smp_mb()	barrier()
 #endif
@@ -94,11 +89,7 @@
 #define smp_read_barrier_depends()	do { } while (0)
 #endif
 
-<<<<<<< HEAD
-#endif	/* CONFIG_SMP */
-=======
 #endif
->>>>>>> linux-next/akpm-base
 
 #ifndef smp_store_mb
 #define smp_store_mb(var, value)  do { WRITE_ONCE(var, value); mb(); } while (0)

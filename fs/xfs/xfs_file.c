@@ -1516,15 +1516,9 @@ xfs_filemap_fault(
 {
 	struct xfs_inode	*ip = XFS_I(file_inode(vma->vm_file));
 	int			ret;
-<<<<<<< HEAD
 
 	trace_xfs_filemap_fault(ip);
 
-=======
-
-	trace_xfs_filemap_fault(ip);
-
->>>>>>> linux-next/akpm-base
 	/* DAX can shortcut the normal fault path on write faults! */
 	if ((vmf->flags & FAULT_FLAG_WRITE) && IS_DAX(VFS_I(ip)))
 		return xfs_filemap_page_mkwrite(vma, vmf);
