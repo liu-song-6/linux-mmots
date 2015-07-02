@@ -577,6 +577,13 @@ restart:
 	if (error)
 		return error;
 
+	/* For changing security info in file_remove_privs() we need i_mutex */
+	if (*iolock == XFS_IOLOCK_SHARED && !IS_NOSEC(inode)) {
+		xfs_rw_iunlock(ip, *iolock);
+		*iolock = XFS_IOLOCK_EXCL;
+		xfs_rw_ilock(ip, *iolock);
+		goto restart;
+	}
 	/*
 	 * If the offset is beyond the size of the file, we need to zero any
 	 * blocks that fall between the existing EOF and the start of this
@@ -637,7 +644,9 @@ restart:
 	 * setgid bits if the process is not being run by root.  This keeps
 	 * people from modifying setuid and setgid binaries.
 	 */
-	return file_remove_suid(file);
+	if (!IS_NOSEC(inode))
+		return file_remove_privs(file);
+	return 0;
 }
 
 /*
@@ -1507,9 +1516,15 @@ xfs_filemap_fault(
 {
 	struct xfs_inode	*ip = XFS_I(file_inode(vma->vm_file));
 	int			ret;
+<<<<<<< HEAD
 
 	trace_xfs_filemap_fault(ip);
 
+=======
+
+	trace_xfs_filemap_fault(ip);
+
+>>>>>>> linux-next/akpm-base
 	/* DAX can shortcut the normal fault path on write faults! */
 	if ((vmf->flags & FAULT_FLAG_WRITE) && IS_DAX(VFS_I(ip)))
 		return xfs_filemap_page_mkwrite(vma, vmf);
