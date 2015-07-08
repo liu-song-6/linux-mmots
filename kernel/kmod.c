@@ -269,7 +269,11 @@ out:
 	do_exit(0);
 }
 
-/* Keventd can't block, but this (a child) can. */
+/*
+ * We couldn't wait for usermodehelper completion from khelper without
+ * blocking other pending concurrent usermodehelper targets. This is why
+ * the UMH_WAIT_PROC flavour runs in its own thread.
+ */
 static int call_usermodehelper_exec_sync(void *data)
 {
 	struct subprocess_info *sub_info = data;
@@ -285,8 +289,8 @@ static int call_usermodehelper_exec_sync(void *data)
 		/*
 		 * Normally it is bogus to call wait4() from in-kernel because
 		 * wait4() wants to write the exit code to a userspace address.
-		 * But call_usermodehelper_exec_sync() always runs as keventd,
-		 * and put_user() to a kernel address works OK for kernel
+		 * But call_usermodehelper_exec_sync() always runs as kernel
+		 * thread and put_user() to a kernel address works OK for kernel
 		 * threads, due to their having an mm_segment_t which spans the
 		 * entire address space.
 		 *
@@ -307,7 +311,15 @@ static int call_usermodehelper_exec_sync(void *data)
 	do_exit(0);
 }
 
-/* This is run by khelper thread  */
+/*
+ * This function doesn't need to be called asynchronously. But we need to create
+ * the usermodehelper kernel threads from a task that is affine to all CPUs
+ * (or nohz housekeeping ones) such that they inherit a global affinity. Khelper
+ * workqueue simply provides that.
+ * call_usermodehelper() can be called from tasks with a reduced CPU
+ * affinity (eg: per-cpu workqueues) and we don't want usermodehelper targets to
+ * contend any busy CPU.
+ */
 static void call_usermodehelper_exec_work(struct work_struct *work)
 {
 	struct subprocess_info *sub_info =
@@ -693,6 +705,18 @@ struct ctl_table usermodehelper_table[] = {
 
 void __init usermodehelper_init(void)
 {
+	/*
+	 * The singlethread property here stands for the need of a workqueue
+	 * with wide CPUs affinity, in order to create usermodehelper kernel
+	 * threads inheriting this attribute irrespective of
+	 * call_usermodehelper() callers. Non-singlethread workqueues are
+	 * otherwise per-cpu and wouldn't produce the desired effect.
+	 *
+	 * The ordering guarantee as a side-effect isn't necessary but shouldn't
+	 * introduce performance issue. All we do is creating two kernel threads.
+	 * This should be fast enough not to block concurrent usermodehelper
+	 * callers.
+	 */
 	khelper_wq = create_singlethread_workqueue("khelper");
 	BUG_ON(!khelper_wq);
 }
