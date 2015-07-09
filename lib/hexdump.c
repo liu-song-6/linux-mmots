@@ -124,6 +124,11 @@ int hex_dump_to_buffer(const void *buf, size_t len, int rowsize, int groupsize,
 	if ((len % groupsize) != 0)	/* no mixed size output */
 		groupsize = 1;
 
+	/* fall back to 1-byte groups if buf is not aligned to groupsize */
+	if (!IS_ENABLED(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS) &&
+	    !IS_ALIGNED((uintptr_t)buf, groupsize))
+		groupsize = 1;
+
 	ngroups = len / groupsize;
 	ascii_column = rowsize * 2 + rowsize / groupsize + 1;
 
