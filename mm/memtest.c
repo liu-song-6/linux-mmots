@@ -94,7 +94,7 @@ static int memtest_pattern __initdata;
 static int __init parse_memtest(char *arg)
 {
 	if (arg)
-		memtest_pattern = simple_strtoul(arg, NULL, 0);
+		parse_integer(arg, 0, (unsigned int *)&memtest_pattern);
 	else
 		memtest_pattern = ARRAY_SIZE(patterns);
 
