@@ -1798,6 +1798,28 @@ void zs_pool_stats(struct zs_pool *pool, struct zs_pool_stats *stats)
 }
 EXPORT_SYMBOL_GPL(zs_pool_stats);
 
+unsigned long zs_pages_to_compact(struct zs_pool *pool)
+{
+	unsigned long pages_to_free = 0;
+	int i;
+	struct size_class *class;
+
+	for (i = zs_size_classes - 1; i >= 0; i--) {
+		class = pool->size_class[i];
+		if (!class)
+			continue;
+		if (class->index != i)
+			continue;
+
+		spin_lock(&class->lock);
+		pages_to_free += zs_can_compact(class);
+		spin_unlock(&class->lock);
+	}
+
+	return pages_to_free;
+}
+EXPORT_SYMBOL_GPL(zs_pages_to_compact);
+
 static unsigned long zs_shrinker_scan(struct shrinker *shrinker,
 		struct shrink_control *sc)
 {
@@ -1819,28 +1841,13 @@ static unsigned long zs_shrinker_scan(struct shrinker *shrinker,
 static unsigned long zs_shrinker_count(struct shrinker *shrinker,
 		struct shrink_control *sc)
 {
-	int i;
-	struct size_class *class;
-	unsigned long pages_to_free = 0;
 	struct zs_pool *pool = container_of(shrinker, struct zs_pool,
 			shrinker);
 
 	if (!pool->shrinker_enabled)
 		return 0;
 
-	for (i = zs_size_classes - 1; i >= 0; i--) {
-		class = pool->size_class[i];
-		if (!class)
-			continue;
-		if (class->index != i)
-			continue;
-
-		spin_lock(&class->lock);
-		pages_to_free += zs_can_compact(class);
-		spin_unlock(&class->lock);
-	}
-
-	return pages_to_free;
+	return zs_pages_to_compact(pool);
 }
 
 static void zs_unregister_shrinker(struct zs_pool *pool)
