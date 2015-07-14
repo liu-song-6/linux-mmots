@@ -404,6 +404,20 @@ static ssize_t compact_store(struct device *dev,
 	return len;
 }
 
+static ssize_t compact_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct zram *zram = dev_to_zram(dev);
+	unsigned long num_pages = 0;
+
+	down_read(&zram->init_lock);
+	if (init_done(zram))
+		num_pages = zs_pages_to_compact(zram->meta->mem_pool);
+	up_read(&zram->init_lock);
+
+	return scnprintf(buf, PAGE_SIZE, "%lu\n", num_pages);
+}
+
 static ssize_t io_stat_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1145,7 +1159,7 @@ static const struct block_device_operations zram_devops = {
 	.owner = THIS_MODULE
 };
 
-static DEVICE_ATTR_WO(compact);
+static DEVICE_ATTR_RW(compact);
 static DEVICE_ATTR_RW(disksize);
 static DEVICE_ATTR_RO(initstate);
 static DEVICE_ATTR_WO(reset);

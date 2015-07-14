@@ -146,7 +146,9 @@ mem_limit         RW    the maximum amount of memory ZRAM can use to store
                         the compressed data
 pages_compacted   RO    the number of pages freed during compaction
                         (available only via zram<id>/mm_stat node)
-compact           WO    trigger memory compaction
+compact           RW    write triggers memory compaction, read shows how many
+                        pages can potentially (but not necessarily will) be
+                        compacted
 
 WARNING
 =======

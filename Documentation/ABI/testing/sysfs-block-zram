@@ -146,9 +146,10 @@ What:		/sys/block/zram<id>/compact
 Date:		August 2015
 Contact:	Minchan Kim <minchan@kernel.org>
 Description:
-		The compact file is write-only and trigger compaction for
-		allocator zrm uses. The allocator moves some objects so that
-		it could free fragment space.
+		The compact file is read/write. Write triggers underlying
+		allocator's memory compaction, which may result in memory
+		savings. Read returns the number of pages that compaction
+		can potentially (but not guaranteed to) free.
 
 What:		/sys/block/zram<id>/io_stat
 Date:		August 2015
