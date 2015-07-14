@@ -1811,9 +1811,7 @@ unsigned long zs_pages_to_compact(struct zs_pool *pool)
 		if (class->index != i)
 			continue;
 
-		spin_lock(&class->lock);
 		pages_to_free += zs_can_compact(class);
-		spin_unlock(&class->lock);
 	}
 
 	return pages_to_free;
