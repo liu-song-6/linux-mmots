@@ -177,6 +177,9 @@ void zpool_destroy_pool(struct zpool *zpool)
 {
 	pr_debug("destroying pool type %s\n", zpool->type);
 
+	if (unlikely(!zpool))
+		return;
+
 	spin_lock(&pools_lock);
 	list_del(&zpool->list);
 	spin_unlock(&pools_lock);
