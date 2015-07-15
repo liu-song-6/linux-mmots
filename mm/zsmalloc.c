@@ -1869,6 +1869,9 @@ void zs_destroy_pool(struct zs_pool *pool)
 {
 	int i;
 
+	if (unlikely(!pool))
+		return;
+
 	zs_pool_stat_destroy(pool);
 
 	for (i = 0; i < zs_size_classes; i++) {
