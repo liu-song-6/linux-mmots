@@ -39,6 +39,16 @@ static void br_multicast_start_querier(struct net_bridge *br,
 				       struct bridge_mcast_own_query *query);
 static void br_multicast_add_router(struct net_bridge *br,
 				    struct net_bridge_port *port);
+static void br_ip4_multicast_leave_group(struct net_bridge *br,
+					 struct net_bridge_port *port,
+					 __be32 group,
+					 __u16 vid);
+#if IS_ENABLED(CONFIG_IPV6)
+static void br_ip6_multicast_leave_group(struct net_bridge *br,
+					 struct net_bridge_port *port,
+					 const struct in6_addr *group,
+					 __u16 vid);
+#endif
 unsigned int br_mdb_rehash_seq;
 
 static inline int br_ip_equal(const struct br_ip *a, const struct br_ip *b)
@@ -694,7 +704,7 @@ static int br_multicast_add_group(struct net_bridge *br,
 	if (unlikely(!p))
 		goto err;
 	rcu_assign_pointer(*pp, p);
-	br_mdb_notify(br->dev, port, group, RTM_NEWMDB);
+	br_mdb_notify(br->dev, port, group, RTM_NEWMDB, MDB_TEMPORARY);
 
 found:
 	mod_timer(&p->timer, now + br->multicast_membership_interval);
@@ -1010,9 +1020,15 @@ static int br_ip4_multicast_igmp3_report(struct net_bridge *br,
 			continue;
 		}
 
-		err = br_ip4_multicast_add_group(br, port, group, vid);
-		if (err)
-			break;
+		if ((type == IGMPV3_CHANGE_TO_INCLUDE ||
+		     type == IGMPV3_MODE_IS_INCLUDE) &&
+		    ntohs(grec->grec_nsrcs) == 0) {
+			br_ip4_multicast_leave_group(br, port, group, vid);
+		} else {
+			err = br_ip4_multicast_add_group(br, port, group, vid);
+			if (err)
+				break;
+		}
 	}
 
 	return err;
@@ -1071,10 +1087,17 @@ static int br_ip6_multicast_mld2_report(struct net_bridge *br,
 			continue;
 		}
 
-		err = br_ip6_multicast_add_group(br, port, &grec->grec_mca,
-						 vid);
-		if (err)
-			break;
+		if ((grec->grec_type == MLD2_CHANGE_TO_INCLUDE ||
+		     grec->grec_type == MLD2_MODE_IS_INCLUDE) &&
+		    ntohs(*nsrcs) == 0) {
+			br_ip6_multicast_leave_group(br, port, &grec->grec_mca,
+						     vid);
+		} else {
+			err = br_ip6_multicast_add_group(br, port,
+							 &grec->grec_mca, vid);
+			if (!err)
+				break;
+		}
 	}
 
 	return err;
@@ -1439,8 +1462,9 @@ br_multicast_leave_group(struct net_bridge *br,
 			rcu_assign_pointer(*pp, p->next);
 			hlist_del_init(&p->mglist);
 			del_timer(&p->timer);
+			br_mdb_notify(br->dev, port, group, RTM_DELMDB,
+				      p->state);
 			call_rcu_bh(&p->rcu, br_multicast_free_pg);
-			br_mdb_notify(br->dev, port, group, RTM_DELMDB);
 
 			if (!mp->ports && !mp->mglist &&
 			    netif_running(br->dev))
