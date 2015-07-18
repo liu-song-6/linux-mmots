@@ -1053,7 +1053,7 @@ static void intel_wait_for_pipe_off(struct intel_crtc *crtc)
 		/* Wait for the Pipe State to go off */
 		if (wait_for((I915_READ(reg) & I965_PIPECONF_ACTIVE) == 0,
 			     100))
-			WARN(1, "pipe_off wait timed out\n");
+			WARN(1, "pipe_qoff wait timed out\n");
 	} else {
 		/* Wait for the display line to settle */
 		if (wait_for(pipe_dsl_stopped(dev, pipe), 100))
@@ -6330,36 +6330,6 @@ void intel_crtc_update_dpms(struct drm_crtc *crtc)
 		enable |= intel_encoder->connectors_active;
 
 	intel_crtc_control(crtc, enable);
-<<<<<<< HEAD
-
-	crtc->state->active = enable;
-}
-
-static void intel_crtc_disable(struct drm_crtc *crtc)
-{
-	struct drm_device *dev = crtc->dev;
-	struct drm_connector *connector;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-
-	intel_crtc_disable_planes(crtc);
-	dev_priv->display.crtc_disable(crtc);
-	dev_priv->display.off(crtc);
-
-	drm_plane_helper_disable(crtc->primary);
-
-	/* Update computed state. */
-	list_for_each_entry(connector, &dev->mode_config.connector_list, head) {
-		if (!connector->encoder || !connector->encoder->crtc)
-			continue;
-
-		if (connector->encoder->crtc != crtc)
-			continue;
-
-		connector->dpms = DRM_MODE_DPMS_OFF;
-		to_intel_encoder(connector->encoder)->connectors_active = false;
-	}
-=======
->>>>>>> linux-next/akpm-base
 }
 
 void intel_encoder_destroy(struct drm_encoder *encoder)
@@ -13059,21 +13029,12 @@ static int haswell_mode_set_planes_workaround(struct drm_atomic_state *state)
 		if (!crtc_state->active || !needs_modeset(crtc_state))
 			continue;
 
-<<<<<<< HEAD
-		if (!crtc_state->enable) {
-			if (crtc->state->enable)
-				intel_crtc_disable(crtc);
-		} else if (crtc->state->enable) {
-			intel_crtc_disable_planes(crtc);
-			dev_priv->display.crtc_disable(crtc);
-=======
 		if (first_crtc_state) {
 			other_crtc_state = to_intel_crtc_state(crtc_state);
 			break;
 		} else {
 			first_crtc_state = to_intel_crtc_state(crtc_state);
 			first_pipe = intel_crtc->pipe;
->>>>>>> linux-next/akpm-base
 		}
 	}
 
@@ -13622,83 +13583,11 @@ intel_check_primary_plane(struct drm_plane *plane,
 		can_position = true;
 	}
 
-<<<<<<< HEAD
-	ret = drm_plane_helper_check_update(plane, crtc, fb,
-					    src, dest, clip,
-					    min_scale,
-					    max_scale,
-					    can_position, true,
-					    &state->visible);
-	if (ret)
-		return ret;
-
-	if (crtc_state ? crtc_state->base.active : intel_crtc->active) {
-		struct intel_plane_state *old_state =
-			to_intel_plane_state(plane->state);
-
-		intel_crtc->atomic.wait_for_flips = true;
-
-		/*
-		 * FBC does not work on some platforms for rotated
-		 * planes, so disable it when rotation is not 0 and
-		 * update it when rotation is set back to 0.
-		 *
-		 * FIXME: This is redundant with the fbc update done in
-		 * the primary plane enable function except that that
-		 * one is done too late. We eventually need to unify
-		 * this.
-		 */
-		if (state->visible &&
-		    INTEL_INFO(dev)->gen <= 4 && !IS_G4X(dev) &&
-		    dev_priv->fbc.crtc == intel_crtc &&
-		    state->base.rotation != BIT(DRM_ROTATE_0)) {
-			intel_crtc->atomic.disable_fbc = true;
-		}
-
-		if (state->visible && !old_state->visible) {
-			/*
-			 * BDW signals flip done immediately if the plane
-			 * is disabled, even if the plane enable is already
-			 * armed to occur at the next vblank :(
-			 */
-			if (IS_BROADWELL(dev))
-				intel_crtc->atomic.wait_vblank = true;
-		}
-
-		/*
-		 * FIXME: Actually if we will still have any other plane enabled
-		 * on the pipe we could let IPS enabled still, but for
-		 * now lets consider that when we make primary invisible
-		 * by setting DSPCNTR to 0 on update_primary_plane function
-		 * IPS needs to be disable.
-		 */
-		if (!state->visible || !fb)
-			intel_crtc->atomic.disable_ips = true;
-
-		intel_crtc->atomic.fb_bits |=
-			INTEL_FRONTBUFFER_PRIMARY(intel_crtc->pipe);
-
-		intel_crtc->atomic.update_fbc = true;
-
-		if (intel_wm_need_update(plane, &state->base))
-			intel_crtc->atomic.update_wm = true;
-	}
-
-	if (INTEL_INFO(dev)->gen >= 9) {
-		ret = skl_update_scaler_users(intel_crtc, crtc_state,
-			to_intel_plane(plane), state, 0);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
-=======
 	return drm_plane_helper_check_update(plane, crtc, fb, &state->src,
 					     &state->dst, &state->clip,
 					     min_scale, max_scale,
 					     can_position, true,
 					     &state->visible);
->>>>>>> linux-next/akpm-base
 }
 
 static void
