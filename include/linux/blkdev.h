@@ -268,6 +268,7 @@ struct queue_limits {
 	unsigned int		io_min;
 	unsigned int		io_opt;
 	unsigned int		max_discard_sectors;
+	unsigned int		max_hw_discard_sectors;
 	unsigned int		max_write_same_sectors;
 	unsigned int		discard_granularity;
 	unsigned int		discard_alignment;
@@ -1566,6 +1567,7 @@ struct block_device_operations {
 	int (*getgeo)(struct block_device *, struct hd_geometry *);
 	/* this callback is with swap_lock and sometimes page table lock held */
 	void (*swap_slot_free_notify) (struct block_device *, unsigned long);
+	bool (*has_space) (struct block_device *);
 	struct module *owner;
 };
 
@@ -1576,6 +1578,8 @@ extern int bdev_write_page(struct block_device *, sector_t, struct page *,
 						struct writeback_control *);
 extern long bdev_direct_access(struct block_device *, sector_t, void **addr,
 						unsigned long *pfn, long size);
+extern bool bdev_has_space(struct block_device *);
+
 #else /* CONFIG_BLOCK */
 
 struct block_device;
