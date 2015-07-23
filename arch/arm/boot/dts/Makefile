@@ -176,6 +176,8 @@ dtb-$(CONFIG_MACH_KIRKWOOD) += \
 	kirkwood-km_kirkwood.dtb \
 	kirkwood-laplug.dtb \
 	kirkwood-lschlv2.dtb \
+	kirkwood-lswvl.dtb \
+	kirkwood-lswxl.dtb \
 	kirkwood-lsxhl.dtb \
 	kirkwood-mplcec4.dtb \
 	kirkwood-mv88f6281gtw-ge.dtb \
@@ -211,6 +213,7 @@ dtb-$(CONFIG_MACH_KIRKWOOD) += \
 	kirkwood-ts419-6281.dtb \
 	kirkwood-ts419-6282.dtb
 dtb-$(CONFIG_ARCH_LPC18XX) += \
+	lpc4337-ciaa.dtb \
 	lpc4350-hitex-eval.dtb \
 	lpc4357-ea4357-devkit.dtb
 dtb-$(CONFIG_ARCH_LPC32XX) += \
@@ -331,6 +334,8 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-sabreauto.dtb \
 	imx6sx-sdb-reva.dtb \
 	imx6sx-sdb.dtb
+dtb-$(CONFIG_SOC_IMX6UL) += \
+	imx6ul-14x14-evk.dtb
 dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-sdb.dtb
 dtb-$(CONFIG_SOC_LS1021A) += \
@@ -409,15 +414,19 @@ dtb-$(CONFIG_ARCH_OMAP3) += \
 	omap3-overo-alto35.dtb \
 	omap3-overo-chestnut43.dtb \
 	omap3-overo-gallop43.dtb \
+	omap3-overo-palo35.dtb \
 	omap3-overo-palo43.dtb \
 	omap3-overo-storm-alto35.dtb \
 	omap3-overo-storm-chestnut43.dtb \
 	omap3-overo-storm-gallop43.dtb \
+	omap3-overo-storm-palo35.dtb \
 	omap3-overo-storm-palo43.dtb \
 	omap3-overo-storm-summit.dtb \
 	omap3-overo-storm-tobi.dtb \
+	omap3-overo-storm-tobiduo.dtb \
 	omap3-overo-summit.dtb \
 	omap3-overo-tobi.dtb \
+	omap3-overo-tobiduo.dtb \
 	omap3-pandora-600mhz.dtb \
 	omap3-pandora-1ghz.dtb \
 	omap3-sbc-t3517.dtb \
@@ -438,7 +447,8 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-nano.dtb \
 	am335x-pepper.dtb \
 	am335x-lxm.dtb \
-	am335x-chiliboard.dtb
+	am335x-chiliboard.dtb \
+	am335x-wega-rdk.dtb
 dtb-$(CONFIG_ARCH_OMAP4) += \
 	omap4-duovero-parlor.dtb \
 	omap4-panda.dtb \
@@ -488,7 +498,10 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3288-evb-act8846.dtb \
 	rk3288-evb-rk808.dtb \
 	rk3288-firefly-beta.dtb \
-	rk3288-firefly.dtb
+	rk3288-firefly.dtb \
+	rk3288-r89.dtb \
+	rk3288-veyron-jerry.dtb \
+	rk3288-veyron-pinky.dtb
 dtb-$(CONFIG_ARCH_S3C24XX) += \
 	s3c2416-smdk2416.dtb
 dtb-$(CONFIG_ARCH_S3C64XX) += \
@@ -501,11 +514,8 @@ dtb-$(CONFIG_ARCH_S5PV210) += \
 	s5pv210-smdkv210.dtb \
 	s5pv210-torbreck.dtb
 dtb-$(CONFIG_ARCH_SHMOBILE_LEGACY) += \
-	r8a7740-armadillo800eva.dtb \
 	r8a7778-bockw.dtb \
-	r8a7778-bockw-reference.dtb \
-	r8a7779-marzen.dtb \
-	sh73a0-kzm9g.dtb
+	r8a7778-bockw-reference.dtb
 dtb-$(CONFIG_ARCH_SHMOBILE_MULTI) += \
 	emev2-kzm9d.dtb \
 	r7s72100-genmai.dtb \
@@ -516,6 +526,7 @@ dtb-$(CONFIG_ARCH_SHMOBILE_MULTI) += \
 	r8a7790-lager.dtb \
 	r8a7791-henninger.dtb \
 	r8a7791-koelsch.dtb \
+	r8a7793-gose.dtb \
 	r8a7794-alt.dtb \
 	sh73a0-kzm9g.dtb
 dtb-$(CONFIG_ARCH_SOCFPGA) += \
@@ -601,6 +612,7 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-a23-ippo-q8h-v1.2.dtb \
 	sun8i-a33-et-q8-v1.6.dtb \
 	sun8i-a33-ga10h-v1.1.dtb \
+	sun8i-a33-ippo-q8h-v1.2.dtb \
 	sun8i-a33-sinlinx-sina33.dtb
 dtb-$(CONFIG_MACH_SUN9I) += \
 	sun9i-a80-optimus.dtb \

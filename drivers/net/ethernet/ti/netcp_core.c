@@ -1617,11 +1617,11 @@ static int netcp_ndo_open(struct net_device *ndev)
 	}
 	mutex_unlock(&netcp_modules_lock);
 
-	netcp_rxpool_refill(netcp);
 	napi_enable(&netcp->rx_napi);
 	napi_enable(&netcp->tx_napi);
 	knav_queue_enable_notify(netcp->tx_compl_q);
 	knav_queue_enable_notify(netcp->rx_queue);
+	netcp_rxpool_refill(netcp);
 	netif_tx_wake_all_queues(ndev);
 	dev_dbg(netcp->ndev_dev, "netcp device %s opened\n", ndev->name);
 	return 0;
@@ -2142,7 +2142,6 @@ MODULE_DEVICE_TABLE(of, of_match);
 static struct platform_driver netcp_driver = {
 	.driver = {
 		.name		= "netcp-1.0",
-		.owner		= THIS_MODULE,
 		.of_match_table	= of_match,
 	},
 	.probe = netcp_probe,

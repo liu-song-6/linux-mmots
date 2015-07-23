@@ -281,7 +281,7 @@ static int tcf_bpf_init(struct net *net, struct nlattr *nla,
 
 	if (!tcf_hash_check(parm->index, act, bind)) {
 		ret = tcf_hash_create(parm->index, est, act,
-				      sizeof(*prog), bind);
+				      sizeof(*prog), bind, false);
 		if (ret < 0)
 			goto destroy_fp;
 
@@ -339,6 +339,9 @@ static void tcf_bpf_cleanup(struct tc_action *act, int bind)
 		bpf_prog_put(prog->filter);
 	else
 		bpf_prog_destroy(prog->filter);
+
+	kfree(prog->bpf_ops);
+	kfree(prog->bpf_name);
 }
 
 static struct tc_action_ops act_bpf_ops __read_mostly = {
