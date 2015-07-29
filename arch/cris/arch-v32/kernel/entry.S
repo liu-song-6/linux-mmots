@@ -886,7 +886,15 @@ sys_call_table:
 	.long sys_process_vm_writev
 	.long sys_kcmp			/* 350 */
 	.long sys_finit_module
-	.long sys_mlock2
+	.long sys_sched_setattr
+	.long sys_sched_getattr
+	.long sys_renameat2
+	.long sys_seccomp		/* 355 */
+	.long sys_getrandom
+	.long sys_memfd_create
+	.long sys_bpf
+	.long sys_execveat
+	.long sys_mlock2		/* 360 */
 	.long sys_munlock2
 	.long sys_munlockall2
 
