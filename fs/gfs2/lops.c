@@ -70,7 +70,7 @@ static bool buffer_is_rgrp(const struct gfs2_bufdata *bd)
 static void maybe_release_space(struct gfs2_bufdata *bd)
 {
 	struct gfs2_glock *gl = bd->bd_gl;
-	struct gfs2_sbd *sdp = gl->gl_sbd;
+	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
 	struct gfs2_rgrpd *rgd = gl->gl_object;
 	unsigned int index = bd->bd_bh->b_blocknr - gl->gl_name.ln_number;
 	struct gfs2_bitmap *bi = rgd->rd_bits + index;
@@ -202,22 +202,22 @@ static void gfs2_end_log_write_bh(struct gfs2_sbd *sdp, struct bio_vec *bvec,
  *
  */
 
-static void gfs2_end_log_write(struct bio *bio, int error)
+static void gfs2_end_log_write(struct bio *bio)
 {
 	struct gfs2_sbd *sdp = bio->bi_private;
 	struct bio_vec *bvec;
 	struct page *page;
 	int i;
 
-	if (error) {
-		sdp->sd_log_error = error;
-		fs_err(sdp, "Error %d writing to log\n", error);
+	if (bio->bi_error) {
+		sdp->sd_log_error = bio->bi_error;
+		fs_err(sdp, "Error %d writing to log\n", bio->bi_error);
 	}
 
 	bio_for_each_segment_all(bvec, bio, i) {
 		page = bvec->bv_page;
 		if (page_has_buffers(page))
-			gfs2_end_log_write_bh(sdp, bvec, error);
+			gfs2_end_log_write_bh(sdp, bvec, bio->bi_error);
 		else
 			mempool_free(page, gfs2_page_pool);
 	}
@@ -585,7 +585,7 @@ static int buf_lo_scan_elements(struct gfs2_jdesc *jd, unsigned int start,
 static void gfs2_meta_sync(struct gfs2_glock *gl)
 {
 	struct address_space *mapping = gfs2_glock2aspace(gl);
-	struct gfs2_sbd *sdp = gl->gl_sbd;
+	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
 	int error;
 
 	if (mapping == NULL)
@@ -595,7 +595,7 @@ static void gfs2_meta_sync(struct gfs2_glock *gl)
 	error = filemap_fdatawait(mapping);
 
 	if (error)
-		gfs2_io_error(gl->gl_sbd);
+		gfs2_io_error(gl->gl_name.ln_sbd);
 }
 
 static void buf_lo_after_scan(struct gfs2_jdesc *jd, int error, int pass)
