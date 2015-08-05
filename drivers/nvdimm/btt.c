@@ -632,8 +632,9 @@ static void parse_arena_meta(struct arena_info *arena, struct btt_sb *super,
 	arena->logoff = arena_off + le64_to_cpu(super->logoff);
 	arena->info2off = arena_off + le64_to_cpu(super->info2off);
 
-	arena->size = (super->nextoff > 0) ? (le64_to_cpu(super->nextoff)) :
-			(arena->info2off - arena->infooff + BTT_PG_SIZE);
+	arena->size = (le64_to_cpu(super->nextoff) > 0)
+		? (le64_to_cpu(super->nextoff))
+		: (arena->info2off - arena->infooff + BTT_PG_SIZE);
 
 	arena->flags = le32_to_cpu(super->flags);
 }
@@ -1189,7 +1190,7 @@ static void btt_make_request(struct request_queue *q, struct bio *bio)
 	 * another kernel subsystem, and we just pass it through.
 	 */
 	if (bio_integrity_enabled(bio) && bio_integrity_prep(bio)) {
-		err = -EIO;
+		bio->bi_error = -EIO;
 		goto out;
 	}
 
@@ -1211,6 +1212,7 @@ static void btt_make_request(struct request_queue *q, struct bio *bio)
 					"io error in %s sector %lld, len %d,\n",
 					(rw == READ) ? "READ" : "WRITE",
 					(unsigned long long) iter.bi_sector, len);
+			bio->bi_error = err;
 			break;
 		}
 	}
@@ -1218,7 +1220,7 @@ static void btt_make_request(struct request_queue *q, struct bio *bio)
 		nd_iostat_end(bio, start);
 
 out:
-	bio_endio(bio, err);
+	bio_endio(bio);
 }
 
 static int btt_rw_page(struct block_device *bdev, sector_t sector,

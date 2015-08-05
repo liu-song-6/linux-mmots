@@ -556,6 +556,12 @@ S:	Maintained
 F:	Documentation/i2c/busses/i2c-ali1563
 F:	drivers/i2c/busses/i2c-ali1563.c
 
+ALLWINNER SECURITY SYSTEM
+M:	Corentin Labbe <clabbe.montjoie@gmail.com>
+L:	linux-crypto@vger.kernel.org
+S:	Maintained
+F:	drivers/crypto/sunxi-ss/
+
 ALPHA PORT
 M:	Richard Henderson <rth@twiddle.net>
 M:	Ivan Kokshaysky <ink@jurassic.park.msu.ru>
@@ -636,9 +642,14 @@ M:	Oded Gabbay <oded.gabbay@gmail.com>
 L:	dri-devel@lists.freedesktop.org
 T:	git git://people.freedesktop.org/~gabbayo/linux.git
 S:	Supported
+F:	drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.c
+F:	drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.h
+F:	drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gfx_v7.c
+F:	drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gfx_v8.c
 F:	drivers/gpu/drm/amd/amdkfd/
 F:	drivers/gpu/drm/amd/include/cik_structs.h
 F:	drivers/gpu/drm/amd/include/kgd_kfd_interface.h
+F:	drivers/gpu/drm/amd/include/vi_structs.h
 F:	drivers/gpu/drm/radeon/radeon_kfd.c
 F:	drivers/gpu/drm/radeon/radeon_kfd.h
 F:	include/uapi/linux/kfd_ioctl.h
@@ -799,11 +810,13 @@ F:	arch/arm/include/asm/floppy.h
 ARM PMU PROFILING AND DEBUGGING
 M:	Will Deacon <will.deacon@arm.com>
 S:	Maintained
-F:	arch/arm/kernel/perf_event*
+F:	arch/arm/kernel/perf_*
 F:	arch/arm/oprofile/common.c
-F:	arch/arm/include/asm/pmu.h
 F:	arch/arm/kernel/hw_breakpoint.c
 F:	arch/arm/include/asm/hw_breakpoint.h
+F:	arch/arm/include/asm/perf_event.h
+F:	drivers/perf/arm_pmu.c
+F:	include/linux/perf/arm_pmu.h
 
 ARM PORT
 M:	Russell King <linux@arm.linux.org.uk>
@@ -1465,9 +1478,7 @@ F:	arch/arm/boot/dts/emev2*
 F:	arch/arm/boot/dts/r7s*
 F:	arch/arm/boot/dts/r8a*
 F:	arch/arm/boot/dts/sh*
-F:	arch/arm/configs/armadillo800eva_defconfig
 F:	arch/arm/configs/bockw_defconfig
-F:	arch/arm/configs/kzm9g_defconfig
 F:	arch/arm/configs/marzen_defconfig
 F:	arch/arm/configs/shmobile_defconfig
 F:	arch/arm/include/debug/renesas-scif.S
@@ -1504,6 +1515,7 @@ S:	Maintained
 F:	arch/arm/mach-sti/
 F:	arch/arm/boot/dts/sti*
 F:	drivers/clocksource/arm_global_timer.c
+F:	drivers/clocksource/clksrc_st_lpc.c
 F:	drivers/i2c/busses/i2c-st.c
 F:	drivers/media/rc/st_rc.c
 F:	drivers/mmc/host/sdhci-st.c
@@ -1579,7 +1591,10 @@ ARM/UNIPHIER ARCHITECTURE
 M:	Masahiro Yamada <yamada.masahiro@socionext.com>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
+F:	arch/arm/boot/dts/uniphier*
 F:	arch/arm/mach-uniphier/
+F:	drivers/pinctrl/uniphier/
+F:	drivers/tty/serial/8250/8250_uniphier.c
 N:	uniphier
 
 ARM/Ux500 ARM ARCHITECTURE
@@ -3454,6 +3469,7 @@ X:	Documentation/devicetree/
 X:	Documentation/acpi
 X:	Documentation/power
 X:	Documentation/spi
+X:	Documentation/DocBook/media
 T:	git git://git.lwn.net/linux-2.6.git docs-next
 
 DOUBLETALK DRIVER
@@ -4059,15 +4075,6 @@ F:	Documentation/filesystems/ext2.txt
 F:	fs/ext2/
 F:	include/linux/ext2*
 
-EXT3 FILE SYSTEM
-M:	Jan Kara <jack@suse.com>
-M:	Andrew Morton <akpm@linux-foundation.org>
-M:	Andreas Dilger <adilger.kernel@dilger.ca>
-L:	linux-ext4@vger.kernel.org
-S:	Maintained
-F:	Documentation/filesystems/ext3.txt
-F:	fs/ext3/
-
 EXT4 FILE SYSTEM
 M:	"Theodore Ts'o" <tytso@mit.edu>
 M:	Andreas Dilger <adilger.kernel@dilger.ca>
@@ -4414,6 +4421,7 @@ F:	Documentation/filesystems/f2fs.txt
 F:	Documentation/ABI/testing/sysfs-fs-f2fs
 F:	fs/f2fs/
 F:	include/linux/f2fs_fs.h
+F:	include/trace/events/f2fs.h
 
 FUJITSU FR-V (FRV) PORT
 M:	David Howells <dhowells@redhat.com>
@@ -5081,7 +5089,7 @@ F:	drivers/crypto/nx/nx_csbcpb.h
 F:	drivers/crypto/nx/nx_debugfs.h
 
 IBM Power 842 compression accelerator
-M:	Dan Streetman <ddstreet@us.ibm.com>
+M:	Dan Streetman <ddstreet@ieee.org>
 S:	Supported
 F:	drivers/crypto/nx/Makefile
 F:	drivers/crypto/nx/Kconfig
@@ -5755,16 +5763,9 @@ S:	Maintained
 F:	fs/jffs2/
 F:	include/uapi/linux/jffs2.h
 
-JOURNALLING LAYER FOR BLOCK DEVICES (JBD)
-M:	Andrew Morton <akpm@linux-foundation.org>
-M:	Jan Kara <jack@suse.com>
-L:	linux-ext4@vger.kernel.org
-S:	Maintained
-F:	fs/jbd/
-F:	include/linux/jbd.h
-
 JOURNALLING LAYER FOR BLOCK DEVICES (JBD2)
 M:	"Theodore Ts'o" <tytso@mit.edu>
+M:	Jan Kara <jack@suse.com>
 L:	linux-ext4@vger.kernel.org
 S:	Maintained
 F:	fs/jbd2/
@@ -5797,6 +5798,19 @@ T:	git git://gitorious.org/linux-kconfig/linux-kconfig
 S:	Maintained
 F:	Documentation/kbuild/kconfig-language.txt
 F:	scripts/kconfig/
+
+KDBUS
+M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+M:	Daniel Mack <daniel@zonque.org>
+M:	David Herrmann <dh.herrmann@googlemail.com>
+M:	Djalal Harouni <tixxdz@opendz.org>
+L:	linux-kernel@vger.kernel.org
+S:	Maintained
+F:	ipc/kdbus/*
+F:	samples/kdbus/*
+F:	Documentation/kdbus/*
+F:	include/uapi/linux/kdbus.h
+F:	tools/testing/selftests/kdbus/
 
 KDUMP
 M:	Vivek Goyal <vgoyal@redhat.com>
@@ -5896,7 +5910,6 @@ F:	arch/powerpc/kvm/
 KERNEL VIRTUAL MACHINE for s390 (KVM/s390)
 M:	Christian Borntraeger <borntraeger@de.ibm.com>
 M:	Cornelia Huck <cornelia.huck@de.ibm.com>
-M:	linux390@de.ibm.com
 L:	linux-s390@vger.kernel.org
 W:	http://www.ibm.com/developerworks/linux/linux390/
 S:	Supported
@@ -6510,7 +6523,7 @@ F:	drivers/net/ethernet/marvell/mvneta.*
 
 MARVELL MWIFIEX WIRELESS DRIVER
 M:	Amitkumar Karwar <akarwar@marvell.com>
-M:	Avinash Patil <patila@marvell.com>
+M:	Nishant Sarmukadam <nishants@marvell.com>
 L:	linux-wireless@vger.kernel.org
 S:	Maintained
 F:	drivers/net/wireless/mwifiex/
@@ -6562,6 +6575,14 @@ S:	Supported
 F:	drivers/power/max14577_charger.c
 F:	drivers/power/max77693_charger.c
 
+MAXIM MAX77802 MULTIFUNCTION PMIC DEVICE DRIVERS
+M:	Javier Martinez Canillas <javier@osg.samsung.com>
+L:	linux-kernel@vger.kernel.org
+S:	Supported
+F:	drivers/*/*max77802.c
+F:	Documentation/devicetree/bindings/*/*max77802.txt
+F:	include/dt-bindings/*/*max77802.h
+
 MAXIM PMIC AND MUIC DRIVERS FOR EXYNOS BASED BOARDS
 M:	Chanwoo Choi <cw00.choi@samsung.com>
 M:	Krzysztof Kozlowski <k.kozlowski@samsung.com>
@@ -6575,7 +6596,7 @@ F:	drivers/extcon/extcon-max77693.c
 F:	drivers/rtc/rtc-max77686.c
 F:	drivers/clk/clk-max77686.c
 F:	Documentation/devicetree/bindings/mfd/max14577.txt
-F:	Documentation/devicetree/bindings/mfd/max77686.txt
+F:	Documentation/devicetree/bindings/*/max77686.txt
 F:	Documentation/devicetree/bindings/mfd/max77693.txt
 F:	Documentation/devicetree/bindings/clock/maxim,max77686.txt
 F:	include/linux/mfd/max14577*.h
@@ -6648,6 +6669,15 @@ W:	http://www.mellanox.com
 Q:	http://patchwork.ozlabs.org/project/netdev/list/
 F:	drivers/net/ethernet/mellanox/mlx4/en_*
 
+MELLANOX ETHERNET SWITCH DRIVERS
+M:	Jiri Pirko <jiri@mellanox.com>
+M:	Ido Schimmel <idosch@mellanox.com>
+L:	netdev@vger.kernel.org
+S:	Supported
+W:	http://www.mellanox.com
+Q:	http://patchwork.ozlabs.org/project/netdev/list/
+F:	drivers/net/ethernet/mellanox/mlxsw/
+
 MEMORY MANAGEMENT
 L:	linux-mm@kvack.org
 W:	http://www.linux-mm.org
@@ -6683,6 +6713,7 @@ M:	Johannes Thumshirn <morbidrsa@gmail.com>
 S:	Maintained
 F:	drivers/mcb/
 F:	include/linux/mcb.h
+F:	Documentation/men-chameleon-bus.txt
 
 MEN F21BMC (Board Management Controller)
 M:	Andreas Werner <andreas.werner@men.de>
@@ -7999,7 +8030,6 @@ F:	drivers/pinctrl/sh-pfc/
 
 PIN CONTROLLER - SAMSUNG
 M:	Tomasz Figa <tomasz.figa@gmail.com>
-M:	Thomas Abraham <thomas.abraham@linaro.org>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 L:	linux-samsung-soc@vger.kernel.org (moderated for non-subscribers)
 S:	Maintained
@@ -8471,7 +8501,7 @@ M:	"Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 M:	Josh Triplett <josh@joshtriplett.org>
 R:	Steven Rostedt <rostedt@goodmis.org>
 R:	Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
-R:	Lai Jiangshan <laijs@cn.fujitsu.com>
+R:	Lai Jiangshan <jiangshanlai@gmail.com>
 L:	linux-kernel@vger.kernel.org
 S:	Supported
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/paulmck/linux-rcu.git
@@ -8498,7 +8528,7 @@ M:	"Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 M:	Josh Triplett <josh@joshtriplett.org>
 R:	Steven Rostedt <rostedt@goodmis.org>
 R:	Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
-R:	Lai Jiangshan <laijs@cn.fujitsu.com>
+R:	Lai Jiangshan <jiangshanlai@gmail.com>
 L:	linux-kernel@vger.kernel.org
 W:	http://www.rdrop.com/users/paulmck/RCU/
 S:	Supported
@@ -8697,7 +8727,6 @@ F:	drivers/video/fbdev/savage/
 S390
 M:	Martin Schwidefsky <schwidefsky@de.ibm.com>
 M:	Heiko Carstens <heiko.carstens@de.ibm.com>
-M:	linux390@de.ibm.com
 L:	linux-s390@vger.kernel.org
 W:	http://www.ibm.com/developerworks/linux/linux390/
 S:	Supported
@@ -8725,7 +8754,6 @@ F:	block/partitions/ibm.c
 
 S390 NETWORK DRIVERS
 M:	Ursula Braun <ursula.braun@de.ibm.com>
-M:	linux390@de.ibm.com
 L:	linux-s390@vger.kernel.org
 W:	http://www.ibm.com/developerworks/linux/linux390/
 S:	Supported
@@ -8742,7 +8770,6 @@ F:	drivers/pci/hotplug/s390_pci_hpc.c
 
 S390 ZCRYPT DRIVER
 M:	Ingo Tuchscherer <ingo.tuchscherer@de.ibm.com>
-M:	linux390@de.ibm.com
 L:	linux-s390@vger.kernel.org
 W:	http://www.ibm.com/developerworks/linux/linux390/
 S:	Supported
@@ -8750,7 +8777,6 @@ F:	drivers/s390/crypto/
 
 S390 ZFCP DRIVER
 M:	Steffen Maier <maier@linux.vnet.ibm.com>
-M:	linux390@de.ibm.com
 L:	linux-s390@vger.kernel.org
 W:	http://www.ibm.com/developerworks/linux/linux390/
 S:	Supported
@@ -8758,7 +8784,6 @@ F:	drivers/s390/scsi/zfcp_*
 
 S390 IUCV NETWORK LAYER
 M:	Ursula Braun <ursula.braun@de.ibm.com>
-M:	linux390@de.ibm.com
 L:	linux-s390@vger.kernel.org
 W:	http://www.ibm.com/developerworks/linux/linux390/
 S:	Supported
@@ -8910,6 +8935,13 @@ S:	Maintained
 F:	include/linux/dma/dw.h
 F:	include/linux/platform_data/dma-dw.h
 F:	drivers/dma/dw/
+
+SYNOPSYS DESIGNWARE ETHERNET QOS 4.10a driver
+M: Lars Persson <lars.persson@axis.com>
+L: netdev@vger.kernel.org
+S: Supported
+F: Documentation/devicetree/bindings/net/snps,dwc-qos-ethernet.txt
+F: drivers/net/ethernet/synopsys/dwc_eth_qos.c
 
 SYNOPSYS DESIGNWARE MMC/SD/SDIO DRIVER
 M:	Seungwon Jeon <tgih.jun@samsung.com>
@@ -9109,6 +9141,12 @@ W:	apparmor.wiki.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jj/apparmor-dev.git
 S:	Supported
 F:	security/apparmor/
+
+YAMA SECURITY MODULE
+M:	Kees Cook <keescook@chromium.org>
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git yama/tip
+S:	Supported
+F:	security/yama/
 
 SENSABLE PHANTOM
 M:	Jiri Slaby <jirislaby@gmail.com>
@@ -9366,7 +9404,7 @@ F:	include/linux/sl?b*.h
 F:	mm/sl?b*
 
 SLEEPABLE READ-COPY UPDATE (SRCU)
-M:	Lai Jiangshan <laijs@cn.fujitsu.com>
+M:	Lai Jiangshan <jiangshanlai@gmail.com>
 M:	"Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 M:	Josh Triplett <josh@joshtriplett.org>
 R:	Steven Rostedt <rostedt@goodmis.org>
@@ -11200,6 +11238,7 @@ F:	sound/soc/codecs/wm*
 
 WORKQUEUE
 M:	Tejun Heo <tj@kernel.org>
+R:	Lai Jiangshan <jiangshanlai@gmail.com>
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/wq.git
 S:	Maintained
 F:	include/linux/workqueue.h

@@ -38,6 +38,7 @@
 #include <linux/interrupt.h>
 #include <linux/percpu.h>
 #include <linux/slab.h>
+#include <linux/irqchip.h>
 #include <linux/irqchip/chained_irq.h>
 #include <linux/irqchip/arm-gic.h>
 #include <linux/irqchip/arm-gic-acpi.h>
@@ -48,7 +49,6 @@
 #include <asm/smp_plat.h>
 
 #include "irq-gic-common.h"
-#include "irqchip.h"
 
 union gic_base {
 	void __iomem *common_base;
@@ -288,8 +288,8 @@ static void __exception_irq_entry gic_handle_irq(struct pt_regs *regs)
 
 static void gic_handle_cascade_irq(unsigned int irq, struct irq_desc *desc)
 {
-	struct gic_chip_data *chip_data = irq_get_handler_data(irq);
-	struct irq_chip *chip = irq_get_chip(irq);
+	struct gic_chip_data *chip_data = irq_desc_get_handler_data(desc);
+	struct irq_chip *chip = irq_desc_get_chip(desc);
 	unsigned int cascade_irq, gic_irq;
 	unsigned long status;
 
@@ -324,16 +324,17 @@ static struct irq_chip gic_chip = {
 #endif
 	.irq_get_irqchip_state	= gic_irq_get_irqchip_state,
 	.irq_set_irqchip_state	= gic_irq_set_irqchip_state,
-	.flags			= IRQCHIP_SET_TYPE_MASKED,
+	.flags			= IRQCHIP_SET_TYPE_MASKED |
+				  IRQCHIP_SKIP_SET_WAKE |
+				  IRQCHIP_MASK_ON_SUSPEND,
 };
 
 void __init gic_cascade_irq(unsigned int gic_nr, unsigned int irq)
 {
 	if (gic_nr >= MAX_GIC_NR)
 		BUG();
-	if (irq_set_handler_data(irq, &gic_data[gic_nr]) != 0)
-		BUG();
-	irq_set_chained_handler(irq, gic_handle_cascade_irq);
+	irq_set_chained_handler_and_data(irq, gic_handle_cascade_irq,
+					 &gic_data[gic_nr]);
 }
 
 static u8 gic_get_cpumask(struct gic_chip_data *gic)
@@ -358,6 +359,7 @@ static u8 gic_get_cpumask(struct gic_chip_data *gic)
 static void gic_cpu_if_up(void)
 {
 	void __iomem *cpu_base = gic_data_cpu_base(&gic_data[0]);
+	void __iomem *dist_base = gic_data_dist_base(&gic_data[0]);
 	u32 bypass = 0;
 
 	/*
@@ -365,6 +367,9 @@ static void gic_cpu_if_up(void)
 	*/
 	bypass = readl(cpu_base + GIC_CPU_CTRL);
 	bypass &= GICC_DIS_BYPASS_MASK;
+
+	if (readl_relaxed(dist_base + GIC_DIST_CTRL) & GICD_ENABLE_GRP1)
+		bypass |= 0x1e;
 
 	writel_relaxed(bypass | GICC_ENABLE, cpu_base + GIC_CPU_CTRL);
 }
@@ -388,9 +393,19 @@ static void __init gic_dist_init(struct gic_chip_data *gic)
 	for (i = 32; i < gic_irqs; i += 4)
 		writel_relaxed(cpumask, base + GIC_DIST_TARGET + i * 4 / 4);
 
+	writel_relaxed(GICD_ENABLE_GRP1, base + GIC_DIST_CTRL);
+
+	/*
+	 * Optionally set all global interrupts to be group 1.
+	 */
+	if (readl_relaxed(base + GIC_DIST_CTRL) & GICD_ENABLE_GRP1) {
+		for (i = 32; i < gic_irqs; i += 32)
+			writel_relaxed(0xffffffff, base + GIC_DIST_IGROUP + i * 4 / 32);
+	}
+
 	gic_dist_config(base, gic_irqs, NULL);
 
-	writel_relaxed(GICD_ENABLE, base + GIC_DIST_CTRL);
+	writel_relaxed(GICD_ENABLE | GICD_ENABLE_GRP1, base + GIC_DIST_CTRL);
 }
 
 static void gic_cpu_init(struct gic_chip_data *gic)
@@ -416,6 +431,17 @@ static void gic_cpu_init(struct gic_chip_data *gic)
 			gic_cpu_map[i] &= ~cpu_mask;
 
 	gic_cpu_config(dist_base, NULL);
+
+	/*
+	 * Set all PPI and SGI interrupts to be group 1.
+	 *
+	 * If grouping is not available (not implemented or prohibited by
+	 * security mode) these registers are read-as-zero/write-ignored.
+	 */
+	if (readl_relaxed(dist_base + GIC_DIST_CTRL) & GICD_ENABLE_GRP1) {
+		writel_relaxed(0xffff7fff, dist_base + GIC_DIST_IGROUP + 0);
+		writel_relaxed(0x00a0a0a0, dist_base + GIC_DIST_PRI + 12);
+	}
 
 	writel_relaxed(GICC_INT_PRI_THRESHOLD, base + GIC_CPU_PRIMASK);
 	gic_cpu_if_up();
@@ -506,7 +532,7 @@ static void gic_dist_restore(unsigned int gic_nr)
 		writel_relaxed(gic_data[gic_nr].saved_spi_enable[i],
 			dist_base + GIC_DIST_ENABLE_SET + i * 4);
 
-	writel_relaxed(GICD_ENABLE, dist_base + GIC_DIST_CTRL);
+	writel_relaxed(GICD_ENABLE | GICD_ENABLE_GRP1, dist_base + GIC_DIST_CTRL);
 }
 
 static void gic_cpu_save(unsigned int gic_nr)
@@ -562,6 +588,17 @@ static void gic_cpu_restore(unsigned int gic_nr)
 	for (i = 0; i < DIV_ROUND_UP(32, 4); i++)
 		writel_relaxed(GICD_INT_DEF_PRI_X4,
 					dist_base + GIC_DIST_PRI + i * 4);
+
+	/*
+	 * Set all PPI and SGI interrupts to be group 1.
+	 *
+	 * If grouping is not available (not implemented or prohibited by
+	 * security mode) these registers are read-as-zero/write-ignored.
+	 */
+	if (readl_relaxed(dist_base + GIC_DIST_CTRL) & GICD_ENABLE_GRP1) {
+		writel_relaxed(0xffff7fff, dist_base + GIC_DIST_IGROUP + 0);
+		writel_relaxed(0x00a0a0a0, dist_base + GIC_DIST_PRI + 12);
+	}
 
 	writel_relaxed(GICC_INT_PRI_THRESHOLD, cpu_base + GIC_CPU_PRIMASK);
 	gic_cpu_if_up();
@@ -622,10 +659,19 @@ static void __init gic_pm_init(struct gic_chip_data *gic)
 #endif
 
 #ifdef CONFIG_SMP
+static bool sgi_is_nonsecure(int irq, struct gic_chip_data *gic)
+{
+	void __iomem *dist_base = gic_data_dist_base(gic);
+	/* FIXME: this should be done in a more generic way */
+	return irq != 15 && readl_relaxed(dist_base + GIC_DIST_CTRL) & GICD_ENABLE_GRP1;
+}
+
 static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 {
-	int cpu;
+	struct gic_chip_data *gic = &gic_data[0];
 	unsigned long flags, map = 0;
+	unsigned int softirq;
+	int cpu;
 
 	raw_spin_lock_irqsave(&irq_controller_lock, flags);
 
@@ -639,8 +685,14 @@ static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	 */
 	dmb(ishst);
 
+	softirq = map << 16 | irq;
+
+	/* SATT only has effect if we are running in the secure world */
+	if (sgi_is_nonsecure(irq, gic))
+		softirq |= 0x8000;
+
 	/* this always happens on GIC0 */
-	writel_relaxed(map << 16 | irq, gic_data_dist_base(&gic_data[0]) + GIC_DIST_SOFTINT);
+	writel_relaxed(softirq, gic_data_dist_base(gic) + GIC_DIST_SOFTINT);
 
 	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
 }
@@ -879,11 +931,6 @@ static const struct irq_domain_ops gic_irq_domain_ops = {
 	.unmap = gic_irq_domain_unmap,
 	.xlate = gic_irq_domain_xlate,
 };
-
-void gic_set_irqchip_flags(unsigned long flags)
-{
-	gic_chip.flags |= flags;
-}
 
 void __init gic_init_bases(unsigned int gic_nr, int irq_start,
 			   void __iomem *dist_base, void __iomem *cpu_base,
