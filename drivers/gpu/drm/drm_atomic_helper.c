@@ -240,14 +240,8 @@ update_connector_routing(struct drm_atomic_state *state, int conn_idx)
 	connector_state->best_encoder = new_encoder;
 	idx = drm_crtc_index(connector_state->crtc);
 
-<<<<<<< HEAD
 	crtc_state = state->crtc_states[idx];
 	crtc_state->mode_changed = true;
-=======
-		crtc_state = state->crtc_states[idx];
-		crtc_state->connectors_changed = true;
-	}
->>>>>>> linux-next/akpm-base
 
 	DRM_DEBUG_ATOMIC("[CONNECTOR:%d:%s] using [ENCODER:%d:%s] on [CRTC:%d]\n",
 			 connector->base.id,
