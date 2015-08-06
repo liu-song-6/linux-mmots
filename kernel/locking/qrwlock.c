@@ -60,22 +60,23 @@ rspin_until_writer_unlock(struct qrwlock *lock, u32 cnts)
 }
 
 /**
- * queue_read_lock_slowpath - acquire read lock of a queue rwlock
+ * queued_read_lock_slowpath - acquire read lock of a queue rwlock
  * @lock: Pointer to queue rwlock structure
+ * @cnts: Current qrwlock lock value
  */
-void queue_read_lock_slowpath(struct qrwlock *lock)
+void queued_read_lock_slowpath(struct qrwlock *lock, u32 cnts)
 {
-	u32 cnts;
-
 	/*
 	 * Readers come here when they cannot get the lock without waiting
 	 */
 	if (unlikely(in_interrupt())) {
 		/*
-		 * Readers in interrupt context will spin until the lock is
-		 * available without waiting in the queue.
+		 * Readers in interrupt context will get the lock immediately
+		 * if the writer is just waiting (not holding the lock yet).
+		 * The rspin_until_writer_unlock() function returns immediately
+		 * in this case. Otherwise, they will spin until the lock
+		 * is available without waiting in the queue.
 		 */
-		cnts = smp_load_acquire((u32 *)&lock->cnts);
 		rspin_until_writer_unlock(lock, cnts);
 		return;
 	}
@@ -87,15 +88,11 @@ void queue_read_lock_slowpath(struct qrwlock *lock)
 	arch_spin_lock(&lock->lock);
 
 	/*
-	 * At the head of the wait queue now, wait until the writer state
-	 * goes to 0 and then try to increment the reader count and get
-	 * the lock. It is possible that an incoming writer may steal the
-	 * lock in the interim, so it is necessary to check the writer byte
-	 * to make sure that the write lock isn't taken.
+	 * At the head of the wait queue now, increment the reader count
+	 * and wait until the writer, if it has the lock, has gone away.
+	 * At ths stage, it is not possible for a writer to remain in the
+	 * waiting state (_QW_WAITING). So there won't be any deadlock.
 	 */
-	while (atomic_read(&lock->cnts) & _QW_WMASK)
-		cpu_relax_lowlatency();
-
 	cnts = atomic_add_return(_QR_BIAS, &lock->cnts) - _QR_BIAS;
 	rspin_until_writer_unlock(lock, cnts);
 
@@ -104,13 +101,13 @@ void queue_read_lock_slowpath(struct qrwlock *lock)
 	 */
 	arch_spin_unlock(&lock->lock);
 }
-EXPORT_SYMBOL(queue_read_lock_slowpath);
+EXPORT_SYMBOL(queued_read_lock_slowpath);
 
 /**
- * queue_write_lock_slowpath - acquire write lock of a queue rwlock
+ * queued_write_lock_slowpath - acquire write lock of a queue rwlock
  * @lock : Pointer to queue rwlock structure
  */
-void queue_write_lock_slowpath(struct qrwlock *lock)
+void queued_write_lock_slowpath(struct qrwlock *lock)
 {
 	u32 cnts;
 
@@ -149,4 +146,4 @@ void queue_write_lock_slowpath(struct qrwlock *lock)
 unlock:
 	arch_spin_unlock(&lock->lock);
 }
-EXPORT_SYMBOL(queue_write_lock_slowpath);
+EXPORT_SYMBOL(queued_write_lock_slowpath);
