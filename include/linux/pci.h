@@ -180,6 +180,8 @@ enum pci_dev_flags {
 	PCI_DEV_FLAGS_NO_BUS_RESET = (__force pci_dev_flags_t) (1 << 6),
 	/* Do not use PM reset even if device advertises NoSoftRst- */
 	PCI_DEV_FLAGS_NO_PM_RESET = (__force pci_dev_flags_t) (1 << 7),
+	/* Get VPD from function 0 VPD */
+	PCI_DEV_FLAGS_VPD_REF_F0 = (__force pci_dev_flags_t) (1 << 8),
 };
 
 enum pci_irq_reroute_variant {
@@ -366,7 +368,6 @@ struct pci_dev {
 	struct bin_attribute *res_attr[DEVICE_COUNT_RESOURCE]; /* sysfs file for resources */
 	struct bin_attribute *res_attr_wc[DEVICE_COUNT_RESOURCE]; /* sysfs file for WC mapping of resources */
 #ifdef CONFIG_PCI_MSI
-	struct list_head msi_list;
 	const struct attribute_group **msi_irq_groups;
 #endif
 	struct pci_vpd *vpd;
@@ -963,6 +964,23 @@ static inline int pci_is_managed(struct pci_dev *pdev)
 	return pdev->is_managed;
 }
 
+static inline void pci_set_managed_irq(struct pci_dev *pdev, unsigned int irq)
+{
+	pdev->irq = irq;
+	pdev->irq_managed = 1;
+}
+
+static inline void pci_reset_managed_irq(struct pci_dev *pdev)
+{
+	pdev->irq = 0;
+	pdev->irq_managed = 0;
+}
+
+static inline bool pci_has_managed_irq(struct pci_dev *pdev)
+{
+	return pdev->irq_managed && pdev->irq > 0;
+}
+
 void pci_disable_device(struct pci_dev *dev);
 
 extern unsigned int pcibios_max_latency;
@@ -1207,11 +1225,9 @@ struct msix_entry {
 
 #ifdef CONFIG_PCI_MSI
 int pci_msi_vec_count(struct pci_dev *dev);
-void pci_msi_shutdown(struct pci_dev *dev);
 void pci_disable_msi(struct pci_dev *dev);
 int pci_msix_vec_count(struct pci_dev *dev);
 int pci_enable_msix(struct pci_dev *dev, struct msix_entry *entries, int nvec);
-void pci_msix_shutdown(struct pci_dev *dev);
 void pci_disable_msix(struct pci_dev *dev);
 void pci_restore_msi_state(struct pci_dev *dev);
 int pci_msi_enabled(void);
@@ -1235,13 +1251,11 @@ static inline int pci_enable_msix_exact(struct pci_dev *dev,
 }
 #else
 static inline int pci_msi_vec_count(struct pci_dev *dev) { return -ENOSYS; }
-static inline void pci_msi_shutdown(struct pci_dev *dev) { }
 static inline void pci_disable_msi(struct pci_dev *dev) { }
 static inline int pci_msix_vec_count(struct pci_dev *dev) { return -ENOSYS; }
 static inline int pci_enable_msix(struct pci_dev *dev,
 				  struct msix_entry *entries, int nvec)
 { return -ENOSYS; }
-static inline void pci_msix_shutdown(struct pci_dev *dev) { }
 static inline void pci_disable_msix(struct pci_dev *dev) { }
 static inline void pci_restore_msi_state(struct pci_dev *dev) { }
 static inline int pci_msi_enabled(void) { return 0; }
@@ -1647,6 +1661,8 @@ int pcibios_set_pcie_reset_state(struct pci_dev *dev,
 int pcibios_add_device(struct pci_dev *dev);
 void pcibios_release_device(struct pci_dev *dev);
 void pcibios_penalize_isa_irq(int irq, int active);
+int pcibios_alloc_irq(struct pci_dev *dev);
+void pcibios_free_irq(struct pci_dev *dev);
 
 #ifdef CONFIG_HIBERNATE_CALLBACKS
 extern struct dev_pm_ops pcibios_pm_ops;
@@ -1844,10 +1860,12 @@ int pci_vpd_find_info_keyword(const u8 *buf, unsigned int off,
 /* PCI <-> OF binding helpers */
 #ifdef CONFIG_OF
 struct device_node;
+struct irq_domain;
 void pci_set_of_node(struct pci_dev *dev);
 void pci_release_of_node(struct pci_dev *dev);
 void pci_set_bus_of_node(struct pci_bus *bus);
 void pci_release_bus_of_node(struct pci_bus *bus);
+struct irq_domain *pci_host_bridge_of_msi_domain(struct pci_bus *bus);
 
 /* Arch may override this (weak) */
 struct device_node *pcibios_get_phb_of_node(struct pci_bus *bus);
@@ -1870,6 +1888,8 @@ static inline void pci_set_bus_of_node(struct pci_bus *bus) { }
 static inline void pci_release_bus_of_node(struct pci_bus *bus) { }
 static inline struct device_node *
 pci_device_to_OF_node(const struct pci_dev *pdev) { return NULL; }
+static inline struct irq_domain *
+pci_host_bridge_of_msi_domain(struct pci_bus *bus) { return NULL; }
 #endif  /* CONFIG_OF */
 
 #ifdef CONFIG_EEH
