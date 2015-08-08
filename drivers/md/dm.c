@@ -944,7 +944,8 @@ static void dec_pending(struct dm_io *io, int error)
 		} else {
 			/* done with normal IO or empty flush */
 			trace_block_bio_complete(md->queue, bio, io_error);
-			bio_endio(bio, io_error);
+			bio->bi_error = io_error;
+			bio_endio(bio);
 		}
 	}
 }
@@ -957,16 +958,14 @@ static void disable_write_same(struct mapped_device *md)
 	limits->max_write_same_sectors = 0;
 }
 
-static void clone_endio(struct bio *bio, int error)
+static void clone_endio(struct bio *bio)
 {
+	int error = bio->bi_error;
 	int r = error;
 	struct dm_target_io *tio = container_of(bio, struct dm_target_io, clone);
 	struct dm_io *io = tio->io;
 	struct mapped_device *md = tio->io->md;
 	dm_endio_fn endio = tio->ti->type->end_io;
-
-	if (!bio_flagged(bio, BIO_UPTODATE) && !error)
-		error = -EIO;
 
 	if (endio) {
 		r = endio(tio->ti, bio, error);
@@ -996,7 +995,7 @@ static void clone_endio(struct bio *bio, int error)
 /*
  * Partial completion handling for request-based dm
  */
-static void end_clone_bio(struct bio *clone, int error)
+static void end_clone_bio(struct bio *clone)
 {
 	struct dm_rq_clone_bio_info *info =
 		container_of(clone, struct dm_rq_clone_bio_info, clone);
@@ -1013,13 +1012,13 @@ static void end_clone_bio(struct bio *clone, int error)
 		 * the remainder.
 		 */
 		return;
-	else if (error) {
+	else if (bio->bi_error) {
 		/*
 		 * Don't notice the error to the upper layer yet.
 		 * The error handling decision is made by the target driver,
 		 * when the request is completed.
 		 */
-		tio->error = error;
+		tio->error = bio->bi_error;
 		return;
 	}
 
@@ -1729,7 +1728,8 @@ static int dm_merge_bvec(struct request_queue *q,
 	struct mapped_device *md = q->queuedata;
 	struct dm_table *map = dm_get_live_table_fast(md);
 	struct dm_target *ti;
-	sector_t max_sectors, max_size = 0;
+	sector_t max_sectors;
+	int max_size = 0;
 
 	if (unlikely(!map))
 		goto out;
@@ -1742,18 +1742,10 @@ static int dm_merge_bvec(struct request_queue *q,
 	 * Find maximum amount of I/O that won't need splitting
 	 */
 	max_sectors = min(max_io_len(bvm->bi_sector, ti),
-			  (sector_t) queue_max_sectors(q));
+			  (sector_t) BIO_MAX_SECTORS);
 	max_size = (max_sectors << SECTOR_SHIFT) - bvm->bi_size;
-
-	/*
-	 * FIXME: this stop-gap fix _must_ be cleaned up (by passing a sector_t
-	 * to the targets' merge function since it holds sectors not bytes).
-	 * Just doing this as an interim fix for stable@ because the more
-	 * comprehensive cleanup of switching to sector_t will impact every
-	 * DM target that implements a ->merge hook.
-	 */
-	if (max_size > INT_MAX)
-		max_size = INT_MAX;
+	if (max_size < 0)
+		max_size = 0;
 
 	/*
 	 * merge_bvec_fn() returns number of bytes
@@ -1761,13 +1753,13 @@ static int dm_merge_bvec(struct request_queue *q,
 	 * max is precomputed maximal io size
 	 */
 	if (max_size && ti->type->merge)
-		max_size = ti->type->merge(ti, bvm, biovec, (int) max_size);
+		max_size = ti->type->merge(ti, bvm, biovec, max_size);
 	/*
 	 * If the target doesn't support merge method and some of the devices
-	 * provided their merge_bvec method (we know this by looking for the
-	 * max_hw_sectors that dm_set_device_limits may set), then we can't
-	 * allow bios with multiple vector entries.  So always set max_size
-	 * to 0, and the code below allows just one page.
+	 * provided their merge_bvec method (we know this by looking at
+	 * queue_max_hw_sectors), then we can't allow bios with multiple vector
+	 * entries.  So always set max_size to 0, and the code below allows
+	 * just one page.
 	 */
 	else if (queue_max_hw_sectors(q) <= PAGE_SIZE >> 9)
 		max_size = 0;
