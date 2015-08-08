@@ -483,6 +483,21 @@ static inline spinlock_t *huge_pte_lockptr(struct hstate *h,
 #define hugepages_supported() (HPAGE_SHIFT != 0)
 #endif
 
+/*
+ * This simple wrappers are to hide MM_HUGETLBPAGES from outside hugetlbfs
+ * subsystem. The counter MM_HUGETLBPAGES is maintained in page unit basis,
+ * so it changes by 512 for example if a 2MB hugepage is mapped or unmapped.
+ */
+static inline int get_hugetlb_rss(struct mm_struct *mm)
+{
+	return get_mm_counter(mm, MM_HUGETLBPAGES);
+}
+
+static inline void mod_hugetlb_rss(struct mm_struct *mm, long value)
+{
+	add_mm_counter(mm, MM_HUGETLBPAGES, value);
+}
+
 #else	/* CONFIG_HUGETLB_PAGE */
 struct hstate {};
 #define alloc_huge_page(v, a, r) NULL
@@ -519,6 +534,9 @@ static inline spinlock_t *huge_pte_lockptr(struct hstate *h,
 {
 	return &mm->page_table_lock;
 }
+
+#define get_hugetlb_rss(mm)	0
+#define mod_hugetlb_rss(mm, value)	do {} while (0)
 #endif	/* CONFIG_HUGETLB_PAGE */
 
 static inline spinlock_t *huge_pte_lock(struct hstate *h,
