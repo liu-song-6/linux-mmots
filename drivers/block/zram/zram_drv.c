@@ -499,7 +499,7 @@ static void zram_meta_free(struct zram_meta *meta, u64 disksize)
 static struct zram_meta *zram_meta_alloc(int device_id, u64 disksize)
 {
 	size_t num_pages;
-	char pool_name[8];
+	char pool_name[15];
 	struct zram_meta *meta = kmalloc(sizeof(*meta), GFP_KERNEL);
 
 	if (!meta)
