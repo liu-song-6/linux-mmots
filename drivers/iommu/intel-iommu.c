@@ -1590,6 +1590,10 @@ static void free_dmar_iommu(struct intel_iommu *iommu)
 
 	/* free context mapping */
 	free_context_table(iommu);
+
+#ifdef CONFIG_INTEL_IOMMU_SVM
+	intel_svm_free_pasid_tables(iommu);
+#endif
 }
 
 static struct dmar_domain *alloc_domain(int flags)
@@ -3116,6 +3120,9 @@ static int __init init_dmars(void)
 
 		if (!ecap_pass_through(iommu->ecap))
 			hw_pass_through = 0;
+#ifdef CONFIG_INTEL_IOMMU_SVM
+		intel_svm_alloc_pasid_tables(iommu);
+#endif
 	}
 
 	if (iommu_pass_through)
@@ -3236,6 +3243,8 @@ static struct iova *intel_alloc_iova(struct device *dev,
 
 	/* Restrict dma_mask to the width that the iommu can handle */
 	dma_mask = min_t(uint64_t, DOMAIN_MAX_ADDR(domain->gaw), dma_mask);
+	/* Ensure we reserve the whole size-aligned region */
+	nrpages = __roundup_pow_of_two(nrpages);
 
 	if (!dmar_forcedac && dma_mask > DMA_BIT_MASK(32)) {
 		/*
@@ -3744,7 +3753,7 @@ static inline int iommu_devinfo_cache_init(void)
 static int __init iommu_init_mempool(void)
 {
 	int ret;
-	ret = iommu_iova_cache_init();
+	ret = iova_cache_get();
 	if (ret)
 		return ret;
 
@@ -3758,7 +3767,7 @@ static int __init iommu_init_mempool(void)
 
 	kmem_cache_destroy(iommu_domain_cache);
 domain_error:
-	iommu_iova_cache_destroy();
+	iova_cache_put();
 
 	return -ENOMEM;
 }
@@ -3767,7 +3776,7 @@ static void __init iommu_exit_mempool(void)
 {
 	kmem_cache_destroy(iommu_devinfo_cache);
 	kmem_cache_destroy(iommu_domain_cache);
-	iommu_iova_cache_destroy();
+	iova_cache_put();
 }
 
 static void quirk_ioat_snb_local_iommu(struct pci_dev *pdev)
@@ -4141,6 +4150,10 @@ static int intel_iommu_add(struct dmar_drhd_unit *dmaru)
 	if (ret)
 		goto out;
 
+#ifdef CONFIG_INTEL_IOMMU_SVM
+	intel_svm_alloc_pasid_tables(iommu);
+#endif
+
 	if (dmaru->ignored) {
 		/*
 		 * we always have to disable PMRs or DMA may fail on this device
@@ -4449,11 +4462,32 @@ static ssize_t intel_iommu_show_ecap(struct device *dev,
 }
 static DEVICE_ATTR(ecap, S_IRUGO, intel_iommu_show_ecap, NULL);
 
+static ssize_t intel_iommu_show_ndoms(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct intel_iommu *iommu = dev_get_drvdata(dev);
+	return sprintf(buf, "%ld\n", cap_ndoms(iommu->cap));
+}
+static DEVICE_ATTR(domains_supported, S_IRUGO, intel_iommu_show_ndoms, NULL);
+
+static ssize_t intel_iommu_show_ndoms_used(struct device *dev,
+					   struct device_attribute *attr,
+					   char *buf)
+{
+	struct intel_iommu *iommu = dev_get_drvdata(dev);
+	return sprintf(buf, "%d\n", bitmap_weight(iommu->domain_ids,
+						  cap_ndoms(iommu->cap)));
+}
+static DEVICE_ATTR(domains_used, S_IRUGO, intel_iommu_show_ndoms_used, NULL);
+
 static struct attribute *intel_iommu_attrs[] = {
 	&dev_attr_version.attr,
 	&dev_attr_address.attr,
 	&dev_attr_cap.attr,
 	&dev_attr_ecap.attr,
+	&dev_attr_domains_supported.attr,
+	&dev_attr_domains_used.attr,
 	NULL,
 };
 
@@ -4533,7 +4567,7 @@ int __init intel_iommu_init(void)
 	for_each_active_iommu(iommu, drhd)
 		iommu->iommu_dev = iommu_device_create(NULL, iommu,
 						       intel_iommu_groups,
-						       iommu->name);
+						       "%s", iommu->name);
 
 	bus_set_iommu(&pci_bus_type, &intel_iommu_ops);
 	bus_register_notifier(&pci_bus_type, &device_nb);

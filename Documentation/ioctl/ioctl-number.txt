@@ -124,6 +124,8 @@ Code  Seq#(hex)	Include File		Comments
 'H'	00-7F	linux/hiddev.h		conflict!
 'H'	00-0F	linux/hidraw.h		conflict!
 'H'	01	linux/mei.h		conflict!
+'H'	02	linux/mei.h		conflict!
+'H'	03	linux/mei.h		conflict!
 'H'	00-0F	sound/asound.h		conflict!
 'H'	20-40	sound/asound_fm.h	conflict!
 'H'	80-8F	sound/sfnt_info.h	conflict!
@@ -263,7 +265,7 @@ Code  Seq#(hex)	Include File		Comments
 's'	all	linux/cdk.h
 't'	00-7F	linux/ppp-ioctl.h
 't'	80-8F	linux/isdn_ppp.h
-'t'	90	linux/toshiba.h
+'t'	90-91	linux/toshiba.h		toshiba and toshiba_acpi SMM
 'u'	00-1F	linux/smb_fs.h		gone
 'u'	20-3F	linux/uvcvideo.h	USB video class host driver
 'v'	00-1F	linux/ext2_fs.h		conflict!
@@ -292,6 +294,7 @@ Code  Seq#(hex)	Include File		Comments
 0x92	00-0F	drivers/usb/mon/mon_bin.c
 0x93	60-7F	linux/auto_fs.h
 0x94	all	fs/btrfs/ioctl.h
+0x95	all	uapi/linux/kdbus.h	kdbus IPC driver
 0x97	00-7F	fs/ceph/ioctl.h		Ceph file system
 0x99	00-0F				537-Addinboard driver
 					<mailto:buk@buks.ipn.de>
