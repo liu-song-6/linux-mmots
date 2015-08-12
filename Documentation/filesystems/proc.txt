@@ -168,6 +168,7 @@ read the file /proc/PID/status:
   VmLck:         0 kB
   VmHWM:       476 kB
   VmRSS:       476 kB
+  VmHugetlbRSS:  0 kB
   VmData:      156 kB
   VmStk:        88 kB
   VmExe:        68 kB
@@ -230,6 +231,7 @@ Table 1-2: Contents of the status files (as of 4.1)
  VmLck                       locked memory size
  VmHWM                       peak resident set size ("high water mark")
  VmRSS                       size of memory portions
+ VmHugetlbRSS                size of hugetlb memory portions
  VmData                      size of data, stack, and text segments
  VmStk                       size of data, stack, and text segments
  VmExe                       size of text segment
@@ -440,20 +442,31 @@ The "proportional set size" (PSS) of a process is the count of pages it has
 in memory, where each page is divided by the number of processes sharing it.
 So if a process has 1000 pages all to itself, and 1000 shared with one other
 process, its PSS will be 1500.
+
 Note that even a page which is part of a MAP_SHARED mapping, but has only
 a single pte mapped, i.e.  is currently used by only one process, is accounted
 as private and not as shared.
+
 "Referenced" indicates the amount of memory currently marked as referenced or
 accessed.
+
 "Anonymous" shows the amount of memory that does not belong to any file.  Even
 a mapping associated with a file may contain anonymous pages: when MAP_PRIVATE
 and a page is modified, the file page is replaced by a private anonymous copy.
-"Swap" shows how much would-be-anonymous memory is also used, but out on
-swap.
+
+"Swap" shows how much would-be-anonymous memory is also used, but out on swap.
+Since 4.3, "RSS" contains the amount of mappings for hugetlb pages. Although
+RSS of hugetlb mappings is maintained separately from normal mappings
+(displayed in "VmHugetlbRSS" field of /proc/PID/status,) /proc/PID/smaps shows
+both mappings in "RSS" field. Userspace applications clearly distinguish the
+type of mapping with 'ht' flag in "VmFlags" field.
+
 "SwapPss" shows proportional swap share of this mapping.
-"VmFlags" field deserves a separate description. This member represents the kernel
-flags associated with the particular virtual memory area in two letter encoded
-manner. The codes are the following:
+
+"VmFlags" field deserves a separate description.  This member represents
+the kernel flags associated with the particular virtual memory area in two
+letter encoded manner.  The codes are the following:
+
     rd  - readable
     wr  - writeable
     ex  - executable
