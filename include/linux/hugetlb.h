@@ -535,8 +535,15 @@ static inline spinlock_t *huge_pte_lockptr(struct hstate *h,
 	return &mm->page_table_lock;
 }
 
-#define get_hugetlb_rss(mm)	0
-#define mod_hugetlb_rss(mm, value)	do {} while (0)
+static inline int get_hugetlb_rss(struct mm_struct *mm)
+{
+	return 0;
+}
+
+static inline void mod_hugetlb_rss(struct mm_struct *mm, long value)
+{
+}
+
 #endif	/* CONFIG_HUGETLB_PAGE */
 
 static inline spinlock_t *huge_pte_lock(struct hstate *h,
