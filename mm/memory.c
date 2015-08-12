@@ -621,12 +621,12 @@ int __pte_alloc_kernel(pmd_t *pmd, unsigned long address)
 	return 0;
 }
 
-static inline void init_rss_vec(int *rss)
+inline void init_rss_vec(int *rss)
 {
 	memset(rss, 0, sizeof(int) * NR_MM_COUNTERS);
 }
 
-static inline void add_mm_rss_vec(struct mm_struct *mm, int *rss)
+inline void add_mm_rss_vec(struct mm_struct *mm, int *rss)
 {
 	int i;
 

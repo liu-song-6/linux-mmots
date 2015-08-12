@@ -1342,6 +1342,9 @@ static inline void sync_mm_rss(struct mm_struct *mm)
 }
 #endif
 
+extern inline void init_rss_vec(int *rss);
+extern inline void add_mm_rss_vec(struct mm_struct *mm, int *rss);
+
 int vma_wants_writenotify(struct vm_area_struct *vma);
 
 extern pte_t *__get_locked_pte(struct mm_struct *mm, unsigned long addr,

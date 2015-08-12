@@ -2971,9 +2971,11 @@ int copy_hugetlb_page_range(struct mm_struct *dst, struct mm_struct *src,
 	unsigned long mmun_start;	/* For mmu_notifiers */
 	unsigned long mmun_end;		/* For mmu_notifiers */
 	int ret = 0;
+	int rss[NR_MM_COUNTERS];
 
 	cow = (vma->vm_flags & (VM_SHARED | VM_MAYWRITE)) == VM_MAYWRITE;
 
+	init_rss_vec(rss);
 	mmun_start = vma->vm_start;
 	mmun_end = vma->vm_end;
 	if (cow)
@@ -3025,6 +3027,7 @@ int copy_hugetlb_page_range(struct mm_struct *dst, struct mm_struct *src,
 			get_page(ptepage);
 			page_dup_rmap(ptepage);
 			set_huge_pte_at(dst, addr, dst_pte, entry);
+			rss[MM_HUGETLBPAGES] += pages_per_huge_page(h);
 		}
 		spin_unlock(src_ptl);
 		spin_unlock(dst_ptl);
@@ -3033,6 +3036,7 @@ int copy_hugetlb_page_range(struct mm_struct *dst, struct mm_struct *src,
 	if (cow)
 		mmu_notifier_invalidate_range_end(src, mmun_start, mmun_end);
 
+	add_mm_rss_vec(dst, rss);
 	return ret;
 }
 
@@ -3051,6 +3055,7 @@ void __unmap_hugepage_range(struct mmu_gather *tlb, struct vm_area_struct *vma,
 	unsigned long sz = huge_page_size(h);
 	const unsigned long mmun_start = start;	/* For mmu_notifiers */
 	const unsigned long mmun_end   = end;	/* For mmu_notifiers */
+	int rss[NR_MM_COUNTERS];
 
 	WARN_ON(!is_vm_hugetlb_page(vma));
 	BUG_ON(start & ~huge_page_mask(h));
@@ -3060,6 +3065,7 @@ void __unmap_hugepage_range(struct mmu_gather *tlb, struct vm_area_struct *vma,
 	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
 	address = start;
 again:
+	init_rss_vec(rss);
 	for (; address < end; address += sz) {
 		ptep = huge_pte_offset(mm, address);
 		if (!ptep)
@@ -3105,6 +3111,7 @@ again:
 		if (huge_pte_dirty(pte))
 			set_page_dirty(page);
 
+		rss[MM_HUGETLBPAGES] -= pages_per_huge_page(h);
 		page_remove_rmap(page);
 		force_flush = !__tlb_remove_page(tlb, page);
 		if (force_flush) {
@@ -3120,6 +3127,7 @@ again:
 unlock:
 		spin_unlock(ptl);
 	}
+	add_mm_rss_vec(mm, rss);
 	/*
 	 * mmu_gather ran out of room to batch pages, we break out of
 	 * the PTE lock to avoid doing the potential expensive TLB invalidate
@@ -3501,6 +3509,7 @@ retry:
 				&& (vma->vm_flags & VM_SHARED)));
 	set_huge_pte_at(mm, address, ptep, new_pte);
 
+	mod_hugetlb_rss(mm, pages_per_huge_page(h));
 	if ((flags & FAULT_FLAG_WRITE) && !(vma->vm_flags & VM_SHARED)) {
 		/* Optimization, do the COW without a second fault */
 		ret = hugetlb_cow(mm, vma, address, ptep, new_pte, page, ptl);
