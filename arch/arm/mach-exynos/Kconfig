@@ -25,10 +25,17 @@ menuconfig ARCH_EXYNOS
 	select S5P_DEV_MFC
 	select SRAM
 	select MFD_SYSCON
+	select THERMAL
+	select EXYNOS_THERMAL
 	help
 	  Support for SAMSUNG EXYNOS SoCs (EXYNOS4/5)
 
 if ARCH_EXYNOS
+
+config S5P_DEV_MFC
+	bool
+	help
+	  Compile in setup memory (init) code for MFC
 
 config ARCH_EXYNOS3
 	bool "SAMSUNG EXYNOS3"
