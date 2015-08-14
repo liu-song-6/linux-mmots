@@ -227,18 +227,16 @@ static struct pci_ops xilinx_pcie_ops = {
  */
 static void xilinx_pcie_destroy_msi(unsigned int irq)
 {
-	struct irq_desc *desc;
 	struct msi_desc *msi;
 	struct xilinx_pcie_port *port;
 
-	desc = irq_to_desc(irq);
-	msi = irq_desc_get_msi_desc(desc);
-	port = sys_to_pcie(msi->dev->bus->sysdata);
-
-	if (!test_bit(irq, msi_irq_in_use))
+	if (!test_bit(irq, msi_irq_in_use)) {
+		msi = irq_get_msi_desc(irq);
+		port = sys_to_pcie(msi_desc_to_pci_sys_data(msi));
 		dev_err(port->dev, "Trying to free unused MSI#%d\n", irq);
-	else
+	} else {
 		clear_bit(irq, msi_irq_in_use);
+	}
 }
 
 /**
@@ -449,14 +447,17 @@ static irqreturn_t xilinx_pcie_intr_handler(int irq, void *data)
 			return IRQ_HANDLED;
 		}
 
-		/* Clear interrupt FIFO register 1 */
-		pcie_write(port, XILINX_PCIE_RPIFR1_ALL_MASK,
-			   XILINX_PCIE_REG_RPIFR1);
+		if (!(val & XILINX_PCIE_RPIFR1_MSI_INTR)) {
+			/* Clear interrupt FIFO register 1 */
+			pcie_write(port, XILINX_PCIE_RPIFR1_ALL_MASK,
+				   XILINX_PCIE_REG_RPIFR1);
 
-		/* Handle INTx Interrupt */
-		val = ((val & XILINX_PCIE_RPIFR1_INTR_MASK) >>
-			XILINX_PCIE_RPIFR1_INTR_SHIFT) + 1;
-		generic_handle_irq(irq_find_mapping(port->irq_domain, val));
+			/* Handle INTx Interrupt */
+			val = ((val & XILINX_PCIE_RPIFR1_INTR_MASK) >>
+				XILINX_PCIE_RPIFR1_INTR_SHIFT) + 1;
+			generic_handle_irq(irq_find_mapping(port->irq_domain,
+							    val));
+		}
 	}
 
 	if (status & XILINX_PCIE_INTR_MSI) {
