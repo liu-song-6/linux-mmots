@@ -15,7 +15,7 @@ DOCBOOKS := z8530book.xml device-drivers.xml \
 	    80211.xml debugobjects.xml sh.xml regulator.xml \
 	    alsa-driver-api.xml writing-an-alsa-driver.xml \
 	    tracepoint.xml drm.xml media_api.xml w1.xml \
-	    writing_musb_glue_layer.xml crypto-API.xml
+	    writing_musb_glue_layer.xml crypto-API.xml iio.xml
 
 include Documentation/DocBook/media/Makefile
 
@@ -56,11 +56,11 @@ htmldocs: $(HTML)
 
 MAN := $(patsubst %.xml, %.9, $(BOOKS))
 mandocs: $(MAN)
-	find $(obj)/man -name '*.9' | xargs gzip -f
+	find $(obj)/man -name '*.9' | xargs gzip -nf
 
 installmandocs: mandocs
 	mkdir -p /usr/local/man/man9/
-	install $(obj)/man/*.9.gz /usr/local/man/man9/
+	install -m 644 $(obj)/man/*.9.gz /usr/local/man/man9/
 
 ###
 #External programs used

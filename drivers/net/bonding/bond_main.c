@@ -786,6 +786,7 @@ static bool bond_should_notify_peers(struct bonding *bond)
 		   slave ? slave->dev->name : "NULL");
 
 	if (!slave || !bond->send_peer_notif ||
+	    !netif_carrier_ok(bond->dev) ||
 	    test_bit(__LINK_STATE_LINKWATCH_PENDING, &slave->dev->state))
 		return false;
 
@@ -3779,7 +3780,6 @@ int bond_update_slave_arr(struct bonding *bond, struct slave *skipslave)
 	struct slave *slave;
 	struct list_head *iter;
 	struct bond_up_slave *new_arr, *old_arr;
-	int slaves_in_agg;
 	int agg_id = 0;
 	int ret = 0;
 
@@ -3810,7 +3810,6 @@ int bond_update_slave_arr(struct bonding *bond, struct slave *skipslave)
 			}
 			goto out;
 		}
-		slaves_in_agg = ad_info.ports;
 		agg_id = ad_info.aggregator_id;
 	}
 	bond_for_each_slave(bond, slave, iter) {
