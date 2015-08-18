@@ -340,6 +340,8 @@ static void loop_make_request(struct request_queue *q, struct bio *old_bio)
 	int rw = bio_rw(old_bio);
 	int inactive;
 
+	blk_queue_split(q, &old_bio, q->bio_split);
+
 	if (!lo)
 		goto err;
 
@@ -365,7 +367,7 @@ static void loop_make_request(struct request_queue *q, struct bio *old_bio)
 	loop_add_bio(lo, old_bio);
 	return;
 err:
-	cfs_bio_io_error(old_bio, old_bio->bi_iter.bi_size);
+	bio_io_error(old_bio);
 }
 
 
@@ -376,7 +378,7 @@ static inline void loop_handle_bio(struct lloop_device *lo, struct bio *bio)
 	while (bio) {
 		struct bio *tmp = bio->bi_next;
 		bio->bi_next = NULL;
-		cfs_bio_endio(bio, bio->bi_iter.bi_size, ret);
+		bio_endio(bio);
 		bio = tmp;
 	}
 }

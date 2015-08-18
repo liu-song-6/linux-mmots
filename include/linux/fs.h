@@ -942,12 +942,18 @@ struct lock_manager_operations {
 
 struct lock_manager {
 	struct list_head list;
+	/*
+	 * NFSv4 and up also want opens blocked during the grace period;
+	 * NLM doesn't care:
+	 */
+	bool block_opens;
 };
 
 struct net;
 void locks_start_grace(struct net *, struct lock_manager *);
 void locks_end_grace(struct lock_manager *);
 int locks_in_grace(struct net *);
+int opens_in_grace(struct net *);
 
 /* that will die - we need it for nfs_lock_info */
 #include <linux/nfs_fs_i.h>
@@ -1259,6 +1265,7 @@ struct mm_struct;
 
 /* sb->s_iflags */
 #define SB_I_CGROUPWB	0x00000001	/* cgroup-aware writeback enabled */
+#define SB_I_NOEXEC	0x00000002	/* Ignore executables on this fs */
 
 /* Possible states of 'frozen' field */
 enum {
@@ -3025,5 +3032,7 @@ static inline bool dir_relax(struct inode *inode)
 	mutex_lock(&inode->i_mutex);
 	return !IS_DEADDIR(inode);
 }
+
+extern bool path_noexec(const struct path *path);
 
 #endif /* _LINUX_FS_H */

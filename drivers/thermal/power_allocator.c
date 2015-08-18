@@ -92,8 +92,8 @@ struct power_allocator_params {
  * Return: The power budget for the next period.
  */
 static u32 pid_controller(struct thermal_zone_device *tz,
-			  unsigned long current_temp,
-			  unsigned long control_temp,
+			  int current_temp,
+			  int control_temp,
 			  u32 max_allocatable_power)
 {
 	s64 p, i, d, power_range;
@@ -102,7 +102,7 @@ static u32 pid_controller(struct thermal_zone_device *tz,
 
 	max_power_frac = int_to_frac(max_allocatable_power);
 
-	err = ((s32)control_temp - (s32)current_temp);
+	err = control_temp - current_temp;
 	err = int_to_frac(err);
 
 	/* Calculate the proportional term */
@@ -223,8 +223,8 @@ static void divvy_up_power(u32 *req_power, u32 *max_power, int num_actors,
 }
 
 static int allocate_power(struct thermal_zone_device *tz,
-			  unsigned long current_temp,
-			  unsigned long control_temp)
+			  int current_temp,
+			  int control_temp)
 {
 	struct thermal_instance *instance;
 	struct power_allocator_params *params = tz->governor_data;
@@ -332,9 +332,9 @@ static int allocate_power(struct thermal_zone_device *tz,
 				      granted_power, total_granted_power,
 				      num_actors, power_range,
 				      max_allocatable_power, current_temp,
-				      (s32)control_temp - (s32)current_temp);
+				      control_temp - current_temp);
 
-	devm_kfree(&tz->device, req_power);
+	kfree(req_power);
 unlock:
 	mutex_unlock(&tz->lock);
 
@@ -417,7 +417,7 @@ static int power_allocator_bind(struct thermal_zone_device *tz)
 {
 	int ret;
 	struct power_allocator_params *params;
-	unsigned long switch_on_temp, control_temp;
+	int switch_on_temp, control_temp;
 	u32 temperature_threshold;
 
 	if (!tz->tzp || !tz->tzp->sustainable_power) {
@@ -426,7 +426,7 @@ static int power_allocator_bind(struct thermal_zone_device *tz)
 		return -EINVAL;
 	}
 
-	params = devm_kzalloc(&tz->device, sizeof(*params), GFP_KERNEL);
+	params = kzalloc(sizeof(*params), GFP_KERNEL);
 	if (!params)
 		return -ENOMEM;
 
@@ -468,21 +468,21 @@ static int power_allocator_bind(struct thermal_zone_device *tz)
 	return 0;
 
 free:
-	devm_kfree(&tz->device, params);
+	kfree(params);
 	return ret;
 }
 
 static void power_allocator_unbind(struct thermal_zone_device *tz)
 {
 	dev_dbg(&tz->device, "Unbinding from thermal zone %d\n", tz->id);
-	devm_kfree(&tz->device, tz->governor_data);
+	kfree(tz->governor_data);
 	tz->governor_data = NULL;
 }
 
 static int power_allocator_throttle(struct thermal_zone_device *tz, int trip)
 {
 	int ret;
-	unsigned long switch_on_temp, control_temp, current_temp;
+	int switch_on_temp, control_temp, current_temp;
 	struct power_allocator_params *params = tz->governor_data;
 
 	/*
