@@ -193,48 +193,6 @@ static int crypto_authenc_esn_encrypt(struct aead_request *req)
 {
 	struct crypto_aead *authenc_esn = crypto_aead_reqtfm(req);
 	struct authenc_esn_request_ctx *areq_ctx = aead_request_ctx(req);
-<<<<<<< HEAD
-	struct scatterlist *dst = req->dst;
-	struct scatterlist *assoc = req->assoc;
-	struct scatterlist *cipher = areq_ctx->cipher;
-	struct scatterlist *hsg = areq_ctx->hsg;
-	struct scatterlist *tsg = areq_ctx->tsg;
-	unsigned int ivsize = crypto_aead_ivsize(authenc_esn);
-	unsigned int cryptlen = req->cryptlen;
-	struct page *dstp;
-	u8 *vdst;
-	u8 *hash;
-
-	dstp = sg_page(dst);
-	vdst = PageHighMem(dstp) ? NULL : page_address(dstp) + dst->offset;
-
-	if (ivsize) {
-		sg_init_table(cipher, 2);
-		sg_set_buf(cipher, iv, ivsize);
-		scatterwalk_crypto_chain(cipher, dst, vdst == iv + ivsize, 2);
-		dst = cipher;
-		cryptlen += ivsize;
-	}
-
-	if (assoc->length < 12)
-		return -EINVAL;
-
-	sg_init_table(hsg, 2);
-	sg_set_page(hsg, sg_page(assoc), 4, assoc->offset);
-	sg_set_page(hsg + 1, sg_page(assoc), 4, assoc->offset + 8);
-
-	sg_init_table(tsg, 1);
-	sg_set_page(tsg, sg_page(assoc), 4, assoc->offset + 4);
-
-	areq_ctx->cryptlen = cryptlen;
-	areq_ctx->headlen = 8;
-	areq_ctx->trailen = 4;
-	areq_ctx->sg = dst;
-
-	areq_ctx->complete = authenc_esn_geniv_ahash_done;
-	areq_ctx->update_complete = authenc_esn_geniv_ahash_update_done;
-	areq_ctx->update_complete2 = authenc_esn_geniv_ahash_update_done2;
-=======
 	struct crypto_authenc_esn_ctx *ctx = crypto_aead_ctx(authenc_esn);
 	struct ablkcipher_request *abreq = (void *)(areq_ctx->tail
 						    + ctx->reqoff);
@@ -243,7 +201,6 @@ static int crypto_authenc_esn_encrypt(struct aead_request *req)
 	unsigned int cryptlen = req->cryptlen;
 	struct scatterlist *src, *dst;
 	int err;
->>>>>>> linux-next/akpm-base
 
 	sg_init_table(areq_ctx->src, 2);
 	src = scatterwalk_ffwd(areq_ctx->src, req->src, assoclen);
@@ -320,42 +277,6 @@ static int crypto_authenc_esn_decrypt(struct aead_request *req)
 {
 	struct crypto_aead *authenc_esn = crypto_aead_reqtfm(req);
 	struct authenc_esn_request_ctx *areq_ctx = aead_request_ctx(req);
-<<<<<<< HEAD
-	struct scatterlist *src = req->src;
-	struct scatterlist *assoc = req->assoc;
-	struct scatterlist *cipher = areq_ctx->cipher;
-	struct scatterlist *hsg = areq_ctx->hsg;
-	struct scatterlist *tsg = areq_ctx->tsg;
-	unsigned int ivsize = crypto_aead_ivsize(authenc_esn);
-	struct page *srcp;
-	u8 *vsrc;
-
-	srcp = sg_page(src);
-	vsrc = PageHighMem(srcp) ? NULL : page_address(srcp) + src->offset;
-
-	if (ivsize) {
-		sg_init_table(cipher, 2);
-		sg_set_buf(cipher, iv, ivsize);
-		scatterwalk_crypto_chain(cipher, src, vsrc == iv + ivsize, 2);
-		src = cipher;
-		cryptlen += ivsize;
-	}
-
-	if (assoc->length < 12)
-		return -EINVAL;
-
-	sg_init_table(hsg, 2);
-	sg_set_page(hsg, sg_page(assoc), 4, assoc->offset);
-	sg_set_page(hsg + 1, sg_page(assoc), 4, assoc->offset + 8);
-
-	sg_init_table(tsg, 1);
-	sg_set_page(tsg, sg_page(assoc), 4, assoc->offset + 4);
-
-	areq_ctx->cryptlen = cryptlen;
-	areq_ctx->headlen = 8;
-	areq_ctx->trailen = 4;
-	areq_ctx->sg = src;
-=======
 	struct crypto_authenc_esn_ctx *ctx = crypto_aead_ctx(authenc_esn);
 	struct ahash_request *ahreq = (void *)(areq_ctx->tail + ctx->reqoff);
 	unsigned int authsize = crypto_aead_authsize(authenc_esn);
@@ -382,7 +303,6 @@ static int crypto_authenc_esn_decrypt(struct aead_request *req)
 
 	if (!authsize)
 		goto tail;
->>>>>>> linux-next/akpm-base
 
 	/* Move high-order bits of sequence number to the end. */
 	scatterwalk_map_and_copy(tmp, dst, 0, 8, 0);
