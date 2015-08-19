@@ -25,11 +25,6 @@ static inline bool scsi_sense_is_deferred(const struct scsi_sense_hdr *sshdr)
 extern int scsi_get_sense_info_fld(const u8 * sense_buffer, int sb_len,
 				   u64 * info_out);
 
-<<<<<<< HEAD
-extern void scsi_build_sense_buffer(int desc, u8 *buf, u8 key, u8 asc, u8 ascq);
-
-=======
->>>>>>> linux-next/akpm-base
 extern int scsi_ioctl_reset(struct scsi_device *, int __user *);
 
 struct scsi_eh_save {

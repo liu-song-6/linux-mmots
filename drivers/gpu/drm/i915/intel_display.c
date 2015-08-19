@@ -12883,17 +12883,10 @@ static int haswell_mode_set_planes_workaround(struct drm_atomic_state *state)
 		if (IS_ERR(pipe_config))
 			return PTR_ERR(pipe_config);
 
-<<<<<<< HEAD
-	/* Now enable the clocks, plane, pipe, and connectors that we set up. */
-	for_each_crtc_in_state(state, crtc, crtc_state, i) {
-		if (!needs_modeset(crtc->state) || !crtc->state->enable) {
-			drm_atomic_helper_commit_planes_on_crtc(crtc_state);
-=======
 		pipe_config->hsw_workaround_pipe = INVALID_PIPE;
 
 		if (!pipe_config->base.active ||
 		    needs_modeset(&pipe_config->base))
->>>>>>> linux-next/akpm-base
 			continue;
 		}
 
@@ -12901,12 +12894,7 @@ static int haswell_mode_set_planes_workaround(struct drm_atomic_state *state)
 		if (enabled_pipe != INVALID_PIPE)
 			return 0;
 
-<<<<<<< HEAD
-		dev_priv->display.crtc_enable(crtc);
-		drm_atomic_helper_commit_planes_on_crtc(crtc_state);
-=======
 		enabled_pipe = intel_crtc->pipe;
->>>>>>> linux-next/akpm-base
 	}
 
 	if (enabled_pipe != INVALID_PIPE)
@@ -13111,14 +13099,6 @@ static int intel_atomic_commit(struct drm_device *dev,
 		any_ms = true;
 		intel_pre_plane_update(intel_crtc);
 
-<<<<<<< HEAD
-static int intel_crtc_set_config(struct drm_mode_set *set)
-{
-	struct drm_device *dev;
-	struct drm_atomic_state *state = NULL;
-	struct intel_crtc_state *pipe_config;
-	int ret;
-=======
 		if (crtc_state->active) {
 			intel_crtc_disable_planes(crtc, crtc_state->plane_mask);
 			dev_priv->display.crtc_disable(crtc);
@@ -13133,7 +13113,6 @@ static int intel_crtc_set_config(struct drm_mode_set *set)
 
 	if (any_ms) {
 		intel_shared_dpll_commit(state);
->>>>>>> linux-next/akpm-base
 
 		drm_atomic_helper_update_legacy_modeset_state(state->dev, state);
 		modeset_update_crtc_power_domains(state);
@@ -13166,13 +13145,6 @@ static int intel_crtc_set_config(struct drm_mode_set *set)
 
 	drm_atomic_state_free(state);
 
-<<<<<<< HEAD
-	ret = intel_set_mode_with_config(set->crtc, pipe_config, true);
-
-	if (ret) {
-		DRM_DEBUG_KMS("failed to set mode on [CRTC:%d], err = %d\n",
-			      set->crtc->base.id, ret);
-=======
 	return 0;
 }
 
@@ -13207,7 +13179,6 @@ retry:
 		drm_atomic_state_clear(state);
 		drm_modeset_backoff(state->acquire_ctx);
 		goto retry;
->>>>>>> linux-next/akpm-base
 	}
 
 	if (ret)
@@ -13449,90 +13420,11 @@ intel_check_primary_plane(struct drm_plane *plane,
 		can_position = true;
 	}
 
-<<<<<<< HEAD
-	ret = drm_plane_helper_check_update(plane, crtc, fb,
-					    src, dest, clip,
-					    min_scale,
-					    max_scale,
-					    can_position, true,
-					    &state->visible);
-	if (ret)
-		return ret;
-
-	if (crtc_state ? crtc_state->base.active : intel_crtc->active) {
-		struct intel_plane_state *old_state =
-			to_intel_plane_state(plane->state);
-
-		intel_crtc->atomic.wait_for_flips = true;
-
-		/*
-		 * FBC does not work on some platforms for rotated
-		 * planes, so disable it when rotation is not 0 and
-		 * update it when rotation is set back to 0.
-		 *
-		 * FIXME: This is redundant with the fbc update done in
-		 * the primary plane enable function except that that
-		 * one is done too late. We eventually need to unify
-		 * this.
-		 */
-		if (state->visible &&
-		    INTEL_INFO(dev)->gen <= 4 && !IS_G4X(dev) &&
-		    dev_priv->fbc.crtc == intel_crtc &&
-		    state->base.rotation != BIT(DRM_ROTATE_0)) {
-			intel_crtc->atomic.disable_fbc = true;
-		}
-
-		if (state->visible && !old_state->visible) {
-			/*
-			 * BDW signals flip done immediately if the plane
-			 * is disabled, even if the plane enable is already
-			 * armed to occur at the next vblank :(
-			 */
-			if (IS_BROADWELL(dev))
-				intel_crtc->atomic.wait_vblank = true;
-
-			if (crtc_state)
-				intel_crtc->atomic.post_enable_primary = true;
-		}
-
-		/*
-		 * FIXME: Actually if we will still have any other plane enabled
-		 * on the pipe we could let IPS enabled still, but for
-		 * now lets consider that when we make primary invisible
-		 * by setting DSPCNTR to 0 on update_primary_plane function
-		 * IPS needs to be disable.
-		 */
-		if (!state->visible || !fb)
-			intel_crtc->atomic.disable_ips = true;
-
-		if (!state->visible && old_state->visible &&
-		    crtc_state && !needs_modeset(&crtc_state->base))
-			intel_crtc->atomic.pre_disable_primary = true;
-
-		intel_crtc->atomic.fb_bits |=
-			INTEL_FRONTBUFFER_PRIMARY(intel_crtc->pipe);
-
-		intel_crtc->atomic.update_fbc = true;
-
-		if (intel_wm_need_update(plane, &state->base))
-			intel_crtc->atomic.update_wm = true;
-	}
-
-	if (INTEL_INFO(dev)->gen >= 9) {
-		ret = skl_update_scaler_users(intel_crtc, crtc_state,
-			to_intel_plane(plane), state, 0);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
-=======
 	return drm_plane_helper_check_update(plane, crtc, fb, &state->src,
 					     &state->dst, &state->clip,
 					     min_scale, max_scale,
 					     can_position, true,
 					     &state->visible);
->>>>>>> linux-next/akpm-base
 }
 
 static void
@@ -15192,11 +15084,6 @@ static void intel_modeset_readout_hw_state(struct drm_device *dev)
 		__drm_atomic_helper_crtc_destroy_state(&crtc->base, crtc->base.state);
 		memset(crtc->config, 0, sizeof(*crtc->config));
 		crtc->config->base.crtc = &crtc->base;
-<<<<<<< HEAD
-
-		crtc->config->quirks |= PIPE_CONFIG_QUIRK_INHERITED_MODE;
-=======
->>>>>>> linux-next/akpm-base
 
 		crtc->active = dev_priv->display.get_pipe_config(crtc,
 								 crtc->config);
