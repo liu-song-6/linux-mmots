@@ -11,6 +11,7 @@
  */
 
 #include <linux/sched.h>
+#include <linux/mm_types.h>
 
 /*
  * Returns true if the task does not share ->mm with another thread/process.

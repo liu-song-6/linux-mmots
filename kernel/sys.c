@@ -6,6 +6,7 @@
 
 #include <linux/export.h>
 #include <linux/mm.h>
+#include <linux/mm-flags.h>
 #include <linux/utsname.h>
 #include <linux/mman.h>
 #include <linux/reboot.h>

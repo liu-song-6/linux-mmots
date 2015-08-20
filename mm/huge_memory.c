@@ -8,6 +8,7 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/mm.h>
+#include <linux/mm-flags.h>
 #include <linux/sched.h>
 #include <linux/highmem.h>
 #include <linux/hugetlb.h>

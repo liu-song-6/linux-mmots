@@ -16,6 +16,7 @@
 #include <linux/stat.h>
 #include <linux/sched.h>
 #include <linux/mm.h>
+#include <linux/mm-flags.h>
 #include <linux/mman.h>
 #include <linux/errno.h>
 #include <linux/signal.h>

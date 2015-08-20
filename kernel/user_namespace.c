@@ -14,6 +14,7 @@
 #include <linux/cred.h>
 #include <linux/securebits.h>
 #include <linux/keyctl.h>
+#include <linux/mm_types.h>
 #include <linux/key-type.h>
 #include <keys/user-type.h>
 #include <linux/seq_file.h>
