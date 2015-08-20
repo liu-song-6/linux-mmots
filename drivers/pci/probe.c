@@ -326,8 +326,7 @@ static void pci_read_bases(struct pci_dev *dev, unsigned int howmany, int rom)
 		struct resource *res = &dev->resource[PCI_ROM_RESOURCE];
 		dev->rom_base_reg = rom;
 		res->flags = IORESOURCE_MEM | IORESOURCE_PREFETCH |
-				IORESOURCE_READONLY | IORESOURCE_CACHEABLE |
-				IORESOURCE_SIZEALIGN;
+				IORESOURCE_READONLY | IORESOURCE_SIZEALIGN;
 		__pci_read_base(dev, pci_bar_mem32, res, rom);
 	}
 }
@@ -661,6 +660,35 @@ static void pci_set_bus_speed(struct pci_bus *bus)
 	}
 }
 
+static struct irq_domain *pci_host_bridge_msi_domain(struct pci_bus *bus)
+{
+	struct irq_domain *d;
+
+	/*
+	 * Any firmware interface that can resolve the msi_domain
+	 * should be called from here.
+	 */
+	d = pci_host_bridge_of_msi_domain(bus);
+
+	return d;
+}
+
+static void pci_set_bus_msi_domain(struct pci_bus *bus)
+{
+	struct irq_domain *d;
+
+	/*
+	 * Either bus is the root, and we must obtain it from the
+	 * firmware, or we inherit it from the bridge device.
+	 */
+	if (pci_is_root_bus(bus))
+		d = pci_host_bridge_msi_domain(bus);
+	else
+		d = dev_get_msi_domain(&bus->self->dev);
+
+	dev_set_msi_domain(&bus->dev, d);
+}
+
 static struct pci_bus *pci_alloc_child_bus(struct pci_bus *parent,
 					   struct pci_dev *bridge, int busnr)
 {
@@ -714,6 +742,7 @@ static struct pci_bus *pci_alloc_child_bus(struct pci_bus *parent,
 	bridge->subordinate = child;
 
 add_dev:
+	pci_set_bus_msi_domain(child);
 	ret = device_register(&child->dev);
 	WARN_ON(ret < 0);
 
@@ -826,6 +855,9 @@ int pci_scan_bridge(struct pci_bus *bus, struct pci_dev *dev, int max, int pass)
 			child->bridge_ctl = bctl;
 		}
 
+		/* Read and initialize bridge resources */
+		pci_read_bridge_bases(child);
+
 		cmax = pci_scan_child_bus(child);
 		if (cmax > subordinate)
 			dev_warn(&dev->dev, "bridge has subordinate %02x but max busn %02x\n",
@@ -886,6 +918,9 @@ int pci_scan_bridge(struct pci_bus *bus, struct pci_dev *dev, int max, int pass)
 
 		if (!is_cardbus) {
 			child->bridge_ctl = bctl;
+
+			/* Read and initialize bridge resources */
+			pci_read_bridge_bases(child);
 			max = pci_scan_child_bus(child);
 		} else {
 			/*
@@ -1133,7 +1168,6 @@ int pci_setup_device(struct pci_dev *dev)
 {
 	u32 class;
 	u8 hdr_type;
-	struct pci_slot *slot;
 	int pos = 0;
 	struct pci_bus_region region;
 	struct resource *res;
@@ -1149,10 +1183,7 @@ int pci_setup_device(struct pci_dev *dev)
 	dev->error_state = pci_channel_io_normal;
 	set_pcie_port_type(dev);
 
-	list_for_each_entry(slot, &dev->bus->slots, list)
-		if (PCI_SLOT(dev->devfn) == slot->number)
-			dev->slot = slot;
-
+	pci_dev_assign_slot(dev);
 	/* Assume 32-bit PCI; let 64-bit PCI cards (which are far rarer)
 	   set this higher, assuming the system even supports it.  */
 	dev->dma_mask = 0xffffffff;
@@ -1268,7 +1299,7 @@ int pci_setup_device(struct pci_dev *dev)
 	bad:
 		dev_err(&dev->dev, "ignoring class %#08x (doesn't match header type %02x)\n",
 			dev->class, dev->hdr_type);
-		dev->class = PCI_CLASS_NOT_DEFINED;
+		dev->class = PCI_CLASS_NOT_DEFINED << 8;
 	}
 
 	/* We found a fine healthy device, go go go... */
@@ -1540,8 +1571,22 @@ static void pci_init_capabilities(struct pci_dev *dev)
 	/* Single Root I/O Virtualization */
 	pci_iov_init(dev);
 
+	/* Address Translation Services */
+	pci_ats_init(dev);
+
 	/* Enable ACS P2P upstream forwarding */
 	pci_enable_acs(dev);
+}
+
+static void pci_set_msi_domain(struct pci_dev *dev)
+{
+	/*
+	 * If no domain has been set through the pcibios_add_device
+	 * callback, inherit the default from the bus device.
+	 */
+	if (!dev_get_msi_domain(&dev->dev))
+		dev_set_msi_domain(&dev->dev,
+				   dev_get_msi_domain(&dev->bus->dev));
 }
 
 void pci_device_add(struct pci_dev *dev, struct pci_bus *bus)
@@ -1584,6 +1629,9 @@ void pci_device_add(struct pci_dev *dev, struct pci_bus *bus)
 
 	ret = pcibios_add_device(dev);
 	WARN_ON(ret < 0);
+
+	/* Setup MSI irq domain */
+	pci_set_msi_domain(dev);
 
 	/* Notifier could use PCI capabilities */
 	dev->match_driver = false;
@@ -1975,6 +2023,7 @@ struct pci_bus *pci_create_root_bus(struct device *parent, int bus,
 	b->bridge = get_device(&bridge->dev);
 	device_enable_async_suspend(b->bridge);
 	pci_set_bus_of_node(b);
+	pci_set_bus_msi_domain(b);
 
 	if (!parent)
 		set_dev_node(b->bridge, pcibus_to_node(b));
