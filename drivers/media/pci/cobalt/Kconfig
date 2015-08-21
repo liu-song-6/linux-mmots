@@ -1,7 +1,12 @@
 config VIDEO_COBALT
 	tristate "Cisco Cobalt support"
 	depends on VIDEO_V4L2 && I2C && MEDIA_CONTROLLER
+<<<<<<< HEAD
 	depends on PCI_MSI && MTD_COMPLEX_MAPPINGS && GPIOLIB
+=======
+	depends on PCI_MSI && MTD_COMPLEX_MAPPINGS
+	depends on GPIOLIB || COMPILE_TEST
+>>>>>>> linux-next/akpm-base
 	depends on SND
 	select I2C_ALGOBIT
 	select VIDEO_ADV7604
