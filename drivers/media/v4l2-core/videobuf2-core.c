@@ -1215,11 +1215,8 @@ void vb2_buffer_done(struct vb2_buffer *vb, enum vb2_buffer_state state)
 	atomic_dec(&q->owned_by_drv_count);
 	spin_unlock_irqrestore(&q->done_lock, flags);
 
-<<<<<<< HEAD
-=======
 	trace_vb2_buf_done(q, vb);
 
->>>>>>> linux-next/akpm-base
 	switch (state) {
 	case VB2_BUF_STATE_QUEUED:
 		return;
