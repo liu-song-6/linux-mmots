@@ -180,6 +180,8 @@ static inline unsigned int isa_virt_to_bus(volatile void *address)
  */
 extern void __iomem *ioremap_nocache(resource_size_t offset, unsigned long size);
 extern void __iomem *ioremap_uc(resource_size_t offset, unsigned long size);
+#define ioremap_uc ioremap_uc
+
 extern void __iomem *ioremap_cache(resource_size_t offset, unsigned long size);
 extern void __iomem *ioremap_prot(resource_size_t offset, unsigned long size,
 				unsigned long prot_val);
@@ -248,11 +250,7 @@ static inline void flush_write_buffers(void)
 #endif
 }
 
-static inline void __pmem *arch_memremap_pmem(resource_size_t offset,
-	unsigned long size)
-{
-	return (void __force __pmem *) ioremap_cache(offset, size);
-}
+#define ARCH_MEMREMAP_PMEM MEMREMAP_WB
 
 #endif /* __KERNEL__ */
 
