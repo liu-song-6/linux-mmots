@@ -557,6 +557,30 @@ TRACE_EVENT(ocfs2_validate_extent_block,
 	TP_printk("%llu ", __entry->blkno)
 );
 
+TRACE_EVENT(ocfs2_filecheck_validate_extent_block,
+	TP_PROTO(unsigned long long blkno),
+	TP_ARGS(blkno),
+	TP_STRUCT__entry(
+		__field(unsigned long long, blkno)
+	),
+	TP_fast_assign(
+		__entry->blkno = blkno;
+	),
+	TP_printk("%llu ", __entry->blkno)
+);
+
+TRACE_EVENT(ocfs2_filecheck_repair_extent_block,
+	TP_PROTO(unsigned long long blkno),
+	TP_ARGS(blkno),
+	TP_STRUCT__entry(
+		__field(unsigned long long, blkno)
+	),
+	TP_fast_assign(
+		__entry->blkno = blkno;
+	),
+	TP_printk("%llu ", __entry->blkno)
+);
+
 TRACE_EVENT(ocfs2_rotate_leaf,
 	TP_PROTO(unsigned int insert_cpos, int insert_index,
 		 int has_empty, int next_free,

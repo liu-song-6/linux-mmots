@@ -92,6 +92,10 @@ void ocfs2_init_refcount_extent_tree(struct ocfs2_extent_tree *et,
 int ocfs2_read_extent_block(struct ocfs2_caching_info *ci, u64 eb_blkno,
 			    struct buffer_head **bh);
 
+int
+ocfs2_filecheck_read_extent_block(struct ocfs2_caching_info *ci, u64 eb_blkno,
+				struct buffer_head **bh, unsigned int flags);
+
 struct ocfs2_alloc_context;
 int ocfs2_insert_extent(handle_t *handle,
 			struct ocfs2_extent_tree *et,
