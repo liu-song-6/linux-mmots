@@ -396,7 +396,7 @@ int register_mem_sect_under_node(struct memory_block *mem_blk, int nid)
 		 * memory block could have several absent sections from start.
 		 * skip pfn range from absent section
 		 */
-		if (!present_section_nr(pfn_to_section_nr(pfn))) {
+		if (!pfn_present(pfn)) {
 			pfn = round_down(pfn + PAGES_PER_SECTION,
 					 PAGES_PER_SECTION) - 1;
 			continue;
