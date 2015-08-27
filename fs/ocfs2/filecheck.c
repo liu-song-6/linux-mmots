@@ -31,7 +31,10 @@
 #include "ocfs2.h"
 #include "ocfs2_fs.h"
 #include "stackglue.h"
+#include "dlmglue.h"
 #include "inode.h"
+#include "alloc.h"
+#include "journal.h"
 
 #include "filecheck.h"
 
@@ -45,6 +48,7 @@ static const char * const ocfs2_filecheck_errs[] = {
 	"INPROGRESS",
 	"READONLY",
 	"INVALIDINO",
+	"INVALIDEXT",
 	"BLOCKECC",
 	"BLOCKNO",
 	"VALIDFLAG",

@@ -350,6 +350,9 @@ void ocfs2_journal_dirty(handle_t *handle, struct buffer_head *bh);
 /* simple file updates like chmod, etc. */
 #define OCFS2_INODE_UPDATE_CREDITS 1
 
+/* extent block update */
+#define OCFS2_EXTENT_BLOCK_UPDATE_CREDITS 1
+
 /* extended attribute block update */
 #define OCFS2_XATTR_BLOCK_UPDATE_CREDITS 1
 
