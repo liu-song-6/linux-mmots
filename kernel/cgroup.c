@@ -1339,9 +1339,10 @@ static int cgroup_show_options(struct seq_file *seq,
 	struct cgroup_subsys *ss;
 	int ssid;
 
-	for_each_subsys(ss, ssid)
-		if (root->subsys_mask & (1 << ssid))
-			seq_show_option(seq, ss->name, NULL);
+	if (root != &cgrp_dfl_root)
+		for_each_subsys(ss, ssid)
+			if (root->subsys_mask & (1 << ssid))
+				seq_show_option(seq, ss->name, NULL);
 	if (root->flags & CGRP_ROOT_NOPREFIX)
 		seq_puts(seq, ",noprefix");
 	if (root->flags & CGRP_ROOT_XATTR)
