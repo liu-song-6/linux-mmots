@@ -961,6 +961,7 @@ static const struct net_device_ops tap_netdev_ops = {
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= tun_poll_controller,
 #endif
+	.ndo_features_check	= passthru_features_check,
 };
 
 static void tun_flow_init(struct tun_struct *tun)
@@ -1065,7 +1066,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 		linear = len;
 
 	skb = sock_alloc_send_pskb(sk, prepad + linear, len - linear, noblock,
-				   &err, 0);
+				   &err, 6);
 	if (!skb)
 		return ERR_PTR(err);
 
