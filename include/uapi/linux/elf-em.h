@@ -39,6 +39,10 @@
 #define EM_TI_C6000	140	/* TI C6X DSPs */
 #define EM_AARCH64	183	/* ARM 64 bit */
 #define EM_TILEPRO	188	/* Tilera TILEPro */
+<<<<<<< HEAD
+=======
+#define EM_MICROBLAZE	189	/* Xilinx MicroBlaze */
+>>>>>>> linux-next/akpm-base
 #define EM_TILEGX	191	/* Tilera TILE-Gx */
 #define EM_FRV		0x5441	/* Fujitsu FR-V */
 #define EM_AVR32	0x18ad	/* Atmel AVR32 */

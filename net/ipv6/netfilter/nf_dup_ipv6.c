@@ -11,7 +11,10 @@
 #include <linux/module.h>
 #include <linux/percpu.h>
 #include <linux/skbuff.h>
+<<<<<<< HEAD
 #include <linux/netfilter.h>
+=======
+>>>>>>> linux-next/akpm-base
 #include <net/ipv6.h>
 #include <net/ip6_route.h>
 #include <net/netfilter/ipv6/nf_dup_ipv6.h>

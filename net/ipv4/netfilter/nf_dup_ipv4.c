@@ -13,7 +13,10 @@
 #include <linux/percpu.h>
 #include <linux/route.h>
 #include <linux/skbuff.h>
+<<<<<<< HEAD
 #include <linux/netfilter.h>
+=======
+>>>>>>> linux-next/akpm-base
 #include <net/checksum.h>
 #include <net/icmp.h>
 #include <net/ip.h>

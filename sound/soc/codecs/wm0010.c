@@ -672,8 +672,10 @@ static int wm0010_boot(struct snd_soc_codec *codec)
 		}
 
 		img_swap = kzalloc(len, GFP_KERNEL | GFP_DMA);
-		if (!img_swap)
+		if (!img_swap) {
+			kfree(out);
 			goto abort;
+		}
 
 		/* We need to re-order for 0010 */
 		byte_swap_64((u64 *)&pll_rec, img_swap, len);
@@ -690,6 +692,8 @@ static int wm0010_boot(struct snd_soc_codec *codec)
 		ret = spi_sync(spi, &m);
 		if (ret != 0) {
 			dev_err(codec->dev, "First PLL write failed: %d\n", ret);
+			kfree(img_swap);
+			kfree(out);
 			goto abort;
 		}
 
@@ -697,6 +701,8 @@ static int wm0010_boot(struct snd_soc_codec *codec)
 		ret = spi_sync(spi, &m);
 		if (ret != 0) {
 			dev_err(codec->dev, "Second PLL write failed: %d\n", ret);
+			kfree(img_swap);
+			kfree(out);
 			goto abort;
 		}
 
@@ -953,7 +959,7 @@ static int wm0010_spi_probe(struct spi_device *spi)
 		trigger = IRQF_TRIGGER_FALLING;
 	trigger |= IRQF_ONESHOT;
 
-	ret = request_threaded_irq(irq, NULL, wm0010_irq, trigger | IRQF_ONESHOT,
+	ret = request_threaded_irq(irq, NULL, wm0010_irq, trigger,
 				   "wm0010", wm0010);
 	if (ret) {
 		dev_err(wm0010->dev, "Failed to request IRQ %d: %d\n",
@@ -1003,7 +1009,6 @@ static int wm0010_spi_remove(struct spi_device *spi)
 static struct spi_driver wm0010_spi_driver = {
 	.driver = {
 		.name	= "wm0010",
-		.bus 	= &spi_bus_type,
 		.owner	= THIS_MODULE,
 	},
 	.probe		= wm0010_spi_probe,

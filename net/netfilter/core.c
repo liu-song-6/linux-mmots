@@ -74,6 +74,8 @@ static struct list_head *nf_find_hook_list(struct net *net,
 		if (reg->dev && dev_net(reg->dev) == net)
 			hook_list = &reg->dev->nf_hooks_ingress;
 #endif
+<<<<<<< HEAD
+=======
 	}
 	return hook_list;
 }
@@ -100,8 +102,38 @@ int nf_register_net_hook(struct net *net, const struct nf_hook_ops *reg)
 	if (!hook_list) {
 		kfree(entry);
 		return -ENOENT;
+>>>>>>> linux-next/akpm-base
+	}
+	return hook_list;
+}
+
+struct nf_hook_entry {
+	const struct nf_hook_ops	*orig_ops;
+	struct nf_hook_ops		ops;
+};
+
+int nf_register_net_hook(struct net *net, const struct nf_hook_ops *reg)
+{
+	struct list_head *hook_list;
+	struct nf_hook_entry *entry;
+	struct nf_hook_ops *elem;
+
+<<<<<<< HEAD
+	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return -ENOMEM;
+
+	entry->orig_ops	= reg;
+	entry->ops	= *reg;
+
+	hook_list = nf_find_hook_list(net, reg);
+	if (!hook_list) {
+		kfree(entry);
+		return -ENOENT;
 	}
 
+=======
+>>>>>>> linux-next/akpm-base
 	mutex_lock(&nf_hook_mutex);
 	list_for_each_entry(elem, hook_list, list) {
 		if (reg->priority < elem->priority)
@@ -388,12 +420,15 @@ EXPORT_SYMBOL(nf_conntrack_destroy);
 struct nfq_ct_hook __rcu *nfq_ct_hook __read_mostly;
 EXPORT_SYMBOL_GPL(nfq_ct_hook);
 
+<<<<<<< HEAD
 /* Built-in default zone used e.g. by modules. */
 const struct nf_conntrack_zone nf_ct_zone_dflt = {
 	.id	= NF_CT_DEFAULT_ZONE_ID,
 	.dir	= NF_CT_DEFAULT_ZONE_DIR,
 };
 EXPORT_SYMBOL_GPL(nf_ct_zone_dflt);
+=======
+>>>>>>> linux-next/akpm-base
 #endif /* CONFIG_NF_CONNTRACK */
 
 #ifdef CONFIG_NF_NAT_NEEDED
