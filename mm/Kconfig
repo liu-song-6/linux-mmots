@@ -635,6 +635,9 @@ config MAX_STACK_SIZE_MB
 config ARCH_SUPPORTS_DEFERRED_STRUCT_PAGE_INIT
 	bool
 
+config FRAME_VECTOR
+	bool
+
 config DEFERRED_STRUCT_PAGE_INIT
 	bool "Defer initialisation of struct pages to kswapd"
 	default n
