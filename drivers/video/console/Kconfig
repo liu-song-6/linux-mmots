@@ -9,7 +9,11 @@ config VGA_CONSOLE
 	depends on !4xx && !8xx && !SPARC && !M68K && !PARISC && !FRV && \
 		!SUPERH && !BLACKFIN && !AVR32 && !MN10300 && !CRIS && \
 		(!ARM || ARCH_FOOTBRIDGE || ARCH_INTEGRATOR || ARCH_NETWINDER) && \
+<<<<<<< HEAD
 		!ARM64 && !ARC && !MICROBLAZE
+=======
+		!ARM64 && !MICROBLAZE && !ARC
+>>>>>>> linux-next/akpm-base
 	default y
 	help
 	  Saying Y here will allow you to use Linux in text mode through a

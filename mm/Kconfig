@@ -661,6 +661,9 @@ config IDLE_PAGE_TRACKING
 
 	  See Documentation/vm/idle_page_tracking.txt for more details.
 
+config FRAME_VECTOR
+	bool
+
 config ZONE_DEVICE
 	bool "Device memory (pmem, etc...) hotplug support" if EXPERT
 	default !ZONE_DMA
