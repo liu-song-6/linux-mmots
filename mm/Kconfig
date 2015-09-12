@@ -649,6 +649,7 @@ config DEFERRED_STRUCT_PAGE_INIT
 	  processes running early in the lifetime of the systemm until kswapd
 	  finishes the initialisation.
 
+<<<<<<< HEAD
 config IDLE_PAGE_TRACKING
 	bool "Enable idle page tracking"
 	depends on SYSFS && MMU
@@ -660,6 +661,10 @@ config IDLE_PAGE_TRACKING
 	  within a compute cluster.
 
 	  See Documentation/vm/idle_page_tracking.txt for more details.
+=======
+config FRAME_VECTOR
+	bool
+>>>>>>> linux-next/akpm-base
 
 config ZONE_DEVICE
 	bool "Device memory (pmem, etc...) hotplug support" if EXPERT

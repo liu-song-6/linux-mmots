@@ -101,6 +101,7 @@ static inline unsigned long pfn_to_mfn(unsigned long pfn)
 {
 	unsigned long mfn;
 
+<<<<<<< HEAD
 	/*
 	 * Some x86 code are still using pfn_to_mfn instead of
 	 * pfn_to_mfn. This will have to be removed when we figured
@@ -108,6 +109,9 @@ static inline unsigned long pfn_to_mfn(unsigned long pfn)
 	 */
 	if (xen_feature(XENFEAT_auto_translated_physmap))
 		return pfn;
+=======
+	BUG_ON(xen_feature(XENFEAT_auto_translated_physmap));
+>>>>>>> linux-next/akpm-base
 
 	mfn = __pfn_to_mfn(pfn);
 
@@ -152,6 +156,7 @@ static inline unsigned long mfn_to_pfn(unsigned long mfn)
 {
 	unsigned long pfn;
 
+<<<<<<< HEAD
 	/*
 	 * Some x86 code are still using mfn_to_pfn instead of
 	 * gfn_to_pfn. This will have to be removed when we figure
@@ -159,6 +164,9 @@ static inline unsigned long mfn_to_pfn(unsigned long mfn)
 	 */
 	if (xen_feature(XENFEAT_auto_translated_physmap))
 		return mfn;
+=======
+	BUG_ON(xen_feature(XENFEAT_auto_translated_physmap));
+>>>>>>> linux-next/akpm-base
 
 	pfn = mfn_to_pfn_no_overrides(mfn);
 	if (__pfn_to_mfn(pfn) != mfn)
