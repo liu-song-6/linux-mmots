@@ -86,6 +86,10 @@ static __always_inline bool memory_is_poisoned_2(unsigned long addr)
 		if (memory_is_poisoned_1(addr + 1))
 			return true;
 
+		/*
+		 * If the shadow spans two bytes, the first byte should
+		 * be zero.
+		 */
 		if (likely(((addr + 1) & KASAN_SHADOW_MASK) != 0))
 			return false;
 
@@ -103,6 +107,10 @@ static __always_inline bool memory_is_poisoned_4(unsigned long addr)
 		if (memory_is_poisoned_1(addr + 3))
 			return true;
 
+		/*
+		 * If the shadow spans two bytes, the first byte should
+		 * be zero.
+		 */
 		if (likely(((addr + 3) & KASAN_SHADOW_MASK) >= 3))
 			return false;
 
@@ -120,7 +128,11 @@ static __always_inline bool memory_is_poisoned_8(unsigned long addr)
 		if (memory_is_poisoned_1(addr + 7))
 			return true;
 
-		if (likely(((addr + 7) & KASAN_SHADOW_MASK) >= 7))
+		/*
+		 * If the shadow spans two bytes, the first byte should
+		 * be zero.
+		 */
+		if (likely(IS_ALIGNED(addr, KASAN_SHADOW_SCALE_SIZE)))
 			return false;
 
 		return unlikely(*(u8 *)shadow_addr);
@@ -139,7 +151,12 @@ static __always_inline bool memory_is_poisoned_16(unsigned long addr)
 		if (unlikely(shadow_first_bytes))
 			return true;
 
-		if (likely(IS_ALIGNED(addr, 8)))
+		/*
+		 * If the shadow spans three bytes, we should continue to
+		 * check the last byte. The first two bytes which we
+		 * checked above should always be zero.
+		 */
+		if (likely(IS_ALIGNED(addr, KASAN_SHADOW_SCALE_SIZE)))
 			return false;
 
 		return memory_is_poisoned_1(addr + 15);
