@@ -123,6 +123,7 @@ dtb-$(CONFIG_ARCH_EXYNOS5) += \
 	exynos5420-smdk5420.dtb \
 	exynos5422-odroidxu3.dtb \
 	exynos5422-odroidxu3-lite.dtb \
+	exynos5422-odroidxu4.dtb \
 	exynos5440-sd5v1.dtb \
 	exynos5440-ssdk5440.dtb \
 	exynos5800-peach-pi.dtb
@@ -507,6 +508,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3288-firefly-beta.dtb \
 	rk3288-firefly.dtb \
 	rk3288-r89.dtb \
+	rk3288-veyron-jaq.dtb \
 	rk3288-veyron-jerry.dtb \
 	rk3288-veyron-minnie.dtb \
 	rk3288-veyron-pinky.dtb \
@@ -522,9 +524,6 @@ dtb-$(CONFIG_ARCH_S5PV210) += \
 	s5pv210-smdkc110.dtb \
 	s5pv210-smdkv210.dtb \
 	s5pv210-torbreck.dtb
-dtb-$(CONFIG_ARCH_SHMOBILE_LEGACY) += \
-	r8a7778-bockw.dtb \
-	r8a7778-bockw-reference.dtb
 dtb-$(CONFIG_ARCH_SHMOBILE_MULTI) += \
 	emev2-kzm9d.dtb \
 	r7s72100-genmai.dtb \
@@ -577,8 +576,10 @@ dtb-$(CONFIG_MACH_SUN4I) += \
 	sun4i-a10-gemei-g9.dtb \
 	sun4i-a10-hackberry.dtb \
 	sun4i-a10-hyundai-a7hd.dtb \
+	sun4i-a10-inet1.dtb \
 	sun4i-a10-inet97fv2.dtb \
-	sun4i-a10-itead-iteaduino-plus.dts \
+	sun4i-a10-inet9f-rev03.dtb \
+	sun4i-a10-itead-iteaduino-plus.dtb \
 	sun4i-a10-jesurun-q5.dtb \
 	sun4i-a10-marsboard.dtb \
 	sun4i-a10-mini-xplus.dtb \
@@ -587,11 +588,14 @@ dtb-$(CONFIG_MACH_SUN4I) += \
 	sun4i-a10-olinuxino-lime.dtb \
 	sun4i-a10-pcduino.dtb
 dtb-$(CONFIG_MACH_SUN5I) += \
+	sun5i-a10s-auxtek-t003.dtb \
 	sun5i-a10s-auxtek-t004.dtb \
 	sun5i-a10s-mk802.dtb \
 	sun5i-a10s-olinuxino-micro.dtb \
 	sun5i-a10s-r7-tv-dongle.dtb \
+	sun5i-a10s-wobo-i5.dtb \
 	sun5i-a13-hsg-h702.dtb \
+	sun5i-a13-inet-98v-rev2.dtb \
 	sun5i-a13-olinuxino.dtb \
 	sun5i-a13-olinuxino-micro.dtb \
 	sun5i-a13-utoo-p66.dtb
@@ -622,11 +626,13 @@ dtb-$(CONFIG_MACH_SUN7I) += \
 	sun7i-a20-wexler-tab7200.dtb
 dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-a23-evb.dtb \
+	sun8i-a23-gt90h-v4.dtb \
 	sun8i-a23-ippo-q8h-v5.dtb \
 	sun8i-a23-ippo-q8h-v1.2.dtb \
 	sun8i-a33-et-q8-v1.6.dtb \
 	sun8i-a33-ga10h-v1.1.dtb \
 	sun8i-a33-ippo-q8h-v1.2.dtb \
+	sun8i-a33-q8-tzx-723q4.dtb \
 	sun8i-a33-sinlinx-sina33.dtb
 dtb-$(CONFIG_MACH_SUN9I) += \
 	sun9i-a80-optimus.dtb \
