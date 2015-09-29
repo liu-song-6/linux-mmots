@@ -2946,7 +2946,8 @@ static int selinux_inode_setattr(struct dentry *dentry, struct iattr *iattr)
 			ATTR_ATIME_SET | ATTR_MTIME_SET | ATTR_TIMES_SET))
 		return dentry_has_perm(cred, dentry, FILE__SETATTR);
 
-	if (selinux_policycap_openperm && (ia_valid & ATTR_SIZE))
+	if (selinux_policycap_openperm && (ia_valid & ATTR_SIZE)
+			&& !(ia_valid & ATTR_FILE))
 		av |= FILE__OPEN;
 
 	return dentry_has_perm(cred, dentry, av);
@@ -4866,7 +4867,7 @@ static unsigned int selinux_ip_forward(struct sk_buff *skb,
 	return NF_ACCEPT;
 }
 
-static unsigned int selinux_ipv4_forward(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv4_forward(void *priv,
 					 struct sk_buff *skb,
 					 const struct nf_hook_state *state)
 {
@@ -4874,7 +4875,7 @@ static unsigned int selinux_ipv4_forward(const struct nf_hook_ops *ops,
 }
 
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
-static unsigned int selinux_ipv6_forward(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv6_forward(void *priv,
 					 struct sk_buff *skb,
 					 const struct nf_hook_state *state)
 {
@@ -4924,7 +4925,7 @@ static unsigned int selinux_ip_output(struct sk_buff *skb,
 	return NF_ACCEPT;
 }
 
-static unsigned int selinux_ipv4_output(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv4_output(void *priv,
 					struct sk_buff *skb,
 					const struct nf_hook_state *state)
 {
@@ -5099,7 +5100,7 @@ static unsigned int selinux_ip_postroute(struct sk_buff *skb,
 	return NF_ACCEPT;
 }
 
-static unsigned int selinux_ipv4_postroute(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv4_postroute(void *priv,
 					   struct sk_buff *skb,
 					   const struct nf_hook_state *state)
 {
@@ -5107,7 +5108,7 @@ static unsigned int selinux_ipv4_postroute(const struct nf_hook_ops *ops,
 }
 
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
-static unsigned int selinux_ipv6_postroute(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv6_postroute(void *priv,
 					   struct sk_buff *skb,
 					   const struct nf_hook_state *state)
 {

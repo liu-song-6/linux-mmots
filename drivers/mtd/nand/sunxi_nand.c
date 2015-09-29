@@ -147,6 +147,10 @@
 #define NFC_ECC_MODE		GENMASK(15, 12)
 #define NFC_RANDOM_SEED		GENMASK(30, 16)
 
+/* NFC_USER_DATA helper macros */
+#define NFC_BUF_TO_USER_DATA(buf)	((buf)[0] | ((buf)[1] << 8) | \
+					((buf)[2] << 16) | ((buf)[3] << 24))
+
 #define NFC_DEFAULT_TIMEOUT_MS	1000
 
 #define NFC_SRAM_SIZE		1024
@@ -646,15 +650,9 @@ static int sunxi_nfc_hw_ecc_write_page(struct mtd_info *mtd,
 		offset = layout->eccpos[i * ecc->bytes] - 4 + mtd->writesize;
 
 		/* Fill OOB data in */
-		if (oob_required) {
-			tmp = 0xffffffff;
-			memcpy_toio(nfc->regs + NFC_REG_USER_DATA_BASE, &tmp,
-				    4);
-		} else {
-			memcpy_toio(nfc->regs + NFC_REG_USER_DATA_BASE,
-				    chip->oob_poi + offset - mtd->writesize,
-				    4);
-		}
+		writel(NFC_BUF_TO_USER_DATA(chip->oob_poi +
+					    layout->oobfree[i].offset),
+		       nfc->regs + NFC_REG_USER_DATA_BASE);
 
 		chip->cmdfunc(mtd, NAND_CMD_RNDIN, offset, -1);
 
@@ -784,14 +782,8 @@ static int sunxi_nfc_hw_syndrome_ecc_write_page(struct mtd_info *mtd,
 		offset += ecc->size;
 
 		/* Fill OOB data in */
-		if (oob_required) {
-			tmp = 0xffffffff;
-			memcpy_toio(nfc->regs + NFC_REG_USER_DATA_BASE, &tmp,
-				    4);
-		} else {
-			memcpy_toio(nfc->regs + NFC_REG_USER_DATA_BASE, oob,
-				    4);
-		}
+		writel(NFC_BUF_TO_USER_DATA(oob),
+		       nfc->regs + NFC_REG_USER_DATA_BASE);
 
 		tmp = NFC_DATA_TRANS | NFC_DATA_SWAP_METHOD | NFC_ACCESS_DIR |
 		      (1 << 30);
@@ -978,17 +970,23 @@ static int sunxi_nand_chip_init_timings(struct sunxi_nand_chip *chip,
 		mode = chip->nand.onfi_timing_mode_default;
 	} else {
 		uint8_t feature[ONFI_SUBFEATURE_PARAM_LEN] = {};
+		int i;
 
 		mode = fls(mode) - 1;
 		if (mode < 0)
 			mode = 0;
 
 		feature[0] = mode;
-		ret = chip->nand.onfi_set_features(&chip->mtd, &chip->nand,
+		for (i = 0; i < chip->nsels; i++) {
+			chip->nand.select_chip(&chip->mtd, i);
+			ret = chip->nand.onfi_set_features(&chip->mtd,
+						&chip->nand,
 						ONFI_FEATURE_ADDR_TIMING_MODE,
 						feature);
-		if (ret)
-			return ret;
+			chip->nand.select_chip(&chip->mtd, -1);
+			if (ret)
+				return ret;
+		}
 	}
 
 	timings = onfi_async_timing_mode_to_sdr_timings(mode);
@@ -1162,28 +1160,15 @@ static int sunxi_nand_ecc_init(struct mtd_info *mtd, struct nand_ecc_ctrl *ecc,
 			       struct device_node *np)
 {
 	struct nand_chip *nand = mtd->priv;
-	int strength;
-	int blk_size;
 	int ret;
 
-	blk_size = of_get_nand_ecc_step_size(np);
-	strength = of_get_nand_ecc_strength(np);
-	if (blk_size > 0 && strength > 0) {
-		ecc->size = blk_size;
-		ecc->strength = strength;
-	} else {
+	if (!ecc->size) {
 		ecc->size = nand->ecc_step_ds;
 		ecc->strength = nand->ecc_strength_ds;
 	}
 
 	if (!ecc->size || !ecc->strength)
 		return -EINVAL;
-
-	ecc->mode = NAND_ECC_HW;
-
-	ret = of_get_nand_ecc_mode(np);
-	if (ret >= 0)
-		ecc->mode = ret;
 
 	switch (ecc->mode) {
 	case NAND_ECC_SOFT_BCH:
@@ -1310,14 +1295,17 @@ static int sunxi_nand_chip_init(struct device *dev, struct sunxi_nfc *nfc,
 	/* Default tR value specified in the ONFI spec (chapter 4.15.1) */
 	nand->chip_delay = 200;
 	nand->controller = &nfc->controller;
+	/*
+	 * Set the ECC mode to the default value in case nothing is specified
+	 * in the DT.
+	 */
+	nand->ecc.mode = NAND_ECC_HW;
+	nand->flash_node = np;
 	nand->select_chip = sunxi_nfc_select_chip;
 	nand->cmd_ctrl = sunxi_nfc_cmd_ctrl;
 	nand->read_buf = sunxi_nfc_read_buf;
 	nand->write_buf = sunxi_nfc_write_buf;
 	nand->read_byte = sunxi_nfc_read_byte;
-
-	if (of_get_nand_on_flash_bbt(np))
-		nand->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
 
 	mtd = &chip->mtd;
 	mtd->dev.parent = dev;
@@ -1327,6 +1315,9 @@ static int sunxi_nand_chip_init(struct device *dev, struct sunxi_nfc *nfc,
 	ret = nand_scan_ident(mtd, nsels, NULL);
 	if (ret)
 		return ret;
+
+	if (nand->bbt_options & NAND_BBT_USE_FLASH)
+		nand->bbt_options |= NAND_BBT_NO_OOB;
 
 	ret = sunxi_nand_chip_init_timings(chip, np);
 	if (ret) {
@@ -1389,6 +1380,7 @@ static void sunxi_nand_chips_cleanup(struct sunxi_nfc *nfc)
 					node);
 		nand_release(&chip->mtd);
 		sunxi_nand_ecc_cleanup(&chip->nand.ecc);
+		list_del(&chip->node);
 	}
 }
 

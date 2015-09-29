@@ -214,6 +214,20 @@
 			dma-requests = <96>;
 		};
 
+<<<<<<< HEAD
+=======
+		pbias_regulator: pbias_regulator {
+			compatible = "ti,pbias-omap3", "ti,pbias-omap";
+			reg = <0x2b0 0x4>;
+			syscon = <&scm_conf>;
+			pbias_mmc_reg: pbias_mmc_omap2430 {
+				regulator-name = "pbias_mmc_omap2430";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3000000>;
+			};
+		};
+
+>>>>>>> linux-next/akpm-base
 		gpio1: gpio@48310000 {
 			compatible = "ti,omap3-gpio";
 			reg = <0x48310000 0x200>;

@@ -189,6 +189,7 @@ void ip6_tnl_dst_set(struct ip6_tnl *t, struct dst_entry *dst)
 EXPORT_SYMBOL_GPL(ip6_tnl_dst_set);
 
 void ip6_tnl_dst_destroy(struct ip6_tnl *t)
+<<<<<<< HEAD
 {
 	if (!t->dst_cache)
 		return;
@@ -211,6 +212,30 @@ int ip6_tnl_dst_init(struct ip6_tnl *t)
 
 	return 0;
 }
+=======
+{
+	if (!t->dst_cache)
+		return;
+
+	ip6_tnl_dst_reset(t);
+	free_percpu(t->dst_cache);
+}
+EXPORT_SYMBOL_GPL(ip6_tnl_dst_destroy);
+
+int ip6_tnl_dst_init(struct ip6_tnl *t)
+{
+	int i;
+
+	t->dst_cache = alloc_percpu(struct ip6_tnl_dst);
+	if (!t->dst_cache)
+		return -ENOMEM;
+
+	for_each_possible_cpu(i)
+		seqlock_init(&per_cpu_ptr(t->dst_cache, i)->lock);
+
+	return 0;
+}
+>>>>>>> linux-next/akpm-base
 EXPORT_SYMBOL_GPL(ip6_tnl_dst_init);
 
 /**
