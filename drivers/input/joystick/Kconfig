@@ -186,6 +186,7 @@ config JOYSTICK_STINGER
 config JOYSTICK_TWIDJOY
 	tristate "Twiddler as a joystick"
 	select SERIO
+	select BITREVERSE
 	help
 	  Say Y here if you have a Handykey Twiddler connected to your
 	  computer's serial port and want to use it as a joystick.
