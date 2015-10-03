@@ -674,10 +674,9 @@ static int selinux_set_mnt_opts(struct super_block *sb,
 
 		if (flags[i] == SBLABEL_MNT)
 			continue;
-		rc = security_context_to_sid(mount_options[i],
-					     strlen(mount_options[i]), &sid, GFP_KERNEL);
+		rc = security_context_str_to_sid(mount_options[i], &sid, GFP_KERNEL);
 		if (rc) {
-			printk(KERN_WARNING "SELinux: security_context_to_sid"
+			printk(KERN_WARNING "SELinux: security_context_str_to_sid"
 			       "(%s) failed for (dev %s, type %s) errno=%d\n",
 			       mount_options[i], sb->s_id, name, rc);
 			goto out;
@@ -2617,15 +2616,12 @@ static int selinux_sb_remount(struct super_block *sb, void *data)
 
 	for (i = 0; i < opts.num_mnt_opts; i++) {
 		u32 sid;
-		size_t len;
 
 		if (flags[i] == SBLABEL_MNT)
 			continue;
-		len = strlen(mount_options[i]);
-		rc = security_context_to_sid(mount_options[i], len, &sid,
-					     GFP_KERNEL);
+		rc = security_context_str_to_sid(mount_options[i], &sid, GFP_KERNEL);
 		if (rc) {
-			printk(KERN_WARNING "SELinux: security_context_to_sid"
+			printk(KERN_WARNING "SELinux: security_context_str_to_sid"
 			       "(%s) failed for (dev %s, type %s) errno=%d\n",
 			       mount_options[i], sb->s_id, sb->s_type->name, rc);
 			goto out_free_opts;
@@ -2946,7 +2942,8 @@ static int selinux_inode_setattr(struct dentry *dentry, struct iattr *iattr)
 			ATTR_ATIME_SET | ATTR_MTIME_SET | ATTR_TIMES_SET))
 		return dentry_has_perm(cred, dentry, FILE__SETATTR);
 
-	if (selinux_policycap_openperm && (ia_valid & ATTR_SIZE))
+	if (selinux_policycap_openperm && (ia_valid & ATTR_SIZE)
+			&& !(ia_valid & ATTR_FILE))
 		av |= FILE__OPEN;
 
 	return dentry_has_perm(cred, dentry, av);
@@ -3166,7 +3163,7 @@ static int selinux_inode_setsecurity(struct inode *inode, const char *name,
 	if (!value || !size)
 		return -EACCES;
 
-	rc = security_context_to_sid((void *)value, size, &newsid, GFP_KERNEL);
+	rc = security_context_to_sid(value, size, &newsid, GFP_KERNEL);
 	if (rc)
 		return rc;
 
@@ -3238,7 +3235,7 @@ static void selinux_file_free_security(struct file *file)
  * Check whether a task has the ioctl permission and cmd
  * operation to an inode.
  */
-int ioctl_has_perm(const struct cred *cred, struct file *file,
+static int ioctl_has_perm(const struct cred *cred, struct file *file,
 		u32 requested, u16 cmd)
 {
 	struct common_audit_data ad;
@@ -4866,7 +4863,7 @@ static unsigned int selinux_ip_forward(struct sk_buff *skb,
 	return NF_ACCEPT;
 }
 
-static unsigned int selinux_ipv4_forward(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv4_forward(void *priv,
 					 struct sk_buff *skb,
 					 const struct nf_hook_state *state)
 {
@@ -4874,7 +4871,7 @@ static unsigned int selinux_ipv4_forward(const struct nf_hook_ops *ops,
 }
 
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
-static unsigned int selinux_ipv6_forward(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv6_forward(void *priv,
 					 struct sk_buff *skb,
 					 const struct nf_hook_state *state)
 {
@@ -4924,7 +4921,7 @@ static unsigned int selinux_ip_output(struct sk_buff *skb,
 	return NF_ACCEPT;
 }
 
-static unsigned int selinux_ipv4_output(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv4_output(void *priv,
 					struct sk_buff *skb,
 					const struct nf_hook_state *state)
 {
@@ -5099,7 +5096,7 @@ static unsigned int selinux_ip_postroute(struct sk_buff *skb,
 	return NF_ACCEPT;
 }
 
-static unsigned int selinux_ipv4_postroute(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv4_postroute(void *priv,
 					   struct sk_buff *skb,
 					   const struct nf_hook_state *state)
 {
@@ -5107,7 +5104,7 @@ static unsigned int selinux_ipv4_postroute(const struct nf_hook_ops *ops,
 }
 
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
-static unsigned int selinux_ipv6_postroute(const struct nf_hook_ops *ops,
+static unsigned int selinux_ipv6_postroute(void *priv,
 					   struct sk_buff *skb,
 					   const struct nf_hook_state *state)
 {

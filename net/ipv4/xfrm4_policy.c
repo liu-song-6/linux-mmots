@@ -15,7 +15,7 @@
 #include <net/dst.h>
 #include <net/xfrm.h>
 #include <net/ip.h>
-#include <net/vrf.h>
+#include <net/l3mdev.h>
 
 static struct xfrm_policy_afinfo xfrm4_policy_afinfo;
 
@@ -97,6 +97,7 @@ static int xfrm4_fill_dst(struct xfrm_dst *xdst, struct net_device *dev,
 	xdst->u.rt.rt_gateway = rt->rt_gateway;
 	xdst->u.rt.rt_uses_gateway = rt->rt_uses_gateway;
 	xdst->u.rt.rt_pmtu = rt->rt_pmtu;
+	xdst->u.rt.rt_table_id = rt->rt_table_id;
 	INIT_LIST_HEAD(&xdst->u.rt.rt_uncached);
 
 	return 0;
@@ -110,10 +111,8 @@ _decode_session4(struct sk_buff *skb, struct flowi *fl, int reverse)
 	struct flowi4 *fl4 = &fl->u.ip4;
 	int oif = 0;
 
-	if (skb_dst(skb)) {
-		oif = vrf_master_ifindex(skb_dst(skb)->dev) ?
-			: skb_dst(skb)->dev->ifindex;
-	}
+	if (skb_dst(skb))
+		oif = l3mdev_fib_oif(skb_dst(skb)->dev);
 
 	memset(fl4, 0, sizeof(struct flowi4));
 	fl4->flowi4_mark = skb->mark;
@@ -245,7 +244,7 @@ static struct dst_ops xfrm4_dst_ops = {
 	.destroy =		xfrm4_dst_destroy,
 	.ifdown =		xfrm4_dst_ifdown,
 	.local_out =		__ip_local_out,
-	.gc_thresh =		32768,
+	.gc_thresh =		INT_MAX,
 };
 
 static struct xfrm_policy_afinfo xfrm4_policy_afinfo = {
