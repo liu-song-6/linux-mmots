@@ -1081,25 +1081,6 @@ static int acpi_ec_query(struct acpi_ec *ec, u8 *data)
 	if (result)
 		goto err_exit;
 
-<<<<<<< HEAD
-	mutex_lock(&ec->mutex);
-	result = -ENODATA;
-	list_for_each_entry(handler, &ec->list, node) {
-		if (value == handler->query_bit) {
-			result = 0;
-			q->handler = acpi_ec_get_query_handler(handler);
-			ec_dbg_evt("Query(0x%02x) scheduled",
-				   q->handler->query_bit);
-			/*
-			 * It is reported that _Qxx are evaluated in a
-			 * parallel way on Windows:
-			 * https://bugzilla.kernel.org/show_bug.cgi?id=94411
-			 */
-			if (!schedule_work(&q->work))
-				result = -EBUSY;
-			break;
-		}
-=======
 	q->handler = acpi_ec_get_query_handler_by_value(ec, value);
 	if (!q->handler) {
 		result = -ENODATA;
@@ -1119,7 +1100,6 @@ static int acpi_ec_query(struct acpi_ec *ec, u8 *data)
 	if (!schedule_work(&q->work)) {
 		ec_dbg_evt("Query(0x%02x) overlapped", value);
 		result = -EBUSY;
->>>>>>> linux-next/akpm-base
 	}
 
 err_exit:

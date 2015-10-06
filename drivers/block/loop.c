@@ -1678,15 +1678,11 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 
 	ret = do_req_filebacked(lo, cmd->rq);
  failed:
-<<<<<<< HEAD
-	blk_mq_complete_request(cmd->rq, ret ? -EIO : 0);
-=======
 	if (ret)
 		cmd->rq->errors = -EIO;
 	/* complete non-aio request */
 	if (!cmd->use_aio || ret)
 		blk_mq_complete_request(cmd->rq);
->>>>>>> linux-next/akpm-base
 }
 
 static void loop_queue_work(struct kthread_work *work)

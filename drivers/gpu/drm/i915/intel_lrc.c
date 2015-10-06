@@ -519,15 +519,8 @@ void intel_lrc_irq_handler(struct intel_engine_cs *ring)
 
 	while (read_pointer < write_pointer) {
 		read_pointer++;
-<<<<<<< HEAD
-		status = I915_READ(RING_CONTEXT_STATUS_BUF(ring) +
-				(read_pointer % GEN8_CSB_ENTRIES) * 8);
-		status_id = I915_READ(RING_CONTEXT_STATUS_BUF(ring) +
-				(read_pointer % GEN8_CSB_ENTRIES) * 8 + 4);
-=======
 		status = I915_READ(RING_CONTEXT_STATUS_BUF_LO(ring, read_pointer % GEN8_CSB_ENTRIES));
 		status_id = I915_READ(RING_CONTEXT_STATUS_BUF_HI(ring, read_pointer % GEN8_CSB_ENTRIES));
->>>>>>> linux-next/akpm-base
 
 		if (status & GEN8_CTX_STATUS_IDLE_ACTIVE)
 			continue;
@@ -1487,12 +1480,9 @@ static int gen8_init_common_ring(struct intel_engine_cs *ring)
 	struct drm_device *dev = ring->dev;
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	u8 next_context_status_buffer_hw;
-<<<<<<< HEAD
-=======
 
 	lrc_setup_hardware_status_page(ring,
 				ring->default_context->engine[ring->id].state);
->>>>>>> linux-next/akpm-base
 
 	I915_WRITE_IMR(ring, ~(ring->irq_enable_mask | ring->irq_keep_mask));
 	I915_WRITE(RING_HWSTAM(ring->mmio_base), 0xffffffff);

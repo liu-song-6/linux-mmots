@@ -459,11 +459,7 @@ static int dsa_slave_port_attr_set(struct net_device *dev,
 
 	switch (attr->id) {
 	case SWITCHDEV_ATTR_PORT_STP_STATE:
-<<<<<<< HEAD
-		if (attr->trans == SWITCHDEV_TRANS_PREPARE)
-=======
 		if (switchdev_trans_ph_prepare(trans))
->>>>>>> linux-next/akpm-base
 			ret = ds->drv->port_stp_update ? 0 : -EOPNOTSUPP;
 		else
 			ret = ds->drv->port_stp_update(ds, p->port,
