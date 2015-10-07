@@ -622,17 +622,7 @@ int xen_alloc_p2m_entry(unsigned long pfn)
 			free_p2m_page(p2m);
 	}
 
-<<<<<<< HEAD
-	/* Expanded the p2m? */
-	if (pfn > xen_p2m_last_pfn) {
-		xen_p2m_last_pfn = pfn;
-		HYPERVISOR_shared_info->arch.max_pfn = xen_p2m_last_pfn;
-	}
-
-	return true;
-=======
 	return 0;
->>>>>>> linux-next/akpm-base
 }
 EXPORT_SYMBOL(xen_alloc_p2m_entry);
 
