@@ -690,16 +690,9 @@ static int sunxi_nfc_hw_ecc_write_chunk(struct mtd_info *mtd,
 	if (ret)
 		return ret;
 
-<<<<<<< HEAD
-		/* Fill OOB data in */
-		writel(NFC_BUF_TO_USER_DATA(chip->oob_poi +
-					    layout->oobfree[i].offset),
-		       nfc->regs + NFC_REG_USER_DATA_BASE);
-=======
 	writel(NFC_DATA_TRANS | NFC_DATA_SWAP_METHOD |
 	       NFC_ACCESS_DIR | NFC_ECC_OP,
 	       nfc->regs + NFC_REG_CMD);
->>>>>>> linux-next/akpm-base
 
 	ret = sunxi_nfc_wait_int(nfc, NFC_CMD_INT_FLAG, 0);
 	if (ret)
@@ -834,23 +827,10 @@ static int sunxi_nfc_hw_syndrome_ecc_write_page(struct mtd_info *mtd,
 	sunxi_nfc_hw_ecc_enable(mtd);
 
 	for (i = 0; i < ecc->steps; i++) {
-<<<<<<< HEAD
-		chip->write_buf(mtd, buf + (i * ecc->size), ecc->size);
-		offset += ecc->size;
-
-		/* Fill OOB data in */
-		writel(NFC_BUF_TO_USER_DATA(oob),
-		       nfc->regs + NFC_REG_USER_DATA_BASE);
-
-		tmp = NFC_DATA_TRANS | NFC_DATA_SWAP_METHOD | NFC_ACCESS_DIR |
-		      (1 << 30);
-		writel(tmp, nfc->regs + NFC_REG_CMD);
-=======
 		int data_off = i * (ecc->size + ecc->bytes + 4);
 		int oob_off = data_off + ecc->size;
 		const u8 *data = buf + (i * ecc->size);
 		const u8 *oob = chip->oob_poi + (i * (ecc->bytes + 4));
->>>>>>> linux-next/akpm-base
 
 		ret = sunxi_nfc_hw_ecc_write_chunk(mtd, data, data_off,
 						   oob, oob_off, &cur_off);
