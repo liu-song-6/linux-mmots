@@ -5,6 +5,7 @@ menuconfig ARCH_AT91
 	select COMMON_CLK_AT91
 	select PINCTRL
 	select PINCTRL_AT91
+	select PINCTRL_AT91PIO4
 	select SOC_BUS
 
 if ARCH_AT91
@@ -100,6 +101,9 @@ config HAVE_AT91_SMD
 	bool
 
 config HAVE_AT91_H32MX
+	bool
+
+config HAVE_AT91_GENERATED_CLK
 	bool
 
 config SOC_SAM_V4_V5

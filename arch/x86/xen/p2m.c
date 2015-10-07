@@ -530,7 +530,7 @@ static pte_t *alloc_p2m_pmd(unsigned long addr, pte_t *pte_pg)
  * the new pages are installed with cmpxchg; if we lose the race then
  * simply free the page we allocated and use the one that's there.
  */
-static bool alloc_p2m(unsigned long pfn)
+int xen_alloc_p2m_entry(unsigned long pfn)
 {
 	unsigned topidx;
 	unsigned long *top_mfn_p, *mid_mfn;
@@ -540,6 +540,9 @@ static bool alloc_p2m(unsigned long pfn)
 	unsigned long addr = (unsigned long)(xen_p2m_addr + pfn);
 	unsigned long p2m_pfn;
 
+	if (xen_feature(XENFEAT_auto_translated_physmap))
+		return 0;
+
 	ptep = lookup_address(addr, &level);
 	BUG_ON(!ptep || level != PG_LEVEL_4K);
 	pte_pg = (pte_t *)((unsigned long)ptep & ~(PAGE_SIZE - 1));
@@ -548,7 +551,7 @@ static bool alloc_p2m(unsigned long pfn)
 		/* PMD level is missing, allocate a new one */
 		ptep = alloc_p2m_pmd(addr, pte_pg);
 		if (!ptep)
-			return false;
+			return -ENOMEM;
 	}
 
 	if (p2m_top_mfn && pfn < MAX_P2M_PFN) {
@@ -566,7 +569,7 @@ static bool alloc_p2m(unsigned long pfn)
 
 			mid_mfn = alloc_p2m_page();
 			if (!mid_mfn)
-				return false;
+				return -ENOMEM;
 
 			p2m_mid_mfn_init(mid_mfn, p2m_missing);
 
@@ -592,7 +595,7 @@ static bool alloc_p2m(unsigned long pfn)
 
 		p2m = alloc_p2m_page();
 		if (!p2m)
-			return false;
+			return -ENOMEM;
 
 		if (p2m_pfn == PFN_DOWN(__pa(p2m_missing)))
 			p2m_init(p2m);
@@ -619,6 +622,7 @@ static bool alloc_p2m(unsigned long pfn)
 			free_p2m_page(p2m);
 	}
 
+<<<<<<< HEAD
 	/* Expanded the p2m? */
 	if (pfn > xen_p2m_last_pfn) {
 		xen_p2m_last_pfn = pfn;
@@ -626,7 +630,11 @@ static bool alloc_p2m(unsigned long pfn)
 	}
 
 	return true;
+=======
+	return 0;
+>>>>>>> linux-next/akpm-base
 }
+EXPORT_SYMBOL(xen_alloc_p2m_entry);
 
 unsigned long __init set_phys_range_identity(unsigned long pfn_s,
 				      unsigned long pfn_e)
@@ -688,7 +696,10 @@ bool __set_phys_to_machine(unsigned long pfn, unsigned long mfn)
 bool set_phys_to_machine(unsigned long pfn, unsigned long mfn)
 {
 	if (unlikely(!__set_phys_to_machine(pfn, mfn))) {
-		if (!alloc_p2m(pfn))
+		int ret;
+
+		ret = xen_alloc_p2m_entry(pfn);
+		if (ret < 0)
 			return false;
 
 		return __set_phys_to_machine(pfn, mfn);
