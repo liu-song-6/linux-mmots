@@ -1994,8 +1994,10 @@ static int mwifiex_cfg80211_inform_ibss_bss(struct mwifiex_private *priv)
 				  CFG80211_BSS_FTYPE_UNKNOWN,
 				  bss_info.bssid, 0, WLAN_CAPABILITY_IBSS,
 				  0, ie_buf, ie_len, 0, GFP_KERNEL);
-	cfg80211_put_bss(priv->wdev.wiphy, bss);
-	memcpy(priv->cfg_bssid, bss_info.bssid, ETH_ALEN);
+	if (bss) {
+		cfg80211_put_bss(priv->wdev.wiphy, bss);
+		ether_addr_copy(priv->cfg_bssid, bss_info.bssid);
+	}
 
 	return 0;
 }
@@ -2372,7 +2374,7 @@ mwifiex_cfg80211_leave_ibss(struct wiphy *wiphy, struct net_device *dev)
  * CFG802.11 operation handler for scan request.
  *
  * This function issues a scan request to the firmware based upon
- * the user specified scan configuration. On successfull completion,
+ * the user specified scan configuration. On successful completion,
  * it also informs the results.
  */
 static int
@@ -2859,14 +2861,14 @@ int mwifiex_del_virtual_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
 	case NL80211_IFTYPE_UNSPECIFIED:
 	case NL80211_IFTYPE_STATION:
 	case NL80211_IFTYPE_ADHOC:
-		adapter->curr_iface_comb.sta_intf++;
+		adapter->curr_iface_comb.sta_intf--;
 		break;
 	case NL80211_IFTYPE_AP:
-		adapter->curr_iface_comb.uap_intf++;
+		adapter->curr_iface_comb.uap_intf--;
 		break;
 	case NL80211_IFTYPE_P2P_CLIENT:
 	case NL80211_IFTYPE_P2P_GO:
-		adapter->curr_iface_comb.p2p_intf++;
+		adapter->curr_iface_comb.p2p_intf--;
 		break;
 	default:
 		mwifiex_dbg(adapter, ERROR,

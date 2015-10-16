@@ -105,9 +105,12 @@ void __weak arch_teardown_msi_irq(unsigned int irq)
 
 int __weak arch_setup_msi_irqs(struct pci_dev *dev, int nvec, int type)
 {
+	struct msi_controller *chip = dev->bus->msi;
 	struct msi_desc *entry;
 	int ret;
 
+	if (chip && chip->setup_irqs)
+		return chip->setup_irqs(chip, dev, nvec, type);
 	/*
 	 * If an architecture wants to support multiple MSI, it needs to
 	 * override arch_setup_msi_irqs()
@@ -1246,8 +1249,8 @@ static void pci_msi_domain_update_chip_ops(struct msi_domain_info *info)
 }
 
 /**
- * pci_msi_create_irq_domain - Creat a MSI interrupt domain
- * @node:	Optional device-tree node of the interrupt controller
+ * pci_msi_create_irq_domain - Create a MSI interrupt domain
+ * @fwnode:	Optional fwnode of the interrupt controller
  * @info:	MSI domain info
  * @parent:	Parent irq domain
  *
@@ -1256,7 +1259,7 @@ static void pci_msi_domain_update_chip_ops(struct msi_domain_info *info)
  * Returns:
  * A domain pointer or NULL in case of failure.
  */
-struct irq_domain *pci_msi_create_irq_domain(struct device_node *node,
+struct irq_domain *pci_msi_create_irq_domain(struct fwnode_handle *fwnode,
 					     struct msi_domain_info *info,
 					     struct irq_domain *parent)
 {
@@ -1267,7 +1270,7 @@ struct irq_domain *pci_msi_create_irq_domain(struct device_node *node,
 	if (info->flags & MSI_FLAG_USE_DEF_CHIP_OPS)
 		pci_msi_domain_update_chip_ops(info);
 
-	domain = msi_create_irq_domain(node, info, parent);
+	domain = msi_create_irq_domain(fwnode, info, parent);
 	if (!domain)
 		return NULL;
 
@@ -1303,14 +1306,14 @@ void pci_msi_domain_free_irqs(struct irq_domain *domain, struct pci_dev *dev)
 
 /**
  * pci_msi_create_default_irq_domain - Create a default MSI interrupt domain
- * @node:	Optional device-tree node of the interrupt controller
+ * @fwnode:	Optional fwnode of the interrupt controller
  * @info:	MSI domain info
  * @parent:	Parent irq domain
  *
  * Returns: A domain pointer or NULL in case of failure. If successful
  * the default PCI/MSI irqdomain pointer is updated.
  */
-struct irq_domain *pci_msi_create_default_irq_domain(struct device_node *node,
+struct irq_domain *pci_msi_create_default_irq_domain(struct fwnode_handle *fwnode,
 		struct msi_domain_info *info, struct irq_domain *parent)
 {
 	struct irq_domain *domain;
@@ -1320,7 +1323,7 @@ struct irq_domain *pci_msi_create_default_irq_domain(struct device_node *node,
 		pr_err("PCI: default irq domain for PCI MSI has already been created.\n");
 		domain = NULL;
 	} else {
-		domain = pci_msi_create_irq_domain(node, info, parent);
+		domain = pci_msi_create_irq_domain(fwnode, info, parent);
 		pci_msi_default_domain = domain;
 	}
 	mutex_unlock(&pci_msi_domain_lock);

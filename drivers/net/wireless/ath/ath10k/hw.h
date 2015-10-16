@@ -337,7 +337,7 @@ enum ath10k_hw_rate_cck {
 #define TARGET_10X_MAX_FRAG_ENTRIES		0
 
 /* 10.2 parameters */
-#define TARGET_10_2_DMA_BURST_SIZE		1
+#define TARGET_10_2_DMA_BURST_SIZE		0
 
 /* Target specific defines for WMI-TLV firmware */
 #define TARGET_TLV_NUM_VDEVS			4
@@ -391,7 +391,7 @@ enum ath10k_hw_rate_cck {
 
 #define TARGET_10_4_TX_DBG_LOG_SIZE		1024
 #define TARGET_10_4_NUM_WDS_ENTRIES		32
-#define TARGET_10_4_DMA_BURST_SIZE		1
+#define TARGET_10_4_DMA_BURST_SIZE		0
 #define TARGET_10_4_MAC_AGGR_DELIM		0
 #define TARGET_10_4_RX_SKIP_DEFRAG_TIMEOUT_DUP_DETECTION_CHECK 1
 #define TARGET_10_4_VOW_CONFIG			0
@@ -412,16 +412,6 @@ enum ath10k_hw_rate_cck {
 
 /* Number of Copy Engines supported */
 #define CE_COUNT ar->hw_values->ce_count
-
-/*
- * Total number of PCIe MSI interrupts requested for all interrupt sources.
- * PCIe standard forces this to be a power of 2.
- * Some Host OS's limit MSI requests that can be granted to 8
- * so for now we abide by this limit and avoid requesting more
- * than that.
- */
-#define MSI_NUM_REQUEST_LOG2	3
-#define MSI_NUM_REQUEST		(1<<MSI_NUM_REQUEST_LOG2)
 
 /*
  * Granted MSIs are assigned as follows:
