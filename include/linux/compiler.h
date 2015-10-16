@@ -231,8 +231,11 @@ void __read_once_size_nocheck(const volatile void *p, void *res, int size)
 	__READ_ONCE_SIZE;
 }
 #else
-static __always_inline __alias(__read_once_size_check)
-void __read_once_size_nocheck(const volatile void *p, void *res, int size);
+static __always_inline
+void __read_once_size_nocheck(const volatile void *p, void *res, int size)
+{
+	__READ_ONCE_SIZE;
+}
 #endif
 
 static __always_inline void __write_once_size(volatile void *p, void *res, int size)
