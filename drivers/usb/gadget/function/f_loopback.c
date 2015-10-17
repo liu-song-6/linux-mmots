@@ -34,6 +34,9 @@ struct f_loopback {
 
 	struct usb_ep		*in_ep;
 	struct usb_ep		*out_ep;
+
+	unsigned                qlen;
+	unsigned                buflen;
 };
 
 static inline struct f_loopback *func_to_loop(struct usb_function *f)
@@ -41,13 +44,10 @@ static inline struct f_loopback *func_to_loop(struct usb_function *f)
 	return container_of(f, struct f_loopback, function);
 }
 
-static unsigned qlen;
-static unsigned buflen;
-
 /*-------------------------------------------------------------------------*/
 
 static struct usb_interface_descriptor loopback_intf = {
-	.bLength =		sizeof loopback_intf,
+	.bLength =		sizeof(loopback_intf),
 	.bDescriptorType =	USB_DT_INTERFACE,
 
 	.bNumEndpoints =	2,
@@ -195,12 +195,10 @@ autoconf_fail:
 			f->name, cdev->gadget->name);
 		return -ENODEV;
 	}
-	loop->in_ep->driver_data = cdev;	/* claim */
 
 	loop->out_ep = usb_ep_autoconfig(cdev->gadget, &fs_loop_sink_desc);
 	if (!loop->out_ep)
 		goto autoconf_fail;
-	loop->out_ep->driver_data = cdev;	/* claim */
 
 	/* support high speed hardware */
 	hs_loop_source_desc.bEndpointAddress =
@@ -253,7 +251,7 @@ static void loopback_complete(struct usb_ep *ep, struct usb_request *req)
 		}
 
 		/* queue the buffer for some later OUT packet */
-		req->length = buflen;
+		req->length = loop->buflen;
 		status = usb_ep_queue(ep, req, GFP_ATOMIC);
 		if (status == 0)
 			return;
@@ -290,7 +288,9 @@ static void disable_loopback(struct f_loopback *loop)
 
 static inline struct usb_request *lb_alloc_ep_req(struct usb_ep *ep, int len)
 {
-	return alloc_ep_req(ep, len, buflen);
+	struct f_loopback	*loop = ep->driver_data;
+
+	return alloc_ep_req(ep, len, loop->buflen);
 }
 
 static int enable_endpoint(struct usb_composite_dev *cdev, struct f_loopback *loop,
@@ -317,7 +317,7 @@ static int enable_endpoint(struct usb_composite_dev *cdev, struct f_loopback *lo
 	 * we buffer at most 'qlen' transfers; fewer if any need more
 	 * than 'buflen' bytes each.
 	 */
-	for (i = 0; i < qlen && result == 0; i++) {
+	for (i = 0; i < loop->qlen && result == 0; i++) {
 		req = lb_alloc_ep_req(ep, 0);
 		if (!req)
 			goto fail1;
@@ -364,8 +364,7 @@ static int loopback_set_alt(struct usb_function *f,
 	struct usb_composite_dev *cdev = f->config->cdev;
 
 	/* we know alt is zero */
-	if (loop->in_ep->driver_data)
-		disable_loopback(loop);
+	disable_loopback(loop);
 	return enable_loopback(cdev, loop);
 }
 
@@ -391,10 +390,10 @@ static struct usb_function *loopback_alloc(struct usb_function_instance *fi)
 	lb_opts->refcnt++;
 	mutex_unlock(&lb_opts->lock);
 
-	buflen = lb_opts->bulk_buflen;
-	qlen = lb_opts->qlen;
-	if (!qlen)
-		qlen = 32;
+	loop->buflen = lb_opts->bulk_buflen;
+	loop->qlen = lb_opts->qlen;
+	if (!loop->qlen)
+		loop->qlen = 32;
 
 	loop->function.name = "loopback";
 	loop->function.bind = loopback_bind;
@@ -413,9 +412,6 @@ static inline struct f_lb_opts *to_f_lb_opts(struct config_item *item)
 			    func_inst.group);
 }
 
-CONFIGFS_ATTR_STRUCT(f_lb_opts);
-CONFIGFS_ATTR_OPS(f_lb_opts);
-
 static void lb_attr_release(struct config_item *item)
 {
 	struct f_lb_opts *lb_opts = to_f_lb_opts(item);
@@ -425,24 +421,24 @@ static void lb_attr_release(struct config_item *item)
 
 static struct configfs_item_operations lb_item_ops = {
 	.release		= lb_attr_release,
-	.show_attribute		= f_lb_opts_attr_show,
-	.store_attribute	= f_lb_opts_attr_store,
 };
 
-static ssize_t f_lb_opts_qlen_show(struct f_lb_opts *opts, char *page)
+static ssize_t f_lb_opts_qlen_show(struct config_item *item, char *page)
 {
+	struct f_lb_opts *opts = to_f_lb_opts(item);
 	int result;
 
 	mutex_lock(&opts->lock);
-	result = sprintf(page, "%d", opts->qlen);
+	result = sprintf(page, "%d\n", opts->qlen);
 	mutex_unlock(&opts->lock);
 
 	return result;
 }
 
-static ssize_t f_lb_opts_qlen_store(struct f_lb_opts *opts,
+static ssize_t f_lb_opts_qlen_store(struct config_item *item,
 				    const char *page, size_t len)
 {
+	struct f_lb_opts *opts = to_f_lb_opts(item);
 	int ret;
 	u32 num;
 
@@ -463,25 +459,24 @@ end:
 	return ret;
 }
 
-static struct f_lb_opts_attribute f_lb_opts_qlen =
-	__CONFIGFS_ATTR(qlen, S_IRUGO | S_IWUSR,
-			f_lb_opts_qlen_show,
-			f_lb_opts_qlen_store);
+CONFIGFS_ATTR(f_lb_opts_, qlen);
 
-static ssize_t f_lb_opts_bulk_buflen_show(struct f_lb_opts *opts, char *page)
+static ssize_t f_lb_opts_bulk_buflen_show(struct config_item *item, char *page)
 {
+	struct f_lb_opts *opts = to_f_lb_opts(item);
 	int result;
 
 	mutex_lock(&opts->lock);
-	result = sprintf(page, "%d", opts->bulk_buflen);
+	result = sprintf(page, "%d\n", opts->bulk_buflen);
 	mutex_unlock(&opts->lock);
 
 	return result;
 }
 
-static ssize_t f_lb_opts_bulk_buflen_store(struct f_lb_opts *opts,
+static ssize_t f_lb_opts_bulk_buflen_store(struct config_item *item,
 				    const char *page, size_t len)
 {
+	struct f_lb_opts *opts = to_f_lb_opts(item);
 	int ret;
 	u32 num;
 
@@ -502,14 +497,11 @@ end:
 	return ret;
 }
 
-static struct f_lb_opts_attribute f_lb_opts_bulk_buflen =
-	__CONFIGFS_ATTR(buflen, S_IRUGO | S_IWUSR,
-			f_lb_opts_bulk_buflen_show,
-			f_lb_opts_bulk_buflen_store);
+CONFIGFS_ATTR(f_lb_opts_, bulk_buflen);
 
 static struct configfs_attribute *lb_attrs[] = {
-	&f_lb_opts_qlen.attr,
-	&f_lb_opts_bulk_buflen.attr,
+	&f_lb_opts_attr_qlen,
+	&f_lb_opts_attr_bulk_buflen,
 	NULL,
 };
 

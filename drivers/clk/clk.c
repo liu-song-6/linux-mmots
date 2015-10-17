@@ -19,6 +19,7 @@
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/sched.h>
@@ -1685,7 +1686,7 @@ static struct clk_core *__clk_init_parent(struct clk_core *core)
 			"%s: multi-parent clocks must implement .get_parent\n",
 			__func__);
 		goto out;
-	};
+	}
 
 	/*
 	 * Do our best to cache parent clocks in core->parents.  This prevents
@@ -3004,6 +3005,8 @@ struct clk *__of_clk_get_from_provider(struct of_phandle_args *clkspec,
 
 	if (!clkspec)
 		return ERR_PTR(-EINVAL);
+
+	of_device_probe(clkspec->np);
 
 	/* Check if we have such a provider in our array */
 	mutex_lock(&of_clk_mutex);

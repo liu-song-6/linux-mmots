@@ -138,7 +138,7 @@ u16 amd_iommu_last_bdf;			/* largest PCI device id we have
 					   to handle */
 LIST_HEAD(amd_iommu_unity_map);		/* a list of required unity mappings
 					   we find in ACPI */
-u32 amd_iommu_unmap_flush;		/* if true, flush on every unmap */
+bool amd_iommu_unmap_flush;		/* if true, flush on every unmap */
 
 LIST_HEAD(amd_iommu_list);		/* list of all AMD IOMMUs in the
 					   system */
@@ -1758,11 +1758,8 @@ static void __init free_on_init_error(void)
 	free_pages((unsigned long)irq_lookup_table,
 		   get_order(rlookup_table_size));
 
-	if (amd_iommu_irq_cache) {
-		kmem_cache_destroy(amd_iommu_irq_cache);
-		amd_iommu_irq_cache = NULL;
-
-	}
+	kmem_cache_destroy(amd_iommu_irq_cache);
+	amd_iommu_irq_cache = NULL;
 
 	free_pages((unsigned long)amd_iommu_rlookup_table,
 		   get_order(rlookup_table_size));
@@ -2201,7 +2198,7 @@ int __init amd_iommu_detect(void)
 	iommu_detected = 1;
 	x86_init.iommu.iommu_init = amd_iommu_init;
 
-	return 0;
+	return 1;
 }
 
 /****************************************************************************

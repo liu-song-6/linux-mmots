@@ -694,12 +694,12 @@ static int i2c_device_probe(struct device *dev)
 		goto err_clear_wakeup_irq;
 
 	status = dev_pm_domain_attach(&client->dev, true);
-	if (status != -EPROBE_DEFER) {
-		status = driver->probe(client, i2c_match_id(driver->id_table,
-					client));
-		if (status)
-			goto err_detach_pm_domain;
-	}
+	if (status == -EPROBE_DEFER)
+		goto err_clear_wakeup_irq;
+
+	status = driver->probe(client, i2c_match_id(driver->id_table, client));
+	if (status)
+		goto err_detach_pm_domain;
 
 	return 0;
 
@@ -1413,6 +1413,8 @@ struct i2c_client *of_find_i2c_device_by_node(struct device_node *node)
 	struct device *dev;
 	struct i2c_client *client;
 
+	of_device_probe(node);
+
 	dev = bus_find_device(&i2c_bus_type, NULL, node, of_dev_node_match);
 	if (!dev)
 		return NULL;
@@ -1430,6 +1432,8 @@ struct i2c_adapter *of_find_i2c_adapter_by_node(struct device_node *node)
 {
 	struct device *dev;
 	struct i2c_adapter *adapter;
+
+	of_device_probe(node);
 
 	dev = bus_find_device(&i2c_bus_type, NULL, node, of_dev_node_match);
 	if (!dev)
