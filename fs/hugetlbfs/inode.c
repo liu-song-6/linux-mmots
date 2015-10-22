@@ -428,9 +428,11 @@ static void remove_inode_hugepages(struct inode *inode, loff_t lstart,
 			 * until we finish removing the page.
 			 */
 			if (page_mapped(page)) {
+				i_mmap_lock_write(mapping);
 				hugetlb_vmdelete_list(&mapping->i_mmap,
 					next * pages_per_huge_page(h),
 					(next + 1) * pages_per_huge_page(h));
+				i_mmap_unlock_write(mapping);
 			}
 
 			lock_page(page);
