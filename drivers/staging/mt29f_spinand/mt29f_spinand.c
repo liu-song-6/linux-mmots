@@ -594,7 +594,7 @@ static int spinand_erase_block(struct spi_device *spi_nand, u16 block_id)
 		if (retval < 0) {
 			dev_err(&spi_nand->dev,
 					"error %d reading status register\n",
-					(int) retval);
+					(int)retval);
 			return retval;
 		}
 
@@ -612,7 +612,8 @@ static int spinand_erase_block(struct spi_device *spi_nand, u16 block_id)
 
 #ifdef CONFIG_MTD_SPINAND_ONDIEECC
 static int spinand_write_page_hwecc(struct mtd_info *mtd,
-		struct nand_chip *chip, const uint8_t *buf, int oob_required)
+		struct nand_chip *chip, const uint8_t *buf, int oob_required,
+		int page)
 {
 	const uint8_t *p = buf;
 	int eccsize = chip->ecc.size;
@@ -912,8 +913,7 @@ static int spinand_probe(struct spi_device *spi_nand)
 	dev_set_drvdata(&spi_nand->dev, mtd);
 
 	mtd->priv = chip;
-	mtd->name = dev_name(&spi_nand->dev);
-	mtd->owner = THIS_MODULE;
+	mtd->dev.parent = &spi_nand->dev;
 	mtd->oobsize = 64;
 
 	if (nand_scan(mtd, 1))
@@ -941,6 +941,7 @@ static const struct of_device_id spinand_dt[] = {
 	{ .compatible = "spinand,mt29f", },
 	{}
 };
+MODULE_DEVICE_TABLE(of, spinand_dt);
 
 /*
  * Device name structure description
