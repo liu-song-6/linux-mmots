@@ -1514,8 +1514,13 @@ static struct page *__alloc_buddy_huge_page(struct hstate *h,
 	if (hstate_is_gigantic(h))
 		return NULL;
 
-	if (vma || addr) {
-		WARN_ON_ONCE(!addr || addr == -1);
+	/*
+	 * Make sure that anyone specifying 'nid' is not also specifying a VMA.
+	 * This makes sure the caller is picking _one_ of the modes with which
+	 * we can call this function, not both.
+	 */
+	if (vma || (addr != -1)) {
+		WARN_ON_ONCE(addr == -1);
 		WARN_ON_ONCE(nid != NUMA_NO_NODE);
 	}
 	/*
