@@ -48,11 +48,7 @@ struct rt298_priv {
 	int is_hp_in;
 };
 
-<<<<<<< HEAD
-static struct reg_default rt298_index_def[] = {
-=======
 static const struct reg_default rt298_index_def[] = {
->>>>>>> linux-next/akpm-base
 	{ 0x01, 0xa5a8 },
 	{ 0x02, 0x8e95 },
 	{ 0x03, 0x0002 },

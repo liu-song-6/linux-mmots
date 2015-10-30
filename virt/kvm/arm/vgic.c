@@ -1471,10 +1471,6 @@ static bool vgic_sync_hwirq(struct kvm_vcpu *vcpu, int lr, struct vgic_lr vlr)
 
 	WARN_ON(ret);
 
-<<<<<<< HEAD
-	if (map->active)
-		return 0;
-=======
 	if (phys_active) {
 		/*
 		 * Interrupt still marked as active on the physical
@@ -1488,7 +1484,6 @@ static bool vgic_sync_hwirq(struct kvm_vcpu *vcpu, int lr, struct vgic_lr vlr)
 		WARN_ON(ret);
 		return false;
 	}
->>>>>>> linux-next/akpm-base
 
 	spin_lock(&dist->lock);
 	level_pending = process_queued_irq(vcpu, lr, vlr);

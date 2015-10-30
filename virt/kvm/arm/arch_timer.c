@@ -154,34 +154,8 @@ static void kvm_timer_update_state(struct kvm_vcpu *vcpu)
 	if (!vgic_initialized(vcpu->kvm))
 	    return;
 
-<<<<<<< HEAD
-	/*
-	 * If the timer expired while we were not scheduled, now is the time
-	 * to inject it.
-	 */
-	if (kvm_timer_should_fire(vcpu))
-		kvm_timer_inject_irq(vcpu);
-
-	/*
-	 * We keep track of whether the edge-triggered interrupt has been
-	 * signalled to the vgic/guest, and if so, we mask the interrupt and
-	 * the physical distributor to prevent the timer from raising a
-	 * physical interrupt whenever we run a guest, preventing forward
-	 * VCPU progress.
-	 */
-	if (kvm_vgic_get_phys_irq_active(timer->map))
-		phys_active = true;
-	else
-		phys_active = false;
-
-	ret = irq_set_irqchip_state(timer->map->irq,
-				    IRQCHIP_STATE_ACTIVE,
-				    phys_active);
-	WARN_ON(ret);
-=======
 	if (kvm_timer_should_fire(vcpu) != timer->irq.level)
 		kvm_timer_update_irq(vcpu, !timer->irq.level);
->>>>>>> linux-next/akpm-base
 }
 
 /*

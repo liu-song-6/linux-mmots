@@ -668,11 +668,7 @@ setup_gop32(struct screen_info *si, efi_guid_t *proto,
 		bool conout_found = false;
 		void *dummy = NULL;
 		u32 h = handles[i];
-<<<<<<< HEAD
-		u32 current_fb_base;
-=======
 		u64 current_fb_base;
->>>>>>> linux-next/akpm-base
 
 		status = efi_call_early(handle_protocol, h,
 					proto, (void **)&gop32);
@@ -785,11 +781,7 @@ setup_gop64(struct screen_info *si, efi_guid_t *proto,
 		bool conout_found = false;
 		void *dummy = NULL;
 		u64 h = handles[i];
-<<<<<<< HEAD
-		u32 current_fb_base;
-=======
 		u64 current_fb_base;
->>>>>>> linux-next/akpm-base
 
 		status = efi_call_early(handle_protocol, h,
 					proto, (void **)&gop64);
