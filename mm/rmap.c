@@ -1466,8 +1466,8 @@ static int try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
 			ret = SWAP_FAIL;
 			goto out_unmap;
 		}
-			if (!PageDirty(page))
-				SetPageDirty(page);
+		if (!PageDirty(page))
+			SetPageDirty(page);
 		if (list_empty(&mm->mmlist)) {
 			spin_lock(&mmlist_lock);
 			if (list_empty(&mm->mmlist))
