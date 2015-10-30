@@ -12,6 +12,7 @@
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/of_gpio.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/regulator/consumer.h>
@@ -119,6 +120,7 @@ static ssize_t tegra_dpaux_transfer(struct drm_dp_aux *aux,
 	 */
 	if (msg->size < 1) {
 		switch (msg->request & ~DP_AUX_I2C_MOT) {
+		case DP_AUX_I2C_WRITE_STATUS_UPDATE:
 		case DP_AUX_I2C_WRITE:
 		case DP_AUX_I2C_READ:
 			value = DPAUX_DP_AUXCTL_CMD_ADDRESS_ONLY;
@@ -149,7 +151,7 @@ static ssize_t tegra_dpaux_transfer(struct drm_dp_aux *aux,
 
 		break;
 
-	case DP_AUX_I2C_STATUS:
+	case DP_AUX_I2C_WRITE_STATUS_UPDATE:
 		if (msg->request & DP_AUX_I2C_MOT)
 			value |= DPAUX_DP_AUXCTL_CMD_MOT_RQ;
 		else
@@ -438,6 +440,8 @@ struct platform_driver tegra_dpaux_driver = {
 struct tegra_dpaux *tegra_dpaux_find_by_of_node(struct device_node *np)
 {
 	struct tegra_dpaux *dpaux;
+
+	of_device_probe(np);
 
 	mutex_lock(&dpaux_lock);
 
