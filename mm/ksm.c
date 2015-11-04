@@ -1177,7 +1177,7 @@ again:
 		cond_resched();
 		stable_node = rb_entry(*new, struct stable_node, node);
 		tree_page = get_ksm_page(stable_node, false);
-		if (!tree_page)
+		if (!tree_page) {
 			/*
 			 * If we walked over a stale stable_node,
 			 * get_ksm_page() will call rb_erase() and it
@@ -1185,11 +1185,10 @@ again:
 			 * restart the search from scratch. Returning
 			 * NULL would be safe too, but we'd generate
 			 * false negative insertions just because some
-			 * stable_node was stale which would waste CPU
-			 * by doing the preparation work twice at the
-			 * next KSM pass.
+			 * stable_node was stale.
 			 */
 			goto again;
+		}
 
 		ret = memcmp_pages(page, tree_page);
 		put_page(tree_page);
@@ -1282,7 +1281,7 @@ again:
 		cond_resched();
 		stable_node = rb_entry(*new, struct stable_node, node);
 		tree_page = get_ksm_page(stable_node, false);
-		if (!tree_page)
+		if (!tree_page) {
 			/*
 			 * If we walked over a stale stable_node,
 			 * get_ksm_page() will call rb_erase() and it
@@ -1290,11 +1289,10 @@ again:
 			 * restart the search from scratch. Returning
 			 * NULL would be safe too, but we'd generate
 			 * false negative insertions just because some
-			 * stable_node was stale which would waste CPU
-			 * by doing the preparation work twice at the
-			 * next KSM pass.
+			 * stable_node was stale.
 			 */
 			goto again;
+		}
 
 		ret = memcmp_pages(kpage, tree_page);
 		put_page(tree_page);
