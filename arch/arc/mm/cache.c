@@ -853,13 +853,15 @@ void copy_user_highpage(struct page *to, struct page *from,
 	 *
 	 * Note that while @u_vaddr refers to DST page's userspace vaddr, it is
 	 * equally valid for SRC page as well
+	 * For !VIPT cache, all of this gets compiled out as
+	 * addr_not_cache_congruent() is 0
 	 */
 	if (page_mapcount(from) && addr_not_cache_congruent(kfrom, u_vaddr)) {
-		__flush_dcache_page(kfrom, u_vaddr);
+		__flush_dcache_page((unsigned long)kfrom, u_vaddr);
 		clean_src_k_mappings = 1;
 	}
 
-	copy_page((void *)kto, (void *)kfrom);
+	copy_page(kto, kfrom);
 
 	/*
 	 * Mark DST page K-mapping as dirty for a later finalization by
