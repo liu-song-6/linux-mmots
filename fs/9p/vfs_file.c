@@ -161,7 +161,7 @@ static int v9fs_file_do_lock(struct file *filp, int cmd, struct file_lock *fl)
 	if ((fl->fl_flags & FL_POSIX) != FL_POSIX)
 		BUG();
 
-	res = posix_lock_file_wait(filp, fl);
+	res = locks_lock_file_wait(filp, fl);
 	if (res < 0)
 		goto out;
 
