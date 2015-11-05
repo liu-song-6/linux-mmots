@@ -232,7 +232,7 @@ out_unlock:
 		fl_type = fl->fl_type;
 		fl->fl_type = F_UNLCK;
 		/* Even if this fails we want to return the remote error */
-		posix_lock_file_wait(filp, fl);
+		locks_lock_file_wait(filp, fl);
 		fl->fl_type = fl_type;
 	}
 out:

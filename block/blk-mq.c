@@ -78,47 +78,13 @@ static void blk_mq_hctx_clear_pending(struct blk_mq_hw_ctx *hctx,
 	clear_bit(CTX_TO_BIT(hctx, ctx), &bm->word);
 }
 
-static int blk_mq_queue_enter(struct request_queue *q, gfp_t gfp)
-{
-	while (true) {
-		int ret;
-
-		if (percpu_ref_tryget_live(&q->mq_usage_counter))
-			return 0;
-
-		if (!gfpflags_allow_blocking(gfp))
-			return -EBUSY;
-
-		ret = wait_event_interruptible(q->mq_freeze_wq,
-				!atomic_read(&q->mq_freeze_depth) ||
-				blk_queue_dying(q));
-		if (blk_queue_dying(q))
-			return -ENODEV;
-		if (ret)
-			return ret;
-	}
-}
-
-static void blk_mq_queue_exit(struct request_queue *q)
-{
-	percpu_ref_put(&q->mq_usage_counter);
-}
-
-static void blk_mq_usage_counter_release(struct percpu_ref *ref)
-{
-	struct request_queue *q =
-		container_of(ref, struct request_queue, mq_usage_counter);
-
-	wake_up_all(&q->mq_freeze_wq);
-}
-
 void blk_mq_freeze_queue_start(struct request_queue *q)
 {
 	int freeze_depth;
 
 	freeze_depth = atomic_inc_return(&q->mq_freeze_depth);
 	if (freeze_depth == 1) {
-		percpu_ref_kill(&q->mq_usage_counter);
+		percpu_ref_kill(&q->q_usage_counter);
 		blk_mq_run_hw_queues(q, false);
 	}
 }
