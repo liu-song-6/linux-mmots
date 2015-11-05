@@ -12,6 +12,7 @@
 #include <linux/module.h>
 #include <linux/cpumask.h>
 #include <linux/pci-aspm.h>
+#include <linux/aer.h>
 #include <asm-generic/pci-bridge.h>
 #include "pci.h"
 
@@ -1597,6 +1598,9 @@ static struct pci_dev *pci_scan_device(struct pci_bus *bus, int devfn)
 
 static void pci_init_capabilities(struct pci_dev *dev)
 {
+	/* Enhanced Allocation */
+	pci_ea_init(dev);
+
 	/* MSI/MSI-X list */
 	pci_msi_init_pci_dev(dev);
 
@@ -1620,6 +1624,36 @@ static void pci_init_capabilities(struct pci_dev *dev)
 
 	/* Enable ACS P2P upstream forwarding */
 	pci_enable_acs(dev);
+
+	pci_cleanup_aer_error_status_regs(dev);
+}
+
+/*
+ * This is the equivalent of pci_host_bridge_msi_domain that acts on
+ * devices. Firmware interfaces that can select the MSI domain on a
+ * per-device basis should be called from here.
+ */
+static struct irq_domain *pci_dev_msi_domain(struct pci_dev *dev)
+{
+	struct irq_domain *d;
+
+	/*
+	 * If a domain has been set through the pcibios_add_device
+	 * callback, then this is the one (platform code knows best).
+	 */
+	d = dev_get_msi_domain(&dev->dev);
+	if (d)
+		return d;
+
+	/*
+	 * Let's see if we have a firmware interface able to provide
+	 * the domain.
+	 */
+	d = pci_msi_get_device_domain(dev);
+	if (d)
+		return d;
+
+	return NULL;
 }
 
 /*

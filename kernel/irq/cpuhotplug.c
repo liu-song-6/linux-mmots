@@ -36,7 +36,11 @@ static bool migrate_one_irq(struct irq_desc *desc)
 
 	c = irq_data_get_irq_chip(d);
 	if (!c->irq_set_affinity) {
+<<<<<<< HEAD
 		pr_warn_ratelimited("IRQ%u: unable to set affinity\n", d->irq);
+=======
+		pr_debug("IRQ%u: unable to set affinity\n", d->irq);
+>>>>>>> linux-next/akpm-base
 	} else {
 		int r = irq_do_set_affinity(d, affinity, false);
 		if (r)

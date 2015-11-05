@@ -636,7 +636,15 @@ as follows:
 	q = a;
 	b = p;  /* BUG: Compiler and CPU can both reorder!!! */
 
+<<<<<<< HEAD
 So don't leave out the READ_ONCE().
+=======
+Finally, the READ_ONCE_CTRL() includes an smp_read_barrier_depends()
+that DEC Alpha needs in order to respect control depedencies. Alternatively
+use one of atomic{,64}_read_ctrl().
+
+So don't leave out the READ_ONCE_CTRL().
+>>>>>>> linux-next/akpm-base
 
 It is tempting to try to enforce ordering on identical stores on both
 branches of the "if" statement as follows:
@@ -793,6 +801,14 @@ site: https://www.cl.cam.ac.uk/~pes20/ppcmem/index.html.
 
 In summary:
 
+<<<<<<< HEAD
+=======
+  (*) Control dependencies must be headed by READ_ONCE_CTRL(),
+      atomic{,64}_read_ctrl(). Or, as a much less preferable alternative,
+      interpose smp_read_barrier_depends() between a READ_ONCE() and the
+      control-dependent write.
+
+>>>>>>> linux-next/akpm-base
   (*) Control dependencies can order prior loads against later stores.
       However, they do -not- guarantee any other sort of ordering:
       Not prior loads against later loads, nor prior stores against
@@ -812,9 +828,16 @@ In summary:
       can help to preserve the needed conditional.
 
   (*) Control dependencies require that the compiler avoid reordering the
+<<<<<<< HEAD
       dependency into nonexistence.  Careful use of READ_ONCE() or
       atomic{,64}_read() can help to preserve your control dependency.
       Please see the Compiler Barrier section for more information.
+=======
+      dependency into nonexistence.  Careful use of READ_ONCE_CTRL(),
+      atomic{,64}_read_ctrl() or smp_read_barrier_depends() can help to
+      preserve your control dependency.  Please see the Compiler Barrier
+      section for more information.
+>>>>>>> linux-next/akpm-base
 
   (*) Control dependencies pair normally with other types of barriers.
 

@@ -559,8 +559,12 @@ static int __init camellia_aesni_init(void)
 		return -ENODEV;
 	}
 
+<<<<<<< HEAD
 	if (!cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM,
 				&feature_name)) {
+=======
+	if (!cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM, &feature_name)) {
+>>>>>>> linux-next/akpm-base
 		pr_info("CPU feature '%s' is not supported.\n", feature_name);
 		return -ENODEV;
 	}
