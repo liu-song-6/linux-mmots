@@ -1085,8 +1085,6 @@ static int try_to_merge_with_ksm_page(struct rmap_item *rmap_item,
 	int err = -EFAULT;
 
 	down_read(&mm->mmap_sem);
-	if (ksm_test_exit(mm))
-		goto out;
 	vma = find_mergeable_vma(mm, rmap_item->address);
 	if (!vma)
 		goto out;
