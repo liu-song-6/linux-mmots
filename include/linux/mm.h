@@ -435,7 +435,7 @@ static inline int page_mapcount(struct page *page)
 
 static inline int total_mapcount(struct page *page)
 {
-	int i, ret;
+	int ret;
 
 	VM_BUG_ON_PAGE(PageTail(page), page);
 
@@ -445,8 +445,14 @@ static inline int total_mapcount(struct page *page)
 	ret = compound_mapcount(page);
 	if (PageHuge(page))
 		return ret;
-	for (i = 0; i < HPAGE_PMD_NR; i++)
-		ret += atomic_read(&page[i]._mapcount) + 1;
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
+	{
+		int i;
+
+		for (i = 0; i < HPAGE_PMD_NR; i++)
+			ret += atomic_read(&page[i]._mapcount) + 1;
+	}
+#endif
 	if (PageDoubleMap(page))
 		ret -= HPAGE_PMD_NR;
 	return ret;
