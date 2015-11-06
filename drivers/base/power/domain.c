@@ -1353,6 +1353,10 @@ int pm_genpd_add_subdomain(struct generic_pm_domain *genpd,
 
 	return ret;
 }
+<<<<<<< HEAD
+=======
+EXPORT_SYMBOL_GPL(pm_genpd_add_subdomain);
+>>>>>>> linux-next/akpm-base
 
 /**
  * pm_genpd_remove_subdomain - Remove a subdomain from an I/O PM domain.
@@ -1400,6 +1404,10 @@ out:
 
 	return ret;
 }
+<<<<<<< HEAD
+=======
+EXPORT_SYMBOL_GPL(pm_genpd_remove_subdomain);
+>>>>>>> linux-next/akpm-base
 
 /* Default device callbacks for generic PM domains. */
 

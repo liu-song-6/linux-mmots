@@ -613,7 +613,11 @@ static int spinand_erase_block(struct spi_device *spi_nand, u16 block_id)
 #ifdef CONFIG_MTD_SPINAND_ONDIEECC
 static int spinand_write_page_hwecc(struct mtd_info *mtd,
 				    struct nand_chip *chip,
+<<<<<<< HEAD
 				    const u8 *buf, int oob_required)
+=======
+				    const u8 *buf, int oob_required, int page)
+>>>>>>> linux-next/akpm-base
 {
 	const u8 *p = buf;
 	int eccsize = chip->ecc.size;
@@ -909,8 +913,7 @@ static int spinand_probe(struct spi_device *spi_nand)
 	dev_set_drvdata(&spi_nand->dev, mtd);
 
 	mtd->priv = chip;
-	mtd->name = dev_name(&spi_nand->dev);
-	mtd->owner = THIS_MODULE;
+	mtd->dev.parent = &spi_nand->dev;
 	mtd->oobsize = 64;
 
 	if (nand_scan(mtd, 1))
@@ -946,7 +949,6 @@ MODULE_DEVICE_TABLE(of, spinand_dt);
 static struct spi_driver spinand_driver = {
 	.driver = {
 		.name		= "mt29f",
-		.owner		= THIS_MODULE,
 		.of_match_table	= spinand_dt,
 	},
 	.probe		= spinand_probe,

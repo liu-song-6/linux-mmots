@@ -634,7 +634,10 @@ static struct spi_driver adf4350_driver = {
 	.driver = {
 		.name	= "adf4350",
 		.of_match_table = of_match_ptr(adf4350_of_match),
+<<<<<<< HEAD
 		.owner	= THIS_MODULE,
+=======
+>>>>>>> linux-next/akpm-base
 	},
 	.probe		= adf4350_probe,
 	.remove		= adf4350_remove,

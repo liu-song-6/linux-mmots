@@ -76,9 +76,16 @@ to_stp_policy_node(struct config_item *item)
 		NULL;
 }
 
+<<<<<<< HEAD
 static ssize_t stp_policy_node_masters_show(struct stp_policy_node *policy_node,
 					    char *page)
 {
+=======
+static ssize_t
+stp_policy_node_masters_show(struct config_item *item, char *page)
+{
+	struct stp_policy_node *policy_node = to_stp_policy_node(item);
+>>>>>>> linux-next/akpm-base
 	ssize_t count;
 
 	count = sprintf(page, "%u %u\n", policy_node->first_master,
@@ -88,9 +95,16 @@ static ssize_t stp_policy_node_masters_show(struct stp_policy_node *policy_node,
 }
 
 static ssize_t
+<<<<<<< HEAD
 stp_policy_node_masters_store(struct stp_policy_node *policy_node,
 			      const char *page, size_t count)
 {
+=======
+stp_policy_node_masters_store(struct config_item *item, const char *page,
+			      size_t count)
+{
+	struct stp_policy_node *policy_node = to_stp_policy_node(item);
+>>>>>>> linux-next/akpm-base
 	unsigned int first, last;
 	struct stm_device *stm;
 	char *p = (char *)page;
@@ -123,8 +137,14 @@ unlock:
 }
 
 static ssize_t
+<<<<<<< HEAD
 stp_policy_node_channels_show(struct stp_policy_node *policy_node, char *page)
 {
+=======
+stp_policy_node_channels_show(struct config_item *item, char *page)
+{
+	struct stp_policy_node *policy_node = to_stp_policy_node(item);
+>>>>>>> linux-next/akpm-base
 	ssize_t count;
 
 	count = sprintf(page, "%u %u\n", policy_node->first_channel,
@@ -134,9 +154,16 @@ stp_policy_node_channels_show(struct stp_policy_node *policy_node, char *page)
 }
 
 static ssize_t
+<<<<<<< HEAD
 stp_policy_node_channels_store(struct stp_policy_node *policy_node,
 			       const char *page, size_t count)
 {
+=======
+stp_policy_node_channels_store(struct config_item *item, const char *page,
+			       size_t count)
+{
+	struct stp_policy_node *policy_node = to_stp_policy_node(item);
+>>>>>>> linux-next/akpm-base
 	unsigned int first, last;
 	struct stm_device *stm;
 	char *p = (char *)page;
@@ -171,6 +198,7 @@ static void stp_policy_node_release(struct config_item *item)
 	kfree(to_stp_policy_node(item));
 }
 
+<<<<<<< HEAD
 struct stp_policy_node_attribute {
 	struct configfs_attribute	attr;
 	ssize_t (*show)(struct stp_policy_node *, char *);
@@ -236,6 +264,18 @@ static struct stp_policy_node_attribute stp_policy_node_attr_channels = {
 static struct configfs_attribute *stp_policy_node_attrs[] = {
 	&stp_policy_node_attr_range.attr,
 	&stp_policy_node_attr_channels.attr,
+=======
+static struct configfs_item_operations stp_policy_node_item_ops = {
+	.release		= stp_policy_node_release,
+};
+
+CONFIGFS_ATTR(stp_policy_node_, masters);
+CONFIGFS_ATTR(stp_policy_node_, channels);
+
+static struct configfs_attribute *stp_policy_node_attrs[] = {
+	&stp_policy_node_attr_masters,
+	&stp_policy_node_attr_channels,
+>>>>>>> linux-next/akpm-base
 	NULL,
 };
 
@@ -298,6 +338,7 @@ static struct config_item_type stp_policy_node_type = {
 /*
  * Root group: policies.
  */
+<<<<<<< HEAD
 static struct configfs_attribute stp_policy_attr_device = {
 	.ca_owner = THIS_MODULE,
 	.ca_name = "device",
@@ -312,6 +353,10 @@ static struct configfs_attribute *stp_policy_attrs[] = {
 static ssize_t stp_policy_attr_show(struct config_item *item,
 				    struct configfs_attribute *attr,
 				    char *page)
+=======
+static ssize_t stp_policy_device_show(struct config_item *item,
+				      char *page)
+>>>>>>> linux-next/akpm-base
 {
 	struct stp_policy *policy = to_stp_policy(item);
 	ssize_t count;
@@ -324,6 +369,16 @@ static ssize_t stp_policy_attr_show(struct config_item *item,
 	return count;
 }
 
+<<<<<<< HEAD
+=======
+CONFIGFS_ATTR_RO(stp_policy_, device);
+
+static struct configfs_attribute *stp_policy_attrs[] = {
+	&stp_policy_attr_device,
+	NULL,
+};
+
+>>>>>>> linux-next/akpm-base
 void stp_policy_unbind(struct stp_policy *policy)
 {
 	struct stm_device *stm = policy->stm;
@@ -350,7 +405,10 @@ static void stp_policy_release(struct config_item *item)
 
 static struct configfs_item_operations stp_policy_item_ops = {
 	.release		= stp_policy_release,
+<<<<<<< HEAD
 	.show_attribute		= stp_policy_attr_show,
+=======
+>>>>>>> linux-next/akpm-base
 };
 
 static struct configfs_group_operations stp_policy_group_ops = {

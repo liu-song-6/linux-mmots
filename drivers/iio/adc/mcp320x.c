@@ -405,7 +405,10 @@ static struct spi_driver mcp320x_driver = {
 	.driver = {
 		.name = "mcp320x",
 		.of_match_table = of_match_ptr(mcp320x_dt_ids),
+<<<<<<< HEAD
 		.owner = THIS_MODULE,
+=======
+>>>>>>> linux-next/akpm-base
 	},
 	.probe = mcp320x_probe,
 	.remove = mcp320x_remove,
