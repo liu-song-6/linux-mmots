@@ -159,6 +159,10 @@ config BATTERY_SBS
 
 config BATTERY_BQ27XXX
 	tristate "BQ27xxx battery driver"
+<<<<<<< HEAD
+=======
+	depends on I2C || I2C=n
+>>>>>>> linux-next/akpm-base
 	help
 	  Say Y here to enable support for batteries with BQ27xxx (I2C/HDQ) chips.
 

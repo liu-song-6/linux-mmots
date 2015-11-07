@@ -691,7 +691,11 @@ static bool bq27xxx_battery_dead(struct bq27xxx_device_info *di, u16 flags)
  */
 static int bq27xxx_battery_read_health(struct bq27xxx_device_info *di)
 {
+<<<<<<< HEAD
 	int flags;
+=======
+	u16 flags;
+>>>>>>> linux-next/akpm-base
 
 	flags = bq27xxx_read(di, BQ27XXX_REG_FLAGS, false);
 	if (flags < 0) {
@@ -762,6 +766,18 @@ static void bq27xxx_battery_update(struct bq27xxx_device_info *di)
 	di->last_update = jiffies;
 }
 
+<<<<<<< HEAD
+=======
+static irqreturn_t bq27xxx_battery_irq_handler_thread(int irq, void *data)
+{
+	struct bq27xxx_device_info *di = data;
+
+	bq27xxx_battery_update(di);
+
+	return IRQ_HANDLED;
+}
+
+>>>>>>> linux-next/akpm-base
 static void bq27xxx_battery_poll(struct work_struct *work)
 {
 	struct bq27xxx_device_info *di =
@@ -1052,6 +1068,7 @@ static void bq27xxx_powersupply_unregister(struct bq27xxx_device_info *di)
 static DEFINE_IDR(battery_id);
 static DEFINE_MUTEX(battery_mutex);
 
+<<<<<<< HEAD
 static irqreturn_t bq27xxx_battery_irq_handler_thread(int irq, void *data)
 {
 	struct bq27xxx_device_info *di = data;
@@ -1061,6 +1078,8 @@ static irqreturn_t bq27xxx_battery_irq_handler_thread(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 static int bq27xxx_battery_i2c_read(struct bq27xxx_device_info *di, u8 reg,
 				    bool single)
 {
@@ -1292,7 +1311,10 @@ static int bq27xxx_battery_platform_probe(struct platform_device *pdev)
 
 	di->dev = &pdev->dev;
 	di->chip = pdata->chip;
+<<<<<<< HEAD
 	di->regs = bq27xxx_regs[di->chip];
+=======
+>>>>>>> linux-next/akpm-base
 
 	name = pdata->name ?: dev_name(&pdev->dev);
 	di->bus.read = &bq27xxx_battery_platform_read;
