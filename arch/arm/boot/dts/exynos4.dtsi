@@ -76,6 +76,11 @@
 		reg = <0x10000000 0x100>;
 	};
 
+	sromc@12570000 {
+		compatible = "samsung,exynos-srom";
+		reg = <0x12570000 0x10>;
+	};
+
 	mipi_phy: video-phy@10020710 {
 		compatible = "samsung,s5pv210-mipi-video-phy";
 		#phy-cells = <1>;
@@ -431,6 +436,8 @@
 		interrupts = <0 52 0>;
 		clocks = <&clock CLK_UART0>, <&clock CLK_SCLK_UART0>;
 		clock-names = "uart", "clk_uart_baud0";
+		dmas = <&pdma0 15>, <&pdma0 16>;
+		dma-names = "rx", "tx";
 		status = "disabled";
 	};
 
@@ -440,6 +447,8 @@
 		interrupts = <0 53 0>;
 		clocks = <&clock CLK_UART1>, <&clock CLK_SCLK_UART1>;
 		clock-names = "uart", "clk_uart_baud0";
+		dmas = <&pdma1 15>, <&pdma1 16>;
+		dma-names = "rx", "tx";
 		status = "disabled";
 	};
 
@@ -449,6 +458,8 @@
 		interrupts = <0 54 0>;
 		clocks = <&clock CLK_UART2>, <&clock CLK_SCLK_UART2>;
 		clock-names = "uart", "clk_uart_baud0";
+		dmas = <&pdma0 17>, <&pdma0 18>;
+		dma-names = "rx", "tx";
 		status = "disabled";
 	};
 
@@ -458,6 +469,8 @@
 		interrupts = <0 55 0>;
 		clocks = <&clock CLK_UART3>, <&clock CLK_SCLK_UART3>;
 		clock-names = "uart", "clk_uart_baud0";
+		dmas = <&pdma1 17>, <&pdma1 18>;
+		dma-names = "rx", "tx";
 		status = "disabled";
 	};
 
