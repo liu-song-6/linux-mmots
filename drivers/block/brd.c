@@ -323,7 +323,7 @@ out:
 	return err;
 }
 
-static void brd_make_request(struct request_queue *q, struct bio *bio)
+static blk_qc_t brd_make_request(struct request_queue *q, struct bio *bio)
 {
 	struct block_device *bdev = bio->bi_bdev;
 	struct brd_device *brd = bdev->bd_disk->private_data;
@@ -358,9 +358,10 @@ static void brd_make_request(struct request_queue *q, struct bio *bio)
 
 out:
 	bio_endio(bio);
-	return;
+	return BLK_QC_T_NONE;
 io_error:
 	bio_io_error(bio);
+	return BLK_QC_T_NONE;
 }
 
 static int brd_rw_page(struct block_device *bdev, sector_t sector,
@@ -374,7 +375,7 @@ static int brd_rw_page(struct block_device *bdev, sector_t sector,
 
 #ifdef CONFIG_BLK_DEV_RAM_DAX
 static long brd_direct_access(struct block_device *bdev, sector_t sector,
-			void __pmem **kaddr, unsigned long *pfn)
+			void __pmem **kaddr, pfn_t *pfn)
 {
 	struct brd_device *brd = bdev->bd_disk->private_data;
 	struct page *page;
@@ -385,7 +386,7 @@ static long brd_direct_access(struct block_device *bdev, sector_t sector,
 	if (!page)
 		return -ENOSPC;
 	*kaddr = (void __pmem *)page_address(page);
-	*pfn = page_to_pfn(page);
+	*pfn = page_to_pfn_t(page);
 
 	return PAGE_SIZE;
 }

@@ -482,6 +482,9 @@ struct block_device {
 	int			bd_fsfreeze_count;
 	/* Mutex for freeze */
 	struct mutex		bd_fsfreeze_mutex;
+#ifdef CONFIG_FS_DAX
+	int			bd_map_count;
+#endif
 };
 
 /*
@@ -1042,6 +1045,7 @@ extern int fcntl_setlease(unsigned int fd, struct file *filp, long arg);
 extern int fcntl_getlease(struct file *filp);
 
 /* fs/locks.c */
+extern struct srcu_notifier_head	lease_notifier_chain;
 void locks_free_lock_context(struct file_lock_context *ctx);
 void locks_free_lock(struct file_lock *fl);
 extern void locks_init_lock(struct file_lock *);
@@ -2266,6 +2270,14 @@ extern struct super_block *freeze_bdev(struct block_device *);
 extern void emergency_thaw_all(void);
 extern int thaw_bdev(struct block_device *bdev, struct super_block *sb);
 extern int fsync_bdev(struct block_device *);
+#ifdef CONFIG_FS_DAX
+extern bool blkdev_dax_capable(struct block_device *bdev);
+#else
+static inline bool blkdev_dax_capable(struct block_device *bdev)
+{
+	return false;
+}
+#endif
 
 extern struct super_block *blockdev_superblock;
 
@@ -2613,7 +2625,7 @@ static inline void remove_inode_hash(struct inode *inode)
 extern void inode_sb_list_add(struct inode *inode);
 
 #ifdef CONFIG_BLOCK
-extern void submit_bio(int, struct bio *);
+extern blk_qc_t submit_bio(int, struct bio *);
 extern int bdev_read_only(struct block_device *);
 #endif
 extern int set_blocksize(struct block_device *, int);

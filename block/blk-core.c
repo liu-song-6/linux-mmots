@@ -516,6 +516,12 @@ void blk_set_queue_dying(struct request_queue *q)
 }
 EXPORT_SYMBOL_GPL(blk_set_queue_dying);
 
+void blk_wait_queue_dead(struct request_queue *q)
+{
+	wait_event(q->q_freeze_wq, q->q_usage_dead);
+}
+EXPORT_SYMBOL(blk_wait_queue_dead);
+
 /**
  * blk_cleanup_queue - shutdown a request queue
  * @q: request queue to shutdown
@@ -641,7 +647,7 @@ int blk_queue_enter(struct request_queue *q, gfp_t gfp)
 		if (!gfpflags_allow_blocking(gfp))
 			return -EBUSY;
 
-		ret = wait_event_interruptible(q->mq_freeze_wq,
+		ret = wait_event_interruptible(q->q_freeze_wq,
 				!atomic_read(&q->mq_freeze_depth) ||
 				blk_queue_dying(q));
 		if (blk_queue_dying(q))
@@ -661,7 +667,7 @@ static void blk_queue_usage_counter_release(struct percpu_ref *ref)
 	struct request_queue *q =
 		container_of(ref, struct request_queue, q_usage_counter);
 
-	wake_up_all(&q->mq_freeze_wq);
+	wake_up_all(&q->q_freeze_wq);
 }
 
 struct request_queue *blk_alloc_queue_node(gfp_t gfp_mask, int node_id)
@@ -723,7 +729,7 @@ struct request_queue *blk_alloc_queue_node(gfp_t gfp_mask, int node_id)
 	q->bypass_depth = 1;
 	__set_bit(QUEUE_FLAG_BYPASS, &q->queue_flags);
 
-	init_waitqueue_head(&q->mq_freeze_wq);
+	init_waitqueue_head(&q->q_freeze_wq);
 
 	/*
 	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
@@ -809,7 +815,7 @@ blk_init_queue_node(request_fn_proc *rfn, spinlock_t *lock, int node_id)
 }
 EXPORT_SYMBOL(blk_init_queue_node);
 
-static void blk_queue_bio(struct request_queue *q, struct bio *bio);
+static blk_qc_t blk_queue_bio(struct request_queue *q, struct bio *bio);
 
 struct request_queue *
 blk_init_allocated_queue(struct request_queue *q, request_fn_proc *rfn,
@@ -1678,7 +1684,7 @@ void init_request_from_bio(struct request *req, struct bio *bio)
 	blk_rq_bio_prep(req->q, req, bio);
 }
 
-static void blk_queue_bio(struct request_queue *q, struct bio *bio)
+static blk_qc_t blk_queue_bio(struct request_queue *q, struct bio *bio)
 {
 	const bool sync = !!(bio->bi_rw & REQ_SYNC);
 	struct blk_plug *plug;
@@ -1698,7 +1704,7 @@ static void blk_queue_bio(struct request_queue *q, struct bio *bio)
 	if (bio_integrity_enabled(bio) && bio_integrity_prep(bio)) {
 		bio->bi_error = -EIO;
 		bio_endio(bio);
-		return;
+		return BLK_QC_T_NONE;
 	}
 
 	if (bio->bi_rw & (REQ_FLUSH | REQ_FUA)) {
@@ -1713,7 +1719,7 @@ static void blk_queue_bio(struct request_queue *q, struct bio *bio)
 	 */
 	if (!blk_queue_nomerges(q)) {
 		if (blk_attempt_plug_merge(q, bio, &request_count, NULL))
-			return;
+			return BLK_QC_T_NONE;
 	} else
 		request_count = blk_plug_queued_count(q);
 
@@ -1791,6 +1797,8 @@ get_rq:
 out_unlock:
 		spin_unlock_irq(q->queue_lock);
 	}
+
+	return BLK_QC_T_NONE;
 }
 
 /*
@@ -1996,12 +2004,13 @@ end_io:
  * a lower device by calling into generic_make_request recursively, which
  * means the bio should NOT be touched after the call to ->make_request_fn.
  */
-void generic_make_request(struct bio *bio)
+blk_qc_t generic_make_request(struct bio *bio)
 {
 	struct bio_list bio_list_on_stack;
+	blk_qc_t ret = BLK_QC_T_NONE;
 
 	if (!generic_make_request_checks(bio))
-		return;
+		goto out;
 
 	/*
 	 * We only want one ->make_request_fn to be active at a time, else
@@ -2015,7 +2024,7 @@ void generic_make_request(struct bio *bio)
 	 */
 	if (current->bio_list) {
 		bio_list_add(current->bio_list, bio);
-		return;
+		goto out;
 	}
 
 	/* following loop may be a bit non-obvious, and so deserves some
@@ -2040,7 +2049,7 @@ void generic_make_request(struct bio *bio)
 
 		if (likely(blk_queue_enter(q, __GFP_DIRECT_RECLAIM) == 0)) {
 
-			q->make_request_fn(q, bio);
+			ret = q->make_request_fn(q, bio);
 
 			blk_queue_exit(q);
 
@@ -2053,6 +2062,9 @@ void generic_make_request(struct bio *bio)
 		}
 	} while (bio);
 	current->bio_list = NULL; /* deactivate */
+
+out:
+	return ret;
 }
 EXPORT_SYMBOL(generic_make_request);
 
@@ -2066,7 +2078,7 @@ EXPORT_SYMBOL(generic_make_request);
  * interfaces; @bio must be presetup and ready for I/O.
  *
  */
-void submit_bio(int rw, struct bio *bio)
+blk_qc_t submit_bio(int rw, struct bio *bio)
 {
 	bio->bi_rw |= rw;
 
@@ -2100,7 +2112,7 @@ void submit_bio(int rw, struct bio *bio)
 		}
 	}
 
-	generic_make_request(bio);
+	return generic_make_request(bio);
 }
 EXPORT_SYMBOL(submit_bio);
 
@@ -3305,6 +3317,47 @@ void blk_finish_plug(struct blk_plug *plug)
 	current->plug = NULL;
 }
 EXPORT_SYMBOL(blk_finish_plug);
+
+bool blk_poll(struct request_queue *q, blk_qc_t cookie)
+{
+	struct blk_plug *plug;
+	long state;
+
+	if (!q->mq_ops || !q->mq_ops->poll || !blk_qc_t_valid(cookie) ||
+	    !test_bit(QUEUE_FLAG_POLL, &q->queue_flags))
+		return false;
+
+	plug = current->plug;
+	if (plug)
+		blk_flush_plug_list(plug, false);
+
+	state = current->state;
+	while (!need_resched()) {
+		unsigned int queue_num = blk_qc_t_to_queue_num(cookie);
+		struct blk_mq_hw_ctx *hctx = q->queue_hw_ctx[queue_num];
+		int ret;
+
+		hctx->poll_invoked++;
+
+		ret = q->mq_ops->poll(hctx, blk_qc_t_to_tag(cookie));
+		if (ret > 0) {
+			hctx->poll_success++;
+			set_current_state(TASK_RUNNING);
+			return true;
+		}
+
+		if (signal_pending_state(state, current))
+			set_current_state(TASK_RUNNING);
+
+		if (current->state == TASK_RUNNING)
+			return true;
+		if (ret < 0)
+			break;
+		cpu_relax();
+	}
+
+	return false;
+}
 
 #ifdef CONFIG_PM
 /**
