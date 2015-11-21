@@ -3110,7 +3110,7 @@ static void nand_resume(struct mtd_info *mtd)
  */
 static void nand_shutdown(struct mtd_info *mtd)
 {
-	nand_get_device(mtd, FL_SHUTDOWN);
+	nand_get_device(mtd, FL_PM_SUSPENDED);
 }
 
 /* Set default functions */
@@ -3989,8 +3989,11 @@ int nand_scan_ident(struct mtd_info *mtd, int maxchips,
 	struct nand_flash_dev *type;
 	int ret;
 
-	if (chip->flash_node) {
-		ret = nand_dt_init(mtd, chip, chip->flash_node);
+	if (nand_get_flash_node(chip)) {
+		/* MTD can automatically handle DT partitions, etc. */
+		mtd_set_of_node(mtd, nand_get_flash_node(chip));
+
+		ret = nand_dt_init(mtd, chip, nand_get_flash_node(chip));
 		if (ret)
 			return ret;
 	}
