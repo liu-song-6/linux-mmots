@@ -20,10 +20,13 @@ static void *lzo_create(void)
 	void *ret;
 
 	ret = kzalloc(LZO1X_MEM_COMPRESS,
-			__GFP_NORETRY|__GFP_NOWARN|__GFP_NOMEMALLOC);
-	if (!ret)
-		ret = vzalloc(LZO1X_MEM_COMPRESS);
-	return ret;
+			__GFP_NORETRY | __GFP_NOWARN | __GFP_NOMEMALLOC);
+	if (ret)
+		return ret;
+
+	return __vmalloc(LZO1X_MEM_COMPRESS,
+			GFP_NOIO | __GFP_NOWARN | __GFP_HIGHMEM | __GFP_ZERO,
+			PAGE_KERNEL);
 }
 
 static void lzo_destroy(void *private)
@@ -42,6 +45,7 @@ static int lzo_decompress(const unsigned char *src, size_t src_len,
 		unsigned char *dst)
 {
 	size_t dst_len = PAGE_SIZE;
+
 	int ret = lzo1x_decompress_safe(src, src_len, dst, &dst_len);
 	return ret == LZO_E_OK ? 0 : ret;
 }
