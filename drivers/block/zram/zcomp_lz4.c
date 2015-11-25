@@ -20,10 +20,13 @@ static void *zcomp_lz4_create(void)
 	void *ret;
 
 	ret = kzalloc(LZ4_MEM_COMPRESS,
-			__GFP_NORETRY|__GFP_NOWARN|__GFP_NOMEMALLOC);
-	if (!ret)
-		ret = vzalloc(LZ4_MEM_COMPRESS);
-	return ret;
+			__GFP_NORETRY | __GFP_NOWARN | __GFP_NOMEMALLOC);
+	if (ret)
+		return ret;
+
+	return __vmalloc(LZ4_MEM_COMPRESS,
+			GFP_NOIO | __GFP_NOWARN | __GFP_HIGHMEM | __GFP_ZERO,
+			PAGE_KERNEL);
 }
 
 static void zcomp_lz4_destroy(void *private)
@@ -42,6 +45,7 @@ static int zcomp_lz4_decompress(const unsigned char *src, size_t src_len,
 		unsigned char *dst)
 {
 	size_t dst_len = PAGE_SIZE;
+
 	/* return  : Success if return 0 */
 	return lz4_decompress_unknownoutputsize(src, src_len, dst, &dst_len);
 }
