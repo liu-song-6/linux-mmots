@@ -111,8 +111,8 @@ struct ctl_table
 	struct ctl_table *child;	/* Deprecated */
 	proc_handler *proc_handler;	/* Callback for text formatting */
 	struct ctl_table_poll *poll;
-	void *extra1;
-	void *extra2;
+	const void *extra1;
+	const void *extra2;
 };
 
 struct ctl_node {
