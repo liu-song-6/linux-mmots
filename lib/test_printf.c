@@ -166,6 +166,10 @@ test_string(void)
 	test("", "%s%.0s", "", "123");
 	test("ABCD|abc|123", "%s|%.3s|%.*s", "ABCD", "abcdef", 3, "123456");
 	test("1  |  2|3  |  4|5  ", "%-3s|%3s|%-*s|%*s|%*s", "1", "2", 3, "3", 3, "4", -3, "5");
+	test("1234      ", "%-10.4s", "123456");
+	test("      1234", "%10.4s", "123456");
+	/* Negative precision should be treated as 0. */
+	test("    ", "%4.*s", -5, "123456");
 	/*
 	 * POSIX and C99 say that a missing precision should be
 	 * treated as a precision of 0. However, the kernel's printf
