@@ -2,6 +2,7 @@
 #define LINUX_MM_DEBUG_H 1
 
 #include <linux/stringify.h>
+#include <linux/types.h>
 
 struct page;
 struct vm_area_struct;
@@ -10,7 +11,9 @@ struct mm_struct;
 extern void dump_page(struct page *page, const char *reason);
 extern void dump_page_badflags(struct page *page, const char *reason,
 			       unsigned long badflags);
-extern void dump_gfpflag_names(unsigned long gfp_flags);
+extern char *format_page_flags(unsigned long flags, char *buf, char *end);
+extern char *format_vma_flags(unsigned long flags, char *buf, char *end);
+extern char *format_gfp_flags(gfp_t gfp_flags, char *buf, char*end);
 void dump_vma(const struct vm_area_struct *vma);
 void dump_mm(const struct mm_struct *mm);
 
