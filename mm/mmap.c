@@ -1352,6 +1352,17 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
 			if (locks_verify_locked(file))
 				return -EAGAIN;
 
+			/*
+			 * If we must remove privs, we do it here since
+			 * doing it during page COW is expensive and
+			 * cannot hold inode->i_mutex.
+			 */
+			if (prot & PROT_WRITE && !IS_NOSEC(inode)) {
+				mutex_lock(&inode->i_mutex);
+				file_remove_privs(file);
+				mutex_unlock(&inode->i_mutex);
+			}
+
 			vm_flags |= VM_SHARED | VM_MAYSHARE;
 			if (!(file->f_mode & FMODE_WRITE))
 				vm_flags &= ~(VM_MAYWRITE | VM_SHARED);
