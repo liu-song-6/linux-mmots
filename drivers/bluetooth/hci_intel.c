@@ -186,7 +186,7 @@ static int intel_lpm_suspend(struct hci_uart *hu)
 	}
 
 	memcpy(skb_put(skb, sizeof(suspend)), suspend, sizeof(suspend));
-	bt_cb(skb)->pkt_type = HCI_LPM_PKT;
+	hci_skb_pkt_type(skb) = HCI_LPM_PKT;
 
 	set_bit(STATE_LPM_TRANSACTION, &intel->flags);
 
@@ -230,7 +230,7 @@ static int intel_lpm_resume(struct hci_uart *hu)
 		return -ENOMEM;
 	}
 
-	bt_cb(skb)->pkt_type = HCI_LPM_WAKE_PKT;
+	hci_skb_pkt_type(skb) = HCI_LPM_WAKE_PKT;
 
 	set_bit(STATE_LPM_TRANSACTION, &intel->flags);
 
@@ -272,7 +272,7 @@ static int intel_lpm_host_wake(struct hci_uart *hu)
 
 	memcpy(skb_put(skb, sizeof(lpm_resume_ack)), lpm_resume_ack,
 	       sizeof(lpm_resume_ack));
-	bt_cb(skb)->pkt_type = HCI_LPM_PKT;
+	hci_skb_pkt_type(skb) = HCI_LPM_PKT;
 
 	/* LPM flow is a priority, enqueue packet at list head */
 	skb_queue_head(&intel->txq, skb);
@@ -467,7 +467,7 @@ static int inject_cmd_complete(struct hci_dev *hdev, __u16 opcode)
 
 	*skb_put(skb, 1) = 0x00;
 
-	bt_cb(skb)->pkt_type = HCI_EVENT_PKT;
+	hci_skb_pkt_type(skb) = HCI_EVENT_PKT;
 
 	return hci_recv_frame(hdev, skb);
 }
@@ -502,7 +502,7 @@ static int intel_set_baudrate(struct hci_uart *hu, unsigned int speed)
 	/* Device will not accept speed change if Intel version has not been
 	 * previously requested.
 	 */
-	skb = __hci_cmd_sync(hdev, 0xfc05, 0, NULL, HCI_INIT_TIMEOUT);
+	skb = __hci_cmd_sync(hdev, 0xfc05, 0, NULL, HCI_CMD_TIMEOUT);
 	if (IS_ERR(skb)) {
 		bt_dev_err(hdev, "Reading Intel version information failed (%ld)",
 			   PTR_ERR(skb));
@@ -517,7 +517,7 @@ static int intel_set_baudrate(struct hci_uart *hu, unsigned int speed)
 	}
 
 	memcpy(skb_put(skb, sizeof(speed_cmd)), speed_cmd, sizeof(speed_cmd));
-	bt_cb(skb)->pkt_type = HCI_COMMAND_PKT;
+	hci_skb_pkt_type(skb) = HCI_COMMAND_PKT;
 
 	hci_uart_set_flow_control(hu, true);
 
@@ -590,7 +590,7 @@ static int intel_setup(struct hci_uart *hu)
 	 * is in bootloader mode or if it already has operational firmware
 	 * loaded.
 	 */
-	skb = __hci_cmd_sync(hdev, 0xfc05, 0, NULL, HCI_INIT_TIMEOUT);
+	skb = __hci_cmd_sync(hdev, 0xfc05, 0, NULL, HCI_CMD_TIMEOUT);
 	if (IS_ERR(skb)) {
 		bt_dev_err(hdev, "Reading Intel version information failed (%ld)",
 			   PTR_ERR(skb));
@@ -671,7 +671,7 @@ static int intel_setup(struct hci_uart *hu)
 	/* Read the secure boot parameters to identify the operating
 	 * details of the bootloader.
 	 */
-	skb = __hci_cmd_sync(hdev, 0xfc0d, 0, NULL, HCI_INIT_TIMEOUT);
+	skb = __hci_cmd_sync(hdev, 0xfc0d, 0, NULL, HCI_CMD_TIMEOUT);
 	if (IS_ERR(skb)) {
 		bt_dev_err(hdev, "Reading Intel boot parameters failed (%ld)",
 			   PTR_ERR(skb));
@@ -881,7 +881,7 @@ done:
 	set_bit(STATE_BOOTING, &intel->flags);
 
 	skb = __hci_cmd_sync(hdev, 0xfc01, sizeof(reset_param), reset_param,
-			     HCI_INIT_TIMEOUT);
+			     HCI_CMD_TIMEOUT);
 	if (IS_ERR(skb))
 		return PTR_ERR(skb);
 
@@ -1126,7 +1126,7 @@ static struct sk_buff *intel_dequeue(struct hci_uart *hu)
 		return skb;
 
 	if (test_bit(STATE_BOOTLOADER, &intel->flags) &&
-	    (bt_cb(skb)->pkt_type == HCI_COMMAND_PKT)) {
+	    (hci_skb_pkt_type(skb) == HCI_COMMAND_PKT)) {
 		struct hci_command_hdr *cmd = (void *)skb->data;
 		__u16 opcode = le16_to_cpu(cmd->opcode);
 
@@ -1140,7 +1140,7 @@ static struct sk_buff *intel_dequeue(struct hci_uart *hu)
 	}
 
 	/* Prepend skb with frame type */
-	memcpy(skb_push(skb, 1), &bt_cb(skb)->pkt_type, 1);
+	memcpy(skb_push(skb, 1), &hci_skb_pkt_type(skb), 1);
 
 	return skb;
 }

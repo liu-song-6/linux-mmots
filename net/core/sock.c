@@ -1815,7 +1815,7 @@ static long sock_wait_for_wmem(struct sock *sk, long timeo)
 {
 	DEFINE_WAIT(wait);
 
-	clear_bit(SOCK_ASYNC_NOSPACE, &sk->sk_socket->flags);
+	sk_clear_bit(SOCKWQ_ASYNC_NOSPACE, sk);
 	for (;;) {
 		if (!timeo)
 			break;
@@ -1861,7 +1861,7 @@ struct sk_buff *sock_alloc_send_pskb(struct sock *sk, unsigned long header_len,
 		if (sk_wmem_alloc_get(sk) < sk->sk_sndbuf)
 			break;
 
-		set_bit(SOCK_ASYNC_NOSPACE, &sk->sk_socket->flags);
+		sk_set_bit(SOCKWQ_ASYNC_NOSPACE, sk);
 		set_bit(SOCK_NOSPACE, &sk->sk_socket->flags);
 		err = -EAGAIN;
 		if (!timeo)
@@ -2048,9 +2048,9 @@ int sk_wait_data(struct sock *sk, long *timeo, const struct sk_buff *skb)
 	DEFINE_WAIT(wait);
 
 	prepare_to_wait(sk_sleep(sk), &wait, TASK_INTERRUPTIBLE);
-	set_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+	sk_set_bit(SOCKWQ_ASYNC_WAITDATA, sk);
 	rc = sk_wait_event(sk, timeo, skb_peek_tail(&sk->sk_receive_queue) != skb);
-	clear_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+	sk_clear_bit(SOCKWQ_ASYNC_WAITDATA, sk);
 	finish_wait(sk_sleep(sk), &wait);
 	return rc;
 }
@@ -2283,7 +2283,7 @@ static void sock_def_wakeup(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up_interruptible_all(&wq->wait);
 	rcu_read_unlock();
 }
@@ -2294,7 +2294,7 @@ static void sock_def_error_report(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up_interruptible_poll(&wq->wait, POLLERR);
 	sk_wake_async(sk, SOCK_WAKE_IO, POLL_ERR);
 	rcu_read_unlock();
@@ -2306,7 +2306,7 @@ static void sock_def_readable(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up_interruptible_sync_poll(&wq->wait, POLLIN | POLLPRI |
 						POLLRDNORM | POLLRDBAND);
 	sk_wake_async(sk, SOCK_WAKE_WAITD, POLL_IN);
@@ -2324,7 +2324,7 @@ static void sock_def_write_space(struct sock *sk)
 	 */
 	if ((atomic_read(&sk->sk_wmem_alloc) << 1) <= sk->sk_sndbuf) {
 		wq = rcu_dereference(sk->sk_wq);
-		if (wq_has_sleeper(wq))
+		if (skwq_has_sleeper(wq))
 			wake_up_interruptible_sync_poll(&wq->wait, POLLOUT |
 						POLLWRNORM | POLLWRBAND);
 

@@ -58,6 +58,7 @@
 #include <linux/memcontrol.h>
 #include <linux/static_key.h>
 #include <linux/sched.h>
+#include <linux/wait.h>
 
 #include <linux/filter.h>
 #include <linux/rculist_nulls.h>
@@ -384,8 +385,10 @@ struct sock {
 	int			sk_rcvbuf;
 
 	struct sk_filter __rcu	*sk_filter;
-	struct socket_wq __rcu	*sk_wq;
-
+	union {
+		struct socket_wq __rcu	*sk_wq;
+		struct socket_wq	*sk_wq_raw;
+	};
 #ifdef CONFIG_XFRM
 	struct xfrm_policy	*sk_policy[2];
 #endif
@@ -1879,12 +1882,12 @@ static inline bool sk_has_allocations(const struct sock *sk)
 }
 
 /**
- * wq_has_sleeper - check if there are any waiting processes
+ * skwq_has_sleeper - check if there are any waiting processes
  * @wq: struct socket_wq
  *
  * Returns true if socket_wq has waiting processes
  *
- * The purpose of the wq_has_sleeper and sock_poll_wait is to wrap the memory
+ * The purpose of the skwq_has_sleeper and sock_poll_wait is to wrap the memory
  * barrier call. They were added due to the race found within the tcp code.
  *
  * Consider following tcp code paths:
@@ -1910,15 +1913,9 @@ static inline bool sk_has_allocations(const struct sock *sk)
  * data on the socket.
  *
  */
-static inline bool wq_has_sleeper(struct socket_wq *wq)
+static inline bool skwq_has_sleeper(struct socket_wq *wq)
 {
-	/* We need to be sure we are in sync with the
-	 * add_wait_queue modifications to the wait queue.
-	 *
-	 * This memory barrier is paired in the sock_poll_wait.
-	 */
-	smp_mb();
-	return wq && waitqueue_active(&wq->wait);
+	return wq && wq_has_sleeper(&wq->wait);
 }
 
 /**
@@ -2005,10 +2002,27 @@ static inline unsigned long sock_wspace(struct sock *sk)
 	return amt;
 }
 
-static inline void sk_wake_async(struct sock *sk, int how, int band)
+/* Note:
+ *  We use sk->sk_wq_raw, from contexts knowing this
+ *  pointer is not NULL and cannot disappear/change.
+ */
+static inline void sk_set_bit(int nr, struct sock *sk)
 {
-	if (sock_flag(sk, SOCK_FASYNC))
-		sock_wake_async(sk->sk_socket, how, band);
+	set_bit(nr, &sk->sk_wq_raw->flags);
+}
+
+static inline void sk_clear_bit(int nr, struct sock *sk)
+{
+	clear_bit(nr, &sk->sk_wq_raw->flags);
+}
+
+static inline void sk_wake_async(const struct sock *sk, int how, int band)
+{
+	if (sock_flag(sk, SOCK_FASYNC)) {
+		rcu_read_lock();
+		sock_wake_async(rcu_dereference(sk->sk_wq), how, band);
+		rcu_read_unlock();
+	}
 }
 
 /* Since sk_{r,w}mem_alloc sums skb->truesize, even a small frame might
