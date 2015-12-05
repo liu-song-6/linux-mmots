@@ -634,11 +634,7 @@ static int mtk_spi_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"cs_gpios not specified and num_chipselect > 1\n");
 			ret = -EINVAL;
-<<<<<<< HEAD
-			goto err_put_master;
-=======
 			goto err_disable_runtime_pm;
->>>>>>> linux-next/akpm-base
 		}
 
 		if (master->cs_gpios) {
@@ -649,11 +645,7 @@ static int mtk_spi_probe(struct platform_device *pdev)
 				if (ret) {
 					dev_err(&pdev->dev,
 						"can't get CS GPIO %i\n", i);
-<<<<<<< HEAD
-					goto err_put_master;
-=======
 					goto err_disable_runtime_pm;
->>>>>>> linux-next/akpm-base
 				}
 			}
 		}
