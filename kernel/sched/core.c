@@ -731,7 +731,7 @@ bool sched_can_stop_tick(void)
 	if (current->policy == SCHED_RR) {
 		struct sched_rt_entity *rt_se = &current->rt;
 
-		return rt_se->run_list.prev == rt_se->run_list.next;
+		return list_is_singular(&rt_se->run_list);
 	}
 
 	/*
@@ -1071,8 +1071,8 @@ static struct rq *move_queued_task(struct rq *rq, struct task_struct *p, int new
 {
 	lockdep_assert_held(&rq->lock);
 
-	dequeue_task(rq, p, 0);
 	p->on_rq = TASK_ON_RQ_MIGRATING;
+	dequeue_task(rq, p, 0);
 	set_task_cpu(p, new_cpu);
 	raw_spin_unlock(&rq->lock);
 
@@ -1080,8 +1080,8 @@ static struct rq *move_queued_task(struct rq *rq, struct task_struct *p, int new
 
 	raw_spin_lock(&rq->lock);
 	BUG_ON(task_cpu(p) != new_cpu);
-	p->on_rq = TASK_ON_RQ_QUEUED;
 	enqueue_task(rq, p, 0);
+	p->on_rq = TASK_ON_RQ_QUEUED;
 	check_preempt_curr(rq, p, 0);
 
 	return rq;
@@ -1274,6 +1274,15 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 	WARN_ON_ONCE(p->state != TASK_RUNNING && p->state != TASK_WAKING &&
 			!p->on_rq);
 
+	/*
+	 * Migrating fair class task must have p->on_rq = TASK_ON_RQ_MIGRATING,
+	 * because schedstat_wait_{start,end} rebase migrating task's wait_start
+	 * time relying on p->on_rq.
+	 */
+	WARN_ON_ONCE(p->state == TASK_RUNNING &&
+		     p->sched_class == &fair_sched_class &&
+		     (p->on_rq && !task_on_rq_migrating(p)));
+
 #ifdef CONFIG_LOCKDEP
 	/*
 	 * The caller should hold either p->pi_lock or rq->lock, when changing
@@ -1310,9 +1319,11 @@ static void __migrate_swap_task(struct task_struct *p, int cpu)
 		src_rq = task_rq(p);
 		dst_rq = cpu_rq(cpu);
 
+		p->on_rq = TASK_ON_RQ_MIGRATING;
 		deactivate_task(src_rq, p, 0);
 		set_task_cpu(p, cpu);
 		activate_task(dst_rq, p, 0);
+		p->on_rq = TASK_ON_RQ_QUEUED;
 		check_preempt_curr(dst_rq, p, 0);
 	} else {
 		/*
@@ -3085,7 +3096,6 @@ static void __sched notrace __schedule(bool preempt)
 
 	cpu = smp_processor_id();
 	rq = cpu_rq(cpu);
-	rcu_note_context_switch();
 	prev = rq->curr;
 
 	/*
@@ -3104,13 +3114,16 @@ static void __sched notrace __schedule(bool preempt)
 	if (sched_feat(HRTICK))
 		hrtick_clear(rq);
 
+	local_irq_disable();
+	rcu_note_context_switch();
+
 	/*
 	 * Make sure that signal_pending_state()->signal_pending() below
 	 * can't be reordered with __set_current_state(TASK_INTERRUPTIBLE)
 	 * done by the caller to avoid the race with signal_wake_up().
 	 */
 	smp_mb__before_spinlock();
-	raw_spin_lock_irq(&rq->lock);
+	raw_spin_lock(&rq->lock);
 	lockdep_pin_lock(&rq->lock);
 
 	rq->clock_skip_update <<= 1; /* promote REQ to ACT */
