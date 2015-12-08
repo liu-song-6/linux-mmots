@@ -283,6 +283,29 @@ int __weak get_user_pages_fast(unsigned long start,
 }
 EXPORT_SYMBOL_GPL(get_user_pages_fast);
 
+int do_mmap_shared_checks(struct file *file, unsigned long prot)
+{
+	struct inode *inode = file_inode(file);
+
+	if ((prot & PROT_WRITE) && !(file->f_mode & FMODE_WRITE))
+		return -EACCES;
+
+	/*
+	 * Make sure we don't allow writing to an append-only
+	 * file..
+	 */
+	if (IS_APPEND(inode) && (file->f_mode & FMODE_WRITE))
+		return -EACCES;
+
+	/*
+	 * Make sure there are no mandatory locks on the file.
+	 */
+	if (locks_verify_locked(file))
+		return -EAGAIN;
+
+	return 0;
+}
+
 unsigned long vm_mmap_pgoff(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long prot,
 	unsigned long flag, unsigned long pgoff)
@@ -290,6 +313,33 @@ unsigned long vm_mmap_pgoff(struct file *file, unsigned long addr,
 	unsigned long ret;
 	struct mm_struct *mm = current->mm;
 	unsigned long populate;
+
+	/*
+	 * If we must remove privs, we do it here since doing it during
+	 * page fault may be expensive and cannot hold inode->i_mutex,
+	 * since mm->mmap_sem is already held.
+	 */
+	if (file && (flag & MAP_TYPE) == MAP_SHARED && (prot & PROT_WRITE)) {
+		struct inode *inode = file_inode(file);
+		int err;
+
+		if (!IS_NOSEC(inode)) {
+			/*
+			 * Make sure we can't strip privs from a file that
+			 * wouldn't otherwise be allowed to be mmapped.
+			 */
+			err = do_mmap_shared_checks(file, prot);
+			if (err)
+				return err;
+
+			mutex_lock(&inode->i_mutex);
+			err = file_remove_privs(file);
+			mutex_unlock(&inode->i_mutex);
+
+			if (err)
+				return err;
+		}
+	}
 
 	ret = security_mmap_file(file, prot, flag);
 	if (!ret) {
