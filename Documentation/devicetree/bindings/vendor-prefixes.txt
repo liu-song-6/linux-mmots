@@ -33,6 +33,7 @@ auo	AU Optronics Corporation
 avago	Avago Technologies
 avic	Shanghai AVIC Optoelectronics Co., Ltd.
 axis	Axis Communications AB
+boe	BOE Technology Group Co., Ltd.
 bosch	Bosch Sensortec GmbH
 boundary	Boundary Devices Inc.
 brcm	Broadcom Corporation
@@ -161,6 +162,7 @@ nuvoton	Nuvoton Technology Corporation
 nvidia	NVIDIA
 nxp	NXP Semiconductors
 okaya	Okaya Electric America, Inc.
+olimex	OLIMEX Ltd.
 onnn	ON Semiconductor Corp.
 opencores	OpenCores.org
 option	Option NV
@@ -218,6 +220,7 @@ sony	Sony Corporation
 spansion	Spansion Inc.
 sprd	Spreadtrum Communications Inc.
 st	STMicroelectronics
+startek	Startek
 ste	ST-Ericsson
 stericsson	ST-Ericsson
 synology	Synology, Inc.
