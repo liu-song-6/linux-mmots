@@ -12,13 +12,13 @@
  */
 
 #ifndef _EXYNOS_DRM_FB_H_
-#define _EXYNOS_DRM_FB_H
+#define _EXYNOS_DRM_FB_H_
 
 #include "exynos_drm_gem.h"
 
 struct drm_framebuffer *
 exynos_drm_framebuffer_init(struct drm_device *dev,
-			    struct drm_mode_fb_cmd2 *mode_cmd,
+			    const struct drm_mode_fb_cmd2 *mode_cmd,
 			    struct exynos_drm_gem **exynos_gem,
 			    int count);
 
