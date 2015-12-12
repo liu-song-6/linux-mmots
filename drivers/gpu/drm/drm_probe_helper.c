@@ -53,6 +53,9 @@
  * This helper library can be used independently of the modeset helper library.
  * Drivers can also overwrite different parts e.g. use their own hotplug
  * handling code to avoid probing unrelated outputs.
+ *
+ * The probe helpers share the function table structures with other display
+ * helper libraries. See struct &drm_connector_helper_funcs for the details.
  */
 
 static bool drm_kms_helper_poll = true;
@@ -147,6 +150,8 @@ static int drm_helper_probe_single_connector_modes_merge_bits(struct drm_connect
 	list_for_each_entry(mode, &connector->modes, head)
 		mode->status = MODE_UNVERIFIED;
 
+	old_status = connector->status;
+
 	if (connector->force) {
 		if (connector->force == DRM_FORCE_ON ||
 		    connector->force == DRM_FORCE_ON_DIGITAL)
@@ -156,33 +161,32 @@ static int drm_helper_probe_single_connector_modes_merge_bits(struct drm_connect
 		if (connector->funcs->force)
 			connector->funcs->force(connector);
 	} else {
-		old_status = connector->status;
-
 		connector->status = connector->funcs->detect(connector, true);
+	}
+
+	/*
+	 * Normally either the driver's hpd code or the poll loop should
+	 * pick up any changes and fire the hotplug event. But if
+	 * userspace sneaks in a probe, we might miss a change. Hence
+	 * check here, and if anything changed start the hotplug code.
+	 */
+	if (old_status != connector->status) {
+		DRM_DEBUG_KMS("[CONNECTOR:%d:%s] status updated from %s to %s\n",
+			      connector->base.id,
+			      connector->name,
+			      drm_get_connector_status_name(old_status),
+			      drm_get_connector_status_name(connector->status));
 
 		/*
-		 * Normally either the driver's hpd code or the poll loop should
-		 * pick up any changes and fire the hotplug event. But if
-		 * userspace sneaks in a probe, we might miss a change. Hence
-		 * check here, and if anything changed start the hotplug code.
+		 * The hotplug event code might call into the fb
+		 * helpers, and so expects that we do not hold any
+		 * locks. Fire up the poll struct instead, it will
+		 * disable itself again.
 		 */
-		if (old_status != connector->status) {
-			DRM_DEBUG_KMS("[CONNECTOR:%d:%s] status updated from %d to %d\n",
-				      connector->base.id,
-				      connector->name,
-				      old_status, connector->status);
-
-			/*
-			 * The hotplug event code might call into the fb
-			 * helpers, and so expects that we do not hold any
-			 * locks. Fire up the poll struct instead, it will
-			 * disable itself again.
-			 */
-			dev->mode_config.delayed_event = true;
-			if (dev->mode_config.poll_enabled)
-				schedule_delayed_work(&dev->mode_config.output_poll_work,
-						      0);
-		}
+		dev->mode_config.delayed_event = true;
+		if (dev->mode_config.poll_enabled)
+			schedule_delayed_work(&dev->mode_config.output_poll_work,
+					      0);
 	}
 
 	/* Re-enable polling in case the global poll config changed. */
@@ -269,14 +273,27 @@ prune:
  * @maxX: max width for modes
  * @maxY: max height for modes
  *
- * Based on the helper callbacks implemented by @connector try to detect all
- * valid modes.  Modes will first be added to the connector's probed_modes list,
- * then culled (based on validity and the @maxX, @maxY parameters) and put into
- * the normal modes list.
+ * Based on the helper callbacks implemented by @connector in struct
+ * &drm_connector_helper_funcs try to detect all valid modes.  Modes will first
+ * be added to the connector's probed_modes list, then culled (based on validity
+ * and the @maxX, @maxY parameters) and put into the normal modes list.
  *
- * Intended to be use as a generic implementation of the ->fill_modes()
- * @connector vfunc for drivers that use the crtc helpers for output mode
+ * Intended to be used as a generic implementation of the ->fill_modes()
+ * @connector vfunc for drivers that use the CRTC helpers for output mode
  * filtering and detection.
+ *
+ * If the helper operation returns no mode, and if the connector status is
+ * connector_status_connected, standard VESA DMT modes up to 1024x768 are
+ * automatically added to the modes list by a call to
+ * drm_add_modes_noedid().
+ *
+ * The function then filters out modes larger than @maxX and maxY if specified.
+ * It finally calls the optional connector ->mode_valid() helper operation for each
+ * mode in the probed list to check whether the mode is valid for the connector.
+ *
+ * Compared to drm_helper_probe_single_connector_modes_nomerge() this function
+ * merged the mode bits for the preferred mode, as a hack to work around some
+ * quirky issues on funky hardware.
  *
  * Returns:
  * The number of modes found on @connector.
@@ -294,8 +311,11 @@ EXPORT_SYMBOL(drm_helper_probe_single_connector_modes);
  * @maxX: max width for modes
  * @maxY: max height for modes
  *
- * This operates like drm_hehlper_probe_single_connector_modes except it
+ * This operates like drm_hehlper_probe_single_connector_modes() except it
  * replaces the mode bits instead of merging them for preferred modes.
+ *
+ * Returns:
+ * The number of modes found on @connector.
  */
 int drm_helper_probe_single_connector_modes_nomerge(struct drm_connector *connector,
 					    uint32_t maxX, uint32_t maxY)
