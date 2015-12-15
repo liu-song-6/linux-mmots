@@ -1538,7 +1538,7 @@ static struct drm_encoder *mga_encoder_init(struct drm_device *dev)
 	encoder->possible_crtcs = 0x1;
 
 	drm_encoder_init(dev, encoder, &mga_encoder_encoder_funcs,
-			 DRM_MODE_ENCODER_DAC);
+			 DRM_MODE_ENCODER_DAC, NULL);
 	drm_encoder_helper_add(encoder, &mga_encoder_helper_funcs);
 
 	return encoder;
@@ -1564,7 +1564,7 @@ static uint32_t mga_vga_calculate_mode_bandwidth(struct drm_display_mode *mode,
 							int bits_per_pixel)
 {
 	uint32_t total_area, divisor;
-	int64_t active_area, pixels_per_second, bandwidth;
+	uint64_t active_area, pixels_per_second, bandwidth;
 	uint64_t bytes_per_pixel = (bits_per_pixel + 7) / 8;
 
 	divisor = 1024;
