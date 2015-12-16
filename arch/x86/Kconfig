@@ -538,9 +538,10 @@ config X86_INTEL_QUARK
 
 config X86_INTEL_LPSS
 	bool "Intel Low Power Subsystem Support"
-	depends on ACPI
+	depends on X86 && ACPI
 	select COMMON_CLK
 	select PINCTRL
+	select IOSF_MBI
 	---help---
 	  Select to build support for Intel Low Power Subsystem such as
 	  found on Intel Lynxpoint PCH. Selecting this option enables
@@ -651,7 +652,7 @@ config X86_32_IRIS
 
 config SCHED_OMIT_FRAME_POINTER
 	def_bool y
-	prompt "Single-depth WCHAN output"
+	prompt "Single-depth WCHAN output" if !LTO && !FRAME_POINTER
 	depends on X86
 	---help---
 	  Calculate simpler /proc/<PID>/wchan values. If this option
@@ -701,6 +702,14 @@ config PARAVIRT_SPINLOCKS
 	  benefit on paravirtualized KVM / Xen kernels.
 
 	  If you are unsure how to answer this question, answer Y.
+
+config QUEUED_LOCK_STAT
+	bool "Paravirt queued spinlock statistics"
+	depends on PARAVIRT_SPINLOCKS && DEBUG_FS && QUEUED_SPINLOCKS
+	---help---
+	  Enable the collection of statistical data on the slowpath
+	  behavior of paravirtualized queued spinlocks and report
+	  them on debugfs.
 
 source "arch/x86/xen/Kconfig"
 
