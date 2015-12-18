@@ -275,6 +275,7 @@ static inline void *phys_to_virt(phys_addr_t x)
 
 extern phys_addr_t (*arch_virt_to_idmap)(unsigned long x);
 
+#ifdef CONFIG_MMU
 /*
  * These are for systems that have a hardware interconnect supported alias of
  * physical memory for idmap purposes.  Most cases should leave these
@@ -289,6 +290,9 @@ static inline phys_addr_t __virt_to_idmap(unsigned long x)
 }
 
 #define virt_to_idmap(x)	__virt_to_idmap((unsigned long)(x))
+#else
+#define virt_to_idmap(x)	__virt_to_phys((unsigned long)(x))
+#endif
 
 /*
  * Virtual <-> DMA view memory address translations
