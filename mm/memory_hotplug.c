@@ -131,7 +131,9 @@ static int register_memory_resource(u64 start, u64 size,
 				    struct resource **resource)
 {
 	struct resource *res;
+	int ret = 0;
 	res = kzalloc(sizeof(struct resource), GFP_KERNEL);
+
 	if (!res)
 		return -ENOMEM;
 
@@ -139,13 +141,14 @@ static int register_memory_resource(u64 start, u64 size,
 	res->start = start;
 	res->end = start + size - 1;
 	res->flags = IORESOURCE_MEM | IORESOURCE_BUSY;
-	if (request_resource(&iomem_resource, res) < 0) {
+	ret = request_resource(&iomem_resource, res);
+	if (ret < 0) {
 		pr_debug("System RAM resource %pR cannot be added\n", res);
 		kfree(res);
-		return -EEXIST;
+	} else {
+		*resource = res;
 	}
-	*resource = res;
-	return 0;
+	return ret;
 }
 
 static void release_memory_resource(struct resource *res)
