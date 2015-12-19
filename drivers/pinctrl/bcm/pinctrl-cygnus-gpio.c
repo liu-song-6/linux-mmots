@@ -638,8 +638,7 @@ static int cygnus_gpio_register_pinconf(struct cygnus_gpio *chip)
 
 static void cygnus_gpio_unregister_pinconf(struct cygnus_gpio *chip)
 {
-	if (chip->pctl)
-		pinctrl_unregister(chip->pctl);
+	pinctrl_unregister(chip->pctl);
 }
 
 struct cygnus_gpio_data {
@@ -720,7 +719,7 @@ static int cygnus_gpio_probe(struct platform_device *pdev)
 	gc->ngpio = ngpios;
 	chip->num_banks = (ngpios + NGPIOS_PER_BANK - 1) / NGPIOS_PER_BANK;
 	gc->label = dev_name(dev);
-	gc->dev = dev;
+	gc->parent = dev;
 	gc->of_node = dev->of_node;
 	gc->request = cygnus_gpio_request;
 	gc->free = cygnus_gpio_free;
