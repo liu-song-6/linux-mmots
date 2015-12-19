@@ -851,6 +851,9 @@ static struct mem_cgroup *get_mem_cgroup_from_mm(struct mm_struct *mm)
 	return memcg;
 }
 
+/* Move this to compiler.h if it proves worthy */
+#define defeat_must_check(expr) do { if (expr) ; } while (0)
+
 /**
  * mem_cgroup_iter - iterate over memory cgroup hierarchy
  * @root: hierarchy root
@@ -915,7 +918,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 			 * might block it. So we clear iter->position right
 			 * away.
 			 */
-			(void)cmpxchg(&iter->position, pos, NULL);
+			defeat_must_check(cmpxchg(&iter->position, pos, NULL));
 		}
 	}
 
@@ -967,7 +970,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 		 * thread, so check that the value hasn't changed since we read
 		 * it to avoid reclaiming from the same cgroup twice.
 		 */
-		(void)cmpxchg(&iter->position, pos, memcg);
+		defeat_must_check(cmpxchg(&iter->position, pos, memcg));
 
 		/*
 		 * pairs with css_tryget when dereferencing iter->position
