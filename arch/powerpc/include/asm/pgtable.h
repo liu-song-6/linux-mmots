@@ -1,6 +1,5 @@
 #ifndef _ASM_POWERPC_PGTABLE_H
 #define _ASM_POWERPC_PGTABLE_H
-#ifdef __KERNEL__
 
 #ifndef __ASSEMBLY__
 #include <linux/mmdebug.h>
@@ -271,5 +270,4 @@ static inline pte_t *find_linux_pte_or_hugepte(pgd_t *pgdir, unsigned long ea,
 }
 #endif /* __ASSEMBLY__ */
 
-#endif /* __KERNEL__ */
 #endif /* _ASM_POWERPC_PGTABLE_H */

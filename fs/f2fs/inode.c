@@ -202,6 +202,7 @@ make_now:
 			inode->i_op = &f2fs_encrypted_symlink_inode_operations;
 		else
 			inode->i_op = &f2fs_symlink_inode_operations;
+		inode_nohighmem(inode);
 		inode->i_mapping->a_ops = &f2fs_dblock_aops;
 	} else if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode) ||
 			S_ISFIFO(inode->i_mode) || S_ISSOCK(inode->i_mode)) {
@@ -327,7 +328,7 @@ void f2fs_evict_inode(struct inode *inode)
 		goto out_clear;
 
 	f2fs_bug_on(sbi, get_dirty_pages(inode));
-	remove_dirty_dir_inode(inode);
+	remove_dirty_inode(inode);
 
 	f2fs_destroy_extent_tree(inode);
 
@@ -357,9 +358,9 @@ no_delete:
 	if (xnid)
 		invalidate_mapping_pages(NODE_MAPPING(sbi), xnid, xnid);
 	if (is_inode_flag_set(fi, FI_APPEND_WRITE))
-		add_dirty_inode(sbi, inode->i_ino, APPEND_INO);
+		add_ino_entry(sbi, inode->i_ino, APPEND_INO);
 	if (is_inode_flag_set(fi, FI_UPDATE_WRITE))
-		add_dirty_inode(sbi, inode->i_ino, UPDATE_INO);
+		add_ino_entry(sbi, inode->i_ino, UPDATE_INO);
 	if (is_inode_flag_set(fi, FI_FREE_NID)) {
 		if (err && err != -ENOENT)
 			alloc_nid_done(sbi, inode->i_ino);
