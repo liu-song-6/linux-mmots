@@ -581,10 +581,8 @@ static int page_cache_tree_insert(struct address_space *mapping,
 		if (!radix_tree_exceptional_entry(p))
 			return -EEXIST;
 
-		if (dax_mapping(mapping)) {
-			WARN_ON(1);
+		if (WARN_ON(dax_mapping(mapping)))
 			return -EINVAL;
-		}
 
 		if (shadowp)
 			*shadowp = p;
