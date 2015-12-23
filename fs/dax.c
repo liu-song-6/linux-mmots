@@ -383,10 +383,8 @@ static void dax_writeback_one(struct address_space *mapping, pgoff_t index,
 	struct radix_tree_node *node;
 	void **slot;
 
-	if (type != RADIX_DAX_PTE && type != RADIX_DAX_PMD) {
-		WARN_ON_ONCE(1);
+	if (WARN_ON_ONCE(type != RADIX_DAX_PTE && type != RADIX_DAX_PMD))
 		return;
-	}
 
 	spin_lock_irq(&mapping->tree_lock);
 	/*
@@ -428,10 +426,8 @@ void dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
 	void *entry;
 	int i;
 
-	if (inode->i_blkbits != PAGE_SHIFT) {
-		WARN_ON_ONCE(1);
+	if (WARN_ON_ONCE(inode->i_blkbits != PAGE_SHIFT))
 		return;
-	}
 
 	rcu_read_lock();
 	entry = radix_tree_lookup(&mapping->page_tree, start & PMD_MASK);
