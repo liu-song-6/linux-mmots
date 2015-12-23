@@ -915,7 +915,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 			 * might block it. So we clear iter->position right
 			 * away.
 			 */
-			cmpxchg(&iter->position, pos, NULL);
+			(void)cmpxchg(&iter->position, pos, NULL);
 		}
 	}
 
@@ -962,7 +962,12 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 	}
 
 	if (reclaim) {
-		cmpxchg(&iter->position, pos, memcg);
+		/*
+		 * The position could have already been updated by a competing
+		 * thread, so check that the value hasn't changed since we read
+		 * it to avoid reclaiming from the same cgroup twice.
+		 */
+		(void)cmpxchg(&iter->position, pos, memcg);
 
 		/*
 		 * pairs with css_tryget when dereferencing iter->position
