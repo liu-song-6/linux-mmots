@@ -969,10 +969,6 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 		 */
 		(void)cmpxchg(&iter->position, pos, memcg);
 
-		/*
-		 * pairs with css_tryget when dereferencing iter->position
-		 * above.
-		 */
 		if (pos)
 			css_put(&pos->css);
 
