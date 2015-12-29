@@ -14141,12 +14141,7 @@ intel_commit_cursor_plane(struct drm_plane *plane,
 
 	intel_crtc->cursor_addr = addr;
 
-<<<<<<< HEAD
-	if (crtc->state->active)
-		intel_crtc_update_cursor(crtc, state->visible);
-=======
 	intel_crtc_update_cursor(crtc, state->visible);
->>>>>>> linux-next/akpm-base
 }
 
 static struct drm_plane *intel_cursor_plane_create(struct drm_device *dev,

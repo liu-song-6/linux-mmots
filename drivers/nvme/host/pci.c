@@ -1569,81 +1569,6 @@ static int nvme_setup_io_queues(struct nvme_dev *dev)
 	return result;
 }
 
-<<<<<<< HEAD
-static int ns_cmp(void *priv, struct list_head *a, struct list_head *b)
-{
-	struct nvme_ns *nsa = container_of(a, struct nvme_ns, list);
-	struct nvme_ns *nsb = container_of(b, struct nvme_ns, list);
-
-	return nsa->ns_id - nsb->ns_id;
-}
-
-static struct nvme_ns *nvme_find_ns(struct nvme_dev *dev, unsigned nsid)
-{
-	struct nvme_ns *ns;
-
-	list_for_each_entry(ns, &dev->namespaces, list) {
-		if (ns->ns_id == nsid)
-			return ns;
-		if (ns->ns_id > nsid)
-			break;
-	}
-	return NULL;
-}
-
-static inline bool nvme_io_incapable(struct nvme_dev *dev)
-{
-	return (!dev->bar || readl(&dev->bar->csts) & NVME_CSTS_CFS ||
-							dev->online_queues < 2);
-}
-
-static void nvme_ns_remove(struct nvme_ns *ns)
-{
-	bool kill = nvme_io_incapable(ns->dev) && !blk_queue_dying(ns->queue);
-
-	if (kill) {
-		blk_set_queue_dying(ns->queue);
-
-		/*
-		 * The controller was shutdown first if we got here through
-		 * device removal. The shutdown may requeue outstanding
-		 * requests. These need to be aborted immediately so
-		 * del_gendisk doesn't block indefinitely for their completion.
-		 */
-		blk_mq_abort_requeue_list(ns->queue);
-	}
-	if (ns->disk->flags & GENHD_FL_UP)
-		del_gendisk(ns->disk);
-	if (kill || !blk_queue_dying(ns->queue)) {
-		blk_mq_abort_requeue_list(ns->queue);
-		blk_cleanup_queue(ns->queue);
-	}
-	list_del_init(&ns->list);
-	kref_put(&ns->kref, nvme_free_ns);
-}
-
-static void nvme_scan_namespaces(struct nvme_dev *dev, unsigned nn)
-{
-	struct nvme_ns *ns, *next;
-	unsigned i;
-
-	for (i = 1; i <= nn; i++) {
-		ns = nvme_find_ns(dev, i);
-		if (ns) {
-			if (revalidate_disk(ns->disk))
-				nvme_ns_remove(ns);
-		} else
-			nvme_alloc_ns(dev, i);
-	}
-	list_for_each_entry_safe(ns, next, &dev->namespaces, list) {
-		if (ns->ns_id > nn)
-			nvme_ns_remove(ns);
-	}
-	list_sort(NULL, &dev->namespaces, ns_cmp);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static void nvme_set_irq_hints(struct nvme_dev *dev)
 {
 	struct nvme_queue *nvmeq;
@@ -2044,27 +1969,7 @@ static void nvme_dev_shutdown(struct nvme_dev *dev)
 
 	for (i = dev->queue_count - 1; i >= 0; i--)
 		nvme_clear_queue(dev->queues[i]);
-<<<<<<< HEAD
-}
-
-static void nvme_dev_remove(struct nvme_dev *dev)
-{
-	struct nvme_ns *ns, *next;
-
-	if (nvme_io_incapable(dev)) {
-		/*
-		 * If the device is not capable of IO (surprise hot-removal,
-		 * for example), we need to quiesce prior to deleting the
-		 * namespaces. This will end outstanding requests and prevent
-		 * attempts to sync dirty data.
-		 */
-		nvme_dev_shutdown(dev);
-	}
-	list_for_each_entry_safe(ns, next, &dev->namespaces, list)
-		nvme_ns_remove(ns);
-=======
 	mutex_unlock(&dev->shutdown_lock);
->>>>>>> linux-next/akpm-base
 }
 
 static int nvme_setup_prp_pools(struct nvme_dev *dev)
