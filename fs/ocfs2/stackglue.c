@@ -630,7 +630,6 @@ static struct attribute_group ocfs2_attr_group = {
 };
 
 struct kset *ocfs2_kset;
-EXPORT_SYMBOL_GPL(ocfs2_kset);
 
 static void ocfs2_sysfs_exit(void)
 {
