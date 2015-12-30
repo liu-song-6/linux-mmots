@@ -4702,20 +4702,17 @@ out:
 /*
  * The getxattr API returns the required buffer length when called with a
  * NULL buf. The NFSv4 acl tool then calls getxattr again after allocating
- * the required buf.  On a NULL buf, we send a page of data to the server
- * guessing that the ACL request can be serviced by a page. If so, we cache
- * up to the page of ACL data, and the 2nd call to getxattr is serviced by
- * the cache. If not so, we throw away the page, and cache the required
- * length. The next getxattr call will then produce another round trip to
- * the server, this time with the input buf of the required size.
+ * the required buf. Cache the result from the first getxattr call to avoid
+ * sending another RPC.
  */
 static ssize_t __nfs4_get_acl_uncached(struct inode *inode, void *buf, size_t buflen)
 {
-	struct page *pages[NFS4ACL_MAXPAGES] = {NULL, };
+	/* enough pages to hold ACL data plus the bitmap and acl length */
+	struct page *pages[NFS4ACL_MAXPAGES + 1] = {NULL, };
 	struct nfs_getaclargs args = {
 		.fh = NFS_FH(inode),
+		/* The xdr layer may allocate pages here. */
 		.acl_pages = pages,
-		.acl_len = buflen,
 	};
 	struct nfs_getaclres res = {
 		.acl_len = buflen,
@@ -4725,31 +4722,24 @@ static ssize_t __nfs4_get_acl_uncached(struct inode *inode, void *buf, size_t bu
 		.rpc_argp = &args,
 		.rpc_resp = &res,
 	};
-	unsigned int npages = DIV_ROUND_UP(buflen, PAGE_SIZE);
 	int ret = -ENOMEM, i;
 
-	/* As long as we're doing a round trip to the server anyway,
-	 * let's be prepared for a page of acl data. */
-	if (npages == 0)
-		npages = 1;
-	if (npages > ARRAY_SIZE(pages))
-		return -ERANGE;
-
-	for (i = 0; i < npages; i++) {
-		pages[i] = alloc_page(GFP_KERNEL);
-		if (!pages[i])
-			goto out_free;
-	}
+	/*
+	 * There will be some data returned by the server, how much is not
+	 * known yet. Allocate one page and let the XDR layer allocate
+	 * more if needed.
+	 */
+	pages[0] = alloc_page(GFP_KERNEL);
 
 	/* for decoding across pages */
 	res.acl_scratch = alloc_page(GFP_KERNEL);
 	if (!res.acl_scratch)
 		goto out_free;
 
-	args.acl_len = npages * PAGE_SIZE;
+	args.acl_len = ARRAY_SIZE(pages) << PAGE_SHIFT;
 
-	dprintk("%s  buf %p buflen %zu npages %d args.acl_len %zu\n",
-		__func__, buf, buflen, npages, args.acl_len);
+	dprintk("%s  buf %p buflen %zu args.acl_len %zu\n",
+		__func__, buf, buflen, args.acl_len);
 	ret = nfs4_call_sync(NFS_SERVER(inode)->client, NFS_SERVER(inode),
 			     &msg, &args.seq_args, &res.seq_res, 0);
 	if (ret)
@@ -4774,7 +4764,7 @@ static ssize_t __nfs4_get_acl_uncached(struct inode *inode, void *buf, size_t bu
 out_ok:
 	ret = res.acl_len;
 out_free:
-	for (i = 0; i < npages; i++)
+	for (i = 0; i < ARRAY_SIZE(pages) && pages[i]; i++)
 		if (pages[i])
 			__free_page(pages[i]);
 	if (res.acl_scratch)
@@ -6253,9 +6243,6 @@ static int nfs4_xattr_set_nfs4_acl(const struct xattr_handler *handler,
 				   const void *buf, size_t buflen,
 				   int flags)
 {
-	if (strcmp(key, "") != 0)
-		return -EINVAL;
-
 	return nfs4_proc_set_acl(d_inode(dentry), buf, buflen);
 }
 
@@ -6263,32 +6250,15 @@ static int nfs4_xattr_get_nfs4_acl(const struct xattr_handler *handler,
 				   struct dentry *dentry, const char *key,
 				   void *buf, size_t buflen)
 {
-	if (strcmp(key, "") != 0)
-		return -EINVAL;
-
 	return nfs4_proc_get_acl(d_inode(dentry), buf, buflen);
 }
 
-static size_t nfs4_xattr_list_nfs4_acl(const struct xattr_handler *handler,
-				       struct dentry *dentry, char *list,
-				       size_t list_len, const char *name,
-				       size_t name_len)
+static bool nfs4_xattr_list_nfs4_acl(struct dentry *dentry)
 {
-	size_t len = sizeof(XATTR_NAME_NFSV4_ACL);
-
-	if (!nfs4_server_supports_acls(NFS_SERVER(d_inode(dentry))))
-		return 0;
-
-	if (list && len <= list_len)
-		memcpy(list, XATTR_NAME_NFSV4_ACL, len);
-	return len;
+	return nfs4_server_supports_acls(NFS_SERVER(d_inode(dentry)));
 }
 
 #ifdef CONFIG_NFS_V4_SECURITY_LABEL
-static inline int nfs4_server_supports_labels(struct nfs_server *server)
-{
-	return server->caps & NFS_CAP_SECURITY_LABEL;
-}
 
 static int nfs4_xattr_set_nfs4_label(const struct xattr_handler *handler,
 				     struct dentry *dentry, const char *key,
@@ -6310,29 +6280,34 @@ static int nfs4_xattr_get_nfs4_label(const struct xattr_handler *handler,
 	return -EOPNOTSUPP;
 }
 
-static size_t nfs4_xattr_list_nfs4_label(const struct xattr_handler *handler,
-					 struct dentry *dentry, char *list,
-					 size_t list_len, const char *name,
-					 size_t name_len)
+static ssize_t
+nfs4_listxattr_nfs4_label(struct inode *inode, char *list, size_t list_len)
 {
-	size_t len = 0;
+	int len = 0;
 
-	if (nfs_server_capable(d_inode(dentry), NFS_CAP_SECURITY_LABEL)) {
-		len = security_inode_listsecurity(d_inode(dentry), NULL, 0);
-		if (list && len <= list_len)
-			security_inode_listsecurity(d_inode(dentry), list, len);
+	if (nfs_server_capable(inode, NFS_CAP_SECURITY_LABEL)) {
+		len = security_inode_listsecurity(inode, list, list_len);
+		if (list_len && len > list_len)
+			return -ERANGE;
 	}
 	return len;
 }
 
 static const struct xattr_handler nfs4_xattr_nfs4_label_handler = {
 	.prefix = XATTR_SECURITY_PREFIX,
-	.list	= nfs4_xattr_list_nfs4_label,
 	.get	= nfs4_xattr_get_nfs4_label,
 	.set	= nfs4_xattr_set_nfs4_label,
 };
-#endif
 
+#else
+
+static ssize_t
+nfs4_listxattr_nfs4_label(struct inode *inode, char *list, size_t list_len)
+{
+	return 0;
+}
+
+#endif
 
 /*
  * nfs_fhget will use either the mounted_on_fileid or the fileid
@@ -8749,6 +8724,24 @@ const struct nfs4_minor_version_ops *nfs_v4_minor_ops[] = {
 #endif
 };
 
+ssize_t nfs4_listxattr(struct dentry *dentry, char *list, size_t size)
+{
+	ssize_t error, error2;
+
+	error = generic_listxattr(dentry, list, size);
+	if (error < 0)
+		return error;
+	if (list) {
+		list += error;
+		size -= error;
+	}
+
+	error2 = nfs4_listxattr_nfs4_label(d_inode(dentry), list, size);
+	if (error2 < 0)
+		return error2;
+	return error + error2;
+}
+
 static const struct inode_operations nfs4_dir_inode_operations = {
 	.create		= nfs_create,
 	.lookup		= nfs_lookup,
@@ -8765,7 +8758,7 @@ static const struct inode_operations nfs4_dir_inode_operations = {
 	.setattr	= nfs_setattr,
 	.getxattr	= generic_getxattr,
 	.setxattr	= generic_setxattr,
-	.listxattr	= generic_listxattr,
+	.listxattr	= nfs4_listxattr,
 	.removexattr	= generic_removexattr,
 };
 
@@ -8775,7 +8768,7 @@ static const struct inode_operations nfs4_file_inode_operations = {
 	.setattr	= nfs_setattr,
 	.getxattr	= generic_getxattr,
 	.setxattr	= generic_setxattr,
-	.listxattr	= generic_listxattr,
+	.listxattr	= nfs4_listxattr,
 	.removexattr	= generic_removexattr,
 };
 
@@ -8834,7 +8827,7 @@ const struct nfs_rpc_ops nfs_v4_clientops = {
 };
 
 static const struct xattr_handler nfs4_xattr_nfs4_acl_handler = {
-	.prefix	= XATTR_NAME_NFSV4_ACL,
+	.name	= XATTR_NAME_NFSV4_ACL,
 	.list	= nfs4_xattr_list_nfs4_acl,
 	.get	= nfs4_xattr_get_nfs4_acl,
 	.set	= nfs4_xattr_set_nfs4_acl,
