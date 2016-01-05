@@ -78,34 +78,28 @@ static void iser_event_handler(struct ib_event_handler *handler,
  */
 static int iser_create_device_ib_res(struct iser_device *device)
 {
-	struct ib_device_attr *dev_attr = &device->dev_attr;
+	struct ib_device *ib_dev = device->ib_device;
 	int ret, i, max_cqe;
-
-	ret = ib_query_device(device->ib_device, dev_attr);
-	if (ret) {
-		pr_warn("Query device failed for %s\n", device->ib_device->name);
-		return ret;
-	}
 
 	ret = iser_assign_reg_ops(device);
 	if (ret)
 		return ret;
 
 	device->comps_used = min_t(int, num_online_cpus(),
-				 device->ib_device->num_comp_vectors);
+				 ib_dev->num_comp_vectors);
 
 	device->comps = kcalloc(device->comps_used, sizeof(*device->comps),
 				GFP_KERNEL);
 	if (!device->comps)
 		goto comps_err;
 
-	max_cqe = min(ISER_MAX_CQ_LEN, dev_attr->max_cqe);
+	max_cqe = min(ISER_MAX_CQ_LEN, ib_dev->max_cqe);
 
 	iser_info("using %d CQs, device %s supports %d vectors max_cqe %d\n",
-		  device->comps_used, device->ib_device->name,
-		  device->ib_device->num_comp_vectors, max_cqe);
+		  device->comps_used, ib_dev->name,
+		  ib_dev->num_comp_vectors, max_cqe);
 
-	device->pd = ib_alloc_pd(device->ib_device);
+	device->pd = ib_alloc_pd(ib_dev);
 	if (IS_ERR(device->pd))
 		goto pd_err;
 
@@ -116,7 +110,7 @@ static int iser_create_device_ib_res(struct iser_device *device)
 		comp->device = device;
 		cq_attr.cqe = max_cqe;
 		cq_attr.comp_vector = i;
-		comp->cq = ib_create_cq(device->ib_device,
+		comp->cq = ib_create_cq(ib_dev,
 					iser_cq_callback,
 					iser_cq_event_callback,
 					(void *)comp,
@@ -299,7 +293,7 @@ iser_alloc_reg_res(struct ib_device *ib_device,
 		iser_err("Failed to allocate ib_fast_reg_mr err=%d\n", ret);
 		return ret;
 	}
-	res->mr_valid = 1;
+	res->mr_valid = 0;
 
 	return 0;
 }
@@ -336,7 +330,7 @@ iser_alloc_pi_ctx(struct ib_device *ib_device,
 		ret = PTR_ERR(pi_ctx->sig_mr);
 		goto sig_mr_failure;
 	}
-	pi_ctx->sig_mr_valid = 1;
+	pi_ctx->sig_mr_valid = 0;
 	desc->pi_ctx->sig_protected = 0;
 
 	return 0;
@@ -464,7 +458,7 @@ static int iser_create_ib_conn_res(struct ib_conn *ib_conn)
 	struct iser_conn *iser_conn = container_of(ib_conn, struct iser_conn,
 						   ib_conn);
 	struct iser_device	*device;
-	struct ib_device_attr *dev_attr;
+	struct ib_device	*ib_dev;
 	struct ib_qp_init_attr	init_attr;
 	int			ret = -ENOMEM;
 	int index, min_index = 0;
@@ -472,7 +466,7 @@ static int iser_create_ib_conn_res(struct ib_conn *ib_conn)
 	BUG_ON(ib_conn->device == NULL);
 
 	device = ib_conn->device;
-	dev_attr = &device->dev_attr;
+	ib_dev = device->ib_device;
 
 	memset(&init_attr, 0, sizeof init_attr);
 
@@ -503,16 +497,16 @@ static int iser_create_ib_conn_res(struct ib_conn *ib_conn)
 		iser_conn->max_cmds =
 			ISER_GET_MAX_XMIT_CMDS(ISER_QP_SIG_MAX_REQ_DTOS);
 	} else {
-		if (dev_attr->max_qp_wr > ISER_QP_MAX_REQ_DTOS) {
+		if (ib_dev->max_qp_wr > ISER_QP_MAX_REQ_DTOS) {
 			init_attr.cap.max_send_wr  = ISER_QP_MAX_REQ_DTOS + 1;
 			iser_conn->max_cmds =
 				ISER_GET_MAX_XMIT_CMDS(ISER_QP_MAX_REQ_DTOS);
 		} else {
-			init_attr.cap.max_send_wr = dev_attr->max_qp_wr;
+			init_attr.cap.max_send_wr = ib_dev->max_qp_wr;
 			iser_conn->max_cmds =
-				ISER_GET_MAX_XMIT_CMDS(dev_attr->max_qp_wr);
+				ISER_GET_MAX_XMIT_CMDS(ib_dev->max_qp_wr);
 			iser_dbg("device %s supports max_send_wr %d\n",
-				 device->ib_device->name, dev_attr->max_qp_wr);
+				 device->ib_device->name, ib_dev->max_qp_wr);
 		}
 	}
 
@@ -756,7 +750,7 @@ iser_calc_scsi_params(struct iser_conn *iser_conn,
 
 	sg_tablesize = DIV_ROUND_UP(max_sectors * 512, SIZE_4K);
 	sup_sg_tablesize = min_t(unsigned, ISCSI_ISER_MAX_SG_TABLESIZE,
-				 device->dev_attr.max_fast_reg_page_list_len);
+				 device->ib_device->max_fast_reg_page_list_len);
 
 	if (sg_tablesize > sup_sg_tablesize) {
 		sg_tablesize = sup_sg_tablesize;
@@ -799,7 +793,7 @@ static void iser_addr_handler(struct rdma_cm_id *cma_id)
 
 	/* connection T10-PI support */
 	if (iser_pi_enable) {
-		if (!(device->dev_attr.device_cap_flags &
+		if (!(device->ib_device->device_cap_flags &
 		      IB_DEVICE_SIGNATURE_HANDOVER)) {
 			iser_warn("T10-PI requested but not supported on %s, "
 				  "continue without T10-PI\n",
@@ -841,16 +835,17 @@ static void iser_route_handler(struct rdma_cm_id *cma_id)
 		goto failure;
 
 	memset(&conn_param, 0, sizeof conn_param);
-	conn_param.responder_resources = device->dev_attr.max_qp_rd_atom;
+	conn_param.responder_resources = device->ib_device->max_qp_rd_atom;
 	conn_param.initiator_depth     = 1;
 	conn_param.retry_count	       = 7;
 	conn_param.rnr_retry_count     = 6;
 
 	memset(&req_hdr, 0, sizeof(req_hdr));
-	req_hdr.flags = (ISER_ZBVA_NOT_SUPPORTED |
-			ISER_SEND_W_INV_NOT_SUPPORTED);
-	conn_param.private_data		= (void *)&req_hdr;
-	conn_param.private_data_len	= sizeof(struct iser_cm_hdr);
+	req_hdr.flags = ISER_ZBVA_NOT_SUP;
+	if (!device->remote_inv_sup)
+		req_hdr.flags |= ISER_SEND_W_INV_NOT_SUP;
+	conn_param.private_data	= (void *)&req_hdr;
+	conn_param.private_data_len = sizeof(struct iser_cm_hdr);
 
 	ret = rdma_connect(cma_id, &conn_param);
 	if (ret) {
@@ -863,7 +858,8 @@ failure:
 	iser_connect_error(cma_id);
 }
 
-static void iser_connected_handler(struct rdma_cm_id *cma_id)
+static void iser_connected_handler(struct rdma_cm_id *cma_id,
+				   const void *private_data)
 {
 	struct iser_conn *iser_conn;
 	struct ib_qp_attr attr;
@@ -876,6 +872,15 @@ static void iser_connected_handler(struct rdma_cm_id *cma_id)
 
 	(void)ib_query_qp(cma_id->qp, &attr, ~0, &init_attr);
 	iser_info("remote qpn:%x my qpn:%x\n", attr.dest_qp_num, cma_id->qp->qp_num);
+
+	if (private_data) {
+		u8 flags = *(u8 *)private_data;
+
+		iser_conn->snd_w_inv = !(flags & ISER_SEND_W_INV_NOT_SUP);
+	}
+
+	iser_info("conn %p: negotiated %s invalidation\n",
+		  iser_conn, iser_conn->snd_w_inv ? "remote" : "local");
 
 	iser_conn->state = ISER_CONN_UP;
 	complete(&iser_conn->up_completion);
@@ -928,7 +933,7 @@ static int iser_cma_handler(struct rdma_cm_id *cma_id, struct rdma_cm_event *eve
 		iser_route_handler(cma_id);
 		break;
 	case RDMA_CM_EVENT_ESTABLISHED:
-		iser_connected_handler(cma_id);
+		iser_connected_handler(cma_id, event->param.conn.private_data);
 		break;
 	case RDMA_CM_EVENT_ADDR_ERROR:
 	case RDMA_CM_EVENT_ROUTE_ERROR:
@@ -1206,8 +1211,7 @@ static void iser_handle_wc(struct ib_wc *wc)
 	if (likely(wc->status == IB_WC_SUCCESS)) {
 		if (wc->opcode == IB_WC_RECV) {
 			rx_desc = (struct iser_rx_desc *)(uintptr_t)wc->wr_id;
-			iser_rcv_completion(rx_desc, wc->byte_len,
-					    ib_conn);
+			iser_rcv_completion(rx_desc, wc, ib_conn);
 		} else
 		if (wc->opcode == IB_WC_SEND) {
 			tx_desc = (struct iser_tx_desc *)(uintptr_t)wc->wr_id;
