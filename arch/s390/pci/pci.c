@@ -649,6 +649,7 @@ int pcibios_add_device(struct pci_dev *pdev)
 
 	zdev->pdev = pdev;
 	pdev->dev.groups = zpci_attr_groups;
+	pdev->dev.archdata.dma_ops = &s390_pci_dma_ops;
 	zpci_map_resources(pdev);
 
 	for (i = 0; i < PCI_BAR_COUNT; i++) {
@@ -701,8 +702,7 @@ static int zpci_restore(struct device *dev)
 		goto out;
 
 	zpci_map_resources(pdev);
-	zpci_register_ioat(zdev, 0, zdev->start_dma + PAGE_OFFSET,
-			   zdev->start_dma + zdev->iommu_size - 1,
+	zpci_register_ioat(zdev, 0, zdev->start_dma, zdev->end_dma,
 			   (u64) zdev->dma_table);
 
 out:
