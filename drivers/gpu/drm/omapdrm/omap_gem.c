@@ -500,12 +500,13 @@ static int fault_2d(struct drm_gem_object *obj,
 	for (i = n; i > 0; i--) {
 		vm_insert_mixed(vma, (unsigned long)vaddr,
 				__pfn_to_pfn_t(pfn, PFN_DEV));
-		pfn += usergart[fmt].stride_pfn;
+		pfn += priv->usergart[fmt].stride_pfn;
 		vaddr += PAGE_SIZE * m;
 	}
 
 	/* simple round-robin: */
-	usergart[fmt].last = (usergart[fmt].last + 1) % NUM_USERGART_ENTRIES;
+	priv->usergart[fmt].last = (priv->usergart[fmt].last + 1)
+				 % NUM_USERGART_ENTRIES;
 
 	return 0;
 }
