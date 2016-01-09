@@ -605,6 +605,8 @@ sub get_maintainers {
 
     foreach my $file (@files) {
 
+	$file =~ s/^\.\///;
+
 	my %hash;
 	my $tvi = find_first_section();
 	while ($tvi < @typevalue) {
