@@ -68,7 +68,6 @@ struct rpcrdma_ia {
 	struct completion	ri_done;
 	int			ri_async_rc;
 	unsigned int		ri_max_frmr_depth;
-	struct ib_device_attr	ri_devattr;
 	struct ib_qp_attr	ri_qp_attr;
 	struct ib_qp_init_attr	ri_qp_init_attr;
 };
@@ -87,12 +86,6 @@ struct rpcrdma_ep {
 	struct sockaddr_storage	rep_remote_addr;
 	struct delayed_work	rep_connect_worker;
 };
-
-/*
- * Force a signaled SEND Work Request every so often,
- * in case the provider needs to do some housekeeping.
- */
-#define RPCRDMA_MAX_UNSIGNALED_SENDS	(32)
 
 #define INIT_CQCOUNT(ep) atomic_set(&(ep)->rep_cqcount, (ep)->rep_cqinit)
 #define DECR_CQCOUNT(ep) atomic_sub_return(1, &(ep)->rep_cqcount)
@@ -207,6 +200,12 @@ struct rpcrdma_frmr {
 	enum rpcrdma_frmr_state		fr_state;
 	struct work_struct		fr_work;
 	struct rpcrdma_xprt		*fr_xprt;
+	bool				fr_waiter;
+	struct completion		fr_linv_done;;
+	union {
+		struct ib_reg_wr	fr_regwr;
+		struct ib_send_wr	fr_invwr;
+	};
 };
 
 struct rpcrdma_fmr {
@@ -364,6 +363,8 @@ struct rpcrdma_xprt;
 struct rpcrdma_memreg_ops {
 	int		(*ro_map)(struct rpcrdma_xprt *,
 				  struct rpcrdma_mr_seg *, int, bool);
+	void		(*ro_unmap_sync)(struct rpcrdma_xprt *,
+					 struct rpcrdma_req *);
 	int		(*ro_unmap)(struct rpcrdma_xprt *,
 				    struct rpcrdma_mr_seg *);
 	int		(*ro_open)(struct rpcrdma_ia *,

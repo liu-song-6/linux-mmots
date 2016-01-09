@@ -216,7 +216,7 @@ config STRIP_ASM_SYMS
 
 config READABLE_ASM
         bool "Generate readable assembler code"
-        depends on DEBUG_KERNEL
+        depends on DEBUG_KERNEL && !LTO
         help
           Disable some compiler optimizations that tend to generate human unreadable
           assembler output. This may make the kernel slightly slower, but it helps
@@ -820,6 +820,17 @@ config BOOTPARAM_HUNG_TASK_PANIC_VALUE
 	default 0 if !BOOTPARAM_HUNG_TASK_PANIC
 	default 1 if BOOTPARAM_HUNG_TASK_PANIC
 
+config WQ_WATCHDOG
+	bool "Detect Workqueue Stalls"
+	depends on DEBUG_KERNEL
+	help
+	  Say Y here to enable stall detection on workqueues.  If a
+	  worker pool doesn't make forward progress on a pending work
+	  item for over a given amount of time, 30s by default, a
+	  warning message is printed along with dump of workqueue
+	  state.  This can be configured through kernel parameter
+	  "workqueue.watchdog_thresh" and its sysfs counterpart.
+
 endmenu # "Debug lockups and hangs"
 
 config PANIC_ON_OOPS
@@ -1245,6 +1256,39 @@ config TORTURE_TEST
 	tristate
 	default n
 
+config RCU_PERF_TEST
+	tristate "performance tests for RCU"
+	depends on DEBUG_KERNEL
+	select TORTURE_TEST
+	select SRCU
+	select TASKS_RCU
+	default n
+	help
+	  This option provides a kernel module that runs performance
+	  tests on the RCU infrastructure.  The kernel module may be built
+	  after the fact on the running kernel to be tested, if desired.
+
+	  Say Y here if you want RCU performance tests to be built into
+	  the kernel.
+	  Say M if you want the RCU performance tests to build as a module.
+	  Say N if you are unsure.
+
+config RCU_PERF_TEST_RUNNABLE
+	bool "performance tests for RCU runnable by default"
+	depends on RCU_PERF_TEST = y
+	default n
+	help
+	  This option provides a way to build the RCU performance tests
+	  directly into the kernel without them starting up at boot time.
+	  You can use /sys/module to manually override this setting.
+	  This /proc file is available only when the RCU performance
+	  tests have been built into the kernel.
+
+	  Say Y here if you want the RCU performance tests to start during
+	  boot (you probably don't).
+	  Say N here if you want the RCU performance tests to start only
+	  after being manually enabled via /sys/module.
+
 config RCU_TORTURE_TEST
 	tristate "torture tests for RCU"
 	depends on DEBUG_KERNEL
@@ -1492,6 +1536,29 @@ config OF_RECONFIG_NOTIFIER_ERROR_INJECT
 
 	  If unsure, say N.
 
+config NETDEV_NOTIFIER_ERROR_INJECT
+	tristate "Netdev notifier error injection module"
+	depends on NET && NOTIFIER_ERROR_INJECTION
+	help
+	  This option provides the ability to inject artificial errors to
+	  netdevice notifier chain callbacks.  It is controlled through debugfs
+	  interface /sys/kernel/debug/notifier-error-inject/netdev
+
+	  If the notifier call chain should be failed with some events
+	  notified, write the error code to "actions/<notifier event>/error".
+
+	  Example: Inject netdevice mtu change error (-22 = -EINVAL)
+
+	  # cd /sys/kernel/debug/notifier-error-inject/netdev
+	  # echo -22 > actions/NETDEV_CHANGEMTU/error
+	  # ip link set eth0 mtu 1024
+	  RTNETLINK answers: Invalid argument
+
+	  To compile this code as a module, choose M here: the module will
+	  be called netdev-notifier-error-inject.
+
+	  If unsure, say N.
+
 config FAULT_INJECTION
 	bool "Fault-injection framework"
 	depends on DEBUG_KERNEL
@@ -1531,8 +1598,7 @@ config FAIL_IO_TIMEOUT
 
 config FAIL_MMC_REQUEST
 	bool "Fault-injection capability for MMC IO"
-	select DEBUG_FS
-	depends on FAULT_INJECTION && MMC
+	depends on FAULT_INJECTION_DEBUG_FS && MMC
 	help
 	  Provide fault-injection capability for MMC IO.
 	  This will make the mmc core return data errors. This is

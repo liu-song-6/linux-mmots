@@ -194,7 +194,7 @@ There are some minimal guarantees that may be expected of a CPU:
  (*) On any given CPU, dependent memory accesses will be issued in order, with
      respect to itself.  This means that for:
 
-	WRITE_ONCE(Q, P); smp_read_barrier_depends(); D = READ_ONCE(*Q);
+	Q = READ_ONCE(P); smp_read_barrier_depends(); D = READ_ONCE(*Q);
 
      the CPU will issue the following memory operations:
 
@@ -202,9 +202,9 @@ There are some minimal guarantees that may be expected of a CPU:
 
      and always in that order.  On most systems, smp_read_barrier_depends()
      does nothing, but it is required for DEC Alpha.  The READ_ONCE()
-     and WRITE_ONCE() are required to prevent compiler mischief.  Please
-     note that you should normally use something like rcu_dereference()
-     instead of open-coding smp_read_barrier_depends().
+     is required to prevent compiler mischief.  Please note that you
+     should normally use something like rcu_dereference() instead of
+     open-coding smp_read_barrier_depends().
 
  (*) Overlapping loads and stores within a particular CPU will appear to be
      ordered within that CPU.  This means that for:
@@ -232,7 +232,7 @@ And there are a number of things that _must_ or _must_not_ be assumed:
      with memory references that are not protected by READ_ONCE() and
      WRITE_ONCE().  Without them, the compiler is within its rights to
      do all sorts of "creative" transformations, which are covered in
-     the Compiler Barrier section.
+     the COMPILER BARRIER section.
 
  (*) It _must_not_ be assumed that independent loads and stores will be issued
      in the order given.  This means that for:
@@ -800,9 +800,13 @@ In summary:
       use smp_rmb(), smp_wmb(), or, in the case of prior stores and
       later loads, smp_mb().
 
-  (*) If both legs of the "if" statement begin with identical stores
-      to the same variable, a barrier() statement is required at the
-      beginning of each leg of the "if" statement.
+  (*) If both legs of the "if" statement begin with identical stores to
+      the same variable, then those stores must be ordered, either by
+      preceding both of them with smp_mb() or by using smp_store_release()
+      to carry out the stores.  Please note that it is -not- sufficient
+      to use barrier() at beginning of each leg of the "if" statement,
+      as optimizing compilers do not necessarily respect barrier()
+      in this case.
 
   (*) Control dependencies require at least one run-time conditional
       between the prior load and the subsequent store, and this
@@ -814,7 +818,7 @@ In summary:
   (*) Control dependencies require that the compiler avoid reordering the
       dependency into nonexistence.  Careful use of READ_ONCE() or
       atomic{,64}_read() can help to preserve your control dependency.
-      Please see the Compiler Barrier section for more information.
+      Please see the COMPILER BARRIER section for more information.
 
   (*) Control dependencies pair normally with other types of barriers.
 
@@ -1655,17 +1659,18 @@ macro is a good place to start looking.
 SMP memory barriers are reduced to compiler barriers on uniprocessor compiled
 systems because it is assumed that a CPU will appear to be self-consistent,
 and will order overlapping accesses correctly with respect to itself.
+However, see the subsection on "Virtual Machine Guests" below.
 
 [!] Note that SMP memory barriers _must_ be used to control the ordering of
 references to shared memory on SMP systems, though the use of locking instead
 is sufficient.
 
 Mandatory barriers should not be used to control SMP effects, since mandatory
-barriers unnecessarily impose overhead on UP systems. They may, however, be
-used to control MMIO effects on accesses through relaxed memory I/O windows.
-These are required even on non-SMP systems as they affect the order in which
-memory operations appear to a device by prohibiting both the compiler and the
-CPU from reordering them.
+barriers impose unnecessary overhead on both SMP and UP systems. They may,
+however, be used to control MMIO effects on accesses through relaxed memory I/O
+windows.  These barriers are required even on non-SMP systems as they affect
+the order in which memory operations appear to a device by prohibiting both the
+compiler and the CPU from reordering them.
 
 
 There are some more advanced barrier functions:
@@ -1673,8 +1678,8 @@ There are some more advanced barrier functions:
  (*) smp_store_mb(var, value)
 
      This assigns the value to the variable and then inserts a full memory
-     barrier after it, depending on the function.  It isn't guaranteed to
-     insert anything more than a compiler barrier in a UP compilation.
+     barrier after it.  It isn't guaranteed to insert anything more than a
+     compiler barrier in a UP compilation.
 
 
  (*) smp_mb__before_atomic();
@@ -2948,6 +2953,23 @@ The Alpha defines the Linux kernel's memory barrier model.
 
 See the subsection on "Cache Coherency" above.
 
+VIRTUAL MACHINE GUESTS
+-------------------
+
+Guests running within virtual machines might be affected by SMP effects even if
+the guest itself is compiled without SMP support.  This is an artifact of
+interfacing with an SMP host while running an UP kernel.  Using mandatory
+barriers for this use-case would be possible but is often suboptimal.
+
+To handle this case optimally, low-level virt_mb() etc macros are available.
+These have the same effect as smp_mb() etc when SMP is enabled, but generate
+identical code for SMP and non-SMP systems. For example, virtual machine guests
+should use virt_mb() rather than smp_mb() when synchronizing against a
+(possibly SMP) host.
+
+These are equivalent to smp_mb() etc counterparts in all other respects,
+in particular, they do not control MMIO effects: to control
+MMIO effects, use mandatory barriers.
 
 ============
 EXAMPLE USES
