@@ -17,6 +17,7 @@ help:
 	@echo '  lguest     - a minimal 32-bit x86 hypervisor'
 	@echo '  perf       - Linux performance measurement and analysis tool'
 	@echo '  selftests  - various kernel selftests'
+	@echo '  spi        - spi tools'
 	@echo '  turbostat  - Intel CPU idle stats and freq reporting tool'
 	@echo '  usb        - USB testing tools'
 	@echo '  virtio     - vhost test module'
@@ -52,7 +53,7 @@ acpi: FORCE
 cpupower: FORCE
 	$(call descend,power/$@)
 
-cgroup firewire hv guest usb virtio vm net iio: FORCE
+cgroup firewire hv guest spi usb virtio vm net iio: FORCE
 	$(call descend,$@)
 
 liblockdep: FORCE
@@ -96,7 +97,7 @@ cgroup_install firewire_install hv_install lguest_install perf_install usb_insta
 	$(call descend,$(@:_install=),install)
 
 selftests_install:
-	$(call descend,testing/$(@:_clean=),install)
+	$(call descend,testing/$(@:_install=),install)
 
 turbostat_install x86_energy_perf_policy_install:
 	$(call descend,power/x86/$(@:_install=),install)
@@ -118,7 +119,7 @@ acpi_clean:
 cpupower_clean:
 	$(call descend,power/cpupower,clean)
 
-cgroup_clean hv_clean firewire_clean lguest_clean usb_clean virtio_clean vm_clean net_clean iio_clean:
+cgroup_clean hv_clean firewire_clean lguest_clean spi_clean usb_clean virtio_clean vm_clean net_clean iio_clean:
 	$(call descend,$(@:_clean=),clean)
 
 liblockdep_clean:
@@ -143,7 +144,7 @@ freefall_clean:
 	$(call descend,laptop/freefall,clean)
 
 clean: acpi_clean cgroup_clean cpupower_clean hv_clean firewire_clean lguest_clean \
-		perf_clean selftests_clean turbostat_clean usb_clean virtio_clean \
+		perf_clean selftests_clean turbostat_clean spi_clean usb_clean virtio_clean \
 		vm_clean net_clean iio_clean x86_energy_perf_policy_clean tmon_clean \
 		freefall_clean
 

@@ -3746,7 +3746,7 @@ static const struct flag flags[] = {
 	{ "NET_TX_SOFTIRQ", 2 },
 	{ "NET_RX_SOFTIRQ", 3 },
 	{ "BLOCK_SOFTIRQ", 4 },
-	{ "BLOCK_IOPOLL_SOFTIRQ", 5 },
+	{ "IRQ_POLL_SOFTIRQ", 5 },
 	{ "TASKLET_SOFTIRQ", 6 },
 	{ "SCHED_SOFTIRQ", 7 },
 	{ "HRTIMER_SOFTIRQ", 8 },
@@ -4968,13 +4968,12 @@ static void pretty_print(struct trace_seq *s, void *data, int size, struct event
 				    sizeof(long) != 8) {
 					char *p;
 
-					ls = 2;
 					/* make %l into %ll */
-					p = strchr(format, 'l');
-					if (p)
+					if (ls == 1 && (p = strchr(format, 'l')))
 						memmove(p+1, p, strlen(p)+1);
 					else if (strcmp(format, "%p") == 0)
 						strcpy(format, "0x%llx");
+					ls = 2;
 				}
 				switch (ls) {
 				case -2:

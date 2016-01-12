@@ -325,19 +325,15 @@ struct mesh_preq_queue {
 
 struct ieee80211_roc_work {
 	struct list_head list;
-	struct list_head dependents;
-
-	struct delayed_work work;
 
 	struct ieee80211_sub_if_data *sdata;
 
 	struct ieee80211_channel *chan;
 
 	bool started, abort, hw_begun, notified;
-	bool to_be_freed;
 	bool on_channel;
 
-	unsigned long hw_start_time;
+	unsigned long start_time;
 
 	u32 duration, req_duration;
 	struct sk_buff *frame;
@@ -1335,6 +1331,7 @@ struct ieee80211_local {
 	/*
 	 * Remain-on-channel support
 	 */
+	struct delayed_work roc_work;
 	struct list_head roc_list;
 	struct work_struct hw_roc_start, hw_roc_done;
 	unsigned long hw_roc_start_time;
@@ -1483,6 +1480,10 @@ void ieee80211_bss_info_change_notify(struct ieee80211_sub_if_data *sdata,
 void ieee80211_configure_filter(struct ieee80211_local *local);
 u32 ieee80211_reset_erp_info(struct ieee80211_sub_if_data *sdata);
 
+u64 ieee80211_mgmt_tx_cookie(struct ieee80211_local *local);
+int ieee80211_attach_ack_skb(struct ieee80211_local *local, struct sk_buff *skb,
+			     u64 *cookie, gfp_t gfp);
+
 /* STA code */
 void ieee80211_sta_setup_sdata(struct ieee80211_sub_if_data *sdata);
 int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
@@ -1577,16 +1578,22 @@ int ieee80211_request_sched_scan_stop(struct ieee80211_local *local);
 void ieee80211_sched_scan_end(struct ieee80211_local *local);
 void ieee80211_sched_scan_stopped_work(struct work_struct *work);
 
-/* off-channel helpers */
+/* off-channel/mgmt-tx */
 void ieee80211_offchannel_stop_vifs(struct ieee80211_local *local);
 void ieee80211_offchannel_return(struct ieee80211_local *local);
 void ieee80211_roc_setup(struct ieee80211_local *local);
 void ieee80211_start_next_roc(struct ieee80211_local *local);
 void ieee80211_roc_purge(struct ieee80211_local *local,
 			 struct ieee80211_sub_if_data *sdata);
-void ieee80211_roc_notify_destroy(struct ieee80211_roc_work *roc, bool free);
-void ieee80211_sw_roc_work(struct work_struct *work);
-void ieee80211_handle_roc_started(struct ieee80211_roc_work *roc);
+int ieee80211_remain_on_channel(struct wiphy *wiphy, struct wireless_dev *wdev,
+				struct ieee80211_channel *chan,
+				unsigned int duration, u64 *cookie);
+int ieee80211_cancel_remain_on_channel(struct wiphy *wiphy,
+				       struct wireless_dev *wdev, u64 cookie);
+int ieee80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
+		      struct cfg80211_mgmt_tx_params *params, u64 *cookie);
+int ieee80211_mgmt_tx_cancel_wait(struct wiphy *wiphy,
+				  struct wireless_dev *wdev, u64 cookie);
 
 /* channel switch handling */
 void ieee80211_csa_finalize_work(struct work_struct *work);
@@ -1707,6 +1714,8 @@ ieee80211_vht_cap_ie_to_sta_vht_cap(struct ieee80211_sub_if_data *sdata,
 enum ieee80211_sta_rx_bandwidth ieee80211_sta_cap_rx_bw(struct sta_info *sta);
 enum ieee80211_sta_rx_bandwidth ieee80211_sta_cur_vht_bw(struct sta_info *sta);
 void ieee80211_sta_set_rx_nss(struct sta_info *sta);
+void ieee80211_process_mu_groups(struct ieee80211_sub_if_data *sdata,
+				 struct ieee80211_mgmt *mgmt);
 u32 __ieee80211_vht_handle_opmode(struct ieee80211_sub_if_data *sdata,
                                   struct sta_info *sta, u8 opmode,
 				  enum ieee80211_band band);
@@ -1979,12 +1988,10 @@ int ieee80211_add_ext_srates_ie(struct ieee80211_sub_if_data *sdata,
 u8 *ieee80211_add_wmm_info_ie(u8 *buf, u8 qosinfo);
 
 /* channel management */
-void ieee80211_ht_oper_to_chandef(struct ieee80211_channel *control_chan,
-				  const struct ieee80211_ht_operation *ht_oper,
-				  struct cfg80211_chan_def *chandef);
-void ieee80211_vht_oper_to_chandef(struct ieee80211_channel *control_chan,
-				   const struct ieee80211_vht_operation *oper,
-				   struct cfg80211_chan_def *chandef);
+bool ieee80211_chandef_ht_oper(const struct ieee80211_ht_operation *ht_oper,
+			       struct cfg80211_chan_def *chandef);
+bool ieee80211_chandef_vht_oper(const struct ieee80211_vht_operation *oper,
+				struct cfg80211_chan_def *chandef);
 u32 ieee80211_chandef_downgrade(struct cfg80211_chan_def *c);
 
 int __must_check

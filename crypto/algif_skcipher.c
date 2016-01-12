@@ -31,6 +31,11 @@ struct skcipher_sg_list {
 	struct scatterlist sg[0];
 };
 
+struct skcipher_tfm {
+	struct crypto_skcipher *skcipher;
+	bool has_key;
+};
+
 struct skcipher_ctx {
 	struct list_head tsgl;
 	struct af_alg_sgl rsgl;
@@ -40,7 +45,7 @@ struct skcipher_ctx {
 	struct af_alg_completion completion;
 
 	atomic_t inflight;
-	unsigned used;
+	size_t used;
 
 	unsigned int len;
 	bool more;
@@ -153,7 +158,7 @@ static int skcipher_alloc_sgl(struct sock *sk)
 	return 0;
 }
 
-static void skcipher_pull_sgl(struct sock *sk, int used, int put)
+static void skcipher_pull_sgl(struct sock *sk, size_t used, int put)
 {
 	struct alg_sock *ask = alg_sk(sk);
 	struct skcipher_ctx *ctx = ask->private;
@@ -167,7 +172,7 @@ static void skcipher_pull_sgl(struct sock *sk, int used, int put)
 		sg = sgl->sg;
 
 		for (i = 0; i < sgl->cur; i++) {
-			int plen = min_t(int, used, sg[i].length);
+			size_t plen = min_t(size_t, used, sg[i].length);
 
 			if (!sg_page(sg + i))
 				continue;
@@ -238,7 +243,7 @@ static void skcipher_wmem_wakeup(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up_interruptible_sync_poll(&wq->wait, POLLIN |
 							   POLLRDNORM |
 							   POLLRDBAND);
@@ -288,7 +293,7 @@ static void skcipher_data_wakeup(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up_interruptible_sync_poll(&wq->wait, POLLOUT |
 							   POLLRDNORM |
 							   POLLRDBAND);
@@ -348,7 +353,7 @@ static int skcipher_sendmsg(struct socket *sock, struct msghdr *msg,
 	while (size) {
 		struct scatterlist *sg;
 		unsigned long len = size;
-		int plen;
+		size_t plen;
 
 		if (ctx->merge) {
 			sgl = list_entry(ctx->tsgl.prev,
@@ -390,7 +395,7 @@ static int skcipher_sendmsg(struct socket *sock, struct msghdr *msg,
 		sg_unmark_end(sg + sgl->cur);
 		do {
 			i = sgl->cur;
-			plen = min_t(int, len, PAGE_SIZE);
+			plen = min_t(size_t, len, PAGE_SIZE);
 
 			sg_assign_page(sg + i, alloc_page(GFP_KERNEL));
 			err = -ENOMEM;
@@ -750,17 +755,41 @@ static struct proto_ops algif_skcipher_ops = {
 
 static void *skcipher_bind(const char *name, u32 type, u32 mask)
 {
-	return crypto_alloc_skcipher(name, type, mask);
+	struct skcipher_tfm *tfm;
+	struct crypto_skcipher *skcipher;
+
+	tfm = kzalloc(sizeof(*tfm), GFP_KERNEL);
+	if (!tfm)
+		return ERR_PTR(-ENOMEM);
+
+	skcipher = crypto_alloc_skcipher(name, type, mask);
+	if (IS_ERR(skcipher)) {
+		kfree(tfm);
+		return ERR_CAST(skcipher);
+	}
+
+	tfm->skcipher = skcipher;
+
+	return tfm;
 }
 
 static void skcipher_release(void *private)
 {
-	crypto_free_skcipher(private);
+	struct skcipher_tfm *tfm = private;
+
+	crypto_free_skcipher(tfm->skcipher);
+	kfree(tfm);
 }
 
 static int skcipher_setkey(void *private, const u8 *key, unsigned int keylen)
 {
-	return crypto_skcipher_setkey(private, key, keylen);
+	struct skcipher_tfm *tfm = private;
+	int err;
+
+	err = crypto_skcipher_setkey(tfm->skcipher, key, keylen);
+	tfm->has_key = !err;
+
+	return err;
 }
 
 static void skcipher_wait(struct sock *sk)
@@ -792,20 +821,25 @@ static int skcipher_accept_parent(void *private, struct sock *sk)
 {
 	struct skcipher_ctx *ctx;
 	struct alg_sock *ask = alg_sk(sk);
-	unsigned int len = sizeof(*ctx) + crypto_skcipher_reqsize(private);
+	struct skcipher_tfm *tfm = private;
+	struct crypto_skcipher *skcipher = tfm->skcipher;
+	unsigned int len = sizeof(*ctx) + crypto_skcipher_reqsize(skcipher);
+
+	if (!tfm->has_key)
+		return -ENOKEY;
 
 	ctx = sock_kmalloc(sk, len, GFP_KERNEL);
 	if (!ctx)
 		return -ENOMEM;
 
-	ctx->iv = sock_kmalloc(sk, crypto_skcipher_ivsize(private),
+	ctx->iv = sock_kmalloc(sk, crypto_skcipher_ivsize(skcipher),
 			       GFP_KERNEL);
 	if (!ctx->iv) {
 		sock_kfree_s(sk, ctx, len);
 		return -ENOMEM;
 	}
 
-	memset(ctx->iv, 0, crypto_skcipher_ivsize(private));
+	memset(ctx->iv, 0, crypto_skcipher_ivsize(skcipher));
 
 	INIT_LIST_HEAD(&ctx->tsgl);
 	ctx->len = len;
@@ -818,7 +852,7 @@ static int skcipher_accept_parent(void *private, struct sock *sk)
 
 	ask->private = ctx;
 
-	skcipher_request_set_tfm(&ctx->req, private);
+	skcipher_request_set_tfm(&ctx->req, skcipher);
 	skcipher_request_set_callback(&ctx->req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 				      af_alg_complete, &ctx->completion);
 

@@ -193,7 +193,7 @@ ssize_t splice_to_pipe(struct pipe_inode_info *pipe,
 
 	for (;;) {
 		if (!pipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			if (!ret)
 				ret = -EPIPE;
 			break;
@@ -415,6 +415,7 @@ __generic_file_splice_read(struct file *in, loff_t *ppos,
 			 */
 			if (!page->mapping) {
 				unlock_page(page);
+retry_lookup:
 				page = find_or_create_page(mapping, index,
 						mapping_gfp_mask(mapping));
 
@@ -439,13 +440,10 @@ __generic_file_splice_read(struct file *in, loff_t *ppos,
 			error = mapping->a_ops->readpage(in, page);
 			if (unlikely(error)) {
 				/*
-				 * We really should re-lookup the page here,
-				 * but it complicates things a lot. Instead
-				 * lets just do what we already stored, and
-				 * we'll get it the next time we are called.
+				 * Re-lookup the page
 				 */
 				if (error == AOP_TRUNCATED_PAGE)
-					error = 0;
+					goto retry_lookup;
 
 				break;
 			}
@@ -1769,7 +1767,7 @@ static int opipe_prep(struct pipe_inode_info *pipe, unsigned int flags)
 
 	while (pipe->nrbufs >= pipe->buffers) {
 		if (!pipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			ret = -EPIPE;
 			break;
 		}
@@ -1820,7 +1818,7 @@ retry:
 
 	do {
 		if (!opipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			if (!ret)
 				ret = -EPIPE;
 			break;
@@ -1924,7 +1922,7 @@ static int link_pipe(struct pipe_inode_info *ipipe,
 
 	do {
 		if (!opipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			if (!ret)
 				ret = -EPIPE;
 			break;

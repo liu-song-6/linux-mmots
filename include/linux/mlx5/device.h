@@ -251,6 +251,7 @@ enum mlx5_event {
 	MLX5_EVENT_TYPE_PAGE_REQUEST	   = 0xb,
 
 	MLX5_EVENT_TYPE_PAGE_FAULT	   = 0xc,
+	MLX5_EVENT_TYPE_NIC_VPORT_CHANGE   = 0xd,
 };
 
 enum {
@@ -276,6 +277,26 @@ enum {
 	MLX5_DEV_CAP_FLAG_DCT		= 1LL << 37,
 	MLX5_DEV_CAP_FLAG_SIG_HAND_OVER	= 1LL << 40,
 	MLX5_DEV_CAP_FLAG_CMDIF_CSUM	= 3LL << 46,
+};
+
+enum {
+	MLX5_ROCE_VERSION_1		= 0,
+	MLX5_ROCE_VERSION_2		= 2,
+};
+
+enum {
+	MLX5_ROCE_VERSION_1_CAP		= 1 << MLX5_ROCE_VERSION_1,
+	MLX5_ROCE_VERSION_2_CAP		= 1 << MLX5_ROCE_VERSION_2,
+};
+
+enum {
+	MLX5_ROCE_L3_TYPE_IPV4		= 0,
+	MLX5_ROCE_L3_TYPE_IPV6		= 1,
+};
+
+enum {
+	MLX5_ROCE_L3_TYPE_IPV4_CAP	= 1 << 1,
+	MLX5_ROCE_L3_TYPE_IPV6_CAP	= 1 << 2,
 };
 
 enum {
@@ -442,9 +463,12 @@ struct mlx5_init_seg {
 	__be32			rsvd1[120];
 	__be32			initializing;
 	struct health_buffer	health;
-	__be32			rsvd2[884];
+	__be32			rsvd2[880];
+	__be32			internal_timer_h;
+	__be32			internal_timer_l;
+	__be32			rsvd3[2];
 	__be32			health_counter;
-	__be32			rsvd3[1019];
+	__be32			rsvd4[1019];
 	__be64			ieee1588_clk;
 	__be32			ieee1588_clk_type;
 	__be32			clr_intx;
@@ -520,6 +544,12 @@ struct mlx5_eqe_page_fault {
 	__be32 flags_qpn;
 } __packed;
 
+struct mlx5_eqe_vport_change {
+	u8		rsvd0[2];
+	__be16		vport_num;
+	__be32		rsvd1[6];
+} __packed;
+
 union ev_data {
 	__be32				raw[7];
 	struct mlx5_eqe_cmd		cmd;
@@ -532,6 +562,7 @@ union ev_data {
 	struct mlx5_eqe_stall_vl	stall_vl;
 	struct mlx5_eqe_page_req	req_pages;
 	struct mlx5_eqe_page_fault	page_fault;
+	struct mlx5_eqe_vport_change	vport_change;
 } __packed;
 
 struct mlx5_eqe {
@@ -593,7 +624,8 @@ struct mlx5_cqe64 {
 	__be32		imm_inval_pkey;
 	u8		rsvd40[4];
 	__be32		byte_cnt;
-	__be64		timestamp;
+	__be32		timestamp_h;
+	__be32		timestamp_l;
 	__be32		sop_drop_qpn;
 	__be16		wqe_counter;
 	u8		signature;
@@ -615,6 +647,16 @@ static inline int cqe_has_vlan(struct mlx5_cqe64 *cqe)
 	return !!(cqe->l4_hdr_type_etc & 0x1);
 }
 
+static inline u64 get_cqe_ts(struct mlx5_cqe64 *cqe)
+{
+	u32 hi, lo;
+
+	hi = be32_to_cpu(cqe->timestamp_h);
+	lo = be32_to_cpu(cqe->timestamp_l);
+
+	return (u64)lo | ((u64)hi << 32);
+}
+
 enum {
 	CQE_L4_HDR_TYPE_NONE			= 0x0,
 	CQE_L4_HDR_TYPE_TCP_NO_ACK		= 0x1,
@@ -626,6 +668,12 @@ enum {
 enum {
 	CQE_RSS_HTYPE_IP	= 0x3 << 6,
 	CQE_RSS_HTYPE_L4	= 0x3 << 2,
+};
+
+enum {
+	MLX5_CQE_ROCE_L3_HEADER_TYPE_GRH	= 0x0,
+	MLX5_CQE_ROCE_L3_HEADER_TYPE_IPV6	= 0x1,
+	MLX5_CQE_ROCE_L3_HEADER_TYPE_IPV4	= 0x2,
 };
 
 enum {
@@ -1067,6 +1115,12 @@ enum {
 };
 
 enum {
+	MLX5_ESW_VPORT_ADMIN_STATE_DOWN  = 0x0,
+	MLX5_ESW_VPORT_ADMIN_STATE_UP    = 0x1,
+	MLX5_ESW_VPORT_ADMIN_STATE_AUTO  = 0x2,
+};
+
+enum {
 	MLX5_L3_PROT_TYPE_IPV4		= 0,
 	MLX5_L3_PROT_TYPE_IPV6		= 1,
 };
@@ -1102,6 +1156,12 @@ enum {
 	MLX5_FLOW_CONTEXT_DEST_TYPE_TIR		= 2,
 };
 
+enum mlx5_list_type {
+	MLX5_NVPRT_LIST_TYPE_UC   = 0x0,
+	MLX5_NVPRT_LIST_TYPE_MC   = 0x1,
+	MLX5_NVPRT_LIST_TYPE_VLAN = 0x2,
+};
+
 enum {
 	MLX5_RQC_RQ_TYPE_MEMORY_RQ_INLINE = 0x0,
 	MLX5_RQC_RQ_TYPE_MEMORY_RQ_RPM    = 0x1,
@@ -1124,6 +1184,8 @@ enum mlx5_cap_type {
 	MLX5_CAP_IPOIB_OFFLOADS,
 	MLX5_CAP_EOIB_OFFLOADS,
 	MLX5_CAP_FLOW_TABLE,
+	MLX5_CAP_ESWITCH_FLOW_TABLE,
+	MLX5_CAP_ESWITCH,
 	/* NUM OF CAP Types */
 	MLX5_CAP_NUM
 };
@@ -1160,6 +1222,28 @@ enum mlx5_cap_type {
 
 #define MLX5_CAP_FLOWTABLE_MAX(mdev, cap) \
 	MLX5_GET(flow_table_nic_cap, mdev->hca_caps_max[MLX5_CAP_FLOW_TABLE], cap)
+
+#define MLX5_CAP_ESW_FLOWTABLE(mdev, cap) \
+	MLX5_GET(flow_table_eswitch_cap, \
+		 mdev->hca_caps_cur[MLX5_CAP_ESWITCH_FLOW_TABLE], cap)
+
+#define MLX5_CAP_ESW_FLOWTABLE_MAX(mdev, cap) \
+	MLX5_GET(flow_table_eswitch_cap, \
+		 mdev->hca_caps_max[MLX5_CAP_ESWITCH_FLOW_TABLE], cap)
+
+#define MLX5_CAP_ESW_FLOWTABLE_FDB(mdev, cap) \
+	MLX5_CAP_ESW_FLOWTABLE(mdev, flow_table_properties_nic_esw_fdb.cap)
+
+#define MLX5_CAP_ESW_FLOWTABLE_FDB_MAX(mdev, cap) \
+	MLX5_CAP_ESW_FLOWTABLE_MAX(mdev, flow_table_properties_nic_esw_fdb.cap)
+
+#define MLX5_CAP_ESW(mdev, cap) \
+	MLX5_GET(e_switch_cap, \
+		 mdev->hca_caps_cur[MLX5_CAP_ESWITCH], cap)
+
+#define MLX5_CAP_ESW_MAX(mdev, cap) \
+	MLX5_GET(e_switch_cap, \
+		 mdev->hca_caps_max[MLX5_CAP_ESWITCH], cap)
 
 #define MLX5_CAP_ODP(mdev, cap)\
 	MLX5_GET(odp_cap, mdev->hca_caps_cur[MLX5_CAP_ODP], cap)
