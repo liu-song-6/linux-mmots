@@ -439,6 +439,37 @@ print_block_size(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR(block_size_bytes, 0444, print_block_size, NULL);
 
 /*
+ * Memory auto online policy.
+ */
+
+static ssize_t
+show_auto_online_blocks(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	if (memhp_auto_online)
+		return sprintf(buf, "online\n");
+	else
+		return sprintf(buf, "offline\n");
+}
+
+static ssize_t
+store_auto_online_blocks(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	if (sysfs_streq(buf, "online"))
+		memhp_auto_online = true;
+	else if (sysfs_streq(buf, "offline"))
+		memhp_auto_online = false;
+	else
+		return -EINVAL;
+
+	return count;
+}
+
+static DEVICE_ATTR(auto_online_blocks, 0644, show_auto_online_blocks,
+		   store_auto_online_blocks);
+
+/*
  * Some architectures will have custom drivers to do this, and
  * will not need to do it from userspace.  The fake hot-add code
  * as well as ppc64 will do all of their discovery in userspace
@@ -733,6 +764,7 @@ static struct attribute *memory_root_attrs[] = {
 #endif
 
 	&dev_attr_block_size_bytes.attr,
+	&dev_attr_auto_online_blocks.attr,
 	NULL
 };
 
