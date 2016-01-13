@@ -2546,18 +2546,18 @@ done:
 	return ret;
 }
 
-static void mmu_set_spte(struct kvm_vcpu *vcpu, u64 *sptep,
-			 unsigned pte_access, int write_fault, int *emulate,
-			 int level, gfn_t gfn, kvm_pfn_t pfn, bool speculative,
-			 bool host_writable)
+static bool mmu_set_spte(struct kvm_vcpu *vcpu, u64 *sptep, unsigned pte_access,
+			 int write_fault, int level, gfn_t gfn, kvm_pfn_t pfn,
+			 bool speculative, bool host_writable)
 {
 	int was_rmapped = 0;
 	int rmap_count;
+	bool emulate = false;
 
 	pgprintk("%s: spte %llx write_fault %d gfn %llx\n", __func__,
 		 *sptep, write_fault, gfn);
 
-	if (is_rmap_spte(*sptep)) {
+	if (is_shadow_present_pte(*sptep)) {
 		/*
 		 * If we overwrite a PTE page pointer with a 2MB PMD, unlink
 		 * the parent of the now unreachable PTE.
@@ -2691,9 +2691,8 @@ static void direct_pte_prefetch(struct kvm_vcpu *vcpu, u64 *sptep)
 	__direct_pte_prefetch(vcpu, sp, sptep);
 }
 
-static int __direct_map(struct kvm_vcpu *vcpu, gpa_t v, int write,
-			int map_writable, int level, gfn_t gfn, kvm_pfn_t pfn,
-			bool prefault)
+static int __direct_map(struct kvm_vcpu *vcpu, int write, int map_writable,
+			int level, gfn_t gfn, kvm_pfn_t pfn, bool prefault)
 {
 	struct kvm_shadow_walk_iterator iterator;
 	struct kvm_mmu_page *sp;

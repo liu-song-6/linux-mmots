@@ -22,6 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+#include <linux/badblocks.h>
 #include <linux/memremap.h>
 #include <linux/vmalloc.h>
 #include <linux/pfn_t.h>
