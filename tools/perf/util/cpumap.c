@@ -188,6 +188,7 @@ static struct cpu_map *cpu_map__from_entries(struct cpu_map_entries *cpus)
 	if (map) {
 		unsigned i;
 
+<<<<<<< HEAD
 		for (i = 0; i < cpus->nr; i++) {
 			/*
 			 * Special treatment for -1, which is not real cpu number,
@@ -199,6 +200,10 @@ static struct cpu_map *cpu_map__from_entries(struct cpu_map_entries *cpus)
 			else
 				map->map[i] = (int) cpus->cpu[i];
 		}
+=======
+		for (i = 0; i < cpus->nr; i++)
+			map->map[i] = (int)cpus->cpu[i];
+>>>>>>> linux-next/akpm-base
 	}
 
 	return map;

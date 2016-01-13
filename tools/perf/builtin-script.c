@@ -614,6 +614,7 @@ struct perf_script {
 	bool			show_task_events;
 	bool			show_mmap_events;
 	bool			show_switch_events;
+<<<<<<< HEAD
 	bool			allocated;
 	struct cpu_map		*cpus;
 	struct thread_map	*threads;
@@ -635,6 +636,11 @@ static int perf_evlist__max_name_len(struct perf_evlist *evlist)
 }
 
 static void process_event(struct perf_script *script, union perf_event *event,
+=======
+};
+
+static void process_event(struct perf_script *script __maybe_unused, union perf_event *event,
+>>>>>>> linux-next/akpm-base
 			  struct perf_sample *sample, struct perf_evsel *evsel,
 			  struct addr_location *al)
 {
@@ -697,6 +703,7 @@ static void process_event(struct perf_script *script, union perf_event *event,
 
 static struct scripting_ops	*scripting_ops;
 
+<<<<<<< HEAD
 static void __process_stat(struct perf_evsel *counter, u64 tstamp)
 {
 	int nthreads = thread_map__nr(counter->threads);
@@ -745,6 +752,8 @@ static void process_stat_interval(u64 tstamp)
 		scripting_ops->process_stat_interval(tstamp);
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 static void setup_scripting(void)
 {
 	setup_perl_scripting();

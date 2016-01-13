@@ -925,6 +925,7 @@ void free_callchain(struct callchain_root *root)
 	free_callchain_node(&root->node);
 }
 
+<<<<<<< HEAD
 static u64 decay_callchain_node(struct callchain_node *node)
 {
 	struct callchain_node *child;
@@ -953,6 +954,8 @@ void decay_callchain(struct callchain_root *root)
 	decay_callchain_node(&root->node);
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 int callchain_node__make_parent_list(struct callchain_node *node)
 {
 	struct callchain_node *parent = node->parent;

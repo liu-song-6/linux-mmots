@@ -9,7 +9,11 @@ libperf-y += env.o
 libperf-y += event.o
 libperf-y += evlist.o
 libperf-y += evsel.o
+<<<<<<< HEAD
 libperf-y += find_bit.o
+=======
+libperf-y += find_next_bit.o
+>>>>>>> linux-next/akpm-base
 libperf-y += kallsyms.o
 libperf-y += levenshtein.o
 libperf-y += llvm-utils.o

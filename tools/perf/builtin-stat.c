@@ -184,6 +184,7 @@ static int create_perf_stat_counter(struct perf_evsel *evsel)
 	 * like tracepoints. Clear it up for counting.
 	 */
 	attr->sample_period = 0;
+<<<<<<< HEAD
 
 	/*
 	 * But set sample_type to PERF_SAMPLE_IDENTIFIER, which should be harmless
@@ -196,6 +197,13 @@ static int create_perf_stat_counter(struct perf_evsel *evsel)
 	 */
 	if (!(STAT_RECORD && perf_stat.file.is_pipe))
 		attr->sample_type = PERF_SAMPLE_IDENTIFIER;
+=======
+	/*
+	 * But set sample_type to PERF_SAMPLE_IDENTIFIER, which should be harmless
+	 * while avoiding that older tools show confusing messages.
+	 */
+	attr->sample_type   = PERF_SAMPLE_IDENTIFIER;
+>>>>>>> linux-next/akpm-base
 
 	/*
 	 * Disabling all counters initially, they will be enabled

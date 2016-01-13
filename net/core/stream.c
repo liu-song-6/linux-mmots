@@ -35,7 +35,7 @@ void sk_stream_write_space(struct sock *sk)
 
 		rcu_read_lock();
 		wq = rcu_dereference(sk->sk_wq);
-		if (wq_has_sleeper(wq))
+		if (skwq_has_sleeper(wq))
 			wake_up_interruptible_poll(&wq->wait, POLLOUT |
 						POLLWRNORM | POLLWRBAND);
 		if (wq && wq->fasync_list && !(sk->sk_shutdown & SEND_SHUTDOWN))
@@ -182,7 +182,7 @@ int sk_stream_error(struct sock *sk, int flags, int err)
 	if (err == -EPIPE)
 		err = sock_error(sk) ? : -EPIPE;
 	if (err == -EPIPE && !(flags & MSG_NOSIGNAL))
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 	return err;
 }
 EXPORT_SYMBOL(sk_stream_error);

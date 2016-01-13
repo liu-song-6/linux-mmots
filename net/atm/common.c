@@ -96,7 +96,7 @@ static void vcc_def_wakeup(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up(&wq->wait);
 	rcu_read_unlock();
 }
@@ -117,7 +117,7 @@ static void vcc_write_space(struct sock *sk)
 
 	if (vcc_writable(sk)) {
 		wq = rcu_dereference(sk->sk_wq);
-		if (wq_has_sleeper(wq))
+		if (skwq_has_sleeper(wq))
 			wake_up_interruptible(&wq->wait);
 
 		sk_wake_async(sk, SOCK_WAKE_SPACE, POLL_OUT);
@@ -591,7 +591,7 @@ int vcc_sendmsg(struct socket *sock, struct msghdr *m, size_t size)
 	    test_bit(ATM_VF_CLOSE, &vcc->flags) ||
 	    !test_bit(ATM_VF_READY, &vcc->flags)) {
 		error = -EPIPE;
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		goto out;
 	}
 	if (!size) {
@@ -620,7 +620,7 @@ int vcc_sendmsg(struct socket *sock, struct msghdr *m, size_t size)
 		    test_bit(ATM_VF_CLOSE, &vcc->flags) ||
 		    !test_bit(ATM_VF_READY, &vcc->flags)) {
 			error = -EPIPE;
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			break;
 		}
 		prepare_to_wait(sk_sleep(sk), &wait, TASK_INTERRUPTIBLE);

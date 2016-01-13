@@ -253,7 +253,10 @@ int callchain_node__fprintf_value(struct callchain_node *node,
 				  FILE *fp, u64 total);
 
 void free_callchain(struct callchain_root *root);
+<<<<<<< HEAD
 void decay_callchain(struct callchain_root *root);
+=======
+>>>>>>> linux-next/akpm-base
 int callchain_node__make_parent_list(struct callchain_node *node);
 
 #endif	/* __PERF_CALLCHAIN_H */

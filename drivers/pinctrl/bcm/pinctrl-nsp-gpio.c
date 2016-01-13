@@ -18,7 +18,11 @@
  * through the interaction with the NSP IOMUX controller.
  */
 
+<<<<<<< HEAD
 #include <linux/gpio.h>
+=======
+#include <linux/gpio/driver.h>
+>>>>>>> linux-next/akpm-base
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
@@ -81,11 +85,14 @@ enum base_type {
 	IO_CTRL
 };
 
+<<<<<<< HEAD
 static inline struct nsp_gpio *to_nsp_gpio(struct gpio_chip *gc)
 {
 	return container_of(gc, struct nsp_gpio, gc);
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 /*
  * Mapping from PINCONF pins to GPIO pins is 1-to-1
  */
@@ -297,7 +304,11 @@ static void nsp_gpio_free(struct gpio_chip *gc, unsigned offset)
 
 static int nsp_gpio_direction_input(struct gpio_chip *gc, unsigned gpio)
 {
+<<<<<<< HEAD
 	struct nsp_gpio *chip = to_nsp_gpio(gc);
+=======
+	struct nsp_gpio *chip = gpiochip_get_data(gc);
+>>>>>>> linux-next/akpm-base
 	unsigned long flags;
 
 	spin_lock_irqsave(&chip->lock, flags);
@@ -311,7 +322,11 @@ static int nsp_gpio_direction_input(struct gpio_chip *gc, unsigned gpio)
 static int nsp_gpio_direction_output(struct gpio_chip *gc, unsigned gpio,
 				     int val)
 {
+<<<<<<< HEAD
 	struct nsp_gpio *chip = to_nsp_gpio(gc);
+=======
+	struct nsp_gpio *chip = gpiochip_get_data(gc);
+>>>>>>> linux-next/akpm-base
 	unsigned long flags;
 
 	spin_lock_irqsave(&chip->lock, flags);
@@ -325,7 +340,11 @@ static int nsp_gpio_direction_output(struct gpio_chip *gc, unsigned gpio,
 
 static void nsp_gpio_set(struct gpio_chip *gc, unsigned gpio, int val)
 {
+<<<<<<< HEAD
 	struct nsp_gpio *chip = to_nsp_gpio(gc);
+=======
+	struct nsp_gpio *chip = gpiochip_get_data(gc);
+>>>>>>> linux-next/akpm-base
 	unsigned long flags;
 
 	spin_lock_irqsave(&chip->lock, flags);
@@ -337,14 +356,22 @@ static void nsp_gpio_set(struct gpio_chip *gc, unsigned gpio, int val)
 
 static int nsp_gpio_get(struct gpio_chip *gc, unsigned gpio)
 {
+<<<<<<< HEAD
 	struct nsp_gpio *chip = to_nsp_gpio(gc);
+=======
+	struct nsp_gpio *chip = gpiochip_get_data(gc);
+>>>>>>> linux-next/akpm-base
 
 	return !!(readl(chip->base + NSP_GPIO_DATA_IN) & BIT(gpio));
 }
 
 static int nsp_gpio_to_irq(struct gpio_chip *gc, unsigned offset)
 {
+<<<<<<< HEAD
 	struct nsp_gpio *chip = to_nsp_gpio(gc);
+=======
+	struct nsp_gpio *chip = gpiochip_get_data(gc);
+>>>>>>> linux-next/akpm-base
 
 	return irq_linear_revmap(chip->irq_domain, offset);
 }
@@ -669,7 +696,11 @@ static int nsp_gpio_probe(struct platform_device *pdev)
 	gc->can_sleep = false;
 	gc->ngpio = val;
 	gc->label = dev_name(dev);
+<<<<<<< HEAD
 	gc->dev = dev;
+=======
+	gc->parent = dev;
+>>>>>>> linux-next/akpm-base
 	gc->of_node = dev->of_node;
 	gc->request = nsp_gpio_request;
 	gc->free = nsp_gpio_free;
@@ -714,7 +745,11 @@ static int nsp_gpio_probe(struct platform_device *pdev)
 		writel(val, (chip->base + NSP_CHIP_A_INT_MASK));
 	}
 
+<<<<<<< HEAD
 	ret = gpiochip_add(gc);
+=======
+	ret = gpiochip_add_data(gc, chip);
+>>>>>>> linux-next/akpm-base
 	if (ret < 0) {
 		dev_err(dev, "unable to add GPIO chip\n");
 		return ret;
