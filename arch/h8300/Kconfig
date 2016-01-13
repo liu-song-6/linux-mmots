@@ -17,11 +17,8 @@ config H8300
 	select HAVE_MEMBLOCK
 	select HAVE_DMA_ATTRS
 	select CLKSRC_OF
-<<<<<<< HEAD
-=======
 	select HAVE_ARCH_KGDB
 	select HAVE_KERNEL_LZO
->>>>>>> linux-next/akpm-base
 	select H8300_TMR8
 
 config RWSEM_GENERIC_SPINLOCK

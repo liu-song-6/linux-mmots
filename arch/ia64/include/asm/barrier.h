@@ -67,11 +67,6 @@ do {									\
 	___p1;								\
 })
 
-<<<<<<< HEAD
-#define smp_store_mb(var, value) do { WRITE_ONCE(var, value); smp_mb(); } while (0)
-
-=======
->>>>>>> linux-next/akpm-base
 /*
  * The group barrier in front of the rsm & ssm are necessary to ensure
  * that none of the previous instructions in the same group are

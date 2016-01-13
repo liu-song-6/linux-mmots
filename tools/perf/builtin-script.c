@@ -614,33 +614,9 @@ struct perf_script {
 	bool			show_task_events;
 	bool			show_mmap_events;
 	bool			show_switch_events;
-<<<<<<< HEAD
-	bool			allocated;
-	struct cpu_map		*cpus;
-	struct thread_map	*threads;
-	int			name_width;
-};
-
-static int perf_evlist__max_name_len(struct perf_evlist *evlist)
-{
-	struct perf_evsel *evsel;
-	int max = 0;
-
-	evlist__for_each(evlist, evsel) {
-		int len = strlen(perf_evsel__name(evsel));
-
-		max = MAX(len, max);
-	}
-
-	return max;
-}
-
-static void process_event(struct perf_script *script, union perf_event *event,
-=======
 };
 
 static void process_event(struct perf_script *script __maybe_unused, union perf_event *event,
->>>>>>> linux-next/akpm-base
 			  struct perf_sample *sample, struct perf_evsel *evsel,
 			  struct addr_location *al)
 {
@@ -703,57 +679,6 @@ static void process_event(struct perf_script *script __maybe_unused, union perf_
 
 static struct scripting_ops	*scripting_ops;
 
-<<<<<<< HEAD
-static void __process_stat(struct perf_evsel *counter, u64 tstamp)
-{
-	int nthreads = thread_map__nr(counter->threads);
-	int ncpus = perf_evsel__nr_cpus(counter);
-	int cpu, thread;
-	static int header_printed;
-
-	if (counter->system_wide)
-		nthreads = 1;
-
-	if (!header_printed) {
-		printf("%3s %8s %15s %15s %15s %15s %s\n",
-		       "CPU", "THREAD", "VAL", "ENA", "RUN", "TIME", "EVENT");
-		header_printed = 1;
-	}
-
-	for (thread = 0; thread < nthreads; thread++) {
-		for (cpu = 0; cpu < ncpus; cpu++) {
-			struct perf_counts_values *counts;
-
-			counts = perf_counts(counter->counts, cpu, thread);
-
-			printf("%3d %8d %15" PRIu64 " %15" PRIu64 " %15" PRIu64 " %15" PRIu64 " %s\n",
-				counter->cpus->map[cpu],
-				thread_map__pid(counter->threads, thread),
-				counts->val,
-				counts->ena,
-				counts->run,
-				tstamp,
-				perf_evsel__name(counter));
-		}
-	}
-}
-
-static void process_stat(struct perf_evsel *counter, u64 tstamp)
-{
-	if (scripting_ops && scripting_ops->process_stat)
-		scripting_ops->process_stat(&stat_config, counter, tstamp);
-	else
-		__process_stat(counter, tstamp);
-}
-
-static void process_stat_interval(u64 tstamp)
-{
-	if (scripting_ops && scripting_ops->process_stat_interval)
-		scripting_ops->process_stat_interval(tstamp);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static void setup_scripting(void)
 {
 	setup_perl_scripting();

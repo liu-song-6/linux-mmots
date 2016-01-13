@@ -730,12 +730,9 @@ static int au8522_probe(struct i2c_client *client,
 	struct v4l2_ctrl_handler *hdl;
 	struct v4l2_subdev *sd;
 	int instance;
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_MEDIA_CONTROLLER
 	int ret;
 #endif
->>>>>>> linux-next/akpm-base
 
 	/* Check if the adapter supports the needed features */
 	if (!i2c_check_functionality(client->adapter,

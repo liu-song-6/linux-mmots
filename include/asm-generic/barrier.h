@@ -164,11 +164,7 @@ do {									\
 #else	/* !CONFIG_SMP */
 
 #ifndef smp_store_mb
-<<<<<<< HEAD
-#define smp_store_mb(var, value)  do { WRITE_ONCE(var, value); smp_mb(); } while (0)
-=======
 #define smp_store_mb(var, value)  do { WRITE_ONCE(var, value); barrier(); } while (0)
->>>>>>> linux-next/akpm-base
 #endif
 
 #ifndef smp_mb__before_atomic

@@ -109,12 +109,7 @@ struct symbol_conf {
 			branch_callstack,
 			has_filter,
 			show_ref_callgraph,
-<<<<<<< HEAD
-			hide_unresolved,
-			raw_trace;
-=======
 			hide_unresolved;
->>>>>>> linux-next/akpm-base
 	const char	*vmlinux_name,
 			*kallsyms_name,
 			*source_prefix,

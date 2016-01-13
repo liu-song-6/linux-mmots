@@ -48,11 +48,7 @@
 #include <linux/platform_data/asoc-palm27x.h>
 #include "palm27x.h"
 
-<<<<<<< HEAD
-#include <mach/pm.h>
-=======
 #include "pm.h"
->>>>>>> linux-next/akpm-base
 #include <linux/platform_data/media/camera-pxa.h>
 
 #include <media/soc_camera.h>

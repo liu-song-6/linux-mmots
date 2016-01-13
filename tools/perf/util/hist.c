@@ -1624,17 +1624,6 @@ static void hists_evsel__exit(struct perf_evsel *evsel)
 	hists__delete_all_entries(hists);
 }
 
-<<<<<<< HEAD
-static int hists_evsel__init(struct perf_evsel *evsel)
-{
-	struct hists *hists = evsel__hists(evsel);
-
-	__hists__init(hists);
-	return 0;
-}
-
-=======
->>>>>>> linux-next/akpm-base
 /*
  * XXX We probably need a hists_evsel__exit() to free the hist_entries
  * stored in the rbtree...

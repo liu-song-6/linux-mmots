@@ -44,11 +44,7 @@
 #include <mach/pxa2xx-regs.h>
 #include <linux/platform_data/asoc-palm27x.h>
 #include <linux/platform_data/media/camera-pxa.h>
-<<<<<<< HEAD
-#include <mach/palm27x.h>
-=======
 #include "palm27x.h"
->>>>>>> linux-next/akpm-base
 
 #include <sound/pxa2xx-lib.h>
 

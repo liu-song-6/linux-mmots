@@ -1282,15 +1282,12 @@ int cmd_top(int argc, const char **argv, const char *prefix __maybe_unused)
 	if (perf_evlist__create_maps(top.evlist, target) < 0) {
 		ui__error("Couldn't create thread/CPU maps: %s\n",
 			  errno == ENOENT ? "No such process" : strerror_r(errno, errbuf, sizeof(errbuf)));
-<<<<<<< HEAD
-=======
 		goto out_delete_evlist;
 	}
 
 	if (!top.evlist->nr_entries &&
 	    perf_evlist__add_default(top.evlist) < 0) {
 		ui__error("Not enough memory for event selector list\n");
->>>>>>> linux-next/akpm-base
 		goto out_delete_evlist;
 	}
 

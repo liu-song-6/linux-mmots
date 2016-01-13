@@ -80,15 +80,7 @@ endif
 endif
 
 ifeq ($(check_feat),1)
-<<<<<<< HEAD
-ifeq ($(FEATURES_DUMP),)
 include $(srctree)/tools/build/Makefile.feature
-else
-include $(FEATURES_DUMP)
-endif
-=======
-include $(srctree)/tools/build/Makefile.feature
->>>>>>> linux-next/akpm-base
 endif
 
 export prefix libdir src obj

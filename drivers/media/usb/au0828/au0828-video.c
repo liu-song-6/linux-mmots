@@ -638,8 +638,6 @@ static inline int au0828_isoc_copy(struct au0828_dev *dev, struct urb *urb)
 	return rc;
 }
 
-<<<<<<< HEAD
-=======
 static int au0828_enable_analog_tuner(struct au0828_dev *dev)
 {
 #ifdef CONFIG_MEDIA_CONTROLLER
@@ -698,7 +696,6 @@ static int au0828_enable_analog_tuner(struct au0828_dev *dev)
 	return 0;
 }
 
->>>>>>> linux-next/akpm-base
 static int queue_setup(struct vb2_queue *vq,
 		       unsigned int *nbuffers, unsigned int *nplanes,
 		       unsigned int sizes[], void *alloc_ctxs[])
