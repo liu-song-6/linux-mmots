@@ -1025,7 +1025,7 @@ static int audit_log_single_execve_arg(struct audit_context *context,
 	 * any.
 	 */
 	if (WARN_ON_ONCE(len < 0 || len > MAX_ARG_STRLEN - 1)) {
-		send_sig(SIGKILL, current, 0);
+		io_send_sig(SIGKILL);
 		return -1;
 	}
 
@@ -1043,7 +1043,7 @@ static int audit_log_single_execve_arg(struct audit_context *context,
 		 */
 		if (ret) {
 			WARN_ON(1);
-			send_sig(SIGKILL, current, 0);
+			io_send_sig(SIGKILL);
 			return -1;
 		}
 		buf[to_send] = '\0';
@@ -1107,7 +1107,7 @@ static int audit_log_single_execve_arg(struct audit_context *context,
 			ret = 0;
 		if (ret) {
 			WARN_ON(1);
-			send_sig(SIGKILL, current, 0);
+			io_send_sig(SIGKILL);
 			return -1;
 		}
 		buf[to_send] = '\0';
@@ -1754,7 +1754,7 @@ void __audit_inode(struct filename *name, const struct dentry *dentry,
 		   unsigned int flags)
 {
 	struct audit_context *context = current->audit_context;
-	const struct inode *inode = d_backing_inode(dentry);
+	struct inode *inode = d_backing_inode(dentry);
 	struct audit_names *n;
 	bool parent = flags & AUDIT_INODE_PARENT;
 
@@ -1848,12 +1848,12 @@ void __audit_file(const struct file *file)
  * must be hooked prior, in order to capture the target inode during
  * unsuccessful attempts.
  */
-void __audit_inode_child(const struct inode *parent,
+void __audit_inode_child(struct inode *parent,
 			 const struct dentry *dentry,
 			 const unsigned char type)
 {
 	struct audit_context *context = current->audit_context;
-	const struct inode *inode = d_backing_inode(dentry);
+	struct inode *inode = d_backing_inode(dentry);
 	const char *dname = dentry->d_name.name;
 	struct audit_names *n, *found_parent = NULL, *found_child = NULL;
 

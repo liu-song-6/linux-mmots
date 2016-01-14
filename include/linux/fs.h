@@ -483,6 +483,9 @@ struct block_device {
 	int			bd_fsfreeze_count;
 	/* Mutex for freeze */
 	struct mutex		bd_fsfreeze_mutex;
+#ifdef CONFIG_FS_DAX
+	int			bd_map_count;
+#endif
 };
 
 /*
@@ -1605,6 +1608,8 @@ struct file_operations {
 	ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *);
 	ssize_t (*read_iter) (struct kiocb *, struct iov_iter *);
 	ssize_t (*write_iter) (struct kiocb *, struct iov_iter *);
+	ssize_t (*async_read_iter) (struct kiocb *, struct iov_iter *);
+	ssize_t (*async_write_iter) (struct kiocb *, struct iov_iter *);
 	int (*iterate) (struct file *, struct dir_context *);
 	unsigned int (*poll) (struct file *, struct poll_table_struct *);
 	long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);
@@ -2094,6 +2099,7 @@ static inline int locks_mandatory_locked(struct file *file)
 }
 
 static inline int locks_mandatory_area(struct inode *inode, struct file *filp,
+<<<<<<< HEAD
                                        loff_t start, loff_t end, unsigned char type)
 {
 	return 0;
@@ -2116,10 +2122,37 @@ static inline int locks_verify_locked(struct file *file)
 
 static inline int locks_verify_truncate(struct inode *inode, struct file *filp,
 					size_t size)
+=======
+		loff_t start, loff_t end, unsigned char type)
+>>>>>>> linux-next/akpm-base
 {
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static inline int __mandatory_lock(struct inode *inode)
+{
+	return 0;
+}
+
+static inline int mandatory_lock(struct inode *inode)
+{
+	return 0;
+}
+
+static inline int locks_verify_locked(struct file *file)
+{
+	return 0;
+}
+
+static inline int locks_verify_truncate(struct inode *inode, struct file *filp,
+					size_t size)
+{
+	return 0;
+}
+
+>>>>>>> linux-next/akpm-base
 #endif /* CONFIG_MANDATORY_FILE_LOCKING */
 
 
@@ -2280,6 +2313,14 @@ extern struct super_block *freeze_bdev(struct block_device *);
 extern void emergency_thaw_all(void);
 extern int thaw_bdev(struct block_device *bdev, struct super_block *sb);
 extern int fsync_bdev(struct block_device *);
+#ifdef CONFIG_FS_DAX
+extern bool blkdev_dax_capable(struct block_device *bdev);
+#else
+static inline bool blkdev_dax_capable(struct block_device *bdev)
+{
+	return false;
+}
+#endif
 
 extern struct super_block *blockdev_superblock;
 
