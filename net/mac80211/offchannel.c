@@ -252,20 +252,11 @@ static bool ieee80211_recalc_sw_work(struct ieee80211_local *local,
 static void ieee80211_handle_roc_started(struct ieee80211_roc_work *roc,
 					 unsigned long start_time)
 {
-<<<<<<< HEAD
-	struct ieee80211_local *local = roc->sdata->local;
-
-=======
->>>>>>> linux-next/akpm-base
 	if (WARN_ON(roc->notified))
 		return;
 
 	roc->start_time = start_time;
 	roc->started = true;
-<<<<<<< HEAD
-	roc->hw_begun = true;
-=======
->>>>>>> linux-next/akpm-base
 
 	if (roc->mgmt_tx_cookie) {
 		if (!WARN_ON(!roc->frame)) {
@@ -297,10 +288,7 @@ static void ieee80211_hw_roc_start(struct work_struct *work)
 		if (!roc->started)
 			break;
 
-<<<<<<< HEAD
-=======
 		roc->hw_begun = true;
->>>>>>> linux-next/akpm-base
 		ieee80211_handle_roc_started(roc, local->hw_roc_start_time);
 	}
 
@@ -400,7 +388,6 @@ static void _ieee80211_start_next_roc(struct ieee80211_local *local)
 
 		ieee80211_queue_delayed_work(&local->hw, &local->roc_work,
 					     msecs_to_jiffies(min_dur));
-<<<<<<< HEAD
 
 		/* tell userspace or send frame(s) */
 		list_for_each_entry(tmp, &local->roc_list, list) {
@@ -413,20 +400,6 @@ static void _ieee80211_start_next_roc(struct ieee80211_local *local)
 	}
 }
 
-=======
-
-		/* tell userspace or send frame(s) */
-		list_for_each_entry(tmp, &local->roc_list, list) {
-			if (tmp->sdata != roc->sdata || tmp->chan != roc->chan)
-				break;
-
-			tmp->on_channel = roc->on_channel;
-			ieee80211_handle_roc_started(tmp, jiffies);
-		}
-	}
-}
-
->>>>>>> linux-next/akpm-base
 void ieee80211_start_next_roc(struct ieee80211_local *local)
 {
 	struct ieee80211_roc_work *roc;
@@ -438,13 +411,10 @@ void ieee80211_start_next_roc(struct ieee80211_local *local)
 		return;
 	}
 
-<<<<<<< HEAD
-=======
 	/* defer roc if driver is not started (i.e. during reconfig) */
 	if (local->in_reconfig)
 		return;
 
->>>>>>> linux-next/akpm-base
 	roc = list_first_entry(&local->roc_list, struct ieee80211_roc_work,
 			       list);
 
@@ -566,15 +536,10 @@ ieee80211_coalesce_hw_started_roc(struct ieee80211_local *local,
 	 * begin, otherwise they'll both be marked properly by the work
 	 * struct that runs once the driver notifies us of the beginning
 	 */
-<<<<<<< HEAD
-	if (cur_roc->hw_begun)
-		ieee80211_handle_roc_started(new_roc, now);
-=======
 	if (cur_roc->hw_begun) {
 		new_roc->hw_begun = true;
 		ieee80211_handle_roc_started(new_roc, now);
 	}
->>>>>>> linux-next/akpm-base
 
 	return true;
 }
@@ -697,10 +662,7 @@ static int ieee80211_start_roc_work(struct ieee80211_local *local,
 			queued = true;
 			roc->on_channel = tmp->on_channel;
 			ieee80211_handle_roc_started(roc, now);
-<<<<<<< HEAD
-=======
 			ieee80211_recalc_sw_work(local, now);
->>>>>>> linux-next/akpm-base
 			break;
 		}
 
@@ -750,11 +712,8 @@ static int ieee80211_cancel_roc(struct ieee80211_local *local,
 	mutex_lock(&local->mtx);
 	list_for_each_entry_safe(roc, tmp, &local->roc_list, list) {
 		if (!mgmt_tx && roc->cookie != cookie)
-<<<<<<< HEAD
-=======
 			continue;
 		else if (mgmt_tx && roc->mgmt_tx_cookie != cookie)
->>>>>>> linux-next/akpm-base
 			continue;
 		else if (mgmt_tx && roc->mgmt_tx_cookie != cookie)
 			continue;
@@ -773,8 +732,6 @@ static int ieee80211_cancel_roc(struct ieee80211_local *local,
 		goto out_unlock;
 	}
 
-<<<<<<< HEAD
-=======
 		found = roc;
 		break;
 	}
@@ -789,13 +746,11 @@ static int ieee80211_cancel_roc(struct ieee80211_local *local,
 		goto out_unlock;
 	}
 
->>>>>>> linux-next/akpm-base
 	if (local->ops->remain_on_channel) {
 		ret = drv_cancel_remain_on_channel(local);
 		if (WARN_ON_ONCE(ret)) {
 			mutex_unlock(&local->mtx);
 			return ret;
-<<<<<<< HEAD
 		}
 
 		/* TODO:
@@ -811,23 +766,6 @@ static int ieee80211_cancel_roc(struct ieee80211_local *local,
 			ieee80211_roc_notify_destroy(roc);
 		}
 
-=======
-		}
-
-		/* TODO:
-		 * if multiple items were combined here then we really shouldn't
-		 * cancel them all - we should wait for as much time as needed
-		 * for the longest remaining one, and only then cancel ...
-		 */
-		list_for_each_entry_safe(roc, tmp, &local->roc_list, list) {
-			if (!roc->started)
-				break;
-			if (roc == found)
-				found = NULL;
-			ieee80211_roc_notify_destroy(roc);
-		}
-
->>>>>>> linux-next/akpm-base
 		/* that really must not happen - it was started */
 		WARN_ON(found);
 

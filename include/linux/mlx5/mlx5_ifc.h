@@ -858,28 +858,18 @@ struct mlx5_ifc_cmd_hca_cap_bits {
 	u8         reserved_66[0x8];
 	u8         log_uar_page_sz[0x10];
 
-<<<<<<< HEAD
-	u8         reserved_67[0x40];
-	u8         device_frequency_khz[0x20];
-	u8         reserved_68[0x5f];
-=======
 	u8	   reserved_67[0x20];
 	u8	   device_frequency_mhz[0x20];
 	u8	   device_frequency_khz[0x20];
 	u8         reserved_68[0xa0];
 
 	u8         reserved_69[0x1f];
->>>>>>> linux-next/akpm-base
 	u8         cqe_zip[0x1];
 
 	u8         cqe_zip_timeout[0x10];
 	u8         cqe_zip_max_num[0x10];
 
-<<<<<<< HEAD
-	u8         reserved_69[0x220];
-=======
 	u8         reserved_70[0x220];
->>>>>>> linux-next/akpm-base
 };
 
 enum mlx5_flow_destination_type {
@@ -2231,14 +2221,6 @@ struct mlx5_ifc_nic_vport_context_bits {
 	u8         event_on_vlan_change[0x1];
 	u8         event_on_mc_address_change[0x1];
 	u8         event_on_uc_address_change[0x1];
-<<<<<<< HEAD
-
-	u8         reserved_2[0xf0];
-
-	u8         mtu[0x10];
-
-	u8         reserved_3[0x640];
-=======
 
 	u8         reserved_2[0xf0];
 
@@ -2251,29 +2233,18 @@ struct mlx5_ifc_nic_vport_context_bits {
 	u8         reserved_3[0x140];
 	u8         qkey_violation_counter[0x10];
 	u8         reserved_4[0x430];
->>>>>>> linux-next/akpm-base
 
 	u8         promisc_uc[0x1];
 	u8         promisc_mc[0x1];
 	u8         promisc_all[0x1];
-<<<<<<< HEAD
-	u8         reserved_4[0x2];
-	u8         allowed_list_type[0x3];
-	u8         reserved_5[0xc];
-=======
 	u8         reserved_5[0x2];
 	u8         allowed_list_type[0x3];
 	u8         reserved_6[0xc];
->>>>>>> linux-next/akpm-base
 	u8         allowed_list_size[0xc];
 
 	struct mlx5_ifc_mac_address_layout_bits permanent_address;
 
-<<<<<<< HEAD
-	u8         reserved_6[0x20];
-=======
 	u8         reserved_7[0x20];
->>>>>>> linux-next/akpm-base
 
 	u8         current_uc_mac_address[0][0x40];
 };

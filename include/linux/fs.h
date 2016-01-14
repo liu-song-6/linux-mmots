@@ -2099,38 +2099,11 @@ static inline int locks_mandatory_locked(struct file *file)
 }
 
 static inline int locks_mandatory_area(struct inode *inode, struct file *filp,
-<<<<<<< HEAD
-                                       loff_t start, loff_t end, unsigned char type)
-{
-	return 0;
-}
-
-static inline int __mandatory_lock(struct inode *inode)
-{
-	return 0;
-}
-
-static inline int mandatory_lock(struct inode *inode)
-{
-	return 0;
-}
-
-static inline int locks_verify_locked(struct file *file)
-{
-	return 0;
-}
-
-static inline int locks_verify_truncate(struct inode *inode, struct file *filp,
-					size_t size)
-=======
 		loff_t start, loff_t end, unsigned char type)
->>>>>>> linux-next/akpm-base
 {
 	return 0;
 }
 
-<<<<<<< HEAD
-=======
 static inline int __mandatory_lock(struct inode *inode)
 {
 	return 0;
@@ -2152,7 +2125,6 @@ static inline int locks_verify_truncate(struct inode *inode, struct file *filp,
 	return 0;
 }
 
->>>>>>> linux-next/akpm-base
 #endif /* CONFIG_MANDATORY_FILE_LOCKING */
 
 

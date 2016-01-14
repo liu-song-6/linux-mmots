@@ -77,7 +77,6 @@ u8 mlx5_query_vport_admin_state(struct mlx5_core_dev *mdev, u8 opmod, u16 vport)
 	return MLX5_GET(query_vport_state_out, out, admin_state);
 }
 EXPORT_SYMBOL(mlx5_query_vport_admin_state);
-<<<<<<< HEAD
 
 int mlx5_modify_vport_admin_state(struct mlx5_core_dev *mdev, u8 opmod,
 				  u16 vport, u8 state)
@@ -136,66 +135,6 @@ static int mlx5_modify_nic_vport_context(struct mlx5_core_dev *mdev, void *in,
 	return mlx5_cmd_exec_check_status(mdev, in, inlen, out, sizeof(out));
 }
 
-=======
-
-int mlx5_modify_vport_admin_state(struct mlx5_core_dev *mdev, u8 opmod,
-				  u16 vport, u8 state)
-{
-	u32 in[MLX5_ST_SZ_DW(modify_vport_state_in)];
-	u32 out[MLX5_ST_SZ_DW(modify_vport_state_out)];
-	int err;
-
-	memset(in, 0, sizeof(in));
-
-	MLX5_SET(modify_vport_state_in, in, opcode,
-		 MLX5_CMD_OP_MODIFY_VPORT_STATE);
-	MLX5_SET(modify_vport_state_in, in, op_mod, opmod);
-	MLX5_SET(modify_vport_state_in, in, vport_number, vport);
-
-	if (vport)
-		MLX5_SET(modify_vport_state_in, in, other_vport, 1);
-
-	MLX5_SET(modify_vport_state_in, in, admin_state, state);
-
-	err = mlx5_cmd_exec_check_status(mdev, in, sizeof(in), out,
-					 sizeof(out));
-	if (err)
-		mlx5_core_warn(mdev, "MLX5_CMD_OP_MODIFY_VPORT_STATE failed\n");
-
-	return err;
-}
-EXPORT_SYMBOL(mlx5_modify_vport_admin_state);
-
-static int mlx5_query_nic_vport_context(struct mlx5_core_dev *mdev, u16 vport,
-					u32 *out, int outlen)
-{
-	u32 in[MLX5_ST_SZ_DW(query_nic_vport_context_in)];
-
-	memset(in, 0, sizeof(in));
-
-	MLX5_SET(query_nic_vport_context_in, in, opcode,
-		 MLX5_CMD_OP_QUERY_NIC_VPORT_CONTEXT);
-
-	MLX5_SET(query_nic_vport_context_in, in, vport_number, vport);
-	if (vport)
-		MLX5_SET(query_nic_vport_context_in, in, other_vport, 1);
-
-	return mlx5_cmd_exec_check_status(mdev, in, sizeof(in), out, outlen);
-}
-
-static int mlx5_modify_nic_vport_context(struct mlx5_core_dev *mdev, void *in,
-					 int inlen)
-{
-	u32 out[MLX5_ST_SZ_DW(modify_nic_vport_context_out)];
-
-	MLX5_SET(modify_nic_vport_context_in, in, opcode,
-		 MLX5_CMD_OP_MODIFY_NIC_VPORT_CONTEXT);
-
-	memset(out, 0, sizeof(out));
-	return mlx5_cmd_exec_check_status(mdev, in, inlen, out, sizeof(out));
-}
-
->>>>>>> linux-next/akpm-base
 int mlx5_query_nic_vport_mac_address(struct mlx5_core_dev *mdev,
 				     u16 vport, u8 *addr)
 {
@@ -490,8 +429,6 @@ int mlx5_modify_nic_vport_vlans(struct mlx5_core_dev *dev,
 	return err;
 }
 EXPORT_SYMBOL_GPL(mlx5_modify_nic_vport_vlans);
-<<<<<<< HEAD
-=======
 
 int mlx5_query_nic_vport_system_image_guid(struct mlx5_core_dev *mdev,
 					   u64 *system_image_guid)
@@ -554,7 +491,6 @@ int mlx5_query_nic_vport_qkey_viol_cntr(struct mlx5_core_dev *mdev,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mlx5_query_nic_vport_qkey_viol_cntr);
->>>>>>> linux-next/akpm-base
 
 int mlx5_query_hca_vport_gid(struct mlx5_core_dev *dev, u8 other_vport,
 			     u8 port_num, u16  vf_num, u16 gid_index,
@@ -876,8 +812,6 @@ int mlx5_modify_nic_vport_promisc(struct mlx5_core_dev *mdev,
 	return err;
 }
 EXPORT_SYMBOL_GPL(mlx5_modify_nic_vport_promisc);
-<<<<<<< HEAD
-=======
 
 enum mlx5_vport_roce_state {
 	MLX5_VPORT_ROCE_DISABLED = 0,
@@ -919,4 +853,3 @@ int mlx5_nic_vport_disable_roce(struct mlx5_core_dev *mdev)
 	return mlx5_nic_vport_update_roce_state(mdev, MLX5_VPORT_ROCE_DISABLED);
 }
 EXPORT_SYMBOL_GPL(mlx5_nic_vport_disable_roce);
->>>>>>> linux-next/akpm-base

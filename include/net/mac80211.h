@@ -1954,14 +1954,11 @@ struct ieee80211_txq {
  *	by just its MAC address; this prevents, for example, the same station
  *	from connecting to two virtual AP interfaces at the same time.
  *
-<<<<<<< HEAD
-=======
  * @IEEE80211_HW_SUPPORTS_REORDERING_BUFFER: Hardware (or driver) manages the
  *	reordering buffer internally, guaranteeing mac80211 receives frames in
  *	order and does not need to manage its own reorder buffer or BA session
  *	timeout.
  *
->>>>>>> linux-next/akpm-base
  * @NUM_IEEE80211_HW_FLAGS: number of hardware flags, used for sizing arrays
  */
 enum ieee80211_hw_flags {
@@ -1998,10 +1995,7 @@ enum ieee80211_hw_flags {
 	IEEE80211_HW_SUPPORTS_AMSDU_IN_AMPDU,
 	IEEE80211_HW_BEACON_TX_STATUS,
 	IEEE80211_HW_NEEDS_UNIQUE_STA_ADDR,
-<<<<<<< HEAD
-=======
 	IEEE80211_HW_SUPPORTS_REORDERING_BUFFER,
->>>>>>> linux-next/akpm-base
 
 	/* keep last, obviously */
 	NUM_IEEE80211_HW_FLAGS

@@ -466,11 +466,7 @@ struct mlx5_init_seg {
 	__be32			rsvd2[880];
 	__be32			internal_timer_h;
 	__be32			internal_timer_l;
-<<<<<<< HEAD
-	__be32			rsrv3[2];
-=======
 	__be32			rsvd3[2];
->>>>>>> linux-next/akpm-base
 	__be32			health_counter;
 	__be32			rsvd4[1019];
 	__be64			ieee1588_clk;
