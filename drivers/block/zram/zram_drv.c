@@ -1369,8 +1369,9 @@ static ssize_t hot_remove_store(struct class *class,
 	if (zram) {
 		ret = zram_remove(zram);
 		idr_remove(&zram_index_idr, dev_id);
-	} else
+	} else {
 		ret = -ENODEV;
+	}
 
 	mutex_unlock(&zram_index_mutex);
 	return ret ? ret : count;
