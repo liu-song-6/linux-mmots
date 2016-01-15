@@ -5118,6 +5118,8 @@ static int memory_stat_show(struct seq_file *m, void *v)
 		   tree_stat(memcg, MEM_CGROUP_STAT_RSS) * PAGE_SIZE);
 	seq_printf(m, "file %lu\n",
 		   tree_stat(memcg, MEM_CGROUP_STAT_CACHE) * PAGE_SIZE);
+	seq_printf(m, "sock %lu\n",
+		   tree_stat(memcg, MEMCG_SOCK) * PAGE_SIZE);
 
 	/* Per-consumer breakdowns */
 
@@ -5619,6 +5621,8 @@ bool mem_cgroup_charge_skmem(struct mem_cgroup *memcg, unsigned int nr_pages)
 	if (in_softirq())
 		gfp_mask = GFP_NOWAIT;
 
+	this_cpu_add(memcg->stat->count[MEMCG_SOCK], nr_pages);
+
 	if (try_charge(memcg, gfp_mask, nr_pages) == 0)
 		return true;
 
@@ -5637,6 +5641,8 @@ void mem_cgroup_uncharge_skmem(struct mem_cgroup *memcg, unsigned int nr_pages)
 		page_counter_uncharge(&memcg->tcpmem, nr_pages);
 		return;
 	}
+
+	this_cpu_sub(memcg->stat->count[MEMCG_SOCK], nr_pages);
 
 	page_counter_uncharge(&memcg->memory, nr_pages);
 	css_put_many(&memcg->css, nr_pages);
