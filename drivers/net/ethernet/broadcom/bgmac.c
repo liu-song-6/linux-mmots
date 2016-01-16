@@ -466,7 +466,11 @@ static int bgmac_dma_rx_read(struct bgmac *bgmac, struct bgmac_dma_ring *ring,
 			len -= ETH_FCS_LEN;
 
 			skb = build_skb(buf, BGMAC_RX_ALLOC_SIZE);
+<<<<<<< HEAD
 			if (unlikely(!skb)) {
+=======
+			if (unlikely(skb)) {
+>>>>>>> linux-next/akpm-base
 				bgmac_err(bgmac, "build_skb failed\n");
 				put_page(virt_to_head_page(buf));
 				break;
