@@ -5113,32 +5113,43 @@ static int memory_stat_show(struct seq_file *m, void *v)
 	struct mem_cgroup *memcg = mem_cgroup_from_css(seq_css(m));
 	int i;
 
-	/* Memory consumer totals */
+	/*
+	 * Provide statistics on the state of the memory subsystem as
+	 * well as cumulative event counters that show past behavior.
+	 *
+	 * This list is ordered following a combination of these gradients:
+	 * 1) generic big picture -> specifics and details
+	 * 2) reflecting userspace activity -> reflecting kernel heuristics
+	 *
+	 * Current memory state:
+	 */
 
-	seq_printf(m, "anon %lu\n",
-		   tree_stat(memcg, MEM_CGROUP_STAT_RSS) * PAGE_SIZE);
-	seq_printf(m, "file %lu\n",
-		   tree_stat(memcg, MEM_CGROUP_STAT_CACHE) * PAGE_SIZE);
+	seq_printf(m, "anon %llu\n",
+		   (u64)tree_stat(memcg, MEM_CGROUP_STAT_RSS) * PAGE_SIZE);
+	seq_printf(m, "file %llu\n",
+		   (u64)tree_stat(memcg, MEM_CGROUP_STAT_CACHE) * PAGE_SIZE);
 
-	/* Per-consumer breakdowns */
+	seq_printf(m, "file_mapped %llu\n",
+		   (u64)tree_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED) *
+		   PAGE_SIZE);
+	seq_printf(m, "file_dirty %llu\n",
+		   (u64)tree_stat(memcg, MEM_CGROUP_STAT_DIRTY) *
+		   PAGE_SIZE);
+	seq_printf(m, "file_writeback %llu\n",
+		   (u64)tree_stat(memcg, MEM_CGROUP_STAT_WRITEBACK) *
+		   PAGE_SIZE);
 
 	for (i = 0; i < NR_LRU_LISTS; i++) {
 		struct mem_cgroup *mi;
 		unsigned long val = 0;
 
 		for_each_mem_cgroup_tree(mi, memcg)
-			val += mem_cgroup_nr_lru_pages(mi, BIT(i)) * PAGE_SIZE;
-		seq_printf(m, "%s %lu\n", mem_cgroup_lru_names[i], val);
+			val += mem_cgroup_nr_lru_pages(mi, BIT(i));
+		seq_printf(m, "%s %llu\n",
+			   mem_cgroup_lru_names[i], (u64)val * PAGE_SIZE);
 	}
 
-	seq_printf(m, "file_mapped %lu\n",
-		   tree_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED) * PAGE_SIZE);
-	seq_printf(m, "file_dirty %lu\n",
-		   tree_stat(memcg, MEM_CGROUP_STAT_DIRTY) * PAGE_SIZE);
-	seq_printf(m, "file_writeback %lu\n",
-		   tree_stat(memcg, MEM_CGROUP_STAT_WRITEBACK) * PAGE_SIZE);
-
-	/* Memory management events */
+	/* Accumulated memory events */
 
 	seq_printf(m, "pgfault %lu\n",
 		   tree_events(memcg, MEM_CGROUP_EVENTS_PGFAULT));
