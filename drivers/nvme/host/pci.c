@@ -829,18 +829,7 @@ static int nvme_poll(struct blk_mq_hw_ctx *hctx, unsigned int tag)
 
 static void nvme_submit_async_event(struct nvme_dev *dev)
 {
-<<<<<<< HEAD
-	bool write = cmd->common.opcode & 1;
-	struct bio *bio = NULL;
-	struct request *req;
-	int ret;
-
-	req = blk_mq_alloc_request(q, write, 0);
-	if (IS_ERR(req))
-		return PTR_ERR(req);
-=======
 	struct nvme_command c;
->>>>>>> linux-next/akpm-base
 
 	memset(&c, 0, sizeof(c));
 	c.common.opcode = nvme_admin_async_event;
@@ -860,69 +849,6 @@ static int adapter_delete_queue(struct nvme_dev *dev, u8 opcode, u16 id)
 	return nvme_submit_sync_cmd(dev->ctrl.admin_q, &c, NULL, 0);
 }
 
-<<<<<<< HEAD
-static int nvme_submit_async_admin_req(struct nvme_dev *dev)
-{
-	struct nvme_queue *nvmeq = dev->queues[0];
-	struct nvme_command c;
-	struct nvme_cmd_info *cmd_info;
-	struct request *req;
-
-	req = blk_mq_alloc_request(dev->admin_q, WRITE,
-			BLK_MQ_REQ_NOWAIT | BLK_MQ_REQ_RESERVED);
-	if (IS_ERR(req))
-		return PTR_ERR(req);
-
-	req->cmd_flags |= REQ_NO_TIMEOUT;
-	cmd_info = blk_mq_rq_to_pdu(req);
-	nvme_set_info(cmd_info, NULL, async_req_completion);
-
-	memset(&c, 0, sizeof(c));
-	c.common.opcode = nvme_admin_async_event;
-	c.common.command_id = req->tag;
-
-	blk_mq_free_request(req);
-	__nvme_submit_cmd(nvmeq, &c);
-	return 0;
-}
-
-static int nvme_submit_admin_async_cmd(struct nvme_dev *dev,
-			struct nvme_command *cmd,
-			struct async_cmd_info *cmdinfo, unsigned timeout)
-{
-	struct nvme_queue *nvmeq = dev->queues[0];
-	struct request *req;
-	struct nvme_cmd_info *cmd_rq;
-
-	req = blk_mq_alloc_request(dev->admin_q, WRITE, 0);
-	if (IS_ERR(req))
-		return PTR_ERR(req);
-
-	req->timeout = timeout;
-	cmd_rq = blk_mq_rq_to_pdu(req);
-	cmdinfo->req = req;
-	nvme_set_info(cmd_rq, cmdinfo, async_completion);
-	cmdinfo->status = -EINTR;
-
-	cmd->common.command_id = req->tag;
-
-	nvme_submit_cmd(nvmeq, cmd);
-	return 0;
-}
-
-static int adapter_delete_queue(struct nvme_dev *dev, u8 opcode, u16 id)
-{
-	struct nvme_command c;
-
-	memset(&c, 0, sizeof(c));
-	c.delete_queue.opcode = opcode;
-	c.delete_queue.qid = cpu_to_le16(id);
-
-	return nvme_submit_sync_cmd(dev->admin_q, &c, NULL, 0);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static int adapter_alloc_cq(struct nvme_dev *dev, u16 qid,
 						struct nvme_queue *nvmeq)
 {
@@ -1023,12 +949,6 @@ static enum blk_eh_timer_return nvme_timeout(struct request *req, bool reserved)
 		nvme_dev_disable(dev, false);
 		queue_work(nvme_workq, &dev->reset_work);
 
-<<<<<<< HEAD
-	abort_req = blk_mq_alloc_request(dev->admin_q, WRITE,
-			BLK_MQ_REQ_NOWAIT);
-	if (IS_ERR(abort_req))
-		return;
-=======
 		/*
 		 * Mark the request as handled, since the inline shutdown
 		 * forces all outstanding requests to complete.
@@ -1038,7 +958,6 @@ static enum blk_eh_timer_return nvme_timeout(struct request *req, bool reserved)
 	}
 
 	iod->aborted = 1;
->>>>>>> linux-next/akpm-base
 
 	if (atomic_dec_return(&dev->ctrl.abort_limit) < 0) {
 		atomic_inc(&dev->ctrl.abort_limit);

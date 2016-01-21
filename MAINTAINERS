@@ -1550,14 +1550,8 @@ F:	drivers/media/platform/s5p-jpeg/
 ARM/SHMOBILE ARM ARCHITECTURE
 M:	Simon Horman <horms@verge.net.au>
 M:	Magnus Damm <magnus.damm@gmail.com>
-<<<<<<< HEAD
-L:	linux-renesas-soc@vger.kernel.org
-W:	http://oss.renesas.com
-Q:	http://patchwork.kernel.org/project/linux-renesas-soc/list/
-=======
 L:	linux-sh@vger.kernel.org
 Q:	http://patchwork.kernel.org/project/linux-sh/list/
->>>>>>> linux-next/akpm-base
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git next
 S:	Supported
 F:	arch/arm/boot/dts/emev2*
