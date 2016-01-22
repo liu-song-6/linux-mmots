@@ -836,6 +836,12 @@ S:	Maintained
 F:	drivers/net/arcnet/
 F:	include/uapi/linux/if_arcnet.h
 
+ARM HDLCD DRM DRIVER
+M:	Liviu Dudau <liviu.dudau@arm.com>
+S:	Supported
+F:	drivers/gpu/drm/arm/
+F:	Documentation/devicetree/bindings/display/arm,hdlcd.txt
+
 ARM MFM AND FLOPPY DRIVERS
 M:	Ian Molton <spyro@f2s.com>
 S:	Maintained
@@ -3665,13 +3671,12 @@ F:	drivers/scsi/dpt*
 F:	drivers/scsi/dpt/
 
 DRBD DRIVER
-P:	Philipp Reisner
-P:	Lars Ellenberg
-M:	drbd-dev@lists.linbit.com
-L:	drbd-user@lists.linbit.com
+M:	Philipp Reisner <philipp.reisner@linbit.com>
+M:	Lars Ellenberg <lars.ellenberg@linbit.com>
+L:	drbd-dev@lists.linbit.com
 W:	http://www.drbd.org
-T:	git git://git.drbd.org/linux-2.6-drbd.git drbd
-T:	git git://git.drbd.org/drbd-8.3.git
+T:	git git://git.linbit.com/linux-drbd.git
+T:	git git://git.linbit.com/drbd-8.4.git
 S:	Supported
 F:	drivers/block/drbd/
 F:	lib/lru_cache.c
@@ -6316,6 +6321,12 @@ S:	Maintained
 F:	net/l3mdev
 F:	include/net/l3mdev.h
 
+LANTIQ MIPS ARCHITECTURE
+M:	John Crispin <blogic@openwrt.org>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/lantiq
+
 LAPB module
 L:	linux-x25@vger.kernel.org
 S:	Orphan
@@ -7152,27 +7163,45 @@ W:	https://linuxtv.org
 S:	Odd Fixes
 F:	drivers/media/radio/radio-miropcm20*
 
-Mellanox MLX5 core VPI driver
-M:	Eli Cohen <eli@mellanox.com>
+MELLANOX MLX4 core VPI driver
+M:	Yishai Hadas <yishaih@mellanox.com>
 L:	netdev@vger.kernel.org
 L:	linux-rdma@vger.kernel.org
 W:	http://www.mellanox.com
 Q:	http://patchwork.ozlabs.org/project/netdev/list/
+S:	Supported
+F:	drivers/net/ethernet/mellanox/mlx4/
+F:	include/linux/mlx4/
+
+MELLANOX MLX4 IB driver
+M:	Yishai Hadas <yishaih@mellanox.com>
+L:	linux-rdma@vger.kernel.org
+W:	http://www.mellanox.com
 Q:	http://patchwork.kernel.org/project/linux-rdma/list/
-T:	git git://openfabrics.org/~eli/connect-ib.git
+S:	Supported
+F:	drivers/infiniband/hw/mlx4/
+F:	include/linux/mlx4/
+
+MELLANOX MLX5 core VPI driver
+M:	Matan Barak <matanb@mellanox.com>
+M:	Leon Romanovsky <leonro@mellanox.com>
+L:	netdev@vger.kernel.org
+L:	linux-rdma@vger.kernel.org
+W:	http://www.mellanox.com
+Q:	http://patchwork.ozlabs.org/project/netdev/list/
 S:	Supported
 F:	drivers/net/ethernet/mellanox/mlx5/core/
 F:	include/linux/mlx5/
 
-Mellanox MLX5 IB driver
-M:	Eli Cohen <eli@mellanox.com>
+MELLANOX MLX5 IB driver
+M:	Matan Barak <matanb@mellanox.com>
+M:	Leon Romanovsky <leonro@mellanox.com>
 L:	linux-rdma@vger.kernel.org
 W:	http://www.mellanox.com
 Q:	http://patchwork.kernel.org/project/linux-rdma/list/
-T:	git git://openfabrics.org/~eli/connect-ib.git
 S:	Supported
-F:	include/linux/mlx5/
 F:	drivers/infiniband/hw/mlx5/
+F:	include/linux/mlx5/
 
 MELEXIS MLX90614 DRIVER
 M:	Crt Mori <cmo@melexis.com>
@@ -8090,6 +8119,14 @@ S:	Supported
 F:	fs/overlayfs/
 F:	Documentation/filesystems/overlayfs.txt
 
+ORANGEFS FILESYSTEM
+M:	Mike Marshall <hubcap@omnibond.com>
+L:	pvfs2-developers@beowulf-underground.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/hubcap/linux.git
+S:	Supported
+F:	fs/orangefs/
+F:	Documentation/filesystems/orangefs.txt
+
 P54 WIRELESS DRIVER
 M:	Christian Lamparter <chunkeey@googlemail.com>
 L:	linux-wireless@vger.kernel.org
@@ -8975,6 +9012,12 @@ M:	Paul Mackerras <paulus@samba.org>
 L:	linux-fbdev@vger.kernel.org
 S:	Maintained
 F:	drivers/video/fbdev/aty/aty128fb.c
+
+RALINK MIPS ARCHITECTURE
+M:	John Crispin <blogic@openwrt.org>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/ralink
 
 RALINK RT2X00 WIRELESS LAN DRIVER
 P:	rt2x00 project
@@ -10130,7 +10173,7 @@ F:	drivers/net/ethernet/natsemi/sonic.*
 
 SONICS SILICON BACKPLANE DRIVER (SSB)
 M:	Michael Buesch <m@bues.ch>
-L:	netdev@vger.kernel.org
+L:	linux-wireless@vger.kernel.org
 S:	Maintained
 F:	drivers/ssb/
 F:	include/linux/ssb/
