@@ -326,19 +326,27 @@ static int copy_user_bh(struct page *to, struct inode *inode,
 }
 
 #define NO_SECTOR -1
+#define DAX_PMD_INDEX(page_index) (page_index & (PMD_MASK >> PAGE_CACHE_SHIFT))
 
 static int dax_radix_entry(struct address_space *mapping, pgoff_t index,
 		sector_t sector, bool pmd_entry, bool dirty)
 {
 	struct radix_tree_root *page_tree = &mapping->page_tree;
+	pgoff_t pmd_index = DAX_PMD_INDEX(index);
 	int type, error = 0;
 	void *entry;
 
 	__mark_inode_dirty(mapping->host, I_DIRTY_PAGES);
 
 	spin_lock_irq(&mapping->tree_lock);
-	entry = radix_tree_lookup(page_tree, index);
 
+	entry = radix_tree_lookup(page_tree, pmd_index);
+	if (RADIX_DAX_TYPE(entry) == RADIX_DAX_PMD) {
+		index = pmd_index;
+		goto dirty;
+	}
+
+	entry = radix_tree_lookup(page_tree, index);
 	if (entry) {
 		type = RADIX_DAX_TYPE(entry);
 		if (WARN_ON_ONCE(type != RADIX_DAX_PTE &&
@@ -459,31 +467,33 @@ int dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
 {
 	struct inode *inode = mapping->host;
 	struct block_device *bdev = inode->i_sb->s_bdev;
+	pgoff_t start_index, end_index, pmd_index;
 	pgoff_t indices[PAGEVEC_SIZE];
-	pgoff_t start_page, end_page;
 	struct pagevec pvec;
-	void *entry;
+	bool done = false;
 	int i, ret = 0;
+	void *entry;
 
 	if (WARN_ON_ONCE(inode->i_blkbits != PAGE_SHIFT))
 		return -EIO;
 
+	start_index = start >> PAGE_CACHE_SHIFT;
+	end_index = end >> PAGE_CACHE_SHIFT;
+	pmd_index = DAX_PMD_INDEX(start_index);
+
 	rcu_read_lock();
-	entry = radix_tree_lookup(&mapping->page_tree, start & PMD_MASK);
+	entry = radix_tree_lookup(&mapping->page_tree, pmd_index);
 	rcu_read_unlock();
 
 	/* see if the start of our range is covered by a PMD entry */
-	if (entry && RADIX_DAX_TYPE(entry) == RADIX_DAX_PMD)
-		start &= PMD_MASK;
+	if (RADIX_DAX_TYPE(entry) == RADIX_DAX_PMD)
+		start_index = pmd_index;
 
-	start_page = start >> PAGE_CACHE_SHIFT;
-	end_page = end >> PAGE_CACHE_SHIFT;
-
-	tag_pages_for_writeback(mapping, start_page, end_page);
+	tag_pages_for_writeback(mapping, start_index, end_index);
 
 	pagevec_init(&pvec, 0);
-	while (1) {
-		pvec.nr = find_get_entries_tag(mapping, start_page,
+	while (!done) {
+		pvec.nr = find_get_entries_tag(mapping, start_index,
 				PAGECACHE_TAG_TOWRITE, PAGEVEC_SIZE,
 				pvec.pages, indices);
 
@@ -491,6 +501,11 @@ int dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
 			break;
 
 		for (i = 0; i < pvec.nr; i++) {
+			if (indices[i] > end_index) {
+				done = true;
+				break;
+			}
+
 			ret = dax_writeback_one(bdev, mapping, indices[i],
 					pvec.pages[i]);
 			if (ret < 0)
