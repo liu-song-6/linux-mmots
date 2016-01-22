@@ -329,15 +329,8 @@ isert_create_device_ib_res(struct isert_device *device)
 	struct ib_device *ib_dev = device->ib_device;
 	int ret;
 
-<<<<<<< HEAD
-	dev_attr = &device->dev_attr;
-	ret = isert_query_device(device->ib_device, dev_attr);
-	if (ret)
-		goto out;
-=======
 	isert_dbg("devattr->max_sge: %d\n", ib_dev->attrs.max_sge);
 	isert_dbg("devattr->max_sge_rd: %d\n", ib_dev->attrs.max_sge_rd);
->>>>>>> linux-next/akpm-base
 
 	/* asign function handlers */
 	if (ib_dev->attrs.device_cap_flags & IB_DEVICE_MEM_MGT_EXTENSIONS &&

@@ -800,11 +800,7 @@ endif
 
 include scripts/Makefile.kasan
 include scripts/Makefile.extrawarn
-<<<<<<< HEAD
-include scripts/Makefile.ubsan
-=======
 include scripts/Makefile.lto
->>>>>>> linux-next/akpm-base
 
 # Add any arch overrides and user supplied CPPFLAGS, AFLAGS and CFLAGS as the
 # last assignments

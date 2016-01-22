@@ -126,13 +126,10 @@ static const char *hw_flag_names[] = {
 	FLAG(SUPPORTS_AMSDU_IN_AMPDU),
 	FLAG(BEACON_TX_STATUS),
 	FLAG(NEEDS_UNIQUE_STA_ADDR),
-<<<<<<< HEAD
-=======
 	FLAG(SUPPORTS_REORDERING_BUFFER),
 
 	/* keep last for the build bug below */
 	(void *)0x1
->>>>>>> linux-next/akpm-base
 #undef FLAG
 };
 

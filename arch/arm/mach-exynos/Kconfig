@@ -32,13 +32,6 @@ menuconfig ARCH_EXYNOS
 	select SRAM
 	select THERMAL
 	select MFD_SYSCON
-<<<<<<< HEAD
-	select CLKSRC_EXYNOS_MCT
-	select POWER_RESET
-	select POWER_RESET_SYSCON
-	select POWER_RESET_SYSCON_POWEROFF
-=======
->>>>>>> linux-next/akpm-base
 	help
 	  Support for SAMSUNG EXYNOS SoCs (EXYNOS4/5)
 
