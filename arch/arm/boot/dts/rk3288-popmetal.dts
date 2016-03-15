@@ -74,7 +74,7 @@
 			linux,code = <116>;
 			label = "GPIO Key Power";
 			linux,input-type = <1>;
-			gpio-key,wakeup = <1>;
+			wakeup-source;
 			debounce-interval = <100>;
 		};
 	};
@@ -162,7 +162,6 @@
 };
 
 &emmc {
-	broken-cd;
 	bus-width = <8>;
 	cap-mmc-highspeed;
 	disable-wp;

@@ -1534,7 +1534,6 @@ static int unix_attach_fds(struct scm_cookie *scm, struct sk_buff *skb)
 {
 	int i;
 	unsigned char max_level = 0;
-	int unix_sock_count = 0;
 
 	if (too_many_unix_fds(current))
 		return -ETOOMANYREFS;
@@ -1542,11 +1541,9 @@ static int unix_attach_fds(struct scm_cookie *scm, struct sk_buff *skb)
 	for (i = scm->fp->count - 1; i >= 0; i--) {
 		struct sock *sk = unix_get_socket(scm->fp->fp[i]);
 
-		if (sk) {
-			unix_sock_count++;
+		if (sk)
 			max_level = max(max_level,
 					unix_sk(sk)->recursion_level);
-		}
 	}
 	if (unlikely(max_level > MAX_RECURSION_LEVEL))
 		return -ETOOMANYREFS;
@@ -1944,7 +1941,7 @@ pipe_err_free:
 	kfree_skb(skb);
 pipe_err:
 	if (sent == 0 && !(msg->msg_flags&MSG_NOSIGNAL))
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 	err = -EPIPE;
 out_err:
 	scm_destroy(&scm);
@@ -2061,7 +2058,7 @@ err_unlock:
 err:
 	kfree_skb(newskb);
 	if (send_sigpipe && !(flags & MSG_NOSIGNAL))
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 	if (!init_scm)
 		scm_destroy(&scm);
 	return err;

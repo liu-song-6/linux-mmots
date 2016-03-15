@@ -82,7 +82,7 @@ struct sctp_bind_addr;
 struct sctp_ulpq;
 struct sctp_ep_common;
 struct sctp_ssnmap;
-struct crypto_hash;
+struct crypto_shash;
 
 
 #include <net/sctp/tsnmap.h>
@@ -166,7 +166,7 @@ struct sctp_sock {
 	struct sctp_pf *pf;
 
 	/* Access to HMAC transform. */
-	struct crypto_hash *hmac;
+	struct crypto_shash *hmac;
 	char *sctp_hmac_alg;
 
 	/* What is our base endpointer? */
@@ -535,7 +535,6 @@ struct sctp_datamsg {
 struct sctp_datamsg *sctp_datamsg_from_user(struct sctp_association *,
 					    struct sctp_sndrcvinfo *,
 					    struct iov_iter *);
-void sctp_datamsg_free(struct sctp_datamsg *);
 void sctp_datamsg_put(struct sctp_datamsg *);
 void sctp_chunk_fail(struct sctp_chunk *, int error);
 int sctp_chunk_abandoned(struct sctp_chunk *);
@@ -1098,7 +1097,7 @@ int sctp_bind_addr_dup(struct sctp_bind_addr *dest,
 			const struct sctp_bind_addr *src,
 			gfp_t gfp);
 int sctp_add_bind_addr(struct sctp_bind_addr *, union sctp_addr *,
-		       __u8 addr_state, gfp_t gfp);
+		       int new_size, __u8 addr_state, gfp_t gfp);
 int sctp_del_bind_addr(struct sctp_bind_addr *, union sctp_addr *);
 int sctp_bind_addr_match(struct sctp_bind_addr *, const union sctp_addr *,
 			 struct sctp_sock *);
@@ -1234,7 +1233,7 @@ struct sctp_endpoint {
 	/* SCTP AUTH: array of the HMACs that will be allocated
 	 * we need this per association so that we don't serialize
 	 */
-	struct crypto_hash **auth_hmacs;
+	struct crypto_shash **auth_hmacs;
 
 	/* SCTP-AUTH: hmacs for the endpoint encoded into parameter */
 	 struct sctp_hmac_algo_param *auth_hmacs_list;

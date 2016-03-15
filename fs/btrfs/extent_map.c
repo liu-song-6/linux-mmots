@@ -4,6 +4,7 @@
 #include <linux/hardirq.h>
 #include "ctree.h"
 #include "extent_map.h"
+#include "compression.h"
 
 
 static struct kmem_cache *extent_map_cache;
@@ -20,8 +21,7 @@ int __init extent_map_init(void)
 
 void extent_map_exit(void)
 {
-	if (extent_map_cache)
-		kmem_cache_destroy(extent_map_cache);
+	kmem_cache_destroy(extent_map_cache);
 }
 
 /**

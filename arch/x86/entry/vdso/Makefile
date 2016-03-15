@@ -18,6 +18,7 @@ vobjs-y := vdso-note.o vclock_gettime.o vgetcpu.o
 
 # files to link into kernel
 obj-y				+= vma.o
+OBJECT_FILES_NON_STANDARD_vma.o	:= n
 
 # vDSO images to build
 vdso_img-$(VDSO64-y)		+= 64

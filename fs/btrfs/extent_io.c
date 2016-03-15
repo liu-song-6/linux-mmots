@@ -206,10 +206,8 @@ void extent_io_exit(void)
 	 * destroy caches.
 	 */
 	rcu_barrier();
-	if (extent_state_cache)
-		kmem_cache_destroy(extent_state_cache);
-	if (extent_buffer_cache)
-		kmem_cache_destroy(extent_buffer_cache);
+	kmem_cache_destroy(extent_state_cache);
+	kmem_cache_destroy(extent_buffer_cache);
 	if (btrfs_bioset)
 		bioset_free(btrfs_bioset);
 }
@@ -232,7 +230,7 @@ static struct extent_state *alloc_extent_state(gfp_t mask)
 	if (!state)
 		return state;
 	state->state = 0;
-	state->private = 0;
+	state->failrec = NULL;
 	RB_CLEAR_NODE(&state->rb_node);
 	btrfs_leak_debug_add(&state->leak_list, &states);
 	atomic_set(&state->refs, 1);
@@ -1844,7 +1842,8 @@ out:
  * set the private field for a given byte offset in the tree.  If there isn't
  * an extent_state there already, this does nothing.
  */
-static int set_state_private(struct extent_io_tree *tree, u64 start, u64 private)
+static noinline int set_state_failrec(struct extent_io_tree *tree, u64 start,
+		struct io_failure_record *failrec)
 {
 	struct rb_node *node;
 	struct extent_state *state;
@@ -1865,13 +1864,14 @@ static int set_state_private(struct extent_io_tree *tree, u64 start, u64 private
 		ret = -ENOENT;
 		goto out;
 	}
-	state->private = private;
+	state->failrec = failrec;
 out:
 	spin_unlock(&tree->lock);
 	return ret;
 }
 
-int get_state_private(struct extent_io_tree *tree, u64 start, u64 *private)
+static noinline int get_state_failrec(struct extent_io_tree *tree, u64 start,
+		struct io_failure_record **failrec)
 {
 	struct rb_node *node;
 	struct extent_state *state;
@@ -1892,7 +1892,7 @@ int get_state_private(struct extent_io_tree *tree, u64 start, u64 *private)
 		ret = -ENOENT;
 		goto out;
 	}
-	*private = state->private;
+	*failrec = state->failrec;
 out:
 	spin_unlock(&tree->lock);
 	return ret;
@@ -1972,7 +1972,7 @@ int free_io_failure(struct inode *inode, struct io_failure_record *rec)
 	int err = 0;
 	struct extent_io_tree *failure_tree = &BTRFS_I(inode)->io_failure_tree;
 
-	set_state_private(failure_tree, rec->start, 0);
+	set_state_failrec(failure_tree, rec->start, NULL);
 	ret = clear_extent_bits(failure_tree, rec->start,
 				rec->start + rec->len - 1,
 				EXTENT_LOCKED | EXTENT_DIRTY, GFP_NOFS);
@@ -2089,7 +2089,6 @@ int clean_io_failure(struct inode *inode, u64 start, struct page *page,
 		     unsigned int pg_offset)
 {
 	u64 private;
-	u64 private_failure;
 	struct io_failure_record *failrec;
 	struct btrfs_fs_info *fs_info = BTRFS_I(inode)->root->fs_info;
 	struct extent_state *state;
@@ -2102,12 +2101,11 @@ int clean_io_failure(struct inode *inode, u64 start, struct page *page,
 	if (!ret)
 		return 0;
 
-	ret = get_state_private(&BTRFS_I(inode)->io_failure_tree, start,
-				&private_failure);
+	ret = get_state_failrec(&BTRFS_I(inode)->io_failure_tree, start,
+			&failrec);
 	if (ret)
 		return 0;
 
-	failrec = (struct io_failure_record *)(unsigned long) private_failure;
 	BUG_ON(!failrec->this_mirror);
 
 	if (failrec->in_validation) {
@@ -2167,7 +2165,7 @@ void btrfs_free_io_failure_record(struct inode *inode, u64 start, u64 end)
 
 		next = next_state(state);
 
-		failrec = (struct io_failure_record *)(unsigned long)state->private;
+		failrec = state->failrec;
 		free_extent_state(state);
 		kfree(failrec);
 
@@ -2177,10 +2175,9 @@ void btrfs_free_io_failure_record(struct inode *inode, u64 start, u64 end)
 }
 
 int btrfs_get_io_failure_record(struct inode *inode, u64 start, u64 end,
-				struct io_failure_record **failrec_ret)
+		struct io_failure_record **failrec_ret)
 {
 	struct io_failure_record *failrec;
-	u64 private;
 	struct extent_map *em;
 	struct extent_io_tree *failure_tree = &BTRFS_I(inode)->io_failure_tree;
 	struct extent_io_tree *tree = &BTRFS_I(inode)->io_tree;
@@ -2188,7 +2185,7 @@ int btrfs_get_io_failure_record(struct inode *inode, u64 start, u64 end,
 	int ret;
 	u64 logical;
 
-	ret = get_state_private(failure_tree, start, &private);
+	ret = get_state_failrec(failure_tree, start, &failrec);
 	if (ret) {
 		failrec = kzalloc(sizeof(*failrec), GFP_NOFS);
 		if (!failrec)
@@ -2237,8 +2234,7 @@ int btrfs_get_io_failure_record(struct inode *inode, u64 start, u64 end,
 		ret = set_extent_bits(failure_tree, start, end,
 					EXTENT_LOCKED | EXTENT_DIRTY, GFP_NOFS);
 		if (ret >= 0)
-			ret = set_state_private(failure_tree, start,
-						(u64)(unsigned long)failrec);
+			ret = set_state_failrec(failure_tree, start, failrec);
 		/* set the bits in the inode's tree */
 		if (ret >= 0)
 			ret = set_extent_bits(tree, start, end, EXTENT_DAMAGED,
@@ -2248,7 +2244,6 @@ int btrfs_get_io_failure_record(struct inode *inode, u64 start, u64 end,
 			return ret;
 		}
 	} else {
-		failrec = (struct io_failure_record *)(unsigned long)private;
 		pr_debug("Get IO Failure Record: (found) logical=%llu, start=%llu, len=%llu, validation=%d\n",
 			 failrec->logical, failrec->start, failrec->len,
 			 failrec->in_validation);
@@ -3177,7 +3172,8 @@ static int __extent_read_full_page(struct extent_io_tree *tree,
 
 	while (1) {
 		lock_extent(tree, start, end);
-		ordered = btrfs_lookup_ordered_extent(inode, start);
+		ordered = btrfs_lookup_ordered_range(inode, start,
+						PAGE_CACHE_SIZE);
 		if (!ordered)
 			break;
 		unlock_extent(tree, start, end);
@@ -3204,14 +3200,10 @@ int extent_read_full_page(struct extent_io_tree *tree, struct page *page,
 	return ret;
 }
 
-static noinline void update_nr_written(struct page *page,
-				      struct writeback_control *wbc,
-				      unsigned long nr_written)
+static void update_nr_written(struct page *page, struct writeback_control *wbc,
+			      unsigned long nr_written)
 {
 	wbc->nr_to_write -= nr_written;
-	if (wbc->range_cyclic || (wbc->nr_to_write > 0 &&
-	    wbc->range_start == 0 && wbc->range_end == LLONG_MAX))
-		page->mapping->writeback_index = page->index + nr_written;
 }
 
 /*
@@ -3926,12 +3918,13 @@ static int extent_write_cache_pages(struct extent_io_tree *tree,
 	struct inode *inode = mapping->host;
 	int ret = 0;
 	int done = 0;
-	int err = 0;
 	int nr_to_write_done = 0;
 	struct pagevec pvec;
 	int nr_pages;
 	pgoff_t index;
 	pgoff_t end;		/* Inclusive */
+	pgoff_t done_index;
+	int range_whole = 0;
 	int scanned = 0;
 	int tag;
 
@@ -3954,6 +3947,8 @@ static int extent_write_cache_pages(struct extent_io_tree *tree,
 	} else {
 		index = wbc->range_start >> PAGE_CACHE_SHIFT;
 		end = wbc->range_end >> PAGE_CACHE_SHIFT;
+		if (wbc->range_start == 0 && wbc->range_end == LLONG_MAX)
+			range_whole = 1;
 		scanned = 1;
 	}
 	if (wbc->sync_mode == WB_SYNC_ALL)
@@ -3963,6 +3958,7 @@ static int extent_write_cache_pages(struct extent_io_tree *tree,
 retry:
 	if (wbc->sync_mode == WB_SYNC_ALL)
 		tag_pages_for_writeback(mapping, index, end);
+	done_index = index;
 	while (!done && !nr_to_write_done && (index <= end) &&
 	       (nr_pages = pagevec_lookup_tag(&pvec, mapping, &index, tag,
 			min(end - index, (pgoff_t)PAGEVEC_SIZE-1) + 1))) {
@@ -3972,6 +3968,7 @@ retry:
 		for (i = 0; i < nr_pages; i++) {
 			struct page *page = pvec.pages[i];
 
+			done_index = page->index;
 			/*
 			 * At this point we hold neither mapping->tree_lock nor
 			 * lock on the page itself: the page may be truncated or
@@ -4013,8 +4010,20 @@ retry:
 				unlock_page(page);
 				ret = 0;
 			}
-			if (!err && ret < 0)
-				err = ret;
+			if (ret < 0) {
+				/*
+				 * done_index is set past this page,
+				 * so media errors will not choke
+				 * background writeout for the entire
+				 * file. This has consequences for
+				 * range_cyclic semantics (ie. it may
+				 * not be suitable for data integrity
+				 * writeout).
+				 */
+				done_index = page->index + 1;
+				done = 1;
+				break;
+			}
 
 			/*
 			 * the filesystem may choose to bump up nr_to_write.
@@ -4026,7 +4035,7 @@ retry:
 		pagevec_release(&pvec);
 		cond_resched();
 	}
-	if (!scanned && !done && !err) {
+	if (!scanned && !done) {
 		/*
 		 * We hit the last page and there is more work to be done: wrap
 		 * back to the start of the file
@@ -4035,8 +4044,12 @@ retry:
 		index = 0;
 		goto retry;
 	}
+
+	if (wbc->range_cyclic || (wbc->nr_to_write > 0 && range_whole))
+		mapping->writeback_index = done_index;
+
 	btrfs_add_delayed_iput(inode);
-	return err;
+	return ret;
 }
 
 static void flush_epd_write_bio(struct extent_page_data *epd)

@@ -25,6 +25,7 @@
 #include "btrfs_inode.h"
 #include "extent_io.h"
 #include "disk-io.h"
+#include "compression.h"
 
 static struct kmem_cache *btrfs_ordered_extent_cache;
 
@@ -1114,6 +1115,5 @@ int __init ordered_data_init(void)
 
 void ordered_data_exit(void)
 {
-	if (btrfs_ordered_extent_cache)
-		kmem_cache_destroy(btrfs_ordered_extent_cache);
+	kmem_cache_destroy(btrfs_ordered_extent_cache);
 }

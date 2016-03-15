@@ -52,6 +52,7 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <crypto/hash.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/wait.h>
@@ -61,7 +62,6 @@
 #include <linux/fcntl.h>
 #include <linux/poll.h>
 #include <linux/init.h>
-#include <linux/crypto.h>
 #include <linux/slab.h>
 #include <linux/file.h>
 #include <linux/compat.h>
@@ -386,7 +386,8 @@ static int sctp_do_bind(struct sock *sk, union sctp_addr *addr, int len)
 	/* Add the address to the bind address list.
 	 * Use GFP_ATOMIC since BHs will be disabled.
 	 */
-	ret = sctp_add_bind_addr(bp, addr, SCTP_ADDR_SRC, GFP_ATOMIC);
+	ret = sctp_add_bind_addr(bp, addr, af->sockaddr_len,
+				 SCTP_ADDR_SRC, GFP_ATOMIC);
 
 	/* Copy back into socket for getsockname() use. */
 	if (!ret) {
@@ -577,6 +578,7 @@ static int sctp_send_asconf_add_ip(struct sock		*sk,
 			af = sctp_get_af_specific(addr->v4.sin_family);
 			memcpy(&saveaddr, addr, af->sockaddr_len);
 			retval = sctp_add_bind_addr(bp, &saveaddr,
+						    sizeof(saveaddr),
 						    SCTP_ADDR_NEW, GFP_ATOMIC);
 			addr_buf += af->sockaddr_len;
 		}
@@ -1554,7 +1556,7 @@ static int sctp_error(struct sock *sk, int flags, int err)
 	if (err == -EPIPE)
 		err = sock_error(sk) ? : -EPIPE;
 	if (err == -EPIPE && !(flags & MSG_NOSIGNAL))
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 	return err;
 }
 
@@ -4160,7 +4162,7 @@ static void sctp_destruct_sock(struct sock *sk)
 	struct sctp_sock *sp = sctp_sk(sk);
 
 	/* Free up the HMAC transform. */
-	crypto_free_hash(sp->hmac);
+	crypto_free_shash(sp->hmac);
 
 	inet_sock_destruct(sk);
 }
@@ -6106,9 +6108,10 @@ static int sctp_getsockopt(struct sock *sk, int level, int optname,
 	return retval;
 }
 
-static void sctp_hash(struct sock *sk)
+static int sctp_hash(struct sock *sk)
 {
 	/* STUB */
+	return 0;
 }
 
 static void sctp_unhash(struct sock *sk)
@@ -6304,13 +6307,13 @@ static int sctp_listen_start(struct sock *sk, int backlog)
 {
 	struct sctp_sock *sp = sctp_sk(sk);
 	struct sctp_endpoint *ep = sp->ep;
-	struct crypto_hash *tfm = NULL;
+	struct crypto_shash *tfm = NULL;
 	char alg[32];
 
 	/* Allocate HMAC for generating cookie. */
 	if (!sp->hmac && sp->sctp_hmac_alg) {
 		sprintf(alg, "hmac(%s)", sp->sctp_hmac_alg);
-		tfm = crypto_alloc_hash(alg, 0, CRYPTO_ALG_ASYNC);
+		tfm = crypto_alloc_shash(alg, 0, 0);
 		if (IS_ERR(tfm)) {
 			net_info_ratelimited("failed to load transform for %s: %ld\n",
 					     sp->sctp_hmac_alg, PTR_ERR(tfm));
