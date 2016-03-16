@@ -102,26 +102,6 @@ static void lpc32xx_clcd_remove(struct clcd_fb *fb)
 {
 	dma_free_wc(&fb->dev->dev, fb->fb.fix.smem_len, fb->fb.screen_base,
 		    fb->fb.fix.smem_start);
-<<<<<<< HEAD
-}
-
-/*
- * On some early LCD modules (1307.0), the backlight logic is inverted.
- * For those board variants, swap the disable and enable states for
- * BKL_POWER_GPIO.
-*/
-static void clcd_disable(struct clcd_fb *fb)
-{
-	gpio_set_value(BKL_POWER_GPIO, 0);
-	gpio_set_value(LCD_POWER_GPIO, 0);
-}
-
-static void clcd_enable(struct clcd_fb *fb)
-{
-	gpio_set_value(BKL_POWER_GPIO, 1);
-	gpio_set_value(LCD_POWER_GPIO, 1);
-=======
->>>>>>> linux-next/akpm-base
 }
 
 static struct clcd_board lpc32xx_clcd_data = {

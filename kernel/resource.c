@@ -1128,12 +1128,6 @@ struct resource * __request_region(struct resource *parent,
 	res->name = name;
 	res->start = start;
 	res->end = start + n - 1;
-<<<<<<< HEAD
-	res->flags = resource_type(parent) | resource_ext_type(parent);
-	res->flags |= IORESOURCE_BUSY | flags;
-	res->desc = IORES_DESC_NONE;
-=======
->>>>>>> linux-next/akpm-base
 
 	write_lock(&resource_lock);
 

@@ -819,7 +819,6 @@ update_stats_dequeue(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 static inline void
 update_stats_wait_start(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
-<<<<<<< HEAD
 }
 
 static inline void
@@ -828,16 +827,6 @@ update_stats_wait_end(struct cfs_rq *cfs_rq, struct sched_entity *se)
 }
 
 static inline void
-=======
-}
-
-static inline void
-update_stats_wait_end(struct cfs_rq *cfs_rq, struct sched_entity *se)
-{
-}
-
-static inline void
->>>>>>> linux-next/akpm-base
 update_stats_enqueue(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 }

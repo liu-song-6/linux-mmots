@@ -1312,14 +1312,6 @@ void omap_gem_free_object(struct drm_gem_object *obj)
 			omap_gem_detach_pages(obj);
 	}
 
-<<<<<<< HEAD
-		if (!is_shmem(obj)) {
-			dma_free_wc(dev->dev, obj->size, omap_obj->vaddr,
-				    omap_obj->paddr);
-		} else if (omap_obj->vaddr) {
-			vunmap(omap_obj->vaddr);
-		}
-=======
 	if (omap_obj->flags & OMAP_BO_MEM_DMA_API) {
 		dma_free_wc(dev->dev, obj->size,
 				omap_obj->vaddr, omap_obj->paddr);
@@ -1327,7 +1319,6 @@ void omap_gem_free_object(struct drm_gem_object *obj)
 		vunmap(omap_obj->vaddr);
 	} else if (obj->import_attach) {
 		drm_prime_gem_destroy(obj, omap_obj->sgt);
->>>>>>> linux-next/akpm-base
 	}
 
 	kfree(omap_obj->sync);
@@ -1395,15 +1386,8 @@ struct drm_gem_object *omap_gem_new(struct drm_device *dev,
 		 * For tiled buffers align dimensions to slot boundaries and
 		 * calculate size based on aligned dimensions.
 		 */
-<<<<<<< HEAD
-		omap_obj->vaddr =  dma_alloc_wc(dev->dev, size,
-						&omap_obj->paddr, GFP_KERNEL);
-		if (!omap_obj->vaddr) {
-			kfree(omap_obj);
-=======
 		tiler_align(gem2fmt(flags), &gsize.tiled.width,
 			    &gsize.tiled.height);
->>>>>>> linux-next/akpm-base
 
 		size = tiler_size(gem2fmt(flags), gsize.tiled.width,
 				  gsize.tiled.height);

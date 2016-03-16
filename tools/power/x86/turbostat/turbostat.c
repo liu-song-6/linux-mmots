@@ -2257,11 +2257,7 @@ int has_config_tdp(unsigned int family, unsigned int model)
 }
 
 static void
-<<<<<<< HEAD
-dump_cstate_pstate_config_info(unsigned int family, unsigned int model)
-=======
 dump_cstate_pstate_config_info(int family, int model)
->>>>>>> linux-next/akpm-base
 {
 	if (!do_nhm_platform_info)
 		return;
@@ -2524,11 +2520,7 @@ int print_perf_limit(struct thread_data *t, struct core_data *c, struct pkg_data
 #define	RAPL_POWER_GRANULARITY	0x7FFF	/* 15 bit power granularity */
 #define	RAPL_TIME_GRANULARITY	0x3F /* 6 bit time granularity */
 
-<<<<<<< HEAD
-double get_tdp(unsigned int model)
-=======
 double get_tdp(int model)
->>>>>>> linux-next/akpm-base
 {
 	unsigned long long msr;
 
@@ -2642,11 +2634,7 @@ void rapl_probe(unsigned int family, unsigned int model)
 	return;
 }
 
-<<<<<<< HEAD
-void perf_limit_reasons_probe(unsigned int family, unsigned int model)
-=======
 void perf_limit_reasons_probe(int family, int model)
->>>>>>> linux-next/akpm-base
 {
 	if (!genuine_intel)
 		return;

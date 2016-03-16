@@ -2046,11 +2046,7 @@ static void rcu_gp_cleanup(struct rcu_state *rsp)
 		/* smp_mb() provided by prior unlock-lock pair. */
 		nocb += rcu_future_gp_cleanup(rsp, rnp);
 		sq = rcu_nocb_gp_get(rnp);
-<<<<<<< HEAD
-		raw_spin_unlock_irq(&rnp->lock);
-=======
 		raw_spin_unlock_irq_rcu_node(rnp);
->>>>>>> linux-next/akpm-base
 		rcu_nocb_gp_cleanup(sq);
 		cond_resched_rcu_qs();
 		WRITE_ONCE(rsp->gp_activity, jiffies);
@@ -2252,11 +2248,7 @@ static void rcu_report_qs_rsp(struct rcu_state *rsp, unsigned long flags)
 {
 	WARN_ON_ONCE(!rcu_gp_in_progress(rsp));
 	WRITE_ONCE(rsp->gp_flags, READ_ONCE(rsp->gp_flags) | RCU_GP_FLAG_FQS);
-<<<<<<< HEAD
-	raw_spin_unlock_irqrestore(&rcu_get_root(rsp)->lock, flags);
-=======
 	raw_spin_unlock_irqrestore_rcu_node(rcu_get_root(rsp), flags);
->>>>>>> linux-next/akpm-base
 	swake_up(&rsp->gp_wq);  /* Memory barrier implied by swake_up() path. */
 }
 
@@ -2884,11 +2876,7 @@ static void force_quiescent_state(struct rcu_state *rsp)
 		return;  /* Someone beat us to it. */
 	}
 	WRITE_ONCE(rsp->gp_flags, READ_ONCE(rsp->gp_flags) | RCU_GP_FLAG_FQS);
-<<<<<<< HEAD
-	raw_spin_unlock_irqrestore(&rnp_old->lock, flags);
-=======
 	raw_spin_unlock_irqrestore_rcu_node(rnp_old, flags);
->>>>>>> linux-next/akpm-base
 	swake_up(&rsp->gp_wq); /* Memory barrier implied by swake_up() path. */
 }
 
