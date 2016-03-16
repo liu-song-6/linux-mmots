@@ -73,6 +73,7 @@
 #include <linux/init_task.h>
 #include <linux/context_tracking.h>
 #include <linux/compiler.h>
+#include <linux/frame.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
@@ -2689,7 +2690,7 @@ asmlinkage __visible void schedule_tail(struct task_struct *prev)
 /*
  * context_switch - switch to the new MM and the new thread's register state.
  */
-static inline struct rq *
+static __always_inline struct rq *
 context_switch(struct rq *rq, struct task_struct *prev,
 	       struct task_struct *next)
 {
@@ -3174,7 +3175,7 @@ static void __sched notrace __schedule(bool preempt)
 			if (prev->flags & PF_WQ_WORKER) {
 				struct task_struct *to_wakeup;
 
-				to_wakeup = wq_worker_sleeping(prev, cpu);
+				to_wakeup = wq_worker_sleeping(prev);
 				if (to_wakeup)
 					try_to_wake_up_local(to_wakeup);
 			}
@@ -3204,6 +3205,7 @@ static void __sched notrace __schedule(bool preempt)
 
 	balance_callback(rq);
 }
+STACK_FRAME_NON_STANDARD(__schedule); /* switch_to() */
 
 static inline void sched_submit_work(struct task_struct *tsk)
 {
@@ -5369,6 +5371,7 @@ migration_call(struct notifier_block *nfb, unsigned long action, void *hcpu)
 
 	case CPU_UP_PREPARE:
 		rq->calc_load_update = calc_load_update;
+		account_reset_rq(rq);
 		break;
 
 	case CPU_ONLINE:
@@ -5432,16 +5435,6 @@ static int sched_cpu_active(struct notifier_block *nfb,
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_STARTING:
 		set_cpu_rq_start_time();
-		return NOTIFY_OK;
-
-	case CPU_ONLINE:
-		/*
-		 * At this point a starting CPU has marked itself as online via
-		 * set_cpu_online(). But it might not yet have marked itself
-		 * as active, which is essential from here on.
-		 */
-		set_cpu_active(cpu, true);
-		stop_machine_unpark(cpu);
 		return NOTIFY_OK;
 
 	case CPU_DOWN_FAILED:
@@ -8451,7 +8444,7 @@ struct cgroup_subsys cpu_cgrp_subsys = {
 	.can_attach	= cpu_cgroup_can_attach,
 	.attach		= cpu_cgroup_attach,
 	.legacy_cftypes	= cpu_files,
-	.early_init	= 1,
+	.early_init	= true,
 };
 
 #endif	/* CONFIG_CGROUP_SCHED */

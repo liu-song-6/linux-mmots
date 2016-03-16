@@ -1069,10 +1069,10 @@ config CGROUP_PIDS
 	  is fairly trivial to reach PID exhaustion before you reach even a
 	  conservative kmemcg limit. As a result, it is possible to grind a
 	  system to halt without being limited by other cgroup policies. The
-	  PIDs cgroup subsystem is designed to stop this from happening.
+	  PIDs controller is designed to stop this from happening.
 
 	  It should be noted that organisational operations (such as attaching
-	  to a cgroup hierarchy will *not* be blocked by the PIDs subsystem),
+	  to a cgroup hierarchy will *not* be blocked by the PIDs controller),
 	  since the PIDs limit only affects a process's ability to fork, not to
 	  attach to a cgroup.
 
@@ -1599,6 +1599,19 @@ config AIO
 	  by some high performance threaded applications. Disabling
 	  this option saves about 7k.
 
+config AIO_THREAD
+	bool "Support kernel thread based AIO" if EXPERT
+	depends on AIO
+	default y
+	help
+	   This option enables using kernel thread based AIO which implements
+	   asynchronous operations using the kernel's queue_work() mechanism.
+	   The automatic use of threads for async operations is currently
+	   disabled by default until the security implications for usage
+	   are completely understood.  This functionality can be enabled at
+	   runtime if this option is enabled by setting the fs.aio-auto-threads
+	   to one.
+
 config ADVISE_SYSCALLS
 	bool "Enable madvise/fadvise syscalls" if EXPERT
 	default y
@@ -1806,9 +1819,9 @@ config SYSTEM_DATA_VERIFICATION
 	select SYSTEM_TRUSTED_KEYRING
 	select KEYS
 	select CRYPTO
+	select CRYPTO_RSA
 	select ASYMMETRIC_KEY_TYPE
 	select ASYMMETRIC_PUBLIC_KEY_SUBTYPE
-	select PUBLIC_KEY_ALGO_RSA
 	select ASN1
 	select OID_REGISTRY
 	select X509_CERTIFICATE_PARSER
