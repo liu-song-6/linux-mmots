@@ -614,6 +614,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			cut the overhead, others just disable the usage. So
 			only cgroup_disable=memory is actually worthy}
 
+	cgroup_no_v1=	[KNL] Disable one, multiple, all cgroup controllers in v1
+			Format: { controller[,controller...] | "all" }
+			Like cgroup_disable, but only applies to cgroup v1;
+			the blacklisted controllers remain available in cgroup2.
+
 	cgroup.memory=	[KNL] Pass options to the cgroup memory controller.
 			Format: <string>
 			nosocket -- Disable socket memory accounting.
@@ -982,6 +987,9 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			See Documentation/x86/intel_mpx.txt for more
 			information about the feature.
 
+	nopku		[X86] Disable Memory Protection Keys CPU feature found
+			in some Intel CPUs.
+
 	eagerfpu=	[X86]
 			on	enable eager fpu restore
 			off	disable eager fpu restore
@@ -1063,6 +1071,12 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			found on Freescale Vybrid and QorIQ LS1021A processors.
 			A valid base address must be provided, and the serial
 			port must already be setup and configured.
+
+		armada3700_uart,<addr>
+			Start an early, polled-mode console on the
+			Armada 3700 serial port at the specified
+			address. The serial port must already be setup
+			and configured. Options are not yet supported.
 
 	earlyprintk=	[X86,SH,BLACKFIN,ARM,M68k]
 			earlyprintk=vga
@@ -2609,7 +2623,7 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 	nolapic_timer	[X86-32,APIC] Do not use the local APIC timer.
 
 	noltlbs		[PPC] Do not use large page/tlb entries for kernel
-			lowmem mapping on PPC40x.
+			lowmem mapping on PPC40x and PPC8xx
 
 	nomca		[IA-64] Disable machine check abort handling
 
@@ -3522,6 +3536,12 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			Set number of hash buckets for route cache
 
 	ro		[KNL] Mount root device read-only on boot
+
+	rockchip.usb_uart
+			Enable the uart passthrough on the designated usb port
+			on Rockchip SoCs. When active, the signals of the
+			debug-uart get routed to the D+ and D- pins of the usb
+			port and the regular usb controller gets disabled.
 
 	rodata=		[KNL]
 		on	Mark read-only kernel memory as read-only (default).

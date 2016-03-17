@@ -29,7 +29,6 @@
 #include <linux/module.h>
 #include <linux/namei.h>
 #include <linux/skbuff.h>
-#include <linux/crypto.h>
 #include <linux/mount.h>
 #include <linux/pagemap.h>
 #include <linux/key.h>
@@ -739,8 +738,7 @@ static void ecryptfs_free_kmem_caches(void)
 		struct ecryptfs_cache_info *info;
 
 		info = &ecryptfs_cache_infos[i];
-		if (*(info->cache))
-			kmem_cache_destroy(*(info->cache));
+		kmem_cache_destroy(*(info->cache));
 	}
 }
 
