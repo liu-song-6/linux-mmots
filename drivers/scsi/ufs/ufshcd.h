@@ -688,8 +688,6 @@ static inline int ufshcd_dme_peer_get(struct ufs_hba *hba,
 	return ufshcd_dme_get_attr(hba, attr_sel, mib_val, DME_PEER);
 }
 
-<<<<<<< HEAD
-=======
 int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size);
 
 static inline bool ufshcd_is_hs_mode(struct ufs_pa_layer_attr *pwr_info)
@@ -705,7 +703,6 @@ static inline bool ufshcd_is_hs_mode(struct ufs_pa_layer_attr *pwr_info)
 int ufshcd_read_string_desc(struct ufs_hba *hba, int desc_index, u8 *buf,
 				u32 size, bool ascii);
 
->>>>>>> linux-next/akpm-base
 /* Expose Query-Request API */
 int ufshcd_query_flag(struct ufs_hba *hba, enum query_opcode opcode,
 	enum flag_idn idn, bool *flag_res);

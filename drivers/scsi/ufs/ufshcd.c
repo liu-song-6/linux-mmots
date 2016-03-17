@@ -1709,29 +1709,6 @@ static inline void ufshcd_init_query(struct ufs_hba *hba,
 	(*request)->upiu_req.selector = selector;
 }
 
-static int ufshcd_query_flag_retry(struct ufs_hba *hba,
-	enum query_opcode opcode, enum flag_idn idn, bool *flag_res)
-{
-	int ret;
-	int retries;
-
-	for (retries = 0; retries < QUERY_REQ_RETRIES; retries++) {
-		ret = ufshcd_query_flag(hba, opcode, idn, flag_res);
-		if (ret)
-			dev_dbg(hba->dev,
-				"%s: failed with error %d, retries %d\n",
-				__func__, ret, retries);
-		else
-			break;
-	}
-
-	if (ret)
-		dev_err(hba->dev,
-			"%s: query attribute, opcode %d, idn %d, failed with error %d after %d retires\n",
-			__func__, opcode, idn, ret, retries);
-	return ret;
-}
-
 /**
  * ufshcd_query_flag() - API function for sending flag query requests
  * hba: per-adapter instance
@@ -1800,6 +1777,29 @@ out_unlock:
 	mutex_unlock(&hba->dev_cmd.lock);
 	ufshcd_release(hba);
 	return err;
+}
+
+static int ufshcd_query_flag_retry(struct ufs_hba *hba,
+	enum query_opcode opcode, enum flag_idn idn, bool *flag_res)
+{
+	int ret;
+	int retries;
+
+	for (retries = 0; retries < QUERY_REQ_RETRIES; retries++) {
+		ret = ufshcd_query_flag(hba, opcode, idn, flag_res);
+		if (ret)
+			dev_dbg(hba->dev,
+				"%s: failed with error %d, retries %d\n",
+				__func__, ret, retries);
+		else
+			break;
+	}
+
+	if (ret)
+		dev_err(hba->dev,
+			"%s: query attribute, opcode %d, idn %d, failed with error %d after %d retires\n",
+			__func__, opcode, idn, ret, retries);
+	return ret;
 }
 
 /**
@@ -1876,45 +1876,6 @@ out:
  * @selector: selector field
  * @attr_val: the attribute value after the query request
  * completes
-<<<<<<< HEAD
- *
- * Returns 0 for success, non-zero in case of failure
-*/
-static int ufshcd_query_attr_retry(struct ufs_hba *hba,
-	enum query_opcode opcode, enum attr_idn idn, u8 index, u8 selector,
-	u32 *attr_val)
-{
-	int ret = 0;
-	u32 retries;
-
-	 for (retries = QUERY_REQ_RETRIES; retries > 0; retries--) {
-		ret = ufshcd_query_attr(hba, opcode, idn, index,
-						selector, attr_val);
-		if (ret)
-			dev_dbg(hba->dev, "%s: failed with error %d, retries %d\n",
-				__func__, ret, retries);
-		else
-			break;
-	}
-
-	if (ret)
-		dev_err(hba->dev,
-			"%s: query attribute, idn %d, failed with error %d after %d retires\n",
-			__func__, idn, ret, QUERY_REQ_RETRIES);
-	return ret;
-}
-
-/**
- * ufshcd_query_descriptor - API function for sending descriptor requests
- * hba: per-adapter instance
- * opcode: attribute opcode
- * idn: attribute idn to access
- * index: index field
- * selector: selector field
- * desc_buf: the buffer that contains the descriptor
- * buf_len: length parameter passed to the device
-=======
->>>>>>> linux-next/akpm-base
  *
  * Returns 0 for success, non-zero in case of failure
 */
@@ -2653,7 +2614,6 @@ out:
 }
 
 static int ufshcd_link_recovery(struct ufs_hba *hba)
-<<<<<<< HEAD
 {
 	int ret;
 	unsigned long flags;
@@ -2681,35 +2641,6 @@ static int ufshcd_link_recovery(struct ufs_hba *hba)
 static int __ufshcd_uic_hibern8_enter(struct ufs_hba *hba)
 {
 	int ret;
-=======
-{
-	int ret;
-	unsigned long flags;
-
-	spin_lock_irqsave(hba->host->host_lock, flags);
-	hba->ufshcd_state = UFSHCD_STATE_RESET;
-	ufshcd_set_eh_in_progress(hba);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
-
-	ret = ufshcd_host_reset_and_restore(hba);
-
-	spin_lock_irqsave(hba->host->host_lock, flags);
-	if (ret)
-		hba->ufshcd_state = UFSHCD_STATE_ERROR;
-	ufshcd_clear_eh_in_progress(hba);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
-
-	if (ret)
-		dev_err(hba->dev, "%s: link recovery failed, err %d",
-			__func__, ret);
-
-	return ret;
-}
-
-static int __ufshcd_uic_hibern8_enter(struct ufs_hba *hba)
-{
-	int ret;
->>>>>>> linux-next/akpm-base
 	struct uic_command uic_cmd = {0};
 
 	uic_cmd.command = UIC_CMD_DME_HIBER_ENTER;
@@ -2726,7 +2657,6 @@ static int __ufshcd_uic_hibern8_enter(struct ufs_hba *hba)
 		if (ufshcd_link_recovery(hba))
 			ret = -ENOLINK;
 	}
-<<<<<<< HEAD
 
 	return ret;
 }
@@ -2735,16 +2665,6 @@ static int ufshcd_uic_hibern8_enter(struct ufs_hba *hba)
 {
 	int ret = 0, retries;
 
-=======
-
-	return ret;
-}
-
-static int ufshcd_uic_hibern8_enter(struct ufs_hba *hba)
-{
-	int ret = 0, retries;
-
->>>>>>> linux-next/akpm-base
 	for (retries = UIC_HIBERN8_ENTER_RETRIES; retries > 0; retries--) {
 		ret = __ufshcd_uic_hibern8_enter(hba);
 		if (!ret || ret == -ENOLINK)

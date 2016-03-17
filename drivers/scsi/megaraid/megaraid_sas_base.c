@@ -4088,9 +4088,6 @@ megasas_get_pd_list(struct megasas_instance *instance)
 
 	switch (ret) {
 	case DCMD_FAILED:
-<<<<<<< HEAD
-		megaraid_sas_kill_hba(instance);
-=======
 		dev_info(&instance->pdev->dev, "MR_DCMD_PD_LIST_QUERY "
 			"failed/not supported by firmware\n");
 
@@ -4098,7 +4095,6 @@ megasas_get_pd_list(struct megasas_instance *instance)
 			megaraid_sas_kill_hba(instance);
 		else
 			instance->pd_list_not_supported = 1;
->>>>>>> linux-next/akpm-base
 		break;
 	case DCMD_TIMEOUT:
 
@@ -4123,15 +4119,9 @@ megasas_get_pd_list(struct megasas_instance *instance)
 				__func__, __LINE__);
 			break;
 		}
-<<<<<<< HEAD
 
 		break;
 
-=======
-
-		break;
-
->>>>>>> linux-next/akpm-base
 	case DCMD_SUCCESS:
 		pd_addr = ci->addr;
 
