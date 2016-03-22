@@ -546,10 +546,6 @@ int amdgpu_ttm_tt_get_user_pages(struct ttm_tt *ttm, struct page **pages)
 		list_del(&guptask.list);
 		spin_unlock(&gtt->guptasklock);
 
-<<<<<<< HEAD
-		r = get_user_pages(userptr, num_pages, write, 0, pages, NULL);
-=======
->>>>>>> linux-next/akpm-base
 		if (r < 0)
 			goto release_pages;
 
