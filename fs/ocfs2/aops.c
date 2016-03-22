@@ -2420,6 +2420,8 @@ static int ocfs2_dio_end_io(struct kiocb *iocb,
 
 	level = ocfs2_iocb_rw_locked_level(iocb);
 	ocfs2_rw_unlock(inode, level);
+
+	return 0;
 }
 
 static ssize_t ocfs2_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
