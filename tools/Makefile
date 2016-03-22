@@ -55,7 +55,11 @@ acpi: FORCE
 cpupower: FORCE
 	$(call descend,power/$@)
 
+<<<<<<< HEAD
 cgroup firewire hv guest spi usb virtio vm net iio gpio objtool: FORCE
+=======
+cgroup firewire hv guest spi usb virtio vm net iio objtool gpio: FORCE
+>>>>>>> linux-next/akpm-base
 	$(call descend,$@)
 
 liblockdep: FORCE
@@ -121,7 +125,11 @@ acpi_clean:
 cpupower_clean:
 	$(call descend,power/cpupower,clean)
 
+<<<<<<< HEAD
 cgroup_clean hv_clean firewire_clean lguest_clean spi_clean usb_clean virtio_clean vm_clean net_clean iio_clean gpio_clean objtool_clean:
+=======
+cgroup_clean hv_clean firewire_clean lguest_clean spi_clean usb_clean virtio_clean vm_clean net_clean iio_clean objtool_clean gpio_clean:
+>>>>>>> linux-next/akpm-base
 	$(call descend,$(@:_clean=),clean)
 
 liblockdep_clean:
@@ -158,6 +166,10 @@ clean: acpi_clean cgroup_clean cpupower_clean hv_clean firewire_clean lguest_cle
 		perf_clean selftests_clean turbostat_clean spi_clean usb_clean virtio_clean \
 		vm_clean net_clean iio_clean x86_energy_perf_policy_clean tmon_clean \
 		freefall_clean build_clean libbpf_clean libsubcmd_clean liblockdep_clean \
+<<<<<<< HEAD
 		gpio_clean objtool_clean
+=======
+		objtool_clean gpio_clean
+>>>>>>> linux-next/akpm-base
 
 .PHONY: FORCE

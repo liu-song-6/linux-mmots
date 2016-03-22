@@ -2399,13 +2399,16 @@ out:
  * particularly interested in the aio/dio case.  We use the rw_lock DLM lock
  * to protect io on one node from truncation on another.
  */
-static void ocfs2_dio_end_io(struct kiocb *iocb,
+static int ocfs2_dio_end_io(struct kiocb *iocb,
 			     loff_t offset,
 			     ssize_t bytes,
 			     void *private)
 {
 	struct inode *inode = file_inode(iocb->ki_filp);
 	int level;
+
+	if (bytes <= 0)
+		return 0;
 
 	/* this io's submitter should not have unlocked this before we could */
 	BUG_ON(!ocfs2_iocb_is_rw_locked(iocb));
