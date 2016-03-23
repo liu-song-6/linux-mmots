@@ -670,12 +670,7 @@ static int btree_readpage_end_io_hook(struct btrfs_io_bio *io_bio,
 				       eb, found_level);
 
 	ret = csum_tree_block(fs_info, eb, 1);
-<<<<<<< HEAD
-	if (ret) {
-		ret = -EIO;
-=======
 	if (ret)
->>>>>>> linux-next/akpm-base
 		goto err;
 
 	/*

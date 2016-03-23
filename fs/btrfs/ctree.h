@@ -2200,21 +2200,12 @@ struct btrfs_ioctl_defrag_range_args {
  *
  * - balance status item
  *   (BTRFS_BALANCE_OBJECTID, BTRFS_TEMPORARY_ITEM_KEY, 0)
-<<<<<<< HEAD
  */
 #define BTRFS_TEMPORARY_ITEM_KEY	248
 
 /*
  * Obsolete name, see BTRFS_PERSISTENT_ITEM_KEY
  */
-=======
- */
-#define BTRFS_TEMPORARY_ITEM_KEY	248
-
-/*
- * Obsolete name, see BTRFS_PERSISTENT_ITEM_KEY
- */
->>>>>>> linux-next/akpm-base
 #define BTRFS_DEV_STATS_KEY		249
 
 /*
