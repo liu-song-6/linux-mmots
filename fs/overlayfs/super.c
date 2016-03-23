@@ -336,14 +336,30 @@ static int ovl_dentry_weak_revalidate(struct dentry *dentry, unsigned int flags)
 	return ret;
 }
 
+static struct dentry *ovl_d_native_dentry(struct dentry *dentry,
+					 struct inode *inode)
+{
+	struct ovl_entry *oe = dentry->d_fsdata;
+	struct dentry *realentry = ovl_upperdentry_dereference(oe);
+
+	if (realentry && inode == d_inode(realentry))
+		return realentry;
+	realentry = __ovl_dentry_lower(oe);
+	if (realentry && inode == d_inode(realentry))
+		return realentry;
+	BUG();
+}
+
 static const struct dentry_operations ovl_dentry_operations = {
 	.d_release = ovl_dentry_release,
 	.d_select_inode = ovl_d_select_inode,
+	.d_native_dentry = ovl_d_native_dentry,
 };
 
 static const struct dentry_operations ovl_reval_dentry_operations = {
 	.d_release = ovl_dentry_release,
 	.d_select_inode = ovl_d_select_inode,
+	.d_native_dentry = ovl_d_native_dentry,
 	.d_revalidate = ovl_dentry_revalidate,
 	.d_weak_revalidate = ovl_dentry_weak_revalidate,
 };
@@ -379,7 +395,7 @@ static inline struct dentry *ovl_lookup_real(struct dentry *dir,
 	struct dentry *dentry;
 
 	inode_lock(dir->d_inode);
-	dentry = lookup_one_len(name->name, dir, name->len);
+	dentry = lookup_hash(name, dir, 0);
 	inode_unlock(dir->d_inode);
 
 	if (IS_ERR(dentry)) {
@@ -936,7 +952,8 @@ static int ovl_fill_super(struct super_block *sb, void *data, int silent)
 
 	err = -EINVAL;
 	if (!ufs->config.lowerdir) {
-		pr_err("overlayfs: missing 'lowerdir'\n");
+		if (!silent)
+			pr_err("overlayfs: missing 'lowerdir'\n");
 		goto out_free_config;
 	}
 
@@ -1027,6 +1044,21 @@ static int ovl_fill_super(struct super_block *sb, void *data, int silent)
 				ufs->config.workdir, OVL_WORKDIR_NAME, -err);
 			sb->s_flags |= MS_RDONLY;
 			ufs->workdir = NULL;
+		}
+
+		/*
+		 * Upper should support d_type, else whiteouts are visible.
+		 * Given workdir and upper are on same fs, we can do
+		 * iterate_dir() on workdir.
+		 */
+		err = ovl_check_d_type_supported(&workpath);
+		if (err < 0)
+			goto out_put_workdir;
+
+		if (!err) {
+			pr_err("overlayfs: upper fs needs to support d_type.\n");
+			err = -EINVAL;
+			goto out_put_workdir;
 		}
 	}
 
