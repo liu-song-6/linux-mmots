@@ -311,7 +311,6 @@ EXPORT_SYMBOL(tcp_sockets_allocated);
 struct tcp_splice_state {
 	struct pipe_inode_info *pipe;
 	size_t len;
-	unsigned int flags;
 };
 
 /*
@@ -687,7 +686,7 @@ static int tcp_splice_data_recv(read_descriptor_t *rd_desc, struct sk_buff *skb,
 	int ret;
 
 	ret = skb_splice_bits(skb, skb->sk, offset, tss->pipe,
-			      min(rd_desc->count, len), tss->flags);
+			      min(rd_desc->count, len));
 	if (ret > 0)
 		rd_desc->count -= ret;
 	return ret;
@@ -716,15 +715,15 @@ static int __tcp_splice_read(struct sock *sk, struct tcp_splice_state *tss)
  *    Will read pages from given socket and fill them into a pipe.
  *
  **/
-ssize_t tcp_splice_read(struct socket *sock, loff_t *ppos,
+ssize_t tcp_splice_read(struct file *file, loff_t *ppos,
 			struct pipe_inode_info *pipe, size_t len,
 			unsigned int flags)
 {
+	struct socket *sock = file->private_data;
 	struct sock *sk = sock->sk;
 	struct tcp_splice_state tss = {
 		.pipe = pipe,
 		.len = len,
-		.flags = flags,
 	};
 	long timeo;
 	ssize_t spliced;
@@ -3334,6 +3333,7 @@ void __init tcp_init(void)
 
 	percpu_counter_init(&tcp_sockets_allocated, 0, GFP_KERNEL);
 	percpu_counter_init(&tcp_orphan_count, 0, GFP_KERNEL);
+	inet_hashinfo_init(&tcp_hashinfo);
 	tcp_hashinfo.bind_bucket_cachep =
 		kmem_cache_create("tcp_bind_bucket",
 				  sizeof(struct inet_bind_bucket), 0,
@@ -3377,10 +3377,7 @@ void __init tcp_init(void)
 
 
 	cnt = tcp_hashinfo.ehash_mask + 1;
-
-	tcp_death_row.sysctl_max_tw_buckets = cnt / 2;
 	sysctl_tcp_max_orphans = cnt / 2;
-	sysctl_max_syn_backlog = max(128, cnt / 256);
 
 	tcp_init_mem();
 	/* Set per-socket limits to no more than 1/128 the pressure threshold */
@@ -3399,6 +3396,7 @@ void __init tcp_init(void)
 	pr_info("Hash tables configured (established %u bind %u)\n",
 		tcp_hashinfo.ehash_mask + 1, tcp_hashinfo.bhash_size);
 
+	tcp_v4_init();
 	tcp_metrics_init();
 	BUG_ON(tcp_register_congestion_control(&tcp_reno) != 0);
 	tcp_tasklet_init();
