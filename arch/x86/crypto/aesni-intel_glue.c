@@ -740,9 +740,11 @@ static int helper_rfc4106_encrypt(struct aead_request *req)
 	*((__be32 *)(iv+12)) = counter;
 
 	if (sg_is_last(req->src) &&
-	    req->src->offset + req->src->length <= PAGE_SIZE &&
+	    (!PageHighMem(sg_page(req->src)) ||
+	    req->src->offset + req->src->length <= PAGE_SIZE) &&
 	    sg_is_last(req->dst) &&
-	    req->dst->offset + req->dst->length <= PAGE_SIZE) {
+	    (!PageHighMem(sg_page(req->dst)) ||
+	    req->dst->offset + req->dst->length <= PAGE_SIZE)) {
 		one_entry_in_sg = 1;
 		scatterwalk_start(&src_sg_walk, req->src);
 		assoc = scatterwalk_map(&src_sg_walk);
@@ -822,9 +824,11 @@ static int helper_rfc4106_decrypt(struct aead_request *req)
 	*((__be32 *)(iv+12)) = counter;
 
 	if (sg_is_last(req->src) &&
-	    req->src->offset + req->src->length <= PAGE_SIZE &&
+	    (!PageHighMem(sg_page(req->src)) ||
+	    req->src->offset + req->src->length <= PAGE_SIZE) &&
 	    sg_is_last(req->dst) &&
-	    req->dst->offset + req->dst->length <= PAGE_SIZE) {
+	    (!PageHighMem(sg_page(req->dst)) ||
+	    req->dst->offset + req->dst->length <= PAGE_SIZE)) {
 		one_entry_in_sg = 1;
 		scatterwalk_start(&src_sg_walk, req->src);
 		assoc = scatterwalk_map(&src_sg_walk);
@@ -1020,7 +1024,8 @@ struct {
 	const char *basename;
 	struct simd_skcipher_alg *simd;
 } aesni_simd_skciphers2[] = {
-#if IS_ENABLED(CONFIG_CRYPTO_PCBC)
+#if (defined(MODULE) && IS_ENABLED(CONFIG_CRYPTO_PCBC)) || \
+    IS_BUILTIN(CONFIG_CRYPTO_PCBC)
 	{
 		.algname	= "pcbc(aes)",
 		.drvname	= "pcbc-aes-aesni",

@@ -238,7 +238,6 @@ enum {
 #define AXP288_PMIC_ADC_H               0x56
 #define AXP288_PMIC_ADC_L               0x57
 #define AXP288_ADC_TS_PIN_CTRL          0x84
-#define AXP288_PMIC_ADC_EN              0x84
 
 /* Fuel Gauge */
 #define AXP288_FG_RDC1_REG          0xba
@@ -523,6 +522,7 @@ enum axp809_irqs {
 struct axp20x_dev {
 	struct device			*dev;
 	int				irq;
+	unsigned long			irq_flags;
 	struct regmap			*regmap;
 	struct regmap_irq_chip_data	*regmap_irqc;
 	long				variant;
@@ -530,35 +530,6 @@ struct axp20x_dev {
 	struct mfd_cell                 *cells;
 	const struct regmap_config	*regmap_cfg;
 	const struct regmap_irq_chip	*regmap_irq_chip;
-};
-
-#define BATTID_LEN				64
-#define OCV_CURVE_SIZE			32
-#define MAX_THERM_CURVE_SIZE	25
-#define PD_DEF_MIN_TEMP			0
-#define PD_DEF_MAX_TEMP			55
-
-struct axp20x_fg_pdata {
-	char battid[BATTID_LEN + 1];
-	int design_cap;
-	int min_volt;
-	int max_volt;
-	int max_temp;
-	int min_temp;
-	int cap1;
-	int cap0;
-	int rdc1;
-	int rdc0;
-	int ocv_curve[OCV_CURVE_SIZE];
-	int tcsz;
-	int thermistor_curve[MAX_THERM_CURVE_SIZE][2];
-};
-
-struct axp20x_chrg_pdata {
-	int max_cc;
-	int max_cv;
-	int def_cc;
-	int def_cv;
 };
 
 struct axp288_extcon_pdata {
@@ -611,7 +582,7 @@ int axp20x_match_device(struct axp20x_dev *axp20x);
 int axp20x_device_probe(struct axp20x_dev *axp20x);
 
 /**
- * axp20x_device_probe(): Remove a axp20x device
+ * axp20x_device_remove(): Remove a axp20x device
  *
  * @axp20x: axp20x device to remove
  *
