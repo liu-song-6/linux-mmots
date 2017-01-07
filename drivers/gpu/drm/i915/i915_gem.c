@@ -2776,11 +2776,7 @@ static void i915_gem_reset_engine(struct intel_engine_cs *engine)
 	if (i915_gem_context_is_default(hung_ctx))
 		return;
 
-<<<<<<< HEAD
-	timeline = i915_gem_context_lookup_timeline(incomplete_ctx, engine);
-=======
 	timeline = i915_gem_context_lookup_timeline(hung_ctx, engine);
->>>>>>> linux-next/akpm-base
 
 	spin_lock_irqsave(&engine->timeline->lock, flags);
 	spin_lock(&timeline->lock);
