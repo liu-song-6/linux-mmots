@@ -349,6 +349,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-gw553x.dtb \
 	imx6dl-hummingboard.dtb \
 	imx6dl-icore.dtb \
+	imx6dl-icore-rqs.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
@@ -434,6 +435,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb \
 	imx6ul-geam-kit.dtb \
+	imx6ul-isiot.dtb \
 	imx6ul-liteboard.dtb \
 	imx6ul-pico-hobbit.dtb \
 	imx6ul-tx6ul-0010.dtb \
@@ -564,7 +566,9 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-base0033.dtb \
 	am335x-bone.dtb \
 	am335x-boneblack.dtb \
+	am335x-boneblack-wireless.dtb \
 	am335x-bonegreen.dtb \
+	am335x-bonegreen-wireless.dtb \
 	am335x-chiliboard.dtb \
 	am335x-cm-t335.dtb \
 	am335x-evm.dtb \
@@ -782,6 +786,7 @@ dtb-$(CONFIG_MACH_SUN5I) += \
 	sun5i-a13-empire-electronix-m712.dtb \
 	sun5i-a13-hsg-h702.dtb \
 	sun5i-a13-inet-98v-rev2.dtb \
+	sun5i-a13-licheepi-one.dtb \
 	sun5i-a13-olinuxino.dtb \
 	sun5i-a13-olinuxino-micro.dtb \
 	sun5i-a13-q8-tablet.dtb \
@@ -845,7 +850,9 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-a33-sinlinx-sina33.dtb \
 	sun8i-a83t-allwinner-h8homlet-v2.dtb \
 	sun8i-a83t-cubietruck-plus.dtb \
+	sun8i-h2-plus-orangepi-zero.dtb \
 	sun8i-h3-bananapi-m2-plus.dtb \
+	sun8i-h3-nanopi-m1.dtb	\
 	sun8i-h3-nanopi-neo.dtb \
 	sun8i-h3-orangepi-2.dtb \
 	sun8i-h3-orangepi-lite.dtb \
@@ -950,6 +957,8 @@ dtb-$(CONFIG_MACH_ARMADA_38X) += \
 	armada-385-linksys-cobra.dtb \
 	armada-385-turris-omnia.dtb \
 	armada-388-clearfog.dtb \
+	armada-388-clearfog-base.dtb \
+	armada-388-clearfog-pro.dtb \
 	armada-388-db.dtb \
 	armada-388-gp.dtb \
 	armada-388-rd.dtb

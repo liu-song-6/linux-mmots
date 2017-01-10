@@ -34,7 +34,7 @@ int mgag200_framebuffer_init(struct drm_device *dev,
 {
 	int ret;
 	
-	drm_helper_mode_fill_fb_struct(&gfb->base, mode_cmd);
+	drm_helper_mode_fill_fb_struct(dev, &gfb->base, mode_cmd);
 	gfb->obj = obj;
 	ret = drm_framebuffer_init(dev, &gfb->base, &mga_fb_funcs);
 	if (ret) {
@@ -145,6 +145,8 @@ static int mga_vram_init(struct mga_device *mdev)
 	}
 
 	mem = pci_iomap(mdev->dev->pdev, 0, 0);
+	if (!mem)
+		return -ENOMEM;
 
 	mdev->mc.vram_size = mga_probe_vram(mdev, mem);
 
