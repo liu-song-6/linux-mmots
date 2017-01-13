@@ -605,7 +605,7 @@ static int radix_tree_extend(struct radix_tree_root *root, gfp_t gfp,
 		maxshift += RADIX_TREE_MAP_SHIFT;
 
 	slot = root->rnode;
-	if (!slot)
+	if (!slot && (!is_idr(root) || root_tag_get(root, IDR_FREE)))
 		goto out;
 
 	do {
@@ -616,9 +616,10 @@ static int radix_tree_extend(struct radix_tree_root *root, gfp_t gfp,
 
 		if (is_idr(root)) {
 			all_tag_set(node, IDR_FREE);
-			if (!root_tag_get(root, IDR_FREE))
+			if (!root_tag_get(root, IDR_FREE)) {
 				tag_clear(node, IDR_FREE, 0);
-			root_tag_set(root, IDR_FREE);
+				root_tag_set(root, IDR_FREE);
+			}
 		} else {
 			/* Propagate the aggregated tag info to the new child */
 			for (tag = 0; tag < RADIX_TREE_MAX_TAGS; tag++) {
@@ -1082,7 +1083,11 @@ static void replace_slot(struct radix_tree_root *root,
 
 	WARN_ON_ONCE(radix_tree_is_internal_node(item));
 
-	count = !!item - !!old;
+	/* NULL is a valid entry in an IDR; do not adjust count */
+	if (is_idr(root))
+		count = 0;
+	else
+		count = !!item - !!old;
 	exceptional = !!radix_tree_exceptional_entry(item) -
 		      !!radix_tree_exceptional_entry(old);
 
@@ -1190,6 +1195,8 @@ EXPORT_SYMBOL(radix_tree_replace_slot);
 void radix_tree_iter_replace(struct radix_tree_root *root,
 		const struct radix_tree_iter *iter, void **slot, void *item)
 {
+	if (is_idr(root) && iter->node)
+		iter->node->count++;
 	__radix_tree_replace(root, iter->node, slot, item, NULL, NULL);
 }
 
@@ -1513,8 +1520,6 @@ int radix_tree_tag_get(struct radix_tree_root *root,
 		parent = entry_to_node(node);
 		offset = radix_tree_descend(parent, &node, index);
 
-		if (!node)
-			return 0;
 		if (!tag_get(parent, tag, offset))
 			return 0;
 		if (node == RADIX_TREE_RETRY)
@@ -1970,7 +1975,7 @@ void *radix_tree_delete_item(struct radix_tree_root *root,
 	int tag;
 
 	entry = __radix_tree_lookup(root, index, &node, &slot);
-	if (!entry)
+	if (!entry && !is_idr(root))
 		return NULL;
 
 	if (item && entry != item)
@@ -1987,9 +1992,12 @@ void *radix_tree_delete_item(struct radix_tree_root *root,
 
 	offset = get_slot_offset(node, slot);
 
-	if (is_idr(root))
+	if (is_idr(root)) {
+		if (tag_get(node, IDR_FREE, offset))
+			return entry;
 		node_tag_set(root, node, IDR_FREE, offset);
-	else
+		node->count--;
+	} else
 		for (tag = 0; tag < RADIX_TREE_MAX_TAGS; tag++)
 			node_tag_clear(root, node, tag, offset);
 
