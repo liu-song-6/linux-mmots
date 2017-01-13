@@ -710,9 +710,6 @@ static inline void mddev_clear_unsupported_flags(struct mddev *mddev,
 {
 	mddev->flags &= ~unsupported_flags;
 }
-<<<<<<< HEAD
-=======
 
 extern void md_writesame_setup(struct mddev *mddev, struct bio *bio);
->>>>>>> linux-next/akpm-base
 #endif /* _MD_MD_H */

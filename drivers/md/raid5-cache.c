@@ -2499,11 +2499,7 @@ void r5c_finish_stripe_write_out(struct r5conf *conf,
 	if (do_wakeup)
 		wake_up(&conf->wait_for_overlap);
 
-<<<<<<< HEAD
-	spin_lock_irq(&conf->log->stripe_in_journal_lock);
-=======
 	spin_lock_irq(&log->stripe_in_journal_lock);
->>>>>>> linux-next/akpm-base
 	list_del_init(&sh->r5c);
 	spin_unlock_irq(&log->stripe_in_journal_lock);
 	sh->log_start = MaxSector;
