@@ -352,8 +352,7 @@
  *	Return 0 if permission is granted.
  * @inode_getattr:
  *	Check permission before obtaining file attributes.
- *	@mnt is the vfsmount where the dentry was looked up
- *	@dentry contains the dentry structure for the file.
+ *	@path contains the path structure for the file.
  *	Return 0 if permission is granted.
  * @inode_setxattr:
  *	Check permission before setting the extended attributes
@@ -1547,8 +1546,7 @@ union security_list_options {
 	void (*d_instantiate)(struct dentry *dentry, struct inode *inode);
 
 	int (*getprocattr)(struct task_struct *p, char *name, char **value);
-	int (*setprocattr)(struct task_struct *p, char *name, void *value,
-				size_t size);
+	int (*setprocattr)(const char *name, void *value, size_t size);
 	int (*ismaclabel)(const char *name);
 	int (*secid_to_secctx)(u32 secid, char **secdata, u32 *seclen);
 	int (*secctx_to_secid)(const char *secdata, u32 seclen, u32 *secid);

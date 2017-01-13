@@ -659,6 +659,7 @@ int netvsc_recv_callback(struct hv_device *device_obj,
 	 * policy filters on the host). Deliver these via the VF
 	 * interface in the guest.
 	 */
+	rcu_read_lock();
 	vf_netdev = rcu_dereference(net_device_ctx->vf_netdev);
 	if (vf_netdev && (vf_netdev->flags & IFF_UP))
 		net = vf_netdev;
@@ -667,6 +668,7 @@ int netvsc_recv_callback(struct hv_device *device_obj,
 	skb = netvsc_alloc_recv_skb(net, packet, csum_info, *data, vlan_tci);
 	if (unlikely(!skb)) {
 		++net->stats.rx_dropped;
+		rcu_read_unlock();
 		return NVSP_STAT_FAIL;
 	}
 
@@ -696,6 +698,7 @@ int netvsc_recv_callback(struct hv_device *device_obj,
 	 * TODO - use NAPI?
 	 */
 	netif_rx(skb);
+	rcu_read_unlock();
 
 	return 0;
 }
@@ -908,8 +911,8 @@ out:
 	return ret;
 }
 
-static struct rtnl_link_stats64 *netvsc_get_stats64(struct net_device *net,
-						    struct rtnl_link_stats64 *t)
+static void netvsc_get_stats64(struct net_device *net,
+			       struct rtnl_link_stats64 *t)
 {
 	struct net_device_context *ndev_ctx = netdev_priv(net);
 	int cpu;
@@ -947,8 +950,6 @@ static struct rtnl_link_stats64 *netvsc_get_stats64(struct net_device *net,
 
 	t->rx_dropped	= net->stats.rx_dropped;
 	t->rx_errors	= net->stats.rx_errors;
-
-	return t;
 }
 
 static int netvsc_set_mac_addr(struct net_device *ndev, void *p)

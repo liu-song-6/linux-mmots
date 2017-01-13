@@ -231,7 +231,6 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
  */
 #define	TFO_SERVER_WO_SOCKOPT1	0x400
 
-extern struct inet_timewait_death_row tcp_death_row;
 
 /* sysctl variables for tcp */
 extern int sysctl_tcp_timestamps;
@@ -358,7 +357,7 @@ void tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
 void tcp_rcv_space_adjust(struct sock *sk);
 int tcp_twsk_unique(struct sock *sk, struct sock *sktw, void *twp);
 void tcp_twsk_destructor(struct sock *sk);
-ssize_t tcp_splice_read(struct socket *sk, loff_t *ppos,
+ssize_t tcp_splice_read(struct file *file, loff_t *ppos,
 			struct pipe_inode_info *pipe, size_t len,
 			unsigned int flags);
 
