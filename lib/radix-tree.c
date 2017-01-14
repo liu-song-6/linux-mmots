@@ -365,6 +365,7 @@ static void radix_tree_node_rcu_free(struct rcu_head *head)
 static inline void
 radix_tree_node_free(struct radix_tree_node *node)
 {
+	WARN_ON_ONCE(!list_empty(&node->private_list));
 	call_rcu(&node->rcu_head, radix_tree_node_rcu_free);
 }
 
@@ -640,7 +641,6 @@ static inline void radix_tree_shrink(struct radix_tree_root *root,
 				update_node(node, private);
 		}
 
-		WARN_ON_ONCE(!list_empty(&node->private_list));
 		radix_tree_node_free(node);
 	}
 }
@@ -667,7 +667,6 @@ static void delete_node(struct radix_tree_root *root,
 			root->rnode = NULL;
 		}
 
-		WARN_ON_ONCE(!list_empty(&node->private_list));
 		radix_tree_node_free(node);
 
 		node = parent;
@@ -769,7 +768,6 @@ static void radix_tree_free_nodes(struct radix_tree_node *node)
 			struct radix_tree_node *old = child;
 			offset = child->offset + 1;
 			child = child->parent;
-			WARN_ON_ONCE(!list_empty(&node->private_list));
 			radix_tree_node_free(old);
 			if (old == entry_to_node(node))
 				return;
