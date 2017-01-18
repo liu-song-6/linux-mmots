@@ -2648,7 +2648,7 @@ static struct page *rmqueue_pcplist(struct zone *preferred_zone,
 	page = __rmqueue_pcplist(zone,  migratetype, cold, pcp, list);
 	if (page) {
 		__count_zid_vm_events(PGALLOC, page_zonenum(page), 1 << order);
-		zone_statistics(preferred_zone, zone, gfp_flags);
+		zone_statistics(preferred_zone, zone);
 	}
 	local_irq_restore(flags);
 	return page;
