@@ -48,11 +48,13 @@ dtb-$(CONFIG_SOC_SAM_V7) += \
 	at91-kizbox2.dtb \
 	at91-sama5d2_xplained.dtb \
 	at91-sama5d3_xplained.dtb \
+	at91-tse850-3.dtb \
 	sama5d31ek.dtb \
 	sama5d33ek.dtb \
 	sama5d34ek.dtb \
 	sama5d35ek.dtb \
 	sama5d36ek.dtb \
+	sama5d36ek_cmp.dtb \
 	at91-sama5d4_ma5d4evk.dtb \
 	at91-sama5d4_xplained.dtb \
 	at91-sama5d4ek.dtb \
@@ -349,6 +351,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-gw553x.dtb \
 	imx6dl-hummingboard.dtb \
 	imx6dl-icore.dtb \
+	imx6dl-icore-rqs.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
@@ -357,6 +360,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-sabreauto.dtb \
 	imx6dl-sabrelite.dtb \
 	imx6dl-sabresd.dtb \
+	imx6dl-savageboard.dtb \
 	imx6dl-ts4900.dtb \
 	imx6dl-tx6dl-comtft.dtb \
 	imx6dl-tx6s-8034.dtb \
@@ -393,6 +397,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-icore.dtb \
 	imx6q-icore-rqs.dtb \
 	imx6q-marsboard.dtb \
+	imx6q-mccmon6.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_som2.dtb \
@@ -402,6 +407,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-sabreauto.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \
+	imx6q-savageboard.dtb \
 	imx6q-sbc6x.dtb \
 	imx6q-tbs2910.dtb \
 	imx6q-ts4900.dtb \
@@ -434,6 +440,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb \
 	imx6ul-geam-kit.dtb \
+	imx6ul-isiot.dtb \
 	imx6ul-liteboard.dtb \
 	imx6ul-pico-hobbit.dtb \
 	imx6ul-tx6ul-0010.dtb \
@@ -564,7 +571,9 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-base0033.dtb \
 	am335x-bone.dtb \
 	am335x-boneblack.dtb \
+	am335x-boneblack-wireless.dtb \
 	am335x-bonegreen.dtb \
+	am335x-bonegreen-wireless.dtb \
 	am335x-chiliboard.dtb \
 	am335x-cm-t335.dtb \
 	am335x-evm.dtb \
@@ -782,6 +791,7 @@ dtb-$(CONFIG_MACH_SUN5I) += \
 	sun5i-a13-empire-electronix-m712.dtb \
 	sun5i-a13-hsg-h702.dtb \
 	sun5i-a13-inet-98v-rev2.dtb \
+	sun5i-a13-licheepi-one.dtb \
 	sun5i-a13-olinuxino.dtb \
 	sun5i-a13-olinuxino-micro.dtb \
 	sun5i-a13-q8-tablet.dtb \
@@ -845,7 +855,9 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-a33-sinlinx-sina33.dtb \
 	sun8i-a83t-allwinner-h8homlet-v2.dtb \
 	sun8i-a83t-cubietruck-plus.dtb \
+	sun8i-h2-plus-orangepi-zero.dtb \
 	sun8i-h3-bananapi-m2-plus.dtb \
+	sun8i-h3-nanopi-m1.dtb	\
 	sun8i-h3-nanopi-neo.dtb \
 	sun8i-h3-orangepi-2.dtb \
 	sun8i-h3-orangepi-lite.dtb \
@@ -950,6 +962,8 @@ dtb-$(CONFIG_MACH_ARMADA_38X) += \
 	armada-385-linksys-cobra.dtb \
 	armada-385-turris-omnia.dtb \
 	armada-388-clearfog.dtb \
+	armada-388-clearfog-base.dtb \
+	armada-388-clearfog-pro.dtb \
 	armada-388-db.dtb \
 	armada-388-gp.dtb \
 	armada-388-rd.dtb
@@ -982,6 +996,7 @@ dtb-$(CONFIG_ARCH_MEDIATEK) += \
 	mt8135-evbp1.dtb
 dtb-$(CONFIG_ARCH_ZX) += zx296702-ad1.dtb
 dtb-$(CONFIG_ARCH_ASPEED) += aspeed-bmc-opp-palmetto.dtb \
+	aspeed-bmc-opp-romulus.dtb \
 	aspeed-ast2500-evb.dtb
 endif
 

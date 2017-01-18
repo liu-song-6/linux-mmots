@@ -1582,48 +1582,31 @@ out:
 	return ERR_PTR(error);
 }
 
-static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
+static const char *proc_pid_readlink(struct dentry *dentry, struct inode *inode,
+				     struct delayed_call *done)
 {
-	char *tmp = (char*)__get_free_page(GFP_TEMPORARY);
-	char *pathname;
-	int len;
-
-	if (!tmp)
-		return -ENOMEM;
-
-	pathname = d_path(path, tmp, PAGE_SIZE);
-	len = PTR_ERR(pathname);
-	if (IS_ERR(pathname))
-		goto out;
-	len = tmp + PAGE_SIZE - 1 - pathname;
-
-	if (len > buflen)
-		len = buflen;
-	if (copy_to_user(buffer, pathname, len))
-		len = -EFAULT;
- out:
-	free_page((unsigned long)tmp);
-	return len;
-}
-
-static int proc_pid_readlink(struct dentry * dentry, char __user * buffer, int buflen)
-{
-	int error = -EACCES;
-	struct inode *inode = d_inode(dentry);
+	const char *res;
 	struct path path;
 
 	/* Are we allowed to snoop on the tasks file descriptors? */
 	if (!proc_fd_access_allowed(inode))
-		goto out;
+		return ERR_PTR(-EACCES);
 
-	error = PROC_I(inode)->op.proc_get_link(dentry, &path);
-	if (error)
-		goto out;
+	res = ERR_PTR(PROC_I(inode)->op.proc_get_link(dentry, &path));
+	if (!res) {
+		char *buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 
-	error = do_proc_readlink(&path, buffer, buflen);
-	path_put(&path);
-out:
-	return error;
+		res = ERR_PTR(-ENOMEM);
+		if (buf) {
+			res = d_path(&path, buf, PAGE_SIZE);
+			if (IS_ERR(res))
+				kfree(buf);
+			else
+				set_delayed_call(done, kfree_link, buf);
+		}
+		path_put(&path);
+	}
+	return res;
 }
 
 const struct inode_operations proc_pid_link_inode_operations = {
@@ -2456,6 +2439,12 @@ static ssize_t proc_pid_attr_write(struct file * file, const char __user * buf,
 	length = -ESRCH;
 	if (!task)
 		goto out_no_task;
+
+	/* A task may only write its own attributes. */
+	length = -EACCES;
+	if (current != task)
+		goto out;
+
 	if (count > PAGE_SIZE)
 		count = PAGE_SIZE;
 
@@ -2471,14 +2460,13 @@ static ssize_t proc_pid_attr_write(struct file * file, const char __user * buf,
 	}
 
 	/* Guard against adverse ptrace interaction */
-	length = mutex_lock_interruptible(&task->signal->cred_guard_mutex);
+	length = mutex_lock_interruptible(&current->signal->cred_guard_mutex);
 	if (length < 0)
 		goto out_free;
 
-	length = security_setprocattr(task,
-				      (char*)file->f_path.dentry->d_name.name,
+	length = security_setprocattr(file->f_path.dentry->d_name.name,
 				      page, count);
-	mutex_unlock(&task->signal->cred_guard_mutex);
+	mutex_unlock(&current->signal->cred_guard_mutex);
 out_free:
 	kfree(page);
 out:

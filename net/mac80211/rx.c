@@ -1908,7 +1908,6 @@ ieee80211_rx_h_defragment(struct ieee80211_rx_data *rx)
 	unsigned int frag, seq;
 	struct ieee80211_fragment_entry *entry;
 	struct sk_buff *skb;
-	struct ieee80211_rx_status *status;
 
 	hdr = (struct ieee80211_hdr *)rx->skb->data;
 	fc = hdr->frame_control;
@@ -2033,9 +2032,6 @@ ieee80211_rx_h_defragment(struct ieee80211_rx_data *rx)
 		memcpy(skb_put(rx->skb, skb->len), skb->data, skb->len);
 		dev_kfree_skb(skb);
 	}
-
-	/* Complete frame has been reassembled - process it now */
-	status = IEEE80211_SKB_RXCB(rx->skb);
 
  out:
 	ieee80211_led_rx(rx->local);
@@ -3938,6 +3934,7 @@ static bool ieee80211_invoke_fast_rx(struct ieee80211_rx_data *rx,
 	if (fast_rx->internal_forward) {
 		struct sk_buff *xmit_skb = NULL;
 		bool multicast = is_multicast_ether_addr(skb->data);
+<<<<<<< HEAD
 
 		if (multicast) {
 			xmit_skb = skb_copy(skb, GFP_ATOMIC);
@@ -3946,6 +3943,16 @@ static bool ieee80211_invoke_fast_rx(struct ieee80211_rx_data *rx,
 			skb = NULL;
 		}
 
+=======
+
+		if (multicast) {
+			xmit_skb = skb_copy(skb, GFP_ATOMIC);
+		} else if (sta_info_get(rx->sdata, skb->data)) {
+			xmit_skb = skb;
+			skb = NULL;
+		}
+
+>>>>>>> linux-next/akpm-base
 		if (xmit_skb) {
 			/*
 			 * Send to wireless media and increase priority by 256
