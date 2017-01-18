@@ -3934,7 +3934,6 @@ static bool ieee80211_invoke_fast_rx(struct ieee80211_rx_data *rx,
 	if (fast_rx->internal_forward) {
 		struct sk_buff *xmit_skb = NULL;
 		bool multicast = is_multicast_ether_addr(skb->data);
-<<<<<<< HEAD
 
 		if (multicast) {
 			xmit_skb = skb_copy(skb, GFP_ATOMIC);
@@ -3943,16 +3942,6 @@ static bool ieee80211_invoke_fast_rx(struct ieee80211_rx_data *rx,
 			skb = NULL;
 		}
 
-=======
-
-		if (multicast) {
-			xmit_skb = skb_copy(skb, GFP_ATOMIC);
-		} else if (sta_info_get(rx->sdata, skb->data)) {
-			xmit_skb = skb;
-			skb = NULL;
-		}
-
->>>>>>> linux-next/akpm-base
 		if (xmit_skb) {
 			/*
 			 * Send to wireless media and increase priority by 256
