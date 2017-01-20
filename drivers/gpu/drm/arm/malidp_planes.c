@@ -67,13 +67,14 @@ drm_plane_state *malidp_duplicate_plane_state(struct drm_plane *plane)
 		return NULL;
 
 	state = kmalloc(sizeof(*state), GFP_KERNEL);
-	if (state) {
-		m_state = to_malidp_plane_state(plane->state);
-		__drm_atomic_helper_plane_duplicate_state(plane, &state->base);
-		state->rotmem_size = m_state->rotmem_size;
-		state->format = m_state->format;
-		state->n_planes = m_state->n_planes;
-	}
+	if (!state)
+		return NULL;
+
+	m_state = to_malidp_plane_state(plane->state);
+	__drm_atomic_helper_plane_duplicate_state(plane, &state->base);
+	state->rotmem_size = m_state->rotmem_size;
+	state->format = m_state->format;
+	state->n_planes = m_state->n_planes;
 
 	return &state->base;
 }
@@ -112,11 +113,11 @@ static int malidp_de_plane_check(struct drm_plane *plane,
 	fb = state->fb;
 
 	ms->format = malidp_hw_get_format_id(&mp->hwdev->map, mp->layer->id,
-					    fb->pixel_format);
+					    fb->format->format);
 	if (ms->format == MALIDP_INVALID_FORMAT_ID)
 		return -EINVAL;
 
-	ms->n_planes = drm_format_num_planes(fb->pixel_format);
+	ms->n_planes = fb->format->num_planes;
 	for (i = 0; i < ms->n_planes; i++) {
 		if (!malidp_hw_pitch_valid(mp->hwdev, fb->pitches[i])) {
 			DRM_DEBUG_KMS("Invalid pitch %u for plane %d\n",
@@ -137,8 +138,8 @@ static int malidp_de_plane_check(struct drm_plane *plane,
 
 	/* packed RGB888 / BGR888 can't be rotated or flipped */
 	if (state->rotation != DRM_ROTATE_0 &&
-	    (state->fb->pixel_format == DRM_FORMAT_RGB888 ||
-	     state->fb->pixel_format == DRM_FORMAT_BGR888))
+	    (fb->format->format == DRM_FORMAT_RGB888 ||
+	     fb->format->format == DRM_FORMAT_BGR888))
 		return -EINVAL;
 
 	ms->rotmem_size = 0;
@@ -147,7 +148,7 @@ static int malidp_de_plane_check(struct drm_plane *plane,
 
 		val = mp->hwdev->rotmem_required(mp->hwdev, state->crtc_h,
 						 state->crtc_w,
-						 state->fb->pixel_format);
+						 fb->format->format);
 		if (val < 0)
 			return val;
 
