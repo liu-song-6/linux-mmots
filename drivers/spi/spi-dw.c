@@ -107,15 +107,9 @@ static const struct file_operations dw_spi_regs_ops = {
 
 static int dw_spi_debugfs_init(struct dw_spi *dws)
 {
-<<<<<<< HEAD
-	char name[128];
-
-	snprintf(name, 128, "dw_spi-%s", dev_name(&dws->master->dev));
-=======
 	char name[32];
 
 	snprintf(name, 32, "dw_spi%d", dws->master->bus_num);
->>>>>>> linux-next/akpm-base
 	dws->debugfs = debugfs_create_dir(name, NULL);
 	if (!dws->debugfs)
 		return -ENOMEM;

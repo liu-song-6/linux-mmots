@@ -256,15 +256,10 @@ static int sock_xmit(struct nbd_device *nbd, int index, int send,
 static int nbd_send_cmd(struct nbd_device *nbd, struct nbd_cmd *cmd, int index)
 {
 	struct request *req = blk_mq_rq_from_pdu(cmd);
-<<<<<<< HEAD
-	int result;
-	struct nbd_request request;
-=======
 	int result, flags;
 	struct nbd_request request = {.magic = htonl(NBD_REQUEST_MAGIC)};
 	struct kvec iov = {.iov_base = &request, .iov_len = sizeof(request)};
 	struct iov_iter from;
->>>>>>> linux-next/akpm-base
 	unsigned long size = blk_rq_bytes(req);
 	struct bio *bio;
 	u32 type;
