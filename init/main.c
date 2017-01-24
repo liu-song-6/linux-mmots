@@ -580,7 +580,7 @@ asmlinkage __visible void __init start_kernel(void)
 	timekeeping_init();
 	time_init();
 	sched_clock_postinit();
-	printk_nmi_init();
+	printk_safe_init();
 	perf_event_init();
 	profile_init();
 	call_function_init();
@@ -625,7 +625,6 @@ asmlinkage __visible void __init start_kernel(void)
 	numa_policy_init();
 	if (late_time_init)
 		late_time_init();
-	sched_clock_init();
 	calibrate_delay();
 	pidmap_init();
 	anon_vma_init();

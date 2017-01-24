@@ -1951,7 +1951,7 @@ static void vxlan_encap_bypass(struct sk_buff *skb, struct vxlan_dev *src_vxlan,
 
 static int encap_bypass_if_local(struct sk_buff *skb, struct net_device *dev,
 				 struct vxlan_dev *vxlan, union vxlan_addr *daddr,
-				 __be32 dst_port, __be32 vni, struct dst_entry *dst,
+				 __be16 dst_port, __be32 vni, struct dst_entry *dst,
 				 u32 rt_flags)
 {
 #if IS_ENABLED(CONFIG_IPV6)
@@ -2890,7 +2890,7 @@ static int vxlan_dev_configure(struct net *src_net, struct net_device *dev,
 	memcpy(&vxlan->cfg, conf, sizeof(*conf));
 	if (!vxlan->cfg.dst_port) {
 		if (conf->flags & VXLAN_F_GPE)
-			vxlan->cfg.dst_port = 4790; /* IANA assigned VXLAN-GPE port */
+			vxlan->cfg.dst_port = htons(4790); /* IANA VXLAN-GPE port */
 		else
 			vxlan->cfg.dst_port = default_port;
 	}
