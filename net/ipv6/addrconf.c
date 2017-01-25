@@ -4888,6 +4888,13 @@ static void inet6_ifa_notify(int event, struct inet6_ifaddr *ifa)
 	struct net *net = dev_net(ifa->idev->dev);
 	int err = -ENOBUFS;
 
+	/* Don't send DELADDR notification for TENTATIVE address,
+	 * since NEWADDR notification is sent only after removing
+	 * TENTATIVE flag.
+	 */
+	if (ifa->flags & IFA_F_TENTATIVE && event == RTM_DELADDR)
+		return;
+
 	skb = nlmsg_new(inet6_ifaddr_msgsize(), GFP_ATOMIC);
 	if (!skb)
 		goto errout;
@@ -5540,8 +5547,7 @@ static void addrconf_disable_change(struct net *net, __s32 newf)
 	struct net_device *dev;
 	struct inet6_dev *idev;
 
-	rcu_read_lock();
-	for_each_netdev_rcu(net, dev) {
+	for_each_netdev(net, dev) {
 		idev = __in6_dev_get(dev);
 		if (idev) {
 			int changed = (!idev->cnf.disable_ipv6) ^ (!newf);
@@ -5550,7 +5556,6 @@ static void addrconf_disable_change(struct net *net, __s32 newf)
 				dev_disable_change(idev);
 		}
 	}
-	rcu_read_unlock();
 }
 
 static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int newf)
