@@ -1652,8 +1652,8 @@ static int __soft_offline_page(struct page *page, int flags)
 	 */
 	if (PageLRU(page))
 		ret = isolate_lru_page(page);
-	else
-		ret = !isolate_movable_page(page, ISOLATE_UNEVICTABLE);
+	else if (!isolate_movable_page(page, ISOLATE_UNEVICTABLE))
+		ret = -EBUSY;
 	/*
 	 * Drop page reference which is came from get_any_page()
 	 * successful isolate_lru_page() already took another one.
