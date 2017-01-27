@@ -57,6 +57,9 @@ static inline int migrate_pages(struct list_head *l, new_page_t new,
 		int reason)
 	{ return -ENOSYS; }
 
+static inline bool isolate_movable_page(struct page *page, isolate_mode_t mode)
+	{ return false; }
+
 static inline int migrate_prep(void) { return -ENOSYS; }
 static inline int migrate_prep_local(void) { return -ENOSYS; }
 
