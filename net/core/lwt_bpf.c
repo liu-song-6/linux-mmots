@@ -352,7 +352,7 @@ static int bpf_encap_nlsize(struct lwtunnel_state *lwtstate)
 	       0;
 }
 
-int bpf_lwt_prog_cmp(struct bpf_lwt_prog *a, struct bpf_lwt_prog *b)
+static int bpf_lwt_prog_cmp(struct bpf_lwt_prog *a, struct bpf_lwt_prog *b)
 {
 	/* FIXME:
 	 * The LWT state is currently rebuilt for delete requests which
@@ -386,6 +386,7 @@ static const struct lwtunnel_encap_ops bpf_encap_ops = {
 	.fill_encap	= bpf_fill_encap_info,
 	.get_encap_size = bpf_encap_nlsize,
 	.cmp_encap	= bpf_encap_cmp,
+	.owner		= THIS_MODULE,
 };
 
 static int __init bpf_lwt_init(void)

@@ -162,6 +162,7 @@ config NF_CT_PROTO_SCTP
 	bool 'SCTP protocol connection tracking support'
 	depends on NETFILTER_ADVANCED
 	default y
+	select LIBCRC32C
 	help
 	  With this option enabled, the layer 3 independent connection
 	  tracking code will be able to do state tracking on SCTP connections.
@@ -397,7 +398,6 @@ config NF_NAT_PROTO_SCTP
 	bool
 	default NF_NAT && NF_CT_PROTO_SCTP
 	depends on NF_NAT && NF_CT_PROTO_SCTP
-	select LIBCRC32C
 
 config NF_NAT_AMANDA
 	tristate
@@ -494,7 +494,7 @@ config NFT_CT
 	depends on NF_CONNTRACK
 	tristate "Netfilter nf_tables conntrack module"
 	help
-	  This option adds the "meta" expression that you can use to match
+	  This option adds the "ct" expression that you can use to match
 	  connection tracking information such as the flow state.
 
 config NFT_SET_RBTREE

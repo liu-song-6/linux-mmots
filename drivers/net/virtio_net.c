@@ -48,8 +48,16 @@ module_param(gso, bool, 0444);
  */
 DECLARE_EWMA(pkt_len, 1, 64)
 
+/* With mergeable buffers we align buffer address and use the low bits to
+ * encode its true size. Buffer size is up to 1 page so we need to align to
+ * square root of page size to ensure we reserve enough bits to encode the true
+ * size.
+ */
+#define MERGEABLE_BUFFER_MIN_ALIGN_SHIFT ((PAGE_SHIFT + 1) / 2)
+
 /* Minimum alignment for mergeable packet buffers. */
-#define MERGEABLE_BUFFER_ALIGN max(L1_CACHE_BYTES, 256)
+#define MERGEABLE_BUFFER_ALIGN max(L1_CACHE_BYTES, \
+				   1 << MERGEABLE_BUFFER_MIN_ALIGN_SHIFT)
 
 #define VIRTNET_DRIVER_VERSION "1.0.0"
 
@@ -1104,7 +1112,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 		hdr = skb_vnet_hdr(skb);
 
 	if (virtio_net_hdr_from_skb(skb, &hdr->hdr,
-				    virtio_is_little_endian(vi->vdev)))
+				    virtio_is_little_endian(vi->vdev), false))
 		BUG();
 
 	if (vi->mergeable_rx_bufs)
@@ -1236,10 +1244,9 @@ static int virtnet_set_mac_address(struct net_device *dev, void *p)
 	struct sockaddr *addr;
 	struct scatterlist sg;
 
-	addr = kmalloc(sizeof(*addr), GFP_KERNEL);
+	addr = kmemdup(p, sizeof(*addr), GFP_KERNEL);
 	if (!addr)
 		return -ENOMEM;
-	memcpy(addr, p, sizeof(*addr));
 
 	ret = eth_prepare_mac_addr_change(dev, addr);
 	if (ret)
@@ -1273,8 +1280,8 @@ out:
 	return ret;
 }
 
-static struct rtnl_link_stats64 *virtnet_stats(struct net_device *dev,
-					       struct rtnl_link_stats64 *tot)
+static void virtnet_stats(struct net_device *dev,
+			  struct rtnl_link_stats64 *tot)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
 	int cpu;
@@ -1307,8 +1314,6 @@ static struct rtnl_link_stats64 *virtnet_stats(struct net_device *dev,
 	tot->rx_dropped = dev->stats.rx_dropped;
 	tot->rx_length_errors = dev->stats.rx_length_errors;
 	tot->rx_frame_errors = dev->stats.rx_frame_errors;
-
-	return tot;
 }
 
 #ifdef CONFIG_NET_POLL_CONTROLLER
