@@ -202,10 +202,6 @@ static void amd_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 			i = 128;
 			pin_num = AMD_GPIO_PINS_BANK2 + i;
 			break;
-<<<<<<< HEAD
-		default:
-			return;
-=======
 		case 3:
 			i = 192;
 			pin_num = AMD_GPIO_PINS_BANK3 + i;
@@ -213,7 +209,6 @@ static void amd_gpio_dbg_show(struct seq_file *s, struct gpio_chip *gc)
 		default:
 			/* Illegal bank number, ignore */
 			continue;
->>>>>>> linux-next/akpm-base
 		}
 		for (; i < pin_num; i++) {
 			seq_printf(s, "pin%d\t", i);
