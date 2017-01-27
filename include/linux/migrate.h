@@ -10,7 +10,7 @@ typedef struct page *new_page_t(struct page *page, unsigned long private,
 typedef void free_page_t(struct page *page, unsigned long private);
 
 /*
- * Return values from addresss_space_operations.migratepage():
+ * Return values from address_space_operations.migratepage():
  * - negative errno on page migration failure;
  * - zero on page migration success;
  */
