@@ -65,7 +65,7 @@ int radix__map_kernel_page(unsigned long ea, unsigned long pa,
 		if (!pmdp)
 			return -ENOMEM;
 		if (map_page_size == PMD_SIZE) {
-			ptep = (pte_t *)pudp;
+			ptep = pmdp_ptep(pmdp);
 			goto set_the_pte;
 		}
 		ptep = pte_alloc_kernel(pmdp, ea);
@@ -90,7 +90,7 @@ int radix__map_kernel_page(unsigned long ea, unsigned long pa,
 		}
 		pmdp = pmd_offset(pudp, ea);
 		if (map_page_size == PMD_SIZE) {
-			ptep = (pte_t *)pudp;
+			ptep = pmdp_ptep(pmdp);
 			goto set_the_pte;
 		}
 		if (!pmd_present(*pmdp)) {
@@ -401,6 +401,8 @@ void __init radix__early_init_mmu(void)
 		mtspr(SPRN_LPCR, lpcr | LPCR_UPRT | LPCR_HR);
 		radix_init_partition_table();
 		radix_init_amor();
+	} else {
+		radix_init_pseries();
 	}
 
 	memblock_set_current_limit(MEMBLOCK_ALLOC_ANYWHERE);

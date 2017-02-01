@@ -1133,7 +1133,6 @@ int amdgpu_debugfs_fence_init(struct amdgpu_device *adev);
 
 #if defined(CONFIG_DEBUG_FS)
 int amdgpu_debugfs_init(struct drm_minor *minor);
-void amdgpu_debugfs_cleanup(struct drm_minor *minor);
 #endif
 
 int amdgpu_debugfs_firmware_init(struct amdgpu_device *adev);
@@ -1711,7 +1710,7 @@ extern const struct drm_ioctl_desc amdgpu_ioctls_kms[];
 extern const int amdgpu_max_kms_ioctl;
 
 int amdgpu_driver_load_kms(struct drm_device *dev, unsigned long flags);
-int amdgpu_driver_unload_kms(struct drm_device *dev);
+void amdgpu_driver_unload_kms(struct drm_device *dev);
 void amdgpu_driver_lastclose_kms(struct drm_device *dev);
 int amdgpu_driver_open_kms(struct drm_device *dev, struct drm_file *file_priv);
 void amdgpu_driver_postclose_kms(struct drm_device *dev,
