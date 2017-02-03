@@ -1100,12 +1100,6 @@ static int ext4_get_context(struct inode *inode, void *ctx, size_t len)
 				 EXT4_XATTR_NAME_ENCRYPTION_CONTEXT, ctx, len);
 }
 
-static int ext4_key_prefix(struct inode *inode, u8 **key)
-{
-	*key = EXT4_SB(inode->i_sb)->key_prefix;
-	return EXT4_SB(inode->i_sb)->key_prefix_size;
-}
-
 static int ext4_prepare_context(struct inode *inode)
 {
 	return ext4_convert_inline_data(inode);
@@ -1180,8 +1174,8 @@ static unsigned ext4_max_namelen(struct inode *inode)
 }
 
 static struct fscrypt_operations ext4_cryptops = {
+	.key_prefix		= "ext4:",
 	.get_context		= ext4_get_context,
-	.key_prefix		= ext4_key_prefix,
 	.prepare_context	= ext4_prepare_context,
 	.set_context		= ext4_set_context,
 	.dummy_context		= ext4_dummy_context,
@@ -1290,7 +1284,7 @@ enum {
 	Opt_noquota, Opt_barrier, Opt_nobarrier, Opt_err,
 	Opt_usrquota, Opt_grpquota, Opt_prjquota, Opt_i_version, Opt_dax,
 	Opt_stripe, Opt_delalloc, Opt_nodelalloc, Opt_mblk_io_submit,
-	Opt_lazytime, Opt_nolazytime,
+	Opt_lazytime, Opt_nolazytime, Opt_debug_want_extra_isize,
 	Opt_nomblk_io_submit, Opt_block_validity, Opt_noblock_validity,
 	Opt_inode_readahead_blks, Opt_journal_ioprio,
 	Opt_dioread_nolock, Opt_dioread_lock,
@@ -1358,6 +1352,7 @@ static const match_table_t tokens = {
 	{Opt_delalloc, "delalloc"},
 	{Opt_lazytime, "lazytime"},
 	{Opt_nolazytime, "nolazytime"},
+	{Opt_debug_want_extra_isize, "debug_want_extra_isize=%u"},
 	{Opt_nodelalloc, "nodelalloc"},
 	{Opt_removed, "mblk_io_submit"},
 	{Opt_removed, "nomblk_io_submit"},
@@ -1563,6 +1558,7 @@ static const struct mount_opts {
 #endif
 	{Opt_nouid32, EXT4_MOUNT_NO_UID32, MOPT_SET},
 	{Opt_debug, EXT4_MOUNT_DEBUG, MOPT_SET},
+	{Opt_debug_want_extra_isize, 0, MOPT_GTE0},
 	{Opt_quota, EXT4_MOUNT_QUOTA | EXT4_MOUNT_USRQUOTA, MOPT_SET | MOPT_Q},
 	{Opt_usrquota, EXT4_MOUNT_QUOTA | EXT4_MOUNT_USRQUOTA,
 							MOPT_SET | MOPT_Q},
@@ -1676,6 +1672,8 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 		if (arg == 0)
 			arg = JBD2_DEFAULT_MAX_COMMIT_AGE;
 		sbi->s_commit_interval = HZ * arg;
+	} else if (token == Opt_debug_want_extra_isize) {
+		sbi->s_want_extra_isize = arg;
 	} else if (token == Opt_max_batch_time) {
 		sbi->s_max_batch_time = arg;
 	} else if (token == Opt_min_batch_time) {
@@ -4087,7 +4085,8 @@ no_journal:
 		sb->s_flags |= MS_RDONLY;
 
 	/* determine the minimum size of new large inodes, if present */
-	if (sbi->s_inode_size > EXT4_GOOD_OLD_INODE_SIZE) {
+	if (sbi->s_inode_size > EXT4_GOOD_OLD_INODE_SIZE &&
+	    sbi->s_want_extra_isize == 0) {
 		sbi->s_want_extra_isize = sizeof(struct ext4_inode) -
 						     EXT4_GOOD_OLD_INODE_SIZE;
 		if (ext4_has_feature_extra_isize(sb)) {
@@ -4218,11 +4217,6 @@ no_journal:
 	ratelimit_state_init(&sbi->s_msg_ratelimit_state, 5 * HZ, 10);
 
 	kfree(orig_data);
-#ifdef CONFIG_EXT4_FS_ENCRYPTION
-	memcpy(sbi->key_prefix, EXT4_KEY_DESC_PREFIX,
-				EXT4_KEY_DESC_PREFIX_SIZE);
-	sbi->key_prefix_size = EXT4_KEY_DESC_PREFIX_SIZE;
-#endif
 	return 0;
 
 cantfind_ext4:

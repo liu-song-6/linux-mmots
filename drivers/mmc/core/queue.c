@@ -20,6 +20,8 @@
 
 #include "queue.h"
 #include "block.h"
+#include "core.h"
+#include "card.h"
 
 #define MMC_QUEUE_BOUNCESZ	65536
 
@@ -29,15 +31,6 @@
 static int mmc_prep_request(struct request_queue *q, struct request *req)
 {
 	struct mmc_queue *mq = q->queuedata;
-
-	/*
-	 * We only like normal block requests and discards.
-	 */
-	if (req->cmd_type != REQ_TYPE_FS && req_op(req) != REQ_OP_DISCARD &&
-	    req_op(req) != REQ_OP_SECURE_ERASE) {
-		blk_dump_rq_flags(req, "MMC bad request");
-		return BLKPREP_KILL;
-	}
 
 	if (mq && (mmc_card_removed(mq->card) || mmc_access_rpmb(mq)))
 		return BLKPREP_KILL;
@@ -152,7 +145,7 @@ static struct scatterlist *mmc_alloc_sg(int sg_len, int *err)
 {
 	struct scatterlist *sg;
 
-	sg = kmalloc(sizeof(struct scatterlist)*sg_len, GFP_KERNEL);
+	sg = kmalloc_array(sg_len, sizeof(*sg), GFP_KERNEL);
 	if (!sg)
 		*err = -ENOMEM;
 	else {
