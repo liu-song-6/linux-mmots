@@ -272,7 +272,7 @@ int ip_cmsg_send(struct sock *sk, struct msghdr *msg, struct ipcm_cookie *ipc,
 			continue;
 		switch (cmsg->cmsg_type) {
 		case IP_RETOPTS:
-			err = cmsg->cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr));
+			err = cmsg->cmsg_len - sizeof(struct cmsghdr);
 
 			/* Our caller is responsible for freeing ipc->opt */
 			err = ip_options_get(net, &ipc->opt, CMSG_DATA(cmsg),
@@ -843,6 +843,7 @@ static int do_ip_setsockopt(struct sock *sk, int level,
 	{
 		struct ip_mreqn mreq;
 		struct net_device *dev = NULL;
+		int midx;
 
 		if (sk->sk_type == SOCK_STREAM)
 			goto e_inval;
@@ -887,11 +888,15 @@ static int do_ip_setsockopt(struct sock *sk, int level,
 		err = -EADDRNOTAVAIL;
 		if (!dev)
 			break;
+
+		midx = l3mdev_master_ifindex(dev);
+
 		dev_put(dev);
 
 		err = -EINVAL;
 		if (sk->sk_bound_dev_if &&
-		    mreq.imr_ifindex != sk->sk_bound_dev_if)
+		    mreq.imr_ifindex != sk->sk_bound_dev_if &&
+		    (!midx || midx != sk->sk_bound_dev_if))
 			break;
 
 		inet->mc_index = mreq.imr_ifindex;
@@ -1238,7 +1243,14 @@ void ipv4_pktinfo_prepare(const struct sock *sk, struct sk_buff *skb)
 		pktinfo->ipi_ifindex = 0;
 		pktinfo->ipi_spec_dst.s_addr = 0;
 	}
-	skb_dst_drop(skb);
+	/* We need to keep the dst for __ip_options_echo()
+	 * We could restrict the test to opt.ts_needtime || opt.srr,
+	 * but the following is good enough as IP options are not often used.
+	 */
+	if (unlikely(IPCB(skb)->opt.optlen))
+		skb_dst_force(skb);
+	else
+		skb_dst_drop(skb);
 }
 
 int ip_setsockopt(struct sock *sk, int level,

@@ -1553,6 +1553,19 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 		}
 	}
 
+	/*
+	 * If the supply's parent device is not the same as the
+	 * regulator's parent device, then ensure the parent device
+	 * is bound before we resolve the supply, in case the parent
+	 * device get probe deferred and unregisters the supply.
+	 */
+	if (r->dev.parent && r->dev.parent != rdev->dev.parent) {
+		if (!device_is_bound(r->dev.parent)) {
+			put_device(&r->dev);
+			return -EPROBE_DEFER;
+		}
+	}
+
 	/* Recursively resolve the supply of the supply */
 	ret = regulator_resolve_supply(r);
 	if (ret < 0) {
@@ -1580,13 +1593,18 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 }
 
 /* Internal regulator request function */
-static struct regulator *_regulator_get(struct device *dev, const char *id,
-					bool exclusive, bool allow_dummy)
+struct regulator *_regulator_get(struct device *dev, const char *id,
+				 enum regulator_get_type get_type)
 {
 	struct regulator_dev *rdev;
-	struct regulator *regulator = ERR_PTR(-EPROBE_DEFER);
+	struct regulator *regulator;
 	const char *devname = NULL;
 	int ret;
+
+	if (get_type >= MAX_GET_TYPE) {
+		dev_err(dev, "invalid type %d in %s\n", get_type, __func__);
+		return ERR_PTR(-EINVAL);
+	}
 
 	if (id == NULL) {
 		pr_err("get() with no identifier\n");
@@ -1595,11 +1613,6 @@ static struct regulator *_regulator_get(struct device *dev, const char *id,
 
 	if (dev)
 		devname = dev_name(dev);
-
-	if (have_full_constraints())
-		ret = -ENODEV;
-	else
-		ret = -EPROBE_DEFER;
 
 	rdev = regulator_dev_lookup(dev, id, &ret);
 	if (rdev)
@@ -1621,7 +1634,7 @@ static struct regulator *_regulator_get(struct device *dev, const char *id,
 	 * Assume that a regulator is physically present and enabled
 	 * even if it isn't hooked up and just provide a dummy.
 	 */
-	if (have_full_constraints() && allow_dummy) {
+	if (have_full_constraints() && get_type == NORMAL_GET) {
 		pr_warn("%s supply %s not found, using dummy regulator\n",
 			devname, id);
 
@@ -1629,7 +1642,7 @@ static struct regulator *_regulator_get(struct device *dev, const char *id,
 		get_device(&rdev->dev);
 		goto found;
 	/* Don't log an error when called from regulator_get_optional() */
-	} else if (!have_full_constraints() || exclusive) {
+	} else if (!have_full_constraints() || get_type == EXCLUSIVE_GET) {
 		dev_warn(dev, "dummy supplies not allowed\n");
 	}
 
@@ -1642,7 +1655,7 @@ found:
 		return regulator;
 	}
 
-	if (exclusive && rdev->open_count) {
+	if (get_type == EXCLUSIVE_GET && rdev->open_count) {
 		regulator = ERR_PTR(-EBUSY);
 		put_device(&rdev->dev);
 		return regulator;
@@ -1656,6 +1669,7 @@ found:
 	}
 
 	if (!try_module_get(rdev->owner)) {
+		regulator = ERR_PTR(-EPROBE_DEFER);
 		put_device(&rdev->dev);
 		return regulator;
 	}
@@ -1669,7 +1683,7 @@ found:
 	}
 
 	rdev->open_count++;
-	if (exclusive) {
+	if (get_type == EXCLUSIVE_GET) {
 		rdev->exclusive = 1;
 
 		ret = _regulator_is_enabled(rdev);
@@ -1697,7 +1711,7 @@ found:
  */
 struct regulator *regulator_get(struct device *dev, const char *id)
 {
-	return _regulator_get(dev, id, false, true);
+	return _regulator_get(dev, id, NORMAL_GET);
 }
 EXPORT_SYMBOL_GPL(regulator_get);
 
@@ -1724,7 +1738,7 @@ EXPORT_SYMBOL_GPL(regulator_get);
  */
 struct regulator *regulator_get_exclusive(struct device *dev, const char *id)
 {
-	return _regulator_get(dev, id, true, false);
+	return _regulator_get(dev, id, EXCLUSIVE_GET);
 }
 EXPORT_SYMBOL_GPL(regulator_get_exclusive);
 
@@ -1750,7 +1764,7 @@ EXPORT_SYMBOL_GPL(regulator_get_exclusive);
  */
 struct regulator *regulator_get_optional(struct device *dev, const char *id)
 {
-	return _regulator_get(dev, id, false, false);
+	return _regulator_get(dev, id, OPTIONAL_GET);
 }
 EXPORT_SYMBOL_GPL(regulator_get_optional);
 
@@ -3660,7 +3674,7 @@ err:
 	for (++i; i < num_consumers; ++i) {
 		r = regulator_enable(consumers[i].consumer);
 		if (r != 0)
-			pr_err("Failed to reename %s: %d\n",
+			pr_err("Failed to re-enable %s: %d\n",
 			       consumers[i].supply, r);
 	}
 
@@ -3686,21 +3700,17 @@ int regulator_bulk_force_disable(int num_consumers,
 			   struct regulator_bulk_data *consumers)
 {
 	int i;
-	int ret;
+	int ret = 0;
 
-	for (i = 0; i < num_consumers; i++)
+	for (i = 0; i < num_consumers; i++) {
 		consumers[i].ret =
 			    regulator_force_disable(consumers[i].consumer);
 
-	for (i = 0; i < num_consumers; i++) {
-		if (consumers[i].ret != 0) {
+		/* Store first error for reporting */
+		if (consumers[i].ret && !ret)
 			ret = consumers[i].ret;
-			goto out;
-		}
 	}
 
-	return 0;
-out:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(regulator_bulk_force_disable);
