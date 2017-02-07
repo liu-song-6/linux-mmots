@@ -2378,10 +2378,6 @@ void drain_all_pages(struct zone *zone)
 		mutex_lock(&pcpu_drain_mutex);
 	}
 
-	/*
-	 * As this can be called from reclaim context, do not reenter reclaim.
-	 * An allocation failure can be handled, it's simply slower
-	 */
 	get_online_cpus();
 
 	/*
