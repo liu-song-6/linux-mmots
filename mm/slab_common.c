@@ -500,7 +500,7 @@ static void slab_caches_to_rcu_destroy_workfn(struct work_struct *work)
 	struct kmem_cache *s, *s2;
 
 	/*
-	 * On destruction, SLAB_DESTROY_BY_RCU kmem_caches are put on the
+	 * On destruction, SLAB_TYPESAFE_BY_RCU kmem_caches are put on the
 	 * @slab_caches_to_rcu_destroy list.  The slab pages are freed
 	 * through RCU and and the associated kmem_cache are dereferenced
 	 * while freeing the pages, so the kmem_caches should be freed only
@@ -537,7 +537,7 @@ static int shutdown_cache(struct kmem_cache *s)
 	memcg_unlink_cache(s);
 	list_del(&s->list);
 
-	if (s->flags & SLAB_DESTROY_BY_RCU) {
+	if (s->flags & SLAB_TYPESAFE_BY_RCU) {
 		list_add_tail(&s->list, &slab_caches_to_rcu_destroy);
 		schedule_work(&slab_caches_to_rcu_destroy_work);
 	} else {
