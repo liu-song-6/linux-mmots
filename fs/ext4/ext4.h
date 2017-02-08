@@ -679,6 +679,16 @@ struct fsxattr {
 #define EXT4_IOC_FSGETXATTR		FS_IOC_FSGETXATTR
 #define EXT4_IOC_FSSETXATTR		FS_IOC_FSSETXATTR
 
+#define EXT4_IOC_GOINGDOWN _IOR ('X', 125, __u32)
+
+/*
+ * Flags for going down operation
+ */
+#define EXT4_GOING_FLAGS_DEFAULT		0x0	/* going down */
+#define EXT4_GOING_FLAGS_LOGFLUSH		0x1	/* flush log but not data */
+#define EXT4_GOING_FLAGS_NOLOGFLUSH		0x2	/* don't flush log nor data */
+
+
 #if defined(__KERNEL__) && defined(CONFIG_COMPAT)
 /*
  * ioctl commands in 32 bit emulation
@@ -1343,11 +1353,6 @@ struct ext4_super_block {
 /* Number of quota types we support */
 #define EXT4_MAXQUOTAS 3
 
-#ifdef CONFIG_EXT4_FS_ENCRYPTION
-#define EXT4_KEY_DESC_PREFIX "ext4:"
-#define EXT4_KEY_DESC_PREFIX_SIZE 5
-#endif
-
 /*
  * fourth extended-fs super-block data in memory
  */
@@ -1404,8 +1409,7 @@ struct ext4_sb_info {
 	struct journal_s *s_journal;
 	struct list_head s_orphan;
 	struct mutex s_orphan_lock;
-	unsigned long s_resize_flags;		/* Flags indicating if there
-						   is a resizer */
+	unsigned long s_ext4_flags;		/* Ext4 superblock flags */
 	unsigned long s_commit_interval;
 	u32 s_max_batch_time;
 	u32 s_min_batch_time;
@@ -1517,12 +1521,6 @@ struct ext4_sb_info {
 
 	/* Barrier between changing inodes' journal flags and writepages ops. */
 	struct percpu_rw_semaphore s_journal_flag_rwsem;
-
-	/* Encryption support */
-#ifdef CONFIG_EXT4_FS_ENCRYPTION
-	u8 key_prefix[EXT4_KEY_DESC_PREFIX_SIZE];
-	u8 key_prefix_size;
-#endif
 };
 
 static inline struct ext4_sb_info *EXT4_SB(struct super_block *sb)
@@ -1843,6 +1841,18 @@ static inline bool ext4_has_incompat_features(struct super_block *sb)
 {
 	return (EXT4_SB(sb)->s_es->s_feature_incompat != 0);
 }
+
+/*
+ * Superblock flags
+ */
+#define EXT4_FLAGS_RESIZING	0
+#define EXT4_FLAGS_SHUTDOWN	1
+
+static inline int ext4_forced_shutdown(struct ext4_sb_info *sbi)
+{
+	return test_bit(EXT4_FLAGS_SHUTDOWN, &sbi->s_ext4_flags);
+}
+
 
 /*
  * Default values for user and/or group using reserved blocks
@@ -3034,7 +3044,7 @@ extern int ext4_inline_data_fiemap(struct inode *inode,
 extern int ext4_try_to_evict_inline_data(handle_t *handle,
 					 struct inode *inode,
 					 int needed);
-extern void ext4_inline_data_truncate(struct inode *inode, int *has_inline);
+extern int ext4_inline_data_truncate(struct inode *inode, int *has_inline);
 
 extern int ext4_convert_inline_data(struct inode *inode);
 
@@ -3228,7 +3238,6 @@ static inline void ext4_inode_resume_unlocked_dio(struct inode *inode)
 					    EXT4_WQ_HASH_SZ])
 extern wait_queue_head_t ext4__ioend_wq[EXT4_WQ_HASH_SZ];
 
-#define EXT4_RESIZING	0
 extern int ext4_resize_begin(struct super_block *sb);
 extern void ext4_resize_end(struct super_block *sb);
 
