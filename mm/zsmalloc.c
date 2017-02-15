@@ -270,7 +270,7 @@ struct zs_pool {
 
 /*
  * A zspage's class index and fullness group
- * are encoded in its (first)page->mapping
+ * are stored in struct zspage.
  */
 #define FULLNESS_BITS	2
 #define CLASS_BITS	8
