@@ -19,16 +19,18 @@
 static struct kmem_cache *secpath_cachep __read_mostly;
 
 static DEFINE_SPINLOCK(xfrm_input_afinfo_lock);
-static struct xfrm_input_afinfo __rcu *xfrm_input_afinfo[NPROTO];
+static struct xfrm_input_afinfo const __rcu *xfrm_input_afinfo[AF_INET6 + 1];
 
-int xfrm_input_register_afinfo(struct xfrm_input_afinfo *afinfo)
+static struct gro_cells gro_cells;
+static struct net_device xfrm_napi_dev;
+
+int xfrm_input_register_afinfo(const struct xfrm_input_afinfo *afinfo)
 {
 	int err = 0;
 
-	if (unlikely(afinfo == NULL))
-		return -EINVAL;
-	if (unlikely(afinfo->family >= NPROTO))
+	if (WARN_ON(afinfo->family >= ARRAY_SIZE(xfrm_input_afinfo)))
 		return -EAFNOSUPPORT;
+
 	spin_lock_bh(&xfrm_input_afinfo_lock);
 	if (unlikely(xfrm_input_afinfo[afinfo->family] != NULL))
 		err = -EEXIST;
@@ -39,14 +41,10 @@ int xfrm_input_register_afinfo(struct xfrm_input_afinfo *afinfo)
 }
 EXPORT_SYMBOL(xfrm_input_register_afinfo);
 
-int xfrm_input_unregister_afinfo(struct xfrm_input_afinfo *afinfo)
+int xfrm_input_unregister_afinfo(const struct xfrm_input_afinfo *afinfo)
 {
 	int err = 0;
 
-	if (unlikely(afinfo == NULL))
-		return -EINVAL;
-	if (unlikely(afinfo->family >= NPROTO))
-		return -EAFNOSUPPORT;
 	spin_lock_bh(&xfrm_input_afinfo_lock);
 	if (likely(xfrm_input_afinfo[afinfo->family] != NULL)) {
 		if (unlikely(xfrm_input_afinfo[afinfo->family] != afinfo))
@@ -60,12 +58,13 @@ int xfrm_input_unregister_afinfo(struct xfrm_input_afinfo *afinfo)
 }
 EXPORT_SYMBOL(xfrm_input_unregister_afinfo);
 
-static struct xfrm_input_afinfo *xfrm_input_get_afinfo(unsigned int family)
+static const struct xfrm_input_afinfo *xfrm_input_get_afinfo(unsigned int family)
 {
-	struct xfrm_input_afinfo *afinfo;
+	const struct xfrm_input_afinfo *afinfo;
 
-	if (unlikely(family >= NPROTO))
+	if (WARN_ON_ONCE(family >= ARRAY_SIZE(xfrm_input_afinfo)))
 		return NULL;
+
 	rcu_read_lock();
 	afinfo = rcu_dereference(xfrm_input_afinfo[family]);
 	if (unlikely(!afinfo))
@@ -73,22 +72,17 @@ static struct xfrm_input_afinfo *xfrm_input_get_afinfo(unsigned int family)
 	return afinfo;
 }
 
-static void xfrm_input_put_afinfo(struct xfrm_input_afinfo *afinfo)
-{
-	rcu_read_unlock();
-}
-
 static int xfrm_rcv_cb(struct sk_buff *skb, unsigned int family, u8 protocol,
 		       int err)
 {
 	int ret;
-	struct xfrm_input_afinfo *afinfo = xfrm_input_get_afinfo(family);
+	const struct xfrm_input_afinfo *afinfo = xfrm_input_get_afinfo(family);
 
 	if (!afinfo)
 		return -EAFNOSUPPORT;
 
 	ret = afinfo->callback(skb, protocol, err);
-	xfrm_input_put_afinfo(afinfo);
+	rcu_read_unlock();
 
 	return ret;
 }
@@ -371,7 +365,7 @@ resume:
 
 	if (decaps) {
 		skb_dst_drop(skb);
-		netif_rx(skb);
+		gro_cells_receive(&gro_cells, skb);
 		return 0;
 	} else {
 		return x->inner_mode->afinfo->transport_finish(skb, async);
@@ -394,6 +388,13 @@ EXPORT_SYMBOL(xfrm_input_resume);
 
 void __init xfrm_input_init(void)
 {
+	int err;
+
+	init_dummy_netdev(&xfrm_napi_dev);
+	err = gro_cells_init(&gro_cells, &xfrm_napi_dev);
+	if (err)
+		gro_cells.cells = NULL;
+
 	secpath_cachep = kmem_cache_create("secpath_cache",
 					   sizeof(struct sec_path),
 					   0, SLAB_HWCACHE_ALIGN|SLAB_PANIC,
