@@ -189,9 +189,10 @@ static int alloc_long_term_buff(struct ibmvnic_adapter *adapter,
 	}
 	ltb->map_id = adapter->map_id;
 	adapter->map_id++;
+
+	init_completion(&adapter->fw_done);
 	send_request_map(adapter, ltb->addr,
 			 ltb->size, ltb->map_id);
-	init_completion(&adapter->fw_done);
 	wait_for_completion(&adapter->fw_done);
 	return 0;
 }
@@ -505,7 +506,7 @@ rx_pool_alloc_failed:
 	adapter->rx_pool = NULL;
 rx_pool_arr_alloc_failed:
 	for (i = 0; i < adapter->req_rx_queues; i++)
-		napi_enable(&adapter->napi[i]);
+		napi_disable(&adapter->napi[i]);
 alloc_napi_failed:
 	return -ENOMEM;
 }
@@ -987,7 +988,7 @@ restart_poll:
 
 	if (frames_processed < budget) {
 		enable_scrq_irq(adapter, adapter->rx_scrq[scrq_num]);
-		napi_complete(napi);
+		napi_complete_done(napi, frames_processed);
 		if (pending_scrq(adapter, adapter->rx_scrq[scrq_num]) &&
 		    napi_reschedule(napi)) {
 			disable_scrq_irq(adapter, adapter->rx_scrq[scrq_num]);
@@ -1025,21 +1026,26 @@ static const struct net_device_ops ibmvnic_netdev_ops = {
 
 /* ethtool functions */
 
-static int ibmvnic_get_settings(struct net_device *netdev,
-				struct ethtool_cmd *cmd)
+static int ibmvnic_get_link_ksettings(struct net_device *netdev,
+				      struct ethtool_link_ksettings *cmd)
 {
-	cmd->supported = (SUPPORTED_1000baseT_Full | SUPPORTED_Autoneg |
+	u32 supported, advertising;
+
+	supported = (SUPPORTED_1000baseT_Full | SUPPORTED_Autoneg |
 			  SUPPORTED_FIBRE);
-	cmd->advertising = (ADVERTISED_1000baseT_Full | ADVERTISED_Autoneg |
+	advertising = (ADVERTISED_1000baseT_Full | ADVERTISED_Autoneg |
 			    ADVERTISED_FIBRE);
-	ethtool_cmd_speed_set(cmd, SPEED_1000);
-	cmd->duplex = DUPLEX_FULL;
-	cmd->port = PORT_FIBRE;
-	cmd->phy_address = 0;
-	cmd->transceiver = XCVR_INTERNAL;
-	cmd->autoneg = AUTONEG_ENABLE;
-	cmd->maxtxpkt = 0;
-	cmd->maxrxpkt = 1;
+	cmd->base.speed = SPEED_1000;
+	cmd->base.duplex = DUPLEX_FULL;
+	cmd->base.port = PORT_FIBRE;
+	cmd->base.phy_address = 0;
+	cmd->base.autoneg = AUTONEG_ENABLE;
+
+	ethtool_convert_legacy_u32_to_link_mode(cmd->link_modes.supported,
+						supported);
+	ethtool_convert_legacy_u32_to_link_mode(cmd->link_modes.advertising,
+						advertising);
+
 	return 0;
 }
 
@@ -1121,10 +1127,10 @@ static void ibmvnic_get_ethtool_stats(struct net_device *dev,
 	crq.request_statistics.ioba = cpu_to_be32(adapter->stats_token);
 	crq.request_statistics.len =
 	    cpu_to_be32(sizeof(struct ibmvnic_statistics));
-	ibmvnic_send_crq(adapter, &crq);
 
 	/* Wait for data to be written */
 	init_completion(&adapter->stats_done);
+	ibmvnic_send_crq(adapter, &crq);
 	wait_for_completion(&adapter->stats_done);
 
 	for (i = 0; i < ARRAY_SIZE(ibmvnic_stats); i++)
@@ -1132,7 +1138,6 @@ static void ibmvnic_get_ethtool_stats(struct net_device *dev,
 }
 
 static const struct ethtool_ops ibmvnic_ethtool_ops = {
-	.get_settings		= ibmvnic_get_settings,
 	.get_drvinfo		= ibmvnic_get_drvinfo,
 	.get_msglevel		= ibmvnic_get_msglevel,
 	.set_msglevel		= ibmvnic_set_msglevel,
@@ -1141,6 +1146,7 @@ static const struct ethtool_ops ibmvnic_ethtool_ops = {
 	.get_strings            = ibmvnic_get_strings,
 	.get_sset_count         = ibmvnic_get_sset_count,
 	.get_ethtool_stats	= ibmvnic_get_ethtool_stats,
+	.get_link_ksettings	= ibmvnic_get_link_ksettings,
 };
 
 /* Routines for managing CRQs/sCRQs  */
@@ -1496,7 +1502,7 @@ static void init_sub_crqs(struct ibmvnic_adapter *adapter, int retry)
 		adapter->req_rx_queues = adapter->opt_rx_comp_queues;
 		adapter->req_rx_add_queues = adapter->max_rx_add_queues;
 
-		adapter->req_mtu = adapter->max_mtu;
+		adapter->req_mtu = adapter->netdev->mtu + ETH_HLEN;
 	}
 
 	total_queues = adapter->req_tx_queues + adapter->req_rx_queues;
@@ -2626,12 +2632,12 @@ static void handle_query_cap_rsp(union ibmvnic_crq *crq,
 		break;
 	case MIN_MTU:
 		adapter->min_mtu = be64_to_cpu(crq->query_capability.number);
-		netdev->min_mtu = adapter->min_mtu;
+		netdev->min_mtu = adapter->min_mtu - ETH_HLEN;
 		netdev_dbg(netdev, "min_mtu = %lld\n", adapter->min_mtu);
 		break;
 	case MAX_MTU:
 		adapter->max_mtu = be64_to_cpu(crq->query_capability.number);
-		netdev->max_mtu = adapter->max_mtu;
+		netdev->max_mtu = adapter->max_mtu - ETH_HLEN;
 		netdev_dbg(netdev, "max_mtu = %lld\n", adapter->max_mtu);
 		break;
 	case MAX_MULTICAST_FILTERS:
@@ -2799,9 +2805,9 @@ static ssize_t trace_read(struct file *file, char __user *user_buf, size_t len,
 	crq.collect_fw_trace.correlator = adapter->ras_comps[num].correlator;
 	crq.collect_fw_trace.ioba = cpu_to_be32(trace_tok);
 	crq.collect_fw_trace.len = adapter->ras_comps[num].trace_buff_size;
-	ibmvnic_send_crq(adapter, &crq);
 
 	init_completion(&adapter->fw_done);
+	ibmvnic_send_crq(adapter, &crq);
 	wait_for_completion(&adapter->fw_done);
 
 	if (*ppos + len > be32_to_cpu(adapter->ras_comps[num].trace_buff_size))
@@ -3581,9 +3587,9 @@ static int ibmvnic_dump_show(struct seq_file *seq, void *v)
 	memset(&crq, 0, sizeof(crq));
 	crq.request_dump_size.first = IBMVNIC_CRQ_CMD;
 	crq.request_dump_size.cmd = REQUEST_DUMP_SIZE;
-	ibmvnic_send_crq(adapter, &crq);
 
 	init_completion(&adapter->fw_done);
+	ibmvnic_send_crq(adapter, &crq);
 	wait_for_completion(&adapter->fw_done);
 
 	seq_write(seq, adapter->dump_data, adapter->dump_data_size);
@@ -3629,8 +3635,8 @@ static void handle_crq_init_rsp(struct work_struct *work)
 		}
 	}
 
-	send_version_xchg(adapter);
 	reinit_completion(&adapter->init_done);
+	send_version_xchg(adapter);
 	if (!wait_for_completion_timeout(&adapter->init_done, timeout)) {
 		dev_err(dev, "Passive init timeout\n");
 		goto task_failed;
@@ -3640,9 +3646,9 @@ static void handle_crq_init_rsp(struct work_struct *work)
 		if (adapter->renegotiate) {
 			adapter->renegotiate = false;
 			release_sub_crqs_no_irqs(adapter);
-			send_cap_queries(adapter);
 
 			reinit_completion(&adapter->init_done);
+			send_cap_queries(adapter);
 			if (!wait_for_completion_timeout(&adapter->init_done,
 							 timeout)) {
 				dev_err(dev, "Passive init timeout\n");
@@ -3656,9 +3662,7 @@ static void handle_crq_init_rsp(struct work_struct *work)
 		goto task_failed;
 
 	netdev->real_num_tx_queues = adapter->req_tx_queues;
-	netdev->mtu = adapter->req_mtu;
-	netdev->min_mtu = adapter->min_mtu;
-	netdev->max_mtu = adapter->max_mtu;
+	netdev->mtu = adapter->req_mtu - ETH_HLEN;
 
 	if (adapter->failover) {
 		adapter->failover = false;
@@ -3772,9 +3776,9 @@ static int ibmvnic_probe(struct vio_dev *dev, const struct vio_device_id *id)
 			adapter->debugfs_dump = ent;
 		}
 	}
-	ibmvnic_send_crq_init(adapter);
 
 	init_completion(&adapter->init_done);
+	ibmvnic_send_crq_init(adapter);
 	if (!wait_for_completion_timeout(&adapter->init_done, timeout))
 		return 0;
 
@@ -3782,9 +3786,9 @@ static int ibmvnic_probe(struct vio_dev *dev, const struct vio_device_id *id)
 		if (adapter->renegotiate) {
 			adapter->renegotiate = false;
 			release_sub_crqs_no_irqs(adapter);
-			send_cap_queries(adapter);
 
 			reinit_completion(&adapter->init_done);
+			send_cap_queries(adapter);
 			if (!wait_for_completion_timeout(&adapter->init_done,
 							 timeout))
 				return 0;
@@ -3798,7 +3802,7 @@ static int ibmvnic_probe(struct vio_dev *dev, const struct vio_device_id *id)
 	}
 
 	netdev->real_num_tx_queues = adapter->req_tx_queues;
-	netdev->mtu = adapter->req_mtu;
+	netdev->mtu = adapter->req_mtu - ETH_HLEN;
 
 	rc = register_netdev(netdev);
 	if (rc) {
