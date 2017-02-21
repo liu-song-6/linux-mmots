@@ -109,6 +109,7 @@ config DEBUG_WX
 
 	  If in doubt, say "Y".
 
+<<<<<<< HEAD
 config DEBUG_SET_MODULE_RONX
 	bool "Set loadable kernel module data as NX and text as RO"
 	depends on MODULES
@@ -120,6 +121,8 @@ config DEBUG_SET_MODULE_RONX
 	  against certain classes of kernel exploits.
 	  If in doubt, say "N".
 
+=======
+>>>>>>> linux-next/akpm-base
 config DOUBLEFAULT
 	default y
 	bool "Enable doublefault exception handler" if EXPERT

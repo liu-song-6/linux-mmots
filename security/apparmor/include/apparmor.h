@@ -1,7 +1,7 @@
 /*
  * AppArmor security module
  *
- * This file contains AppArmor basic global and lib definitions
+ * This file contains AppArmor basic global
  *
  * Copyright (C) 1998-2008 Novell/SUSE
  * Copyright 2009-2010 Canonical Ltd.
@@ -15,10 +15,7 @@
 #ifndef __APPARMOR_H
 #define __APPARMOR_H
 
-#include <linux/slab.h>
-#include <linux/fs.h>
-
-#include "match.h"
+#include <linux/types.h>
 
 /*
  * Class of mediation types in the AppArmor policy db
@@ -43,6 +40,7 @@ extern bool aa_g_logsyscall;
 extern bool aa_g_paranoid_load;
 extern unsigned int aa_g_path_max;
 
+<<<<<<< HEAD
 /*
  * DEBUG remains global (no per profile flag) since it is mostly used in sysctl
  * which is not related to profile accesses.
@@ -112,4 +110,6 @@ static inline bool mediated_filesystem(struct dentry *dentry)
 	return !(dentry->d_sb->s_flags & MS_NOUSER);
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 #endif /* __APPARMOR_H */
