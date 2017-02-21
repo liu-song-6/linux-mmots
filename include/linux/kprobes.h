@@ -510,4 +510,17 @@ static inline bool is_kprobe_optinsn_slot(unsigned long addr)
 }
 #endif
 
+#ifndef CONFIG_KPROBES
+static inline bool is_kprobe_insn_slot(unsigned long addr)
+{
+	return false;
+}
+#endif
+#ifndef CONFIG_OPTPROBES
+static inline bool is_kprobe_optinsn_slot(unsigned long addr)
+{
+	return false;
+}
+#endif
+
 #endif /* _LINUX_KPROBES_H */
