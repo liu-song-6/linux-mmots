@@ -231,35 +231,6 @@ int main(void)
 #endif /* CONFIG_PPC_STD_MMU_64 */
 	OFFSET(PACAEMERGSP, paca_struct, emergency_sp);
 #ifdef CONFIG_PPC_BOOK3S_64
-<<<<<<< HEAD
-	DEFINE(PACAMCEMERGSP, offsetof(struct paca_struct, mc_emergency_sp));
-	DEFINE(PACA_IN_MCE, offsetof(struct paca_struct, in_mce));
-#endif
-	DEFINE(PACAHWCPUID, offsetof(struct paca_struct, hw_cpu_id));
-	DEFINE(PACAKEXECSTATE, offsetof(struct paca_struct, kexec_state));
-	DEFINE(PACA_DSCR_DEFAULT, offsetof(struct paca_struct, dscr_default));
-	DEFINE(ACCOUNT_STARTTIME,
-	       offsetof(struct paca_struct, accounting.starttime));
-	DEFINE(ACCOUNT_STARTTIME_USER,
-	       offsetof(struct paca_struct, accounting.starttime_user));
-	DEFINE(ACCOUNT_USER_TIME,
-	       offsetof(struct paca_struct, accounting.utime));
-	DEFINE(ACCOUNT_SYSTEM_TIME,
-	       offsetof(struct paca_struct, accounting.stime));
-	DEFINE(PACA_TRAP_SAVE, offsetof(struct paca_struct, trap_save));
-	DEFINE(PACA_NAPSTATELOST, offsetof(struct paca_struct, nap_state_lost));
-	DEFINE(PACA_SPRG_VDSO, offsetof(struct paca_struct, sprg_vdso));
-#else /* CONFIG_PPC64 */
-#ifdef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
-	DEFINE(ACCOUNT_STARTTIME,
-	       offsetof(struct thread_info, accounting.starttime));
-	DEFINE(ACCOUNT_STARTTIME_USER,
-	       offsetof(struct thread_info, accounting.starttime_user));
-	DEFINE(ACCOUNT_USER_TIME,
-	       offsetof(struct thread_info, accounting.utime));
-	DEFINE(ACCOUNT_SYSTEM_TIME,
-	       offsetof(struct thread_info, accounting.stime));
-=======
 	OFFSET(PACAMCEMERGSP, paca_struct, mc_emergency_sp);
 	OFFSET(PACA_IN_MCE, paca_struct, in_mce);
 #endif
@@ -279,7 +250,6 @@ int main(void)
 	OFFSET(ACCOUNT_STARTTIME_USER, thread_info, accounting.starttime_user);
 	OFFSET(ACCOUNT_USER_TIME, thread_info, accounting.utime);
 	OFFSET(ACCOUNT_SYSTEM_TIME, thread_info, accounting.stime);
->>>>>>> linux-next/akpm-base
 #endif
 #endif /* CONFIG_PPC64 */
 

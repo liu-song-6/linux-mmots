@@ -185,22 +185,9 @@ void ttm_bo_add_to_lru(struct ttm_buffer_object *bo)
 EXPORT_SYMBOL(ttm_bo_add_to_lru);
 
 static void ttm_bo_ref_bug(struct kref *list_kref)
-<<<<<<< HEAD
 {
 	BUG();
 }
-
-void ttm_bo_del_from_lru(struct ttm_buffer_object *bo)
-{
-	struct ttm_bo_device *bdev = bo->bdev;
-
-	if (bdev->driver->lru_removal)
-		bdev->driver->lru_removal(bo);
-=======
-{
-	BUG();
-}
->>>>>>> linux-next/akpm-base
 
 void ttm_bo_del_from_lru(struct ttm_buffer_object *bo)
 {
@@ -212,14 +199,11 @@ void ttm_bo_del_from_lru(struct ttm_buffer_object *bo)
 		list_del_init(&bo->lru);
 		kref_put(&bo->list_kref, ttm_bo_ref_bug);
 	}
-<<<<<<< HEAD
-=======
 
 	/*
 	 * TODO: Add a driver hook to delete from
 	 * driver-specific LRU's here.
 	 */
->>>>>>> linux-next/akpm-base
 }
 
 void ttm_bo_del_sub_from_lru(struct ttm_buffer_object *bo)
@@ -232,18 +216,8 @@ EXPORT_SYMBOL(ttm_bo_del_sub_from_lru);
 
 void ttm_bo_move_to_lru_tail(struct ttm_buffer_object *bo)
 {
-<<<<<<< HEAD
-	struct ttm_bo_device *bdev = bo->bdev;
-
 	lockdep_assert_held(&bo->resv->lock.base);
 
-	if (bdev->driver->lru_removal)
-		bdev->driver->lru_removal(bo);
-
-=======
-	lockdep_assert_held(&bo->resv->lock.base);
-
->>>>>>> linux-next/akpm-base
 	ttm_bo_del_from_lru(bo);
 	ttm_bo_add_to_lru(bo);
 }
@@ -731,10 +705,7 @@ static int ttm_mem_evict_first(struct ttm_bo_device *bdev,
 	struct ttm_mem_type_manager *man = &bdev->man[mem_type];
 	struct ttm_buffer_object *bo;
 	int ret = -EBUSY;
-<<<<<<< HEAD
-=======
 	unsigned i;
->>>>>>> linux-next/akpm-base
 
 	spin_lock(&glob->lru_lock);
 	for (i = 0; i < TTM_MAX_BO_PRIORITY; ++i) {
@@ -1670,11 +1641,7 @@ static int ttm_bo_swapout(struct ttm_mem_shrink *shrink)
 	    container_of(shrink, struct ttm_bo_global, shrink);
 	struct ttm_buffer_object *bo;
 	int ret = -EBUSY;
-<<<<<<< HEAD
-	uint32_t swap_placement = (TTM_PL_FLAG_CACHED | TTM_PL_FLAG_SYSTEM);
-=======
 	unsigned i;
->>>>>>> linux-next/akpm-base
 
 	spin_lock(&glob->lru_lock);
 	for (i = 0; i < TTM_MAX_BO_PRIORITY; ++i) {

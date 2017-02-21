@@ -21,10 +21,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/init.h>
-<<<<<<< HEAD
-=======
 #include <linux/filter.h>
->>>>>>> linux-next/akpm-base
 #include <linux/kprobes.h>
 
 #include <asm/sections.h>
@@ -110,11 +107,8 @@ int __kernel_text_address(unsigned long addr)
 		return 1;
 	if (is_ftrace_trampoline(addr))
 		return 1;
-<<<<<<< HEAD
-=======
 	if (is_bpf_text_address(addr))
 		return 1;
->>>>>>> linux-next/akpm-base
 	if (is_kprobe_optinsn_slot(addr) || is_kprobe_insn_slot(addr))
 		return 1;
 	/*
@@ -138,11 +132,8 @@ int kernel_text_address(unsigned long addr)
 		return 1;
 	if (is_ftrace_trampoline(addr))
 		return 1;
-<<<<<<< HEAD
-=======
 	if (is_bpf_text_address(addr))
 		return 1;
->>>>>>> linux-next/akpm-base
 	if (is_kprobe_optinsn_slot(addr) || is_kprobe_insn_slot(addr))
 		return 1;
 	return 0;
