@@ -332,8 +332,6 @@ static int cpt_ucode_load(struct cpt_device *cpt)
 	return ret;
 }
 
-<<<<<<< HEAD
-=======
 static int cpt_enable_msix(struct cpt_device *cpt)
 {
 	int i, ret;
@@ -354,7 +352,6 @@ static int cpt_enable_msix(struct cpt_device *cpt)
 	return 0;
 }
 
->>>>>>> linux-next/akpm-base
 static irqreturn_t cpt_mbx0_intr_handler(int irq, void *cpt_irq)
 {
 	struct cpt_device *cpt = (struct cpt_device *)cpt_irq;
@@ -364,8 +361,6 @@ static irqreturn_t cpt_mbx0_intr_handler(int irq, void *cpt_irq)
 	return IRQ_HANDLED;
 }
 
-<<<<<<< HEAD
-=======
 static void cpt_disable_msix(struct cpt_device *cpt)
 {
 	if (cpt->msix_enabled) {
@@ -386,7 +381,6 @@ static void cpt_free_all_interrupts(struct cpt_device *cpt)
 	}
 }
 
->>>>>>> linux-next/akpm-base
 static void cpt_reset(struct cpt_device *cpt)
 {
 	cpt_write_csr64(cpt->reg_base, CPTX_PF_RESET(0), 1);
@@ -512,57 +506,32 @@ static int cpt_register_interrupts(struct cpt_device *cpt)
 	struct device *dev = &cpt->pdev->dev;
 
 	/* Enable MSI-X */
-<<<<<<< HEAD
-	ret = pci_alloc_irq_vectors(cpt->pdev, CPT_PF_MSIX_VECTORS,
-			CPT_PF_MSIX_VECTORS, PCI_IRQ_MSIX);
-	if (ret < 0) {
-		dev_err(&cpt->pdev->dev, "Request for #%d msix vectors failed\n",
-			CPT_PF_MSIX_VECTORS);
-		return ret;
-	}
-
-	/* Register mailbox interrupt handlers */
-	ret = request_irq(pci_irq_vector(cpt->pdev, CPT_PF_INT_VEC_E_MBOXX(0)),
-=======
 	ret = cpt_enable_msix(cpt);
 	if (ret)
 		return ret;
 
 	/* Register mailbox interrupt handlers */
 	ret = request_irq(cpt->msix_entries[CPT_PF_INT_VEC_E_MBOXX(0)].vector,
->>>>>>> linux-next/akpm-base
 			  cpt_mbx0_intr_handler, 0, "CPT Mbox0", cpt);
 	if (ret)
 		goto fail;
 
-<<<<<<< HEAD
-=======
 	cpt->irq_allocated[CPT_PF_INT_VEC_E_MBOXX(0)] = true;
 
->>>>>>> linux-next/akpm-base
 	/* Enable mailbox interrupt */
 	cpt_enable_mbox_interrupts(cpt);
 	return 0;
 
 fail:
 	dev_err(dev, "Request irq failed\n");
-<<<<<<< HEAD
-	pci_disable_msix(cpt->pdev);
-=======
 	cpt_free_all_interrupts(cpt);
->>>>>>> linux-next/akpm-base
 	return ret;
 }
 
 static void cpt_unregister_interrupts(struct cpt_device *cpt)
 {
-<<<<<<< HEAD
-	free_irq(pci_irq_vector(cpt->pdev, CPT_PF_INT_VEC_E_MBOXX(0)), cpt);
-	pci_disable_msix(cpt->pdev);
-=======
 	cpt_free_all_interrupts(cpt);
 	cpt_disable_msix(cpt);
->>>>>>> linux-next/akpm-base
 }
 
 static int cpt_sriov_init(struct cpt_device *cpt, int num_vfs)
