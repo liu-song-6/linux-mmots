@@ -189,6 +189,7 @@ struct tid_ampdu_tx {
  * @auto_seq: used for offloaded BA sessions to automatically pick head_seq_and
  *	and ssn.
  * @removed: this session is removed (but might have been found due to RCU)
+ * @started: this session has started (head ssn or higher was received)
  *
  * This structure's lifetime is managed by RCU, assignments to
  * the array holding it must hold the aggregation mutex.
@@ -212,8 +213,9 @@ struct tid_ampdu_rx {
 	u16 ssn;
 	u16 buf_size;
 	u16 timeout;
-	bool auto_seq;
-	bool removed;
+	u8 auto_seq:1,
+	   removed:1,
+	   started:1;
 };
 
 /**
@@ -322,6 +324,9 @@ struct ieee80211_fast_rx {
 	struct rcu_head rcu_head;
 };
 
+/* we use only values in the range 0-100, so pick a large factor */
+DECLARE_EWMA(mesh_fail_avg, 1048576, 8)
+
 /**
  * struct mesh_sta - mesh STA information
  * @plink_lock: serialize access to plink fields
@@ -367,7 +372,7 @@ struct mesh_sta {
 	enum nl80211_mesh_power_mode nonpeer_pm;
 
 	/* moving percentage of failed MSDUs */
-	unsigned int fail_avg;
+	struct ewma_mesh_fail_avg fail_avg;
 };
 
 DECLARE_EWMA(signal, 1024, 8)

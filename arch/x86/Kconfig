@@ -132,6 +132,7 @@ config X86
 	select HAVE_FUNCTION_GRAPH_TRACER
 	select HAVE_FUNCTION_TRACER
 	select HAVE_GCC_PLUGINS
+	select HAVE_GCC_PLUGIN_INITIFY_INIT_EXIT if GCC_PLUGINS
 	select HAVE_HW_BREAKPOINT
 	select HAVE_IDE
 	select HAVE_IOREMAP_PROT
@@ -2786,10 +2787,6 @@ config X86_DEV_DMA_OPS
 config X86_DMA_REMAP
 	bool
 	depends on STA2X11
-
-config PMC_ATOM
-	def_bool y
-        depends on PCI
 
 source "net/Kconfig"
 

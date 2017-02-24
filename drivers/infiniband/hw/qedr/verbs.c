@@ -1353,6 +1353,7 @@ qedr_roce_create_kernel_qp(struct qedr_dev *dev,
 					   n_sq_elems,
 					   QEDR_SQE_ELEMENT_SIZE,
 					   &qp->sq.pbl);
+<<<<<<< HEAD
 
 	if (rc)
 		return rc;
@@ -1360,6 +1361,15 @@ qedr_roce_create_kernel_qp(struct qedr_dev *dev,
 	in_params->sq_num_pages = qed_chain_get_page_cnt(&qp->sq.pbl);
 	in_params->sq_pbl_ptr = qed_chain_get_pbl_phys(&qp->sq.pbl);
 
+=======
+
+	if (rc)
+		return rc;
+
+	in_params->sq_num_pages = qed_chain_get_page_cnt(&qp->sq.pbl);
+	in_params->sq_pbl_ptr = qed_chain_get_pbl_phys(&qp->sq.pbl);
+
+>>>>>>> linux-next/akpm-base
 	rc = dev->ops->common->chain_alloc(dev->cdev,
 					   QED_CHAIN_USE_TO_CONSUME_PRODUCE,
 					   QED_CHAIN_MODE_PBL,

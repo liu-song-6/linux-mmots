@@ -357,10 +357,55 @@ setup_pqfail:
 	return ret;
 }
 
+<<<<<<< HEAD
 static void cptvf_free_irq_affinity(struct cpt_vf *cptvf, int vec)
 {
 	irq_set_affinity_hint(pci_irq_vector(cptvf->pdev, vec), NULL);
 	free_cpumask_var(cptvf->affinity_mask[vec]);
+=======
+static void cptvf_disable_msix(struct cpt_vf *cptvf)
+{
+	if (cptvf->msix_enabled) {
+		pci_disable_msix(cptvf->pdev);
+		cptvf->msix_enabled = 0;
+	}
+}
+
+static int cptvf_enable_msix(struct cpt_vf *cptvf)
+{
+	int i, ret;
+
+	for (i = 0; i < CPT_VF_MSIX_VECTORS; i++)
+		cptvf->msix_entries[i].entry = i;
+
+	ret = pci_enable_msix(cptvf->pdev, cptvf->msix_entries,
+			      CPT_VF_MSIX_VECTORS);
+	if (ret) {
+		dev_err(&cptvf->pdev->dev, "Request for #%d msix vectors failed\n",
+			CPT_VF_MSIX_VECTORS);
+		return ret;
+	}
+
+	cptvf->msix_enabled = 1;
+	/* Mark MSIX enabled */
+	cptvf->flags |= CPT_FLAG_MSIX_ENABLED;
+
+	return 0;
+}
+
+static void cptvf_free_all_interrupts(struct cpt_vf *cptvf)
+{
+	int irq;
+
+	for (irq = 0; irq < CPT_VF_MSIX_VECTORS; irq++) {
+		if (cptvf->irq_allocated[irq])
+			irq_set_affinity_hint(cptvf->msix_entries[irq].vector,
+					      NULL);
+		free_cpumask_var(cptvf->affinity_mask[irq]);
+		free_irq(cptvf->msix_entries[irq].vector, cptvf);
+		cptvf->irq_allocated[irq] = false;
+	}
+>>>>>>> linux-next/akpm-base
 }
 
 static void cptvf_write_vq_ctl(struct cpt_vf *cptvf, bool val)
@@ -612,6 +657,7 @@ static irqreturn_t cptvf_done_intr_handler(int irq, void *cptvf_irq)
 	return IRQ_HANDLED;
 }
 
+<<<<<<< HEAD
 static void cptvf_set_irq_affinity(struct cpt_vf *cptvf, int vec)
 {
 	struct pci_dev *pdev = cptvf->pdev;
@@ -629,6 +675,87 @@ static void cptvf_set_irq_affinity(struct cpt_vf *cptvf, int vec)
 			cptvf->affinity_mask[vec]);
 	irq_set_affinity_hint(pci_irq_vector(pdev, vec),
 			cptvf->affinity_mask[vec]);
+=======
+static int cptvf_register_misc_intr(struct cpt_vf *cptvf)
+{
+	struct pci_dev *pdev = cptvf->pdev;
+	int ret;
+
+	/* Register misc interrupt handlers */
+	ret = request_irq(cptvf->msix_entries[CPT_VF_INT_VEC_E_MISC].vector,
+			  cptvf_misc_intr_handler, 0, "CPT VF misc intr",
+			  cptvf);
+	if (ret)
+		goto fail;
+
+	cptvf->irq_allocated[CPT_VF_INT_VEC_E_MISC] = true;
+
+	/* Enable mailbox interrupt */
+	cptvf_enable_mbox_interrupts(cptvf);
+	cptvf_enable_swerr_interrupts(cptvf);
+
+	return 0;
+
+fail:
+	dev_err(&pdev->dev, "Request misc irq failed");
+	cptvf_free_all_interrupts(cptvf);
+	return ret;
+}
+
+static int cptvf_register_done_intr(struct cpt_vf *cptvf)
+{
+	struct pci_dev *pdev = cptvf->pdev;
+	int ret;
+
+	/* Register DONE interrupt handlers */
+	ret = request_irq(cptvf->msix_entries[CPT_VF_INT_VEC_E_DONE].vector,
+			  cptvf_done_intr_handler, 0, "CPT VF done intr",
+			  cptvf);
+	if (ret)
+		goto fail;
+
+	cptvf->irq_allocated[CPT_VF_INT_VEC_E_DONE] = true;
+
+	/* Enable mailbox interrupt */
+	cptvf_enable_done_interrupts(cptvf);
+	return 0;
+
+fail:
+	dev_err(&pdev->dev, "Request done irq failed\n");
+	cptvf_free_all_interrupts(cptvf);
+	return ret;
+}
+
+static void cptvf_unregister_interrupts(struct cpt_vf *cptvf)
+{
+	cptvf_free_all_interrupts(cptvf);
+	cptvf_disable_msix(cptvf);
+}
+
+static void cptvf_set_irq_affinity(struct cpt_vf *cptvf)
+{
+	struct pci_dev *pdev = cptvf->pdev;
+	int vec, cpu;
+	int irqnum;
+
+	for (vec = 0; vec < CPT_VF_MSIX_VECTORS; vec++) {
+		if (!cptvf->irq_allocated[vec])
+			continue;
+
+		if (!zalloc_cpumask_var(&cptvf->affinity_mask[vec],
+					GFP_KERNEL)) {
+			dev_err(&pdev->dev, "Allocation failed for affinity_mask for VF %d",
+				cptvf->vfid);
+			return;
+		}
+
+		cpu = cptvf->vfid % num_online_cpus();
+		cpumask_set_cpu(cpumask_local_spread(cpu, cptvf->node),
+				cptvf->affinity_mask[vec]);
+		irqnum = cptvf->msix_entries[vec].vector;
+		irq_set_affinity_hint(irqnum, cptvf->affinity_mask[vec]);
+	}
+>>>>>>> linux-next/akpm-base
 }
 
 static void cptvf_write_vq_saddr(struct cpt_vf *cptvf, u64 val)
@@ -709,6 +836,7 @@ static int cptvf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	cptvf->node = dev_to_node(&pdev->dev);
+<<<<<<< HEAD
 	err = pci_alloc_irq_vectors(pdev, CPT_VF_MSIX_VECTORS,
 			CPT_VF_MSIX_VECTORS, PCI_IRQ_MSIX);
 	if (err < 0) {
@@ -728,13 +856,28 @@ static int cptvf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	/* Enable mailbox interrupt */
 	cptvf_enable_mbox_interrupts(cptvf);
 	cptvf_enable_swerr_interrupts(cptvf);
+=======
+	/* Enable MSI-X */
+	err = cptvf_enable_msix(cptvf);
+	if (err) {
+		dev_err(dev, "cptvf_enable_msix() failed");
+		goto cptvf_err_release_regions;
+	}
+
+	/* Register mailbox interrupts */
+	cptvf_register_misc_intr(cptvf);
+>>>>>>> linux-next/akpm-base
 
 	/* Check ready with PF */
 	/* Gets chip ID / device Id from PF if ready */
 	err = cptvf_check_pf_ready(cptvf);
 	if (err) {
 		dev_err(dev, "PF not responding to READY msg");
+<<<<<<< HEAD
 		goto cptvf_free_misc_irq;
+=======
+		goto cptvf_err_release_regions;
+>>>>>>> linux-next/akpm-base
 	}
 
 	/* CPT VF software resources initialization */
@@ -742,13 +885,21 @@ static int cptvf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	err = cptvf_sw_init(cptvf, CPT_CMD_QLEN, CPT_NUM_QS_PER_VF);
 	if (err) {
 		dev_err(dev, "cptvf_sw_init() failed");
+<<<<<<< HEAD
 		goto cptvf_free_misc_irq;
+=======
+		goto cptvf_err_release_regions;
+>>>>>>> linux-next/akpm-base
 	}
 	/* Convey VQ LEN to PF */
 	err = cptvf_send_vq_size_msg(cptvf);
 	if (err) {
 		dev_err(dev, "PF not responding to QLEN msg");
+<<<<<<< HEAD
 		goto cptvf_free_misc_irq;
+=======
+		goto cptvf_err_release_regions;
+>>>>>>> linux-next/akpm-base
 	}
 
 	/* CPT VF device initialization */
@@ -758,13 +909,18 @@ static int cptvf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	err = cptvf_send_vf_to_grp_msg(cptvf);
 	if (err) {
 		dev_err(dev, "PF not responding to VF_GRP msg");
+<<<<<<< HEAD
 		goto cptvf_free_misc_irq;
+=======
+		goto cptvf_err_release_regions;
+>>>>>>> linux-next/akpm-base
 	}
 
 	cptvf->priority = 1;
 	err = cptvf_send_vf_priority_msg(cptvf);
 	if (err) {
 		dev_err(dev, "PF not responding to VF_PRIO msg");
+<<<<<<< HEAD
 		goto cptvf_free_misc_irq;
 	}
 
@@ -787,10 +943,27 @@ static int cptvf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (err) {
 		dev_err(dev, "PF not responding to UP msg");
 		goto cptvf_free_irq_affinity;
+=======
+		goto cptvf_err_release_regions;
+	}
+	/* Register DONE interrupts */
+	err = cptvf_register_done_intr(cptvf);
+	if (err)
+		goto cptvf_err_release_regions;
+
+	/* Set irq affinity masks */
+	cptvf_set_irq_affinity(cptvf);
+	/* Convey UP to PF */
+	err = cptvf_send_vf_up(cptvf);
+	if (err) {
+		dev_err(dev, "PF not responding to UP msg");
+		goto cptvf_up_fail;
+>>>>>>> linux-next/akpm-base
 	}
 	err = cvm_crypto_init(cptvf);
 	if (err) {
 		dev_err(dev, "Algorithm register failed\n");
+<<<<<<< HEAD
 		goto cptvf_free_irq_affinity;
 	}
 	return 0;
@@ -802,6 +975,14 @@ cptvf_free_misc_irq:
 	free_irq(pci_irq_vector(pdev, CPT_VF_INT_VEC_E_MISC), cptvf);
 cptvf_free_vectors:
 	pci_free_irq_vectors(cptvf->pdev);
+=======
+		goto cptvf_up_fail;
+	}
+	return 0;
+
+cptvf_up_fail:
+	cptvf_unregister_interrupts(cptvf);
+>>>>>>> linux-next/akpm-base
 cptvf_err_release_regions:
 	pci_release_regions(pdev);
 cptvf_err_disable_device:
@@ -822,11 +1003,15 @@ static void cptvf_remove(struct pci_dev *pdev)
 	if (cptvf_send_vf_down(cptvf)) {
 		dev_err(&pdev->dev, "PF not responding to DOWN msg");
 	} else {
+<<<<<<< HEAD
 		cptvf_free_irq_affinity(cptvf, CPT_VF_INT_VEC_E_DONE);
 		cptvf_free_irq_affinity(cptvf, CPT_VF_INT_VEC_E_MISC);
 		free_irq(pci_irq_vector(pdev, CPT_VF_INT_VEC_E_DONE), cptvf);
 		free_irq(pci_irq_vector(pdev, CPT_VF_INT_VEC_E_MISC), cptvf);
 		pci_free_irq_vectors(cptvf->pdev);
+=======
+		cptvf_unregister_interrupts(cptvf);
+>>>>>>> linux-next/akpm-base
 		cptvf_sw_cleanup(cptvf);
 		pci_set_drvdata(pdev, NULL);
 		pci_release_regions(pdev);

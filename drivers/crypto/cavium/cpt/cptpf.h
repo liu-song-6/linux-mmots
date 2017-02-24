@@ -51,6 +51,14 @@ struct cpt_device {
 	struct cpt_vf_info vfinfo[CPT_MAX_VF_NUM]; /* Per VF info */
 
 	void __iomem *reg_base; /* Register start address */
+<<<<<<< HEAD
+=======
+	/* MSI-X */
+	u8 num_vec;
+	bool msix_enabled;
+	struct msix_entry msix_entries[CPT_PF_MSIX_VECTORS];
+	bool irq_allocated[CPT_PF_MSIX_VECTORS];
+>>>>>>> linux-next/akpm-base
 	struct pci_dev *pdev; /* pci device handle */
 
 	struct microcode mcode[CPT_MAX_CORE_GROUPS];
