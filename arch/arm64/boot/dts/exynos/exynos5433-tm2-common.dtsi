@@ -217,6 +217,7 @@
 	assigned-clock-parents = <&cmu_top CLK_FOUT_AUD_PLL>;
 };
 
+<<<<<<< HEAD
 &cmu_disp {
 	assigned-clocks = <&cmu_mif CLK_MOUT_SCLK_DECON_TV_ECLK_A>,
 			  <&cmu_mif CLK_DIV_SCLK_DECON_TV_ECLK>,
@@ -229,6 +230,8 @@
 	assigned-clock-rates = <0>, <400000000>;
 };
 
+=======
+>>>>>>> linux-next/akpm-base
 &cmu_fsys {
 	assigned-clocks = <&cmu_top CLK_MOUT_SCLK_USBDRD30>,
 		<&cmu_top CLK_MOUT_SCLK_USBHOST30>,

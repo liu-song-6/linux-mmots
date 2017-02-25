@@ -2555,6 +2555,7 @@ static int smu7_get_profiling_clk(struct pp_hwmgr *hwmgr, enum amd_dpm_forced_le
 		}
 		if (count < 0 || level == AMD_DPM_FORCED_LEVEL_PROFILE_MIN_SCLK)
 			*sclk_mask = 0;
+<<<<<<< HEAD
 
 		if (level == AMD_DPM_FORCED_LEVEL_PROFILE_PEAK)
 			*sclk_mask = table_info->vdd_dep_on_sclk->count - 1;
@@ -2565,6 +2566,18 @@ static int smu7_get_profiling_clk(struct pp_hwmgr *hwmgr, enum amd_dpm_forced_le
 	else if (level == AMD_DPM_FORCED_LEVEL_PROFILE_PEAK)
 		*mclk_mask = golden_dpm_table->mclk_table.count - 1;
 
+=======
+
+		if (level == AMD_DPM_FORCED_LEVEL_PROFILE_PEAK)
+			*sclk_mask = table_info->vdd_dep_on_sclk->count - 1;
+	}
+
+	if (level == AMD_DPM_FORCED_LEVEL_PROFILE_MIN_MCLK)
+		*mclk_mask = 0;
+	else if (level == AMD_DPM_FORCED_LEVEL_PROFILE_PEAK)
+		*mclk_mask = golden_dpm_table->mclk_table.count - 1;
+
+>>>>>>> linux-next/akpm-base
 	*pcie_mask = data->dpm_table.pcie_speed_table.count - 1;
 	return 0;
 }
@@ -2621,6 +2634,7 @@ static int smu7_force_dpm_level(struct pp_hwmgr *hwmgr,
 		if (ret)
 			return ret;
 		hwmgr->dpm_level = level;
+<<<<<<< HEAD
 		break;
 	case AMD_DPM_FORCED_LEVEL_PROFILE_STANDARD:
 	case AMD_DPM_FORCED_LEVEL_PROFILE_MIN_SCLK:
@@ -2635,6 +2649,22 @@ static int smu7_force_dpm_level(struct pp_hwmgr *hwmgr,
 		smu7_force_clock_level(hwmgr, PP_PCIE, 1<<pcie_mask);
 
 		break;
+=======
+		break;
+	case AMD_DPM_FORCED_LEVEL_PROFILE_STANDARD:
+	case AMD_DPM_FORCED_LEVEL_PROFILE_MIN_SCLK:
+	case AMD_DPM_FORCED_LEVEL_PROFILE_MIN_MCLK:
+	case AMD_DPM_FORCED_LEVEL_PROFILE_PEAK:
+		ret = smu7_get_profiling_clk(hwmgr, level, &sclk_mask, &mclk_mask, &pcie_mask);
+		if (ret)
+			return ret;
+		hwmgr->dpm_level = level;
+		smu7_force_clock_level(hwmgr, PP_SCLK, 1<<sclk_mask);
+		smu7_force_clock_level(hwmgr, PP_MCLK, 1<<mclk_mask);
+		smu7_force_clock_level(hwmgr, PP_PCIE, 1<<pcie_mask);
+
+		break;
+>>>>>>> linux-next/akpm-base
 	case AMD_DPM_FORCED_LEVEL_MANUAL:
 		hwmgr->dpm_level = level;
 		break;

@@ -56,7 +56,11 @@
 };
 
 &pio {
+<<<<<<< HEAD
 	mmc2_pins_nrst: mmc2-rst-pin {
+=======
+	mmc2_pins_nrst: mmc2@0 {
+>>>>>>> linux-next/akpm-base
 		pins = "PC16";
 		function = "gpio_out";
 	};
