@@ -18,8 +18,6 @@
 	compatible = "samsung,tm2e", "samsung,exynos5433";
 };
 
-<<<<<<< HEAD
-=======
 &cmu_disp {
 	/*
 	 * TM2 and TM2e differ only by DISP_PLL rate, but define all assigned
@@ -54,7 +52,6 @@
 	assigned-clock-rates = <278000000>, <400000000>;
 };
 
->>>>>>> linux-next/akpm-base
 &ldo31_reg {
 	regulator-name = "TSP_VDD_1.8V_AP";
 	regulator-min-microvolt = <1800000>;

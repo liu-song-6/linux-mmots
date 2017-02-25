@@ -546,12 +546,8 @@ nouveau_drm_unload(struct drm_device *dev)
 
 	if (drm->hdmi_device)
 		pci_dev_put(drm->hdmi_device);
-<<<<<<< HEAD
 	nouveau_cli_fini(&drm->client);
 	kfree(drm);
-=======
-	nouveau_cli_destroy(&drm->client);
->>>>>>> linux-next/akpm-base
 }
 
 void

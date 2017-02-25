@@ -36,8 +36,6 @@
 
 #define END_PRIMARY_CLK		14
 
-<<<<<<< HEAD
-=======
 #define CLK_HSI			14
 #define CLK_SYSCLK		15
 #define CLK_HDMI_CEC		16
@@ -58,5 +56,4 @@
 
 #define END_PRIMARY_CLK_F7	31
 
->>>>>>> linux-next/akpm-base
 #endif

@@ -84,8 +84,6 @@ The secondary index is bound with the following magic numbers:
 	11	CLK_SAI2
 	12	CLK_I2SQ_PDIV	(post divisor of pll i2s q divisor)
 	13	CLK_SAIQ_PDIV	(post divisor of pll sai q divisor)
-<<<<<<< HEAD
-=======
 
 	14	CLK_HSI		(Internal ocscillator clock)
 	15	CLK_SYSCLK	(System Clock)
@@ -105,7 +103,6 @@ The secondary index is bound with the following magic numbers:
 	29	CLK_I2C4
 	30	CLK_LPTIMER	(LPTimer1 clock)
 )
->>>>>>> linux-next/akpm-base
 
 Example:
 

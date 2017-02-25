@@ -1198,11 +1198,7 @@ out:
 
 static void
 nouveau_bo_move_ntfy(struct ttm_buffer_object *bo, bool evict,
-<<<<<<< HEAD
 		     struct ttm_mem_reg *new_reg)
-=======
-		     struct ttm_mem_reg *new_mem)
->>>>>>> linux-next/akpm-base
 {
 	struct nouveau_bo *nvbo = nouveau_bo(bo);
 	struct nvkm_vma *vma;

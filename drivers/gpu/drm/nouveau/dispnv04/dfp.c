@@ -417,11 +417,7 @@ static void nv04_dfp_mode_set(struct drm_encoder *encoder,
 	if ((nv_connector->dithering_mode == DITHERING_MODE_ON) ||
 	    (nv_connector->dithering_mode == DITHERING_MODE_AUTO &&
 	     fb->format->depth > connector->display_info.bpc * 3)) {
-<<<<<<< HEAD
 		if (drm->client.device.info.chipset == 0x11)
-=======
-		if (drm->device.info.chipset == 0x11)
->>>>>>> linux-next/akpm-base
 			regp->dither = savep->dither | 0x00010000;
 		else {
 			int i;

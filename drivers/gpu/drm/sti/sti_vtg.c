@@ -411,7 +411,6 @@ static int vtg_probe(struct platform_device *pdev)
 		DRM_ERROR("failed to remap I/O memory\n");
 		return -ENOMEM;
 	}
-<<<<<<< HEAD
 
 	vtg->irq = platform_get_irq(pdev, 0);
 	if (vtg->irq < 0) {
@@ -421,17 +420,6 @@ static int vtg_probe(struct platform_device *pdev)
 
 	RAW_INIT_NOTIFIER_HEAD(&vtg->notifier_list);
 
-=======
-
-	vtg->irq = platform_get_irq(pdev, 0);
-	if (vtg->irq < 0) {
-		DRM_ERROR("Failed to get VTG interrupt\n");
-		return vtg->irq;
-	}
-
-	RAW_INIT_NOTIFIER_HEAD(&vtg->notifier_list);
-
->>>>>>> linux-next/akpm-base
 	ret = devm_request_threaded_irq(dev, vtg->irq, vtg_irq,
 					vtg_irq_thread, IRQF_ONESHOT,
 					dev_name(dev), vtg);
