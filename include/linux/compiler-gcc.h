@@ -197,6 +197,39 @@
 #endif
 #endif
 
+#ifdef CONFIG_STACK_VALIDATION
+#define annotate_unreachable() ({					\
+	asm("1:\t\n"							\
+	    ".pushsection __unreachable, \"a\"\t\n"			\
+	    ".long 1b\t\n"						\
+	    ".popsection\t\n");						\
+})
+#else
+#define annotate_unreachable()
+#endif
+
+/*
+ * The initify gcc-plugin attempts to identify const arguments that are only
+ * used during init (see __init and __exit), so they can be moved to the
+ * .init.rodata/.exit.rodata section. If an argument is passed to a non-init
+ * function, it must normally be assumed that such an argument has been
+ * captured by that function and may be used in the future when .init/.exit has
+ * been unmapped from memory. In order to identify functions that are confirmed
+ * to not capture their arguments, the __nocapture() attribute is used so that
+ * initify can better identify candidate variables.
+ *
+ * Arguments marked in this way are verified by the plugin, but sometimes
+ * code complexity and other limitiations will cause initify to not be able
+ * to check it correctly. For these cases, the __unverified_nocapture
+ * attribute can be added to disable this checking, overriding the plugin
+ * logic for cases that have been manually verified. This should not need
+ * to be used very often.
+ */
+#ifdef INITIFY_PLUGIN
+#define __nocapture(...) __attribute__((nocapture(__VA_ARGS__)))
+#define __unverified_nocapture(...) __attribute__((unverified_nocapture(__VA_ARGS__)))
+#endif
+
 /*
  * Mark a position in code as unreachable.  This can be used to
  * suppress control flow warnings after asm blocks that transfer
@@ -206,7 +239,7 @@
  * this in the preprocessor, but we can live with this because they're
  * unreleased.  Really, we need to have autoconf for the kernel.
  */
-#define unreachable() __builtin_unreachable()
+#define unreachable() annotate_unreachable(); __builtin_unreachable()
 
 /* Mark a function definition as prohibited from being cloned. */
 #define __noclone	__attribute__((__noclone__, __optimize__("no-tracer")))
