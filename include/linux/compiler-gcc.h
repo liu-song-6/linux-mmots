@@ -199,24 +199,15 @@
 
 #ifdef CONFIG_STACK_VALIDATION
 #define annotate_unreachable() ({					\
-<<<<<<< HEAD
-	asm("%c0:\t\n"							\
-	    ".pushsection __unreachable, \"a\"\t\n"			\
-	    ".long %c0b\t\n"						\
-	    ".popsection\t\n" : : "i" (__LINE__));			\
-=======
 	asm("1:\t\n"							\
 	    ".pushsection __unreachable, \"a\"\t\n"			\
 	    ".long 1b\t\n"						\
 	    ".popsection\t\n");						\
->>>>>>> linux-next/akpm-base
 })
 #else
 #define annotate_unreachable()
 #endif
 
-<<<<<<< HEAD
-=======
 /*
  * The initify gcc-plugin attempts to identify const arguments that are only
  * used during init (see __init and __exit), so they can be moved to the
@@ -239,7 +230,6 @@
 #define __unverified_nocapture(...) __attribute__((unverified_nocapture(__VA_ARGS__)))
 #endif
 
->>>>>>> linux-next/akpm-base
 /*
  * Mark a position in code as unreachable.  This can be used to
  * suppress control flow warnings after asm blocks that transfer
@@ -249,12 +239,7 @@
  * this in the preprocessor, but we can live with this because they're
  * unreleased.  Really, we need to have autoconf for the kernel.
  */
-<<<<<<< HEAD
-#define unreachable() \
-	do { annotate_unreachable(); __builtin_unreachable(); } while (0)
-=======
 #define unreachable() annotate_unreachable(); __builtin_unreachable()
->>>>>>> linux-next/akpm-base
 
 /* Mark a function definition as prohibited from being cloned. */
 #define __noclone	__attribute__((__noclone__, __optimize__("no-tracer")))
