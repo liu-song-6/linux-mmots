@@ -688,7 +688,7 @@ static void __sta_info_recalc_tim(struct sta_info *sta, bool ignore_pending)
 	}
 
 	/* No need to do anything if the driver does all */
-	if (ieee80211_hw_check(&local->hw, AP_LINK_PS))
+	if (ieee80211_hw_check(&local->hw, AP_LINK_PS) && !local->ops->set_tim)
 		return;
 
 	if (sta->dead)
@@ -1264,7 +1264,7 @@ void ieee80211_sta_ps_deliver_wakeup(struct sta_info *sta)
 	sta_info_recalc_tim(sta);
 
 	ps_dbg(sdata,
-	       "STA %pM aid %d sending %d filtered/%d PS frames since STA not sleeping anymore\n",
+	       "STA %pM aid %d sending %d filtered/%d PS frames since STA woke up\n",
 	       sta->sta.addr, sta->sta.aid, filtered, buffered);
 
 	ieee80211_check_fast_xmit(sta);
@@ -1960,14 +1960,17 @@ static void sta_stats_decode_rate(struct ieee80211_local *local, u16 rate,
 	rinfo->bw = (rate & STA_STATS_RATE_BW_MASK) >>
 		STA_STATS_RATE_BW_SHIFT;
 
-	if (rate & STA_STATS_RATE_VHT) {
+	switch (rate & STA_STATS_RATE_TYPE_MASK) {
+	case STA_STATS_RATE_TYPE_VHT:
 		rinfo->flags = RATE_INFO_FLAGS_VHT_MCS;
 		rinfo->mcs = rate & 0xf;
 		rinfo->nss = (rate & 0xf0) >> 4;
-	} else if (rate & STA_STATS_RATE_HT) {
+		break;
+	case STA_STATS_RATE_TYPE_HT:
 		rinfo->flags = RATE_INFO_FLAGS_MCS;
 		rinfo->mcs = rate & 0xff;
-	} else if (rate & STA_STATS_RATE_LEGACY) {
+		break;
+	case STA_STATS_RATE_TYPE_LEGACY: {
 		struct ieee80211_supported_band *sband;
 		u16 brate;
 		unsigned int shift;
@@ -1982,6 +1985,8 @@ static void sta_stats_decode_rate(struct ieee80211_local *local, u16 rate,
 		else
 			shift = 0;
 		rinfo->legacy = DIV_ROUND_UP(brate, 1 << shift);
+		break;
+		}
 	}
 
 	if (rate & STA_STATS_RATE_SGI)

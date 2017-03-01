@@ -189,6 +189,7 @@ struct tid_ampdu_tx {
  * @auto_seq: used for offloaded BA sessions to automatically pick head_seq_and
  *	and ssn.
  * @removed: this session is removed (but might have been found due to RCU)
+ * @started: this session has started (head ssn or higher was received)
  *
  * This structure's lifetime is managed by RCU, assignments to
  * the array holding it must hold the aggregation mutex.
@@ -212,8 +213,9 @@ struct tid_ampdu_rx {
 	u16 ssn;
 	u16 buf_size;
 	u16 timeout;
-	bool auto_seq;
-	bool removed;
+	u8 auto_seq:1,
+	   removed:1,
+	   started:1;
 };
 
 /**
@@ -322,6 +324,9 @@ struct ieee80211_fast_rx {
 	struct rcu_head rcu_head;
 };
 
+/* we use only values in the range 0-100, so pick a large precision */
+DECLARE_EWMA(mesh_fail_avg, 20, 8)
+
 /**
  * struct mesh_sta - mesh STA information
  * @plink_lock: serialize access to plink fields
@@ -367,10 +372,10 @@ struct mesh_sta {
 	enum nl80211_mesh_power_mode nonpeer_pm;
 
 	/* moving percentage of failed MSDUs */
-	unsigned int fail_avg;
+	struct ewma_mesh_fail_avg fail_avg;
 };
 
-DECLARE_EWMA(signal, 1024, 8)
+DECLARE_EWMA(signal, 10, 8)
 
 struct ieee80211_sta_rx_stats {
 	unsigned long packets;
@@ -723,9 +728,10 @@ void ieee80211_sta_ps_deliver_uapsd(struct sta_info *sta);
 unsigned long ieee80211_sta_last_active(struct sta_info *sta);
 
 #define STA_STATS_RATE_INVALID		0
-#define STA_STATS_RATE_VHT		0x8000
-#define STA_STATS_RATE_HT		0x4000
-#define STA_STATS_RATE_LEGACY		0x2000
+#define STA_STATS_RATE_TYPE_MASK	0xC000
+#define STA_STATS_RATE_TYPE_LEGACY	0x4000
+#define STA_STATS_RATE_TYPE_HT		0x8000
+#define STA_STATS_RATE_TYPE_VHT		0xC000
 #define STA_STATS_RATE_SGI		0x1000
 #define STA_STATS_RATE_BW_SHIFT		9
 #define STA_STATS_RATE_BW_MASK		(0x7 << STA_STATS_RATE_BW_SHIFT)
@@ -751,11 +757,11 @@ static inline u16 sta_stats_encode_rate(struct ieee80211_rx_status *s)
 		r |= STA_STATS_RATE_SGI;
 
 	if (s->flag & RX_FLAG_VHT)
-		r |= STA_STATS_RATE_VHT | (s->vht_nss << 4);
+		r |= STA_STATS_RATE_TYPE_VHT | (s->vht_nss << 4);
 	else if (s->flag & RX_FLAG_HT)
-		r |= STA_STATS_RATE_HT;
+		r |= STA_STATS_RATE_TYPE_HT;
 	else
-		r |= STA_STATS_RATE_LEGACY | (s->band << 4);
+		r |= STA_STATS_RATE_TYPE_LEGACY | (s->band << 4);
 
 	return r;
 }
