@@ -44,6 +44,7 @@
 #include <drm/ttm/ttm_bo_driver.h>
 #include <drm/ttm/ttm_placement.h>
 #include <drm/ttm/ttm_page_alloc.h>
+#include <asm/set_memory.h>
 
 /**
  * Allocates storage for pointers to the pages that back the ttm.
