@@ -17,7 +17,7 @@
 #include <linux/slab.h>
 #include <linux/if_vlan.h>
 
-#include <asm/cacheflush.h>
+#include <asm/set_memory.h>
 #include <asm/hwcap.h>
 #include <asm/opcodes.h>
 
