@@ -15,6 +15,8 @@
 #include <linux/gfp.h>
 #include <linux/skbuff.h>
 #include <linux/export.h>
+#include <linux/sched/signal.h>
+
 #include <net/sock.h>
 #include <net/af_rxrpc.h>
 #include "ar-internal.h"
@@ -376,7 +378,7 @@ static int rxrpc_sendmsg_cmsg(struct msghdr *msg,
 		if (!CMSG_OK(msg, cmsg))
 			return -EINVAL;
 
-		len = cmsg->cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr));
+		len = cmsg->cmsg_len - sizeof(struct cmsghdr);
 		_debug("CMSG %d, %d, %d",
 		       cmsg->cmsg_level, cmsg->cmsg_type, len);
 
