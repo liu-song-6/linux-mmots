@@ -572,7 +572,6 @@ qla2x00_find_fcport_by_loopid(scsi_qla_host_t *vha, uint16_t loop_id)
 			return f;
 	return NULL;
 }
-<<<<<<< HEAD
 
 fc_port_t *
 qla2x00_find_fcport_by_wwpn(scsi_qla_host_t *vha, u8 *wwpn, u8 incl_deleted)
@@ -592,27 +591,6 @@ qla2x00_find_fcport_by_wwpn(scsi_qla_host_t *vha, u8 *wwpn, u8 incl_deleted)
 }
 
 fc_port_t *
-=======
-
-fc_port_t *
-qla2x00_find_fcport_by_wwpn(scsi_qla_host_t *vha, u8 *wwpn, u8 incl_deleted)
-{
-	fc_port_t *f, *tf;
-
-	f = tf = NULL;
-	list_for_each_entry_safe(f, tf, &vha->vp_fcports, list) {
-		if (memcmp(f->port_name, wwpn, WWN_SIZE) == 0) {
-			if (incl_deleted)
-				return f;
-			else if (f->deleted == 0)
-				return f;
-		}
-	}
-	return NULL;
-}
-
-fc_port_t *
->>>>>>> linux-next/akpm-base
 qla2x00_find_fcport_by_nportid(scsi_qla_host_t *vha, port_id_t *id,
 	u8 incl_deleted)
 {
@@ -1437,7 +1415,6 @@ qla24xxx_nack_iocb_entry(scsi_qla_host_t *vha, struct req_que *req,
 
 	if (pkt->u.isp2x.status != cpu_to_le16(NOTIFY_ACK_SUCCESS))
 		res = QLA_FUNCTION_FAILED;
-<<<<<<< HEAD
 
 	sp->done(sp, res);
 }
@@ -1458,28 +1435,6 @@ qla2x00_ct_entry(scsi_qla_host_t *vha, struct req_que *req,
 	if (!sp)
 		return;
 
-=======
-
-	sp->done(sp, res);
-}
-
-static void
-qla2x00_ct_entry(scsi_qla_host_t *vha, struct req_que *req,
-    sts_entry_t *pkt, int iocb_type)
-{
-	const char func[] = "CT_IOCB";
-	const char *type;
-	srb_t *sp;
-	struct bsg_job *bsg_job;
-	struct fc_bsg_reply *bsg_reply;
-	uint16_t comp_status;
-	int res = 0;
-
-	sp = qla2x00_get_sp_from_handle(vha, func, req, pkt);
-	if (!sp)
-		return;
-
->>>>>>> linux-next/akpm-base
 	switch (sp->type) {
 	case SRB_CT_CMD:
 	    bsg_job = sp->u.bsg_job;
