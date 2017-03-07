@@ -40,7 +40,7 @@
 #include <sound/initval.h>
 /* for 440MX workaround */
 #include <asm/pgtable.h>
-#include <asnm/set_memory.h>
+#include <asm/set_memory.h>
 #include <asm/cacheflush.h>
 
 MODULE_AUTHOR("Jaroslav Kysela <perex@perex.cz>");
