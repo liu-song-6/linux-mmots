@@ -19,6 +19,7 @@
 #include <asm/pgalloc.h>
 #include <asm/tlbflush.h>
 #include <asm/mmu_context.h>
+#include <asm/set_memory.h>
 #include <asm/apic.h>
 #include <asm/io_apic.h>
 #include <asm/cpufeature.h>
