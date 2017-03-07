@@ -27,6 +27,7 @@
  */
 #include <drm/drmP.h>
 #include <drm/radeon_drm.h>
+#include <asm/set_memory.h>
 #include "radeon.h"
 
 /*
