@@ -2064,6 +2064,9 @@ static const struct address_space_operations def_blk_aops = {
 	.releasepage	= blkdev_releasepage,
 	.direct_IO	= blkdev_direct_IO,
 	.is_dirty_writeback = buffer_check_dirty_writeback,
+#ifdef CONFIG_MIGRATION
+	.migratepage = buffer_migrate_page,
+#endif
 };
 
 #define	BLKDEV_FALLOC_FL_SUPPORTED					\
