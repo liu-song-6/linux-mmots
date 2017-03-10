@@ -653,6 +653,9 @@
 	cpuidle.off=1	[CPU_IDLE]
 			disable the cpuidle sub-system
 
+	cpufreq.off=1	[CPU_FREQ]
+			disable the cpufreq sub-system
+
 	cpu_init_udelay=N
 			[X86] Delay for N microsec between assert and de-assert
 			of APIC INIT to start processors.  This delay occurs
@@ -4111,6 +4114,9 @@
 
 	usbhid.mousepoll=
 			[USBHID] The interval which mice are to be polled at.
+
+	usbhid.jspoll=
+			[USBHID] The interval which joysticks are to be polled at.
 
 	usb-storage.delay_use=
 			[UMS] The delay in seconds before a new device is

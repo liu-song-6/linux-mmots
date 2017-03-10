@@ -152,7 +152,7 @@ u32 msm_readl(const void __iomem *addr)
 {
 	u32 val = readl(addr);
 	if (reglog)
-		printk(KERN_ERR "IO:R %p %08x\n", addr, val);
+		pr_err("IO:R %p %08x\n", addr, val);
 	return val;
 }
 
@@ -241,6 +241,9 @@ static int msm_drm_uninit(struct device *dev)
 
 	drm_dev_unregister(ddev);
 
+	msm_perf_debugfs_cleanup(priv);
+	msm_rd_debugfs_cleanup(priv);
+
 #ifdef CONFIG_DRM_FBDEV_EMULATION
 	if (fbdev && priv->fbdev)
 		msm_fbdev_free(ddev);
@@ -262,6 +265,8 @@ static int msm_drm_uninit(struct device *dev)
 
 	if (gpu) {
 		mutex_lock(&ddev->struct_mutex);
+		// XXX what do we do here?
+		//pm_runtime_enable(&pdev->dev);
 		gpu->funcs->pm_suspend(gpu);
 		mutex_unlock(&ddev->struct_mutex);
 		gpu->funcs->destroy(gpu);
@@ -816,7 +821,6 @@ static struct drm_driver msm_driver = {
 	.irq_preinstall     = msm_irq_preinstall,
 	.irq_postinstall    = msm_irq_postinstall,
 	.irq_uninstall      = msm_irq_uninstall,
-	.get_vblank_counter = drm_vblank_no_hw_counter,
 	.enable_vblank      = msm_enable_vblank,
 	.disable_vblank     = msm_disable_vblank,
 	.gem_free_object    = msm_gem_free_object,
@@ -837,7 +841,6 @@ static struct drm_driver msm_driver = {
 	.gem_prime_mmap     = msm_gem_prime_mmap,
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_init       = msm_debugfs_init,
-	.debugfs_cleanup    = msm_debugfs_cleanup,
 #endif
 	.ioctls             = msm_ioctls,
 	.num_ioctls         = DRM_MSM_NUM_IOCTLS,
