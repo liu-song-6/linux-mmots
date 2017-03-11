@@ -2856,6 +2856,12 @@ static bool pfmemalloc_watermark_ok(pg_data_t *pgdat)
 	return wmark_ok;
 }
 
+static bool should_throttle_direct_reclaim(pg_data_t *pgdat)
+{
+	return (pgdat->kswapd_failures < MAX_RECLAIM_RETRIES &&
+		!pfmemalloc_watermark_ok(pgdat));
+}
+
 /*
  * Throttle direct reclaimers if backing storage is backed by the network
  * and the PFMEMALLOC reserve for the preferred node is getting dangerously
@@ -2910,7 +2916,7 @@ static bool throttle_direct_reclaim(gfp_t gfp_mask, struct zonelist *zonelist,
 
 		/* Throttle based on the first usable node */
 		pgdat = zone->zone_pgdat;
-		if (pfmemalloc_watermark_ok(pgdat))
+		if (!should_throttle_direct_reclaim(pgdat))
 			goto out;
 		break;
 	}
@@ -2932,14 +2938,14 @@ static bool throttle_direct_reclaim(gfp_t gfp_mask, struct zonelist *zonelist,
 	 */
 	if (!(gfp_mask & __GFP_FS)) {
 		wait_event_interruptible_timeout(pgdat->pfmemalloc_wait,
-			pfmemalloc_watermark_ok(pgdat), HZ);
+			!should_throttle_direct_reclaim(pgdat), HZ);
 
 		goto check_pending;
 	}
 
 	/* Throttle until kswapd wakes the process */
 	wait_event_killable(zone->zone_pgdat->pfmemalloc_wait,
-		pfmemalloc_watermark_ok(pgdat));
+		!should_throttle_direct_reclaim(pgdat));
 
 check_pending:
 	if (fatal_signal_pending(current))
