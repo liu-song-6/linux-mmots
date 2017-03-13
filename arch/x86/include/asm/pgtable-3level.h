@@ -121,8 +121,9 @@ static inline void native_pmd_clear(pmd_t *pmd)
 	*(tmp + 1) = 0;
 }
 
-#if !defined(CONFIG_SMP) || (defined(CONFIG_HIGHMEM64G) && \
-		defined(CONFIG_PARAVIRT))
+#if !defined(CONFIG_SMP) || \
+	(defined(CONFIG_HIGHMEM64G) && defined(CONFIG_PARAVIRT)) || \
+	(defined(CONFIG_NOHIGHMEM) && defined(CONFIG_X86_PAE))
 static inline void native_pud_clear(pud_t *pudp)
 {
 }
