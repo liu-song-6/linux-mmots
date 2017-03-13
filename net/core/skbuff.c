@@ -1971,8 +1971,7 @@ static bool __skb_splice_bits(struct sk_buff *skb, struct pipe_inode_info *pipe,
  * the fragments, and the frag list.
  */
 int skb_splice_bits(struct sk_buff *skb, struct sock *sk, unsigned int offset,
-		    struct pipe_inode_info *pipe, unsigned int tlen,
-		    unsigned int flags)
+		    struct pipe_inode_info *pipe, unsigned int tlen)
 {
 	struct partial_page partial[MAX_SKB_FRAGS];
 	struct page *pages[MAX_SKB_FRAGS];
@@ -1980,7 +1979,6 @@ int skb_splice_bits(struct sk_buff *skb, struct sock *sk, unsigned int offset,
 		.pages = pages,
 		.partial = partial,
 		.nr_pages_max = MAX_SKB_FRAGS,
-		.flags = flags,
 		.ops = &nosteal_pipe_buf_ops,
 		.spd_release = sock_spd_release,
 	};
@@ -3828,13 +3826,14 @@ void skb_complete_tx_timestamp(struct sk_buff *skb,
 	if (!skb_may_tx_timestamp(sk, false))
 		return;
 
-	/* take a reference to prevent skb_orphan() from freeing the socket */
-	sock_hold(sk);
-
-	*skb_hwtstamps(skb) = *hwtstamps;
-	__skb_complete_tx_timestamp(skb, sk, SCM_TSTAMP_SND);
-
-	sock_put(sk);
+	/* Take a reference to prevent skb_orphan() from freeing the socket,
+	 * but only if the socket refcount is not zero.
+	 */
+	if (likely(atomic_inc_not_zero(&sk->sk_refcnt))) {
+		*skb_hwtstamps(skb) = *hwtstamps;
+		__skb_complete_tx_timestamp(skb, sk, SCM_TSTAMP_SND);
+		sock_put(sk);
+	}
 }
 EXPORT_SYMBOL_GPL(skb_complete_tx_timestamp);
 
@@ -3893,7 +3892,7 @@ void skb_complete_wifi_ack(struct sk_buff *skb, bool acked)
 {
 	struct sock *sk = skb->sk;
 	struct sock_exterr_skb *serr;
-	int err;
+	int err = 1;
 
 	skb->wifi_acked_valid = 1;
 	skb->wifi_acked = acked;
@@ -3903,14 +3902,15 @@ void skb_complete_wifi_ack(struct sk_buff *skb, bool acked)
 	serr->ee.ee_errno = ENOMSG;
 	serr->ee.ee_origin = SO_EE_ORIGIN_TXSTATUS;
 
-	/* take a reference to prevent skb_orphan() from freeing the socket */
-	sock_hold(sk);
-
-	err = sock_queue_err_skb(sk, skb);
+	/* Take a reference to prevent skb_orphan() from freeing the socket,
+	 * but only if the socket refcount is not zero.
+	 */
+	if (likely(atomic_inc_not_zero(&sk->sk_refcnt))) {
+		err = sock_queue_err_skb(sk, skb);
+		sock_put(sk);
+	}
 	if (err)
 		kfree_skb(skb);
-
-	sock_put(sk);
 }
 EXPORT_SYMBOL_GPL(skb_complete_wifi_ack);
 
