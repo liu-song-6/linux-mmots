@@ -375,3 +375,18 @@ int trace_seq_to_user(struct trace_seq *s, char __user *ubuf, int cnt)
 	return seq_buf_to_user(&s->seq, ubuf, cnt);
 }
 EXPORT_SYMBOL_GPL(trace_seq_to_user);
+
+
+
+/**
+ * trace_seq_has_overflowed - return true if the trace_seq took too much
+ * @s: trace sequence descriptor
+ *
+ * Returns true if too much data was added to the trace_seq and it is
+ * now full and will not take anymore.
+ */
+bool trace_seq_has_overflowed(struct trace_seq *s)
+{
+	return s->full || seq_buf_has_overflowed(&s->seq);
+}
+EXPORT_SYMBOL_GPL(trace_seq_has_overflowed);
