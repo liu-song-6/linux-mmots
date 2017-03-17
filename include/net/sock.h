@@ -995,7 +995,7 @@ struct smc_hashinfo;
 struct module;
 
 /*
- * caches using SLAB_DESTROY_BY_RCU should let .next pointer from nulls nodes
+ * caches using SLAB_TYPESAFE_BY_RCU should let .next pointer from nulls nodes
  * un-modified. Special care is taken when initializing object to zero.
  */
 static inline void sk_prot_clear_nulls(struct sock *sk, int size)
@@ -1783,11 +1783,8 @@ __sk_dst_set(struct sock *sk, struct dst_entry *dst)
 
 	sk_tx_queue_clear(sk);
 	sk->sk_dst_pending_confirm = 0;
-	/*
-	 * This can be called while sk is owned by the caller only,
-	 * with no state that can be checked in a rcu_dereference_check() cond
-	 */
-	old_dst = rcu_dereference_raw(sk->sk_dst_cache);
+	old_dst = rcu_dereference_protected(sk->sk_dst_cache,
+					    lockdep_sock_is_held(sk));
 	rcu_assign_pointer(sk->sk_dst_cache, dst);
 	dst_release(old_dst);
 }

@@ -354,6 +354,7 @@ void *memset(void *addr, int c, size_t len)
 }
 
 #undef memmove
+__unverified_nocapture(2)
 void *memmove(void *dest, const void *src, size_t len)
 {
 	check_memory_region((unsigned long)src, len, false, _RET_IP_);
@@ -363,6 +364,7 @@ void *memmove(void *dest, const void *src, size_t len)
 }
 
 #undef memcpy
+__unverified_nocapture(2)
 void *memcpy(void *dest, const void *src, size_t len)
 {
 	check_memory_region((unsigned long)src, len, false, _RET_IP_);
@@ -413,7 +415,7 @@ void kasan_cache_create(struct kmem_cache *cache, size_t *size,
 	*size += sizeof(struct kasan_alloc_meta);
 
 	/* Add free meta. */
-	if (cache->flags & SLAB_DESTROY_BY_RCU || cache->ctor ||
+	if (cache->flags & SLAB_TYPESAFE_BY_RCU || cache->ctor ||
 	    cache->object_size < sizeof(struct kasan_free_meta)) {
 		cache->kasan_info.free_meta_offset = *size;
 		*size += sizeof(struct kasan_free_meta);
@@ -561,7 +563,7 @@ static void kasan_poison_slab_free(struct kmem_cache *cache, void *object)
 	unsigned long rounded_up_size = round_up(size, KASAN_SHADOW_SCALE_SIZE);
 
 	/* RCU slabs could be legally used after free within the RCU period */
-	if (unlikely(cache->flags & SLAB_DESTROY_BY_RCU))
+	if (unlikely(cache->flags & SLAB_TYPESAFE_BY_RCU))
 		return;
 
 	kasan_poison_shadow(object, rounded_up_size, KASAN_KMALLOC_FREE);
@@ -572,7 +574,7 @@ bool kasan_slab_free(struct kmem_cache *cache, void *object)
 	s8 shadow_byte;
 
 	/* RCU slabs could be legally used after free within the RCU period */
-	if (unlikely(cache->flags & SLAB_DESTROY_BY_RCU))
+	if (unlikely(cache->flags & SLAB_TYPESAFE_BY_RCU))
 		return false;
 
 	shadow_byte = READ_ONCE(*(s8 *)kasan_mem_to_shadow(object));
