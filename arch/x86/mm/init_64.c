@@ -644,7 +644,8 @@ static void  update_end_of_memory_vars(u64 start, u64 size)
 int arch_add_memory(int nid, u64 start, u64 size, int flags)
 {
 	const int supported_flags = MEMORY_DEVICE |
-				    MEMORY_DEVICE_ALLOW_MIGRATE;
+				    MEMORY_DEVICE_ALLOW_MIGRATE |
+				    MEMORY_DEVICE_UNADDRESSABLE;
 	struct pglist_data *pgdat = NODE_DATA(nid);
 	struct zone *zone = pgdat->node_zones +
 		zone_for_memory(nid, start, size, ZONE_NORMAL,
@@ -659,7 +660,17 @@ int arch_add_memory(int nid, u64 start, u64 size, int flags)
 		return -EINVAL;
 	}
 
-	init_memory_mapping(start, start + size);
+	/*
+	 * We get un-addressable memory when some one is adding a ZONE_DEVICE
+	 * to have struct page for a device memory which is not accessible by
+	 * the CPU so it is pointless to have a linear kernel mapping of such
+	 * memory.
+	 *
+	 * Core mm should make sure it never set a pte pointing to such fake
+	 * physical range.
+	 */
+	if (!(flags & MEMORY_DEVICE_UNADDRESSABLE))
+		init_memory_mapping(start, start + size);
 
 	ret = __add_pages(nid, zone, start_pfn, nr_pages);
 	WARN_ON_ONCE(ret);
@@ -958,7 +969,8 @@ kernel_physical_mapping_remove(unsigned long start, unsigned long end)
 int __ref arch_remove_memory(u64 start, u64 size, int flags)
 {
 	const int supported_flags = MEMORY_DEVICE |
-				    MEMORY_DEVICE_ALLOW_MIGRATE;
+				    MEMORY_DEVICE_ALLOW_MIGRATE |
+				    MEMORY_DEVICE_UNADDRESSABLE;
 	unsigned long start_pfn = start >> PAGE_SHIFT;
 	unsigned long nr_pages = size >> PAGE_SHIFT;
 	struct page *page = pfn_to_page(start_pfn);
@@ -979,7 +991,9 @@ int __ref arch_remove_memory(u64 start, u64 size, int flags)
 	zone = page_zone(page);
 	ret = __remove_pages(zone, start_pfn, nr_pages);
 	WARN_ON_ONCE(ret);
-	kernel_physical_mapping_remove(start, start + size);
+
+	if (!(flags & MEMORY_DEVICE_UNADDRESSABLE))
+		kernel_physical_mapping_remove(start, start + size);
 
 	return ret;
 }
