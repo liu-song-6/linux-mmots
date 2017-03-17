@@ -618,14 +618,8 @@ int rxrpc_kernel_send_data(struct socket *sock, struct rxrpc_call *call,
 		ret = rxrpc_send_data(rxrpc_sk(sock->sk), call, msg, len);
 		break;
 	case RXRPC_CALL_COMPLETE:
-<<<<<<< HEAD
-		read_lock_bh(&call->state_lock);
-		ret = -call->error;
-		read_unlock_bh(&call->state_lock);
-=======
 		/* It's too late for this call */
 		ret = -ESHUTDOWN;
->>>>>>> linux-next/akpm-base
 		break;
 	default:
 		 /* Request phase complete for this client call */
