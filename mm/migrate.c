@@ -596,17 +596,9 @@ static void copy_huge_page(struct page *dst, struct page *src)
 	}
 }
 
-/*
- * Copy the page to its new location
- */
-void migrate_page_copy(struct page *newpage, struct page *page)
+static void migrate_page_states(struct page *newpage, struct page *page)
 {
 	int cpupid;
-
-	if (PageHuge(page) || PageTransHuge(page))
-		copy_huge_page(newpage, page);
-	else
-		copy_highpage(newpage, page);
 
 	if (PageError(page))
 		SetPageError(newpage);
@@ -661,6 +653,19 @@ void migrate_page_copy(struct page *newpage, struct page *page)
 
 	mem_cgroup_migrate(page, newpage);
 }
+
+/*
+ * Copy the page to its new location
+ */
+void migrate_page_copy(struct page *newpage, struct page *page)
+{
+	if (PageHuge(page) || PageTransHuge(page))
+		copy_huge_page(newpage, page);
+	else
+		copy_highpage(newpage, page);
+
+	migrate_page_states(newpage, page);
+}
 EXPORT_SYMBOL(migrate_page_copy);
 
 /************************************************************
@@ -674,8 +679,8 @@ EXPORT_SYMBOL(migrate_page_copy);
  * Pages are locked upon entry and exit.
  */
 int migrate_page(struct address_space *mapping,
-		struct page *newpage, struct page *page,
-		enum migrate_mode mode)
+		 struct page *newpage, struct page *page,
+		 enum migrate_mode mode, bool copy)
 {
 	int rc;
 
@@ -686,7 +691,11 @@ int migrate_page(struct address_space *mapping,
 	if (rc != MIGRATEPAGE_SUCCESS)
 		return rc;
 
-	migrate_page_copy(newpage, page);
+	if (copy)
+		migrate_page_copy(newpage, page);
+	else
+		migrate_page_states(newpage, page);
+
 	return MIGRATEPAGE_SUCCESS;
 }
 EXPORT_SYMBOL(migrate_page);
@@ -698,13 +707,14 @@ EXPORT_SYMBOL(migrate_page);
  * exist.
  */
 int buffer_migrate_page(struct address_space *mapping,
-		struct page *newpage, struct page *page, enum migrate_mode mode)
+			struct page *newpage, struct page *page,
+			enum migrate_mode mode, bool copy)
 {
 	struct buffer_head *bh, *head;
 	int rc;
 
 	if (!page_has_buffers(page))
-		return migrate_page(mapping, newpage, page, mode);
+		return migrate_page(mapping, newpage, page, mode, copy);
 
 	head = page_buffers(page);
 
@@ -736,12 +746,15 @@ int buffer_migrate_page(struct address_space *mapping,
 
 	SetPagePrivate(newpage);
 
-	migrate_page_copy(newpage, page);
+	if (copy)
+		migrate_page_copy(newpage, page);
+	else
+		migrate_page_states(newpage, page);
 
 	bh = head;
 	do {
 		unlock_buffer(bh);
- 		put_bh(bh);
+		put_bh(bh);
 		bh = bh->b_this_page;
 
 	} while (bh != head);
@@ -796,7 +809,8 @@ static int writeout(struct address_space *mapping, struct page *page)
  * Default handling if a filesystem does not provide a migration function.
  */
 static int fallback_migrate_page(struct address_space *mapping,
-	struct page *newpage, struct page *page, enum migrate_mode mode)
+				 struct page *newpage, struct page *page,
+				 enum migrate_mode mode)
 {
 	if (PageDirty(page)) {
 		/* Only writeback pages in full synchronous migration */
@@ -813,7 +827,7 @@ static int fallback_migrate_page(struct address_space *mapping,
 	    !try_to_release_page(page, GFP_KERNEL))
 		return -EAGAIN;
 
-	return migrate_page(mapping, newpage, page, mode);
+	return migrate_page(mapping, newpage, page, mode, true);
 }
 
 /*
@@ -841,7 +855,7 @@ static int move_to_new_page(struct page *newpage, struct page *page,
 
 	if (likely(is_lru)) {
 		if (!mapping)
-			rc = migrate_page(mapping, newpage, page, mode);
+			rc = migrate_page(mapping, newpage, page, mode, true);
 		else if (mapping->a_ops->migratepage)
 			/*
 			 * Most pages have a mapping and most filesystems
@@ -851,7 +865,7 @@ static int move_to_new_page(struct page *newpage, struct page *page,
 			 * for page migration.
 			 */
 			rc = mapping->a_ops->migratepage(mapping, newpage,
-							page, mode);
+							page, mode, true);
 		else
 			rc = fallback_migrate_page(mapping, newpage,
 							page, mode);
@@ -868,7 +882,7 @@ static int move_to_new_page(struct page *newpage, struct page *page,
 		}
 
 		rc = mapping->a_ops->migratepage(mapping, newpage,
-						page, mode);
+						page, mode, true);
 		WARN_ON_ONCE(rc == MIGRATEPAGE_SUCCESS &&
 			!PageIsolated(page));
 	}

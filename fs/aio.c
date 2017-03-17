@@ -37,6 +37,7 @@
 #include <linux/blkdev.h>
 #include <linux/compat.h>
 #include <linux/migrate.h>
+#include <linux/memremap.h>
 #include <linux/ramfs.h>
 #include <linux/percpu-refcount.h>
 #include <linux/mount.h>
@@ -366,12 +367,16 @@ static const struct file_operations aio_ring_fops = {
 
 #if IS_ENABLED(CONFIG_MIGRATION)
 static int aio_migratepage(struct address_space *mapping, struct page *new,
-			struct page *old, enum migrate_mode mode)
+			   struct page *old, enum migrate_mode mode, bool copy)
 {
 	struct kioctx *ctx;
 	unsigned long flags;
 	pgoff_t idx;
 	int rc;
+
+	/* Can only migrate addressable memory for now */
+	if (!is_addressable_page(new))
+		return -EINVAL;
 
 	rc = 0;
 

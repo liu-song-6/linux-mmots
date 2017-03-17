@@ -2299,7 +2299,7 @@ void f2fs_invalidate_page(struct page *page, unsigned int offset,
 int f2fs_release_page(struct page *page, gfp_t wait);
 #ifdef CONFIG_MIGRATION
 int f2fs_migrate_page(struct address_space *mapping, struct page *newpage,
-			struct page *page, enum migrate_mode mode);
+			struct page *page, enum migrate_mode mode, bool copy);
 #endif
 
 /*

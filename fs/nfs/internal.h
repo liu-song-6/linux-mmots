@@ -535,8 +535,9 @@ void nfs_clear_pnfs_ds_commit_verifiers(struct pnfs_ds_commit_info *cinfo)
 #endif
 
 #ifdef CONFIG_MIGRATION
-extern int nfs_migrate_page(struct address_space *,
-		struct page *, struct page *, enum migrate_mode);
+extern int nfs_migrate_page(struct address_space *mapping,
+			    struct page *newpage, struct page *page,
+			    enum migrate_mode, bool copy);
 #endif
 
 static inline int

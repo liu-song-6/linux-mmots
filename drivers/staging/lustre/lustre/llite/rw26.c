@@ -43,6 +43,7 @@
 #include <linux/uaccess.h>
 
 #include <linux/migrate.h>
+#include <linux/memremap.h>
 #include <linux/fs.h>
 #include <linux/buffer_head.h>
 #include <linux/mpage.h>
@@ -642,9 +643,12 @@ static int ll_write_end(struct file *file, struct address_space *mapping,
 #ifdef CONFIG_MIGRATION
 static int ll_migratepage(struct address_space *mapping,
 			  struct page *newpage, struct page *page,
-			  enum migrate_mode mode
-		)
+			  enum migrate_mode mode, bool copy)
 {
+	/* Can only migrate addressable memory for now */
+	if (!is_addressable_page(newpage))
+		return -EINVAL;
+
 	/* Always fail page migration until we have a proper implementation */
 	return -EIO;
 }

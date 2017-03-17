@@ -135,7 +135,7 @@ void balloon_page_putback(struct page *page)
 /* move_to_new_page() counterpart for a ballooned page */
 int balloon_page_migrate(struct address_space *mapping,
 		struct page *newpage, struct page *page,
-		enum migrate_mode mode)
+		enum migrate_mode mode, bool copy)
 {
 	struct balloon_dev_info *balloon = balloon_page_device(page);
 

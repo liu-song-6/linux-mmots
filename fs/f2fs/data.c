@@ -23,6 +23,7 @@
 #include <linux/memcontrol.h>
 #include <linux/cleancache.h>
 #include <linux/sched/signal.h>
+#include <linux/memremap.h>
 
 #include "f2fs.h"
 #include "node.h"
@@ -2049,13 +2050,18 @@ static sector_t f2fs_bmap(struct address_space *mapping, sector_t block)
 #include <linux/migrate.h>
 
 int f2fs_migrate_page(struct address_space *mapping,
-		struct page *newpage, struct page *page, enum migrate_mode mode)
+		struct page *newpage, struct page *page,
+		enum migrate_mode mode, bool copy)
 {
 	int rc, extra_count;
 	struct f2fs_inode_info *fi = F2FS_I(mapping->host);
 	bool atomic_written = IS_ATOMIC_WRITTEN_PAGE(page);
 
 	BUG_ON(PageWriteback(page));
+
+	/* Can only migrate addressable memory for now */
+	if (!is_addressable_page(newpage))
+		return -EINVAL;
 
 	/* migrating an atomic written page is safe with the inmem_lock hold */
 	if (atomic_written && !mutex_trylock(&fi->inmem_lock))

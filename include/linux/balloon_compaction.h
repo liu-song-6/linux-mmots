@@ -85,7 +85,8 @@ extern bool balloon_page_isolate(struct page *page,
 extern void balloon_page_putback(struct page *page);
 extern int balloon_page_migrate(struct address_space *mapping,
 				struct page *newpage,
-				struct page *page, enum migrate_mode mode);
+				struct page *page, enum migrate_mode mode,
+				bool copy);
 
 /*
  * balloon_page_insert - insert a page into the balloon's page list and make

@@ -52,6 +52,7 @@
 #include <linux/zpool.h>
 #include <linux/mount.h>
 #include <linux/migrate.h>
+#include <linux/memremap.h>
 #include <linux/pagemap.h>
 
 #define ZSPAGE_MAGIC	0x58
@@ -1968,7 +1969,7 @@ bool zs_page_isolate(struct page *page, isolate_mode_t mode)
 }
 
 int zs_page_migrate(struct address_space *mapping, struct page *newpage,
-		struct page *page, enum migrate_mode mode)
+		    struct page *page, enum migrate_mode mode, bool copy)
 {
 	struct zs_pool *pool;
 	struct size_class *class;
@@ -1985,6 +1986,15 @@ int zs_page_migrate(struct address_space *mapping, struct page *newpage,
 
 	VM_BUG_ON_PAGE(!PageMovable(page), page);
 	VM_BUG_ON_PAGE(!PageIsolated(page), page);
+
+	/*
+	 * Offloading copy operation for zspage require special considerations
+	 * due to locking so for now we only support regular migration. I do
+	 * not expect we will ever want to support offloading copy. See hmm.h
+	 * for more informations on hmm_vma_migrate() and offload copy.
+	 */
+	if (!copy || !is_addressable_page(newpage))
+		return -EINVAL;
 
 	zspage = get_zspage(page);
 
