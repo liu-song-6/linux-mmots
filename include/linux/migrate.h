@@ -130,6 +130,8 @@ static inline int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 #define MIGRATE_PFN_HUGE	(1UL << (BITS_PER_LONG_LONG - 3))
 #define MIGRATE_PFN_LOCKED	(1UL << (BITS_PER_LONG_LONG - 4))
 #define MIGRATE_PFN_WRITE	(1UL << (BITS_PER_LONG_LONG - 5))
+#define MIGRATE_PFN_DEVICE	(1UL << (BITS_PER_LONG_LONG - 6))
+#define MIGRATE_PFN_ERROR	(1UL << (BITS_PER_LONG_LONG - 7))
 #define MIGRATE_PFN_MASK	((1UL << (BITS_PER_LONG_LONG - PAGE_SHIFT)) - 1)
 
 static inline struct page *migrate_pfn_to_page(unsigned long mpfn)
