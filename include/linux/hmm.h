@@ -86,13 +86,28 @@ struct hmm;
  *
  * Flags:
  * HMM_PFN_VALID: pfn is valid
+ * HMM_PFN_READ: read permission set
  * HMM_PFN_WRITE: CPU page table have the write permission set
+ * HMM_PFN_ERROR: corresponding CPU page table entry point to poisoned memory
+ * HMM_PFN_EMPTY: corresponding CPU page table entry is none (pte_none() true)
+ * HMM_PFN_DEVICE: this is device memory (ie a ZONE_DEVICE page)
+ * HMM_PFN_SPECIAL: corresponding CPU page table entry is special ie result of
+ *      vm_insert_pfn() or vm_insert_page() and thus should not be mirror by a
+ *      device (the entry will never have HMM_PFN_VALID set and the pfn value
+ *      is undefine)
+ * HMM_PFN_UNADDRESSABLE: unaddressable device memory (ZONE_DEVICE)
  */
 typedef unsigned long hmm_pfn_t;
 
 #define HMM_PFN_VALID (1 << 0)
-#define HMM_PFN_WRITE (1 << 1)
-#define HMM_PFN_SHIFT 2
+#define HMM_PFN_READ (1 << 1)
+#define HMM_PFN_WRITE (1 << 2)
+#define HMM_PFN_ERROR (1 << 3)
+#define HMM_PFN_EMPTY (1 << 4)
+#define HMM_PFN_DEVICE (1 << 5)
+#define HMM_PFN_SPECIAL (1 << 6)
+#define HMM_PFN_UNADDRESSABLE (1 << 7)
+#define HMM_PFN_SHIFT 8
 
 /*
  * hmm_pfn_to_page() - return struct page pointed to by a valid hmm_pfn_t
@@ -239,6 +254,43 @@ int hmm_mirror_register(struct hmm_mirror *mirror, struct mm_struct *mm);
 int hmm_mirror_register_locked(struct hmm_mirror *mirror,
 			       struct mm_struct *mm);
 void hmm_mirror_unregister(struct hmm_mirror *mirror);
+
+
+/*
+ * struct hmm_range - track invalidation lock on virtual address range
+ *
+ * @list: all range lock are on a list
+ * @start: range virtual start address (inclusive)
+ * @end: range virtual end address (exclusive)
+ * @pfns: array of pfns (big enough for the range)
+ * @valid: pfns array did not change since it has been fill by an HMM function
+ */
+struct hmm_range {
+	struct list_head	list;
+	unsigned long		start;
+	unsigned long		end;
+	hmm_pfn_t		*pfns;
+	bool			valid;
+};
+
+/*
+ * To snapshot CPU page table call hmm_vma_get_pfns() then take device driver
+ * lock that serialize device page table update and call hmm_vma_range_done()
+ * to check if snapshot is still valid. The device driver page table update
+ * lock must also be use in the HMM mirror update() callback so that CPU page
+ * table invalidation serialize on it.
+ *
+ * YOU MUST CALL hmm_vma_range_dond() ONCE AND ONLY ONCE EACH TIME YOU CALL
+ * hmm_vma_get_pfns() WITHOUT ERROR !
+ *
+ * IF YOU DO NOT FOLLOW THE ABOVE RULE THE SNAPSHOT CONTENT MIGHT BE INVALID !
+ */
+int hmm_vma_get_pfns(struct vm_area_struct *vma,
+		     struct hmm_range *range,
+		     unsigned long start,
+		     unsigned long end,
+		     hmm_pfn_t *pfns);
+bool hmm_vma_range_done(struct vm_area_struct *vma, struct hmm_range *range);
 #endif /* IS_ENABLED(CONFIG_HMM_MIRROR) */
 
 
