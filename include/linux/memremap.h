@@ -35,10 +35,16 @@ static inline struct vmem_altmap *to_vmem_altmap(unsigned long memmap_start)
 }
 #endif
 
+typedef int (*dev_page_fault_t)(struct vm_area_struct *vma,
+				unsigned long addr,
+				struct page *page,
+				unsigned flags,
+				pmd_t *pmdp);
 typedef void (*dev_page_free_t)(struct page *page, void *data);
 
 /**
  * struct dev_pagemap - metadata for ZONE_DEVICE mappings
+ * @page_fault: callback when CPU fault on an un-addressable device page
  * @page_free: free page callback when page refcount reach 1
  * @altmap: pre-allocated/reserved memory for vmemmap allocations
  * @res: physical address range covered by @ref
@@ -48,6 +54,7 @@ typedef void (*dev_page_free_t)(struct page *page, void *data);
  * @flags: memory flags see MEMORY_* in memory_hotplug.h
  */
 struct dev_pagemap {
+	dev_page_fault_t page_fault;
 	dev_page_free_t page_free;
 	struct vmem_altmap *altmap;
 	const struct resource *res;
@@ -66,6 +73,12 @@ static inline bool dev_page_allow_migrate(const struct page *page)
 {
 	return ((page_zonenum(page) == ZONE_DEVICE) &&
 		(page->pgmap->flags & MEMORY_DEVICE_ALLOW_MIGRATE));
+}
+
+static inline bool is_addressable_page(const struct page *page)
+{
+	return ((page_zonenum(page) != ZONE_DEVICE) ||
+		!(page->pgmap->flags & MEMORY_DEVICE_UNADDRESSABLE));
 }
 #else
 static inline void *devm_memremap_pages(struct device *dev,
@@ -89,6 +102,11 @@ static inline struct dev_pagemap *find_dev_pagemap(resource_size_t phys)
 static inline bool dev_page_allow_migrate(const struct page *page)
 {
 	return false;
+}
+
+static inline bool is_addressable_page(const struct page *page)
+{
+	return true;
 }
 #endif
 

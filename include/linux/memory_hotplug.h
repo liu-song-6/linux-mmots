@@ -286,15 +286,22 @@ extern int zone_for_memory(int nid, u64 start, u64 size, int zone_default,
  * never relied on struct page migration so far and new user of might also
  * prefer avoiding struct page migration.
  *
+ * For device memory (which use ZONE_DEVICE) we want differentiate between CPU
+ * accessible memory (persitent memory, device memory on an architecture with a
+ * system bus that allow transparent access to device memory) and unaddressable
+ * memory (device memory that can not be accessed by CPU directly).
+ *
  * New non device memory specific flags can be added if ever needed.
  *
  * MEMORY_REGULAR: regular system memory
  * DEVICE_MEMORY: device memory create a ZONE_DEVICE zone for it
  * DEVICE_MEMORY_ALLOW_MIGRATE: page in that device memory ca be migrated
+ * MEMORY_DEVICE_UNADDRESSABLE: un-addressable memory (CPU can not access it)
  */
 #define MEMORY_NORMAL 0
 #define MEMORY_DEVICE (1 << 0)
 #define MEMORY_DEVICE_ALLOW_MIGRATE (1 << 1)
+#define MEMORY_DEVICE_UNADDRESSABLE (1 << 2)
 
 extern int arch_add_memory(int nid, u64 start, u64 size, int flags);
 extern int offline_pages(unsigned long start_pfn, unsigned long nr_pages);
