@@ -293,6 +293,21 @@ config HMM
 	bool
 	depends on MMU
 
+config HMM_MIRROR
+	bool "HMM mirror CPU page table into a device page table"
+	select HMM
+	select MMU_NOTIFIER
+	help
+	  HMM mirror is a set of helpers to mirror CPU page table into a device
+	  page table. There is two side, first keep both page table synchronize
+	  so that no virtual address can point to different page (but one page
+	  table might lag ie onee might still point to page while the other is
+	  is pointing to nothing).
+
+	  Second side of the equation is replicating CPU page table content for
+	  range of virtual address. This require careful synchronization with
+	  CPU page table update.
+
 config PHYS_ADDR_T_64BIT
 	def_bool 64BIT || ARCH_PHYS_ADDR_T_64BIT
 
