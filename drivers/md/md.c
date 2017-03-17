@@ -6522,13 +6522,9 @@ static int update_size(struct mddev *mddev, sector_t num_sectors)
 	}
 	rv = mddev->pers->resize(mddev, num_sectors);
 	if (!rv) {
-<<<<<<< HEAD
-		if (mddev->queue) {
-=======
 		if (mddev_is_clustered(mddev))
 			md_cluster_ops->update_size(mddev, old_dev_sectors);
 		else if (mddev->queue) {
->>>>>>> linux-next/akpm-base
 			set_capacity(mddev->gendisk, mddev->array_sectors);
 			revalidate_disk(mddev->gendisk);
 		}
