@@ -1311,7 +1311,7 @@ static bool try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
 
 	if (IS_ENABLED(CONFIG_MIGRATION) && (flags & TTU_MIGRATION) &&
 	    is_zone_device_page(page) && !dev_page_allow_migrate(page))
-		return SWAP_AGAIN;
+		return true;
 
 	if (flags & TTU_SPLIT_HUGE_PMD) {
 		split_huge_pmd_address(vma, address,
