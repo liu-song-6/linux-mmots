@@ -157,7 +157,11 @@ static inline unsigned long migrate_pfn_size(unsigned long mpfn)
  * allocator for destination memory.
  *
  * Note that in alloc_and_copy device driver can decide not to migrate some of
- * the entry by simply setting corresponding dst entry 0.
+ * the entry by simply setting corresponding dst entry 0. Driver can also try
+ * to allocate memory for empty source entry by setting valid dst entry. If
+ * CPU page table is not populated while alloc_and_copy() callback is taking
+ * place then CPU page table will be updated to point to the newly allocated
+ * memory.
  *
  * Destination page must locked and MIGRATE_PFN_LOCKED set in the corresponding
  * entry of dstarray. It is expected that page allocated will have an elevated
