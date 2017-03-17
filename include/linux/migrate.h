@@ -124,4 +124,77 @@ static inline int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 }
 #endif /* CONFIG_NUMA_BALANCING && CONFIG_TRANSPARENT_HUGEPAGE*/
 
+
+#define MIGRATE_PFN_VALID	(1UL << (BITS_PER_LONG_LONG - 1))
+#define MIGRATE_PFN_MIGRATE	(1UL << (BITS_PER_LONG_LONG - 2))
+#define MIGRATE_PFN_HUGE	(1UL << (BITS_PER_LONG_LONG - 3))
+#define MIGRATE_PFN_LOCKED	(1UL << (BITS_PER_LONG_LONG - 4))
+#define MIGRATE_PFN_WRITE	(1UL << (BITS_PER_LONG_LONG - 5))
+#define MIGRATE_PFN_MASK	((1UL << (BITS_PER_LONG_LONG - PAGE_SHIFT)) - 1)
+
+static inline struct page *migrate_pfn_to_page(unsigned long mpfn)
+{
+	if (!(mpfn & MIGRATE_PFN_VALID))
+		return NULL;
+	return pfn_to_page(mpfn & MIGRATE_PFN_MASK);
+}
+
+static inline unsigned long migrate_pfn_size(unsigned long mpfn)
+{
+	return mpfn & MIGRATE_PFN_HUGE ? PMD_SIZE : PAGE_SIZE;
+}
+
+/*
+ * struct migrate_vma_ops - migrate operation callback
+ *
+ * @alloc_and_copy: alloc destination memoiry and copy source to it
+ * @finalize_and_map: allow caller to inspect successfull migrated page
+ *
+ * migrate_vma() allow memory migration to use DMA  engine to perform copy from
+ * source to destination memory it also allow caller to use its own memory
+ * allocator for destination memory.
+ *
+ * Note that in alloc_and_copy device driver can decide not to migrate some of
+ * the entry by simply setting corresponding dst entry 0.
+ *
+ * Destination page must locked and MIGRATE_PFN_LOCKED set in the corresponding
+ * entry of dstarray. It is expected that page allocated will have an elevated
+ * refcount and that a put_page() will free the page.
+ *
+ * Device driver might want to allocate with an extra-refcount if they want to
+ * control deallocation of failed migration inside finalize_and_map() callback.
+ *
+ * The finalize_and_map() callback must use the MIGRATE_PFN_MIGRATE flag to
+ * determine which page have been successfully migrated (it is set in the src
+ * array for each entry that have been successfully migrated).
+ *
+ * For migration from device memory to system memory device driver must set any
+ * dst entry to MIGRATE_PFN_ERROR for any entry it can not migrate back due to
+ * hardware fatal failure that can not be recovered. Such failure will trigger
+ * a SIGBUS for the process trying to access such memory.
+ */
+struct migrate_vma_ops {
+	void (*alloc_and_copy)(struct vm_area_struct *vma,
+			       const unsigned long *src,
+			       unsigned long *dst,
+			       unsigned long start,
+			       unsigned long end,
+			       void *private);
+	void (*finalize_and_map)(struct vm_area_struct *vma,
+				 const unsigned long *src,
+				 const unsigned long *dst,
+				 unsigned long start,
+				 unsigned long end,
+				 void *private);
+};
+
+int migrate_vma(const struct migrate_vma_ops *ops,
+		struct vm_area_struct *vma,
+		unsigned long mentries,
+		unsigned long start,
+		unsigned long end,
+		unsigned long *src,
+		unsigned long *dst,
+		void *private);
+
 #endif /* _LINUX_MIGRATE_H */
