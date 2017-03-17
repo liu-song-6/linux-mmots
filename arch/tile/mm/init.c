@@ -863,12 +863,18 @@ void __init mem_init(void)
  * memory to the highmem for now.
  */
 #ifndef CONFIG_NEED_MULTIPLE_NODES
-int arch_add_memory(u64 start, u64 size, bool for_device)
+int arch_add_memory(u64 start, u64 size, int flags)
 {
 	struct pglist_data *pgdata = &contig_page_data;
 	struct zone *zone = pgdata->node_zones + MAX_NR_ZONES-1;
 	unsigned long start_pfn = start >> PAGE_SHIFT;
 	unsigned long nr_pages = size >> PAGE_SHIFT;
+
+	/* Each flag need special handling so error out on un-supported flag */
+	if (flags) {
+		pr_err("hotplug unsupported memory type 0x%08x\n", flags);
+		return -EINVAL;
+	}
 
 	return __add_pages(zone, start_pfn, nr_pages);
 }
@@ -879,7 +885,7 @@ int remove_memory(u64 start, u64 size)
 }
 
 #ifdef CONFIG_MEMORY_HOTREMOVE
-int arch_remove_memory(u64 start, u64 size)
+int arch_remove_memory(u64 start, u64 size, int flags)
 {
 	/* TODO */
 	return -EBUSY;

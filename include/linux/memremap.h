@@ -41,18 +41,26 @@ static inline struct vmem_altmap *to_vmem_altmap(unsigned long memmap_start)
  * @res: physical address range covered by @ref
  * @ref: reference count that pins the devm_memremap_pages() mapping
  * @dev: host device of the mapping for debug
+ * @flags: memory flags see MEMORY_* in memory_hotplug.h
  */
 struct dev_pagemap {
 	struct vmem_altmap *altmap;
 	const struct resource *res;
 	struct percpu_ref *ref;
 	struct device *dev;
+	int flags;
 };
 
 #ifdef CONFIG_ZONE_DEVICE
 void *devm_memremap_pages(struct device *dev, struct resource *res,
 		struct percpu_ref *ref, struct vmem_altmap *altmap);
 struct dev_pagemap *find_dev_pagemap(resource_size_t phys);
+
+static inline bool dev_page_allow_migrate(const struct page *page)
+{
+	return ((page_zonenum(page) == ZONE_DEVICE) &&
+		(page->pgmap->flags & MEMORY_DEVICE_ALLOW_MIGRATE));
+}
 #else
 static inline void *devm_memremap_pages(struct device *dev,
 		struct resource *res, struct percpu_ref *ref,
@@ -70,6 +78,11 @@ static inline void *devm_memremap_pages(struct device *dev,
 static inline struct dev_pagemap *find_dev_pagemap(resource_size_t phys)
 {
 	return NULL;
+}
+
+static inline bool dev_page_allow_migrate(const struct page *page)
+{
+	return false;
 }
 #endif
 

@@ -104,7 +104,7 @@ extern bool memhp_auto_online;
 
 #ifdef CONFIG_MEMORY_HOTREMOVE
 extern bool is_pageblock_removable_nolock(struct page *page);
-extern int arch_remove_memory(u64 start, u64 size);
+extern int arch_remove_memory(u64 start, u64 size, int flags);
 extern int __remove_pages(struct zone *zone, unsigned long start_pfn,
 	unsigned long nr_pages);
 #endif /* CONFIG_MEMORY_HOTREMOVE */
@@ -276,7 +276,27 @@ extern int add_memory(int nid, u64 start, u64 size);
 extern int add_memory_resource(int nid, struct resource *resource, bool online);
 extern int zone_for_memory(int nid, u64 start, u64 size, int zone_default,
 		bool for_device);
-extern int arch_add_memory(int nid, u64 start, u64 size, bool for_device);
+
+/*
+ * When hotpluging memory with arch_add_memory() we want more informations on
+ * the type of memory and its properties. The flags parameter allow to provide
+ * more informations on the memory which is being addedd.
+ *
+ * Provide an opt-in flag for struct page migration. Persistent device memory
+ * never relied on struct page migration so far and new user of might also
+ * prefer avoiding struct page migration.
+ *
+ * New non device memory specific flags can be added if ever needed.
+ *
+ * MEMORY_REGULAR: regular system memory
+ * DEVICE_MEMORY: device memory create a ZONE_DEVICE zone for it
+ * DEVICE_MEMORY_ALLOW_MIGRATE: page in that device memory ca be migrated
+ */
+#define MEMORY_NORMAL 0
+#define MEMORY_DEVICE (1 << 0)
+#define MEMORY_DEVICE_ALLOW_MIGRATE (1 << 1)
+
+extern int arch_add_memory(int nid, u64 start, u64 size, int flags);
 extern int offline_pages(unsigned long start_pfn, unsigned long nr_pages);
 extern bool is_memblock_offlined(struct memory_block *mem);
 extern void remove_memory(int nid, u64 start, u64 size);

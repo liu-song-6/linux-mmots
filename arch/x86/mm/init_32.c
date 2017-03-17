@@ -816,23 +816,40 @@ void __init mem_init(void)
 }
 
 #ifdef CONFIG_MEMORY_HOTPLUG
-int arch_add_memory(int nid, u64 start, u64 size, bool for_device)
+int arch_add_memory(int nid, u64 start, u64 size, int flags)
 {
+	const int supported_flags = MEMORY_DEVICE |
+				    MEMORY_DEVICE_ALLOW_MIGRATE;
 	struct pglist_data *pgdata = NODE_DATA(nid);
 	struct zone *zone = pgdata->node_zones +
-		zone_for_memory(nid, start, size, ZONE_HIGHMEM, for_device);
+		zone_for_memory(nid, start, size, ZONE_HIGHMEM,
+				flags & MEMORY_DEVICE);
 	unsigned long start_pfn = start >> PAGE_SHIFT;
 	unsigned long nr_pages = size >> PAGE_SHIFT;
+
+	/* Each flag need special handling so error out on un-supported flag */
+	if (flags & (~supported_flags)) {
+		pr_err("hotplug unsupported memory type 0x%08x\n", flags);
+		return -EINVAL;
+	}
 
 	return __add_pages(nid, zone, start_pfn, nr_pages);
 }
 
 #ifdef CONFIG_MEMORY_HOTREMOVE
-int arch_remove_memory(u64 start, u64 size)
+int arch_remove_memory(u64 start, u64 size, int flags)
 {
+	const int supported_flags = MEMORY_DEVICE |
+				    MEMORY_DEVICE_ALLOW_MIGRATE;
 	unsigned long start_pfn = start >> PAGE_SHIFT;
 	unsigned long nr_pages = size >> PAGE_SHIFT;
 	struct zone *zone;
+
+	/* Each flag need special handling so error out on un-supported flag */
+	if (flags & (~supported_flags)) {
+		pr_err("hotremove unsupported memory type 0x%08x\n", flags);
+		return -EINVAL;
+	}
 
 	zone = page_zone(pfn_to_page(start_pfn));
 	return __remove_pages(zone, start_pfn, nr_pages);

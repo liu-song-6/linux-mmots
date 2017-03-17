@@ -641,14 +641,23 @@ static void  update_end_of_memory_vars(u64 start, u64 size)
  * Memory is added always to NORMAL zone. This means you will never get
  * additional DMA/DMA32 memory.
  */
-int arch_add_memory(int nid, u64 start, u64 size, bool for_device)
+int arch_add_memory(int nid, u64 start, u64 size, int flags)
 {
+	const int supported_flags = MEMORY_DEVICE |
+				    MEMORY_DEVICE_ALLOW_MIGRATE;
 	struct pglist_data *pgdat = NODE_DATA(nid);
 	struct zone *zone = pgdat->node_zones +
-		zone_for_memory(nid, start, size, ZONE_NORMAL, for_device);
+		zone_for_memory(nid, start, size, ZONE_NORMAL,
+				flags & MEMORY_DEVICE);
 	unsigned long start_pfn = start >> PAGE_SHIFT;
 	unsigned long nr_pages = size >> PAGE_SHIFT;
 	int ret;
+
+	/* Each flag need special handling so error out on un-supported flag */
+	if (flags & (~supported_flags)) {
+		pr_err("hotplug unsupported memory type 0x%08x\n", flags);
+		return -EINVAL;
+	}
 
 	init_memory_mapping(start, start + size);
 
@@ -946,14 +955,22 @@ kernel_physical_mapping_remove(unsigned long start, unsigned long end)
 	remove_pagetable(start, end, true);
 }
 
-int __ref arch_remove_memory(u64 start, u64 size)
+int __ref arch_remove_memory(u64 start, u64 size, int flags)
 {
+	const int supported_flags = MEMORY_DEVICE |
+				    MEMORY_DEVICE_ALLOW_MIGRATE;
 	unsigned long start_pfn = start >> PAGE_SHIFT;
 	unsigned long nr_pages = size >> PAGE_SHIFT;
 	struct page *page = pfn_to_page(start_pfn);
 	struct vmem_altmap *altmap;
 	struct zone *zone;
 	int ret;
+
+	/* Each flag need special handling so error out on un-supported flag */
+	if (flags & (~supported_flags)) {
+		pr_err("hotremove unsupported memory type 0x%08x\n", flags);
+		return -EINVAL;
+	}
 
 	/* With altmap the first mapped page is offset from @start */
 	altmap = to_vmem_altmap((unsigned long) page);
