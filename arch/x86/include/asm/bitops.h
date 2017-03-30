@@ -54,11 +54,11 @@
 #define CONST_MASK(nr)			(1 << ((nr) & 7))
 
 /**
- * set_bit - Atomically set a bit in memory
+ * arch_set_bit - Atomically set a bit in memory
  * @nr: the bit to set
  * @addr: the address to start counting from
  *
- * This function is atomic and may not be reordered.  See __set_bit()
+ * This function is atomic and may not be reordered.  See arch___set_bit()
  * if you do not require the atomic guarantees.
  *
  * Note: there are no guarantees that this function will not be reordered
@@ -69,7 +69,7 @@
  * restricted to acting on a single-word quantity.
  */
 static __always_inline void
-set_bit(long nr, volatile unsigned long *addr)
+arch_set_bit(long nr, volatile unsigned long *addr)
 {
 	if (IS_IMMEDIATE(nr)) {
 		asm volatile(LOCK_PREFIX "orb %1,%0"
@@ -83,31 +83,32 @@ set_bit(long nr, volatile unsigned long *addr)
 }
 
 /**
- * __set_bit - Set a bit in memory
+ * arch___set_bit - Set a bit in memory
  * @nr: the bit to set
  * @addr: the address to start counting from
  *
- * Unlike set_bit(), this function is non-atomic and may be reordered.
+ * Unlike arch_set_bit(), this function is non-atomic and may be reordered.
  * If it's called on the same region of memory simultaneously, the effect
  * may be that only one operation succeeds.
  */
-static __always_inline void __set_bit(long nr, volatile unsigned long *addr)
+static __always_inline void
+arch___set_bit(long nr, volatile unsigned long *addr)
 {
 	asm volatile("bts %1,%0" : ADDR : "Ir" (nr) : "memory");
 }
 
 /**
- * clear_bit - Clears a bit in memory
+ * arch_clear_bit - Clears a bit in memory
  * @nr: Bit to clear
  * @addr: Address to start counting from
  *
- * clear_bit() is atomic and may not be reordered.  However, it does
+ * arch_clear_bit() is atomic and may not be reordered.  However, it does
  * not contain a memory barrier, so if it is used for locking purposes,
  * you should call smp_mb__before_atomic() and/or smp_mb__after_atomic()
  * in order to ensure changes are visible on other processors.
  */
 static __always_inline void
-clear_bit(long nr, volatile unsigned long *addr)
+arch_clear_bit(long nr, volatile unsigned long *addr)
 {
 	if (IS_IMMEDIATE(nr)) {
 		asm volatile(LOCK_PREFIX "andb %1,%0"
@@ -121,25 +122,25 @@ clear_bit(long nr, volatile unsigned long *addr)
 }
 
 /*
- * clear_bit_unlock - Clears a bit in memory
+ * arch_clear_bit_unlock - Clears a bit in memory
  * @nr: Bit to clear
  * @addr: Address to start counting from
  *
- * clear_bit() is atomic and implies release semantics before the memory
- * operation. It can be used for an unlock.
+ * arch_clear_bit_unlock() is atomic and implies release semantics before the
+ * memory operation. It can be used for an unlock.
  */
-static __always_inline void clear_bit_unlock(long nr, volatile unsigned long *addr)
+static __always_inline void arch_clear_bit_unlock(long nr, volatile unsigned long *addr)
 {
 	barrier();
-	clear_bit(nr, addr);
+	arch_clear_bit(nr, addr);
 }
 
-static __always_inline void __clear_bit(long nr, volatile unsigned long *addr)
+static __always_inline void arch___clear_bit(long nr, volatile unsigned long *addr)
 {
 	asm volatile("btr %1,%0" : ADDR : "Ir" (nr));
 }
 
-static __always_inline bool clear_bit_unlock_is_negative_byte(long nr, volatile unsigned long *addr)
+static __always_inline bool arch_clear_bit_unlock_is_negative_byte(long nr, volatile unsigned long *addr)
 {
 	bool negative;
 	asm volatile(LOCK_PREFIX "andb %2,%1\n\t"
@@ -153,47 +154,49 @@ static __always_inline bool clear_bit_unlock_is_negative_byte(long nr, volatile 
 #define clear_bit_unlock_is_negative_byte clear_bit_unlock_is_negative_byte
 
 /*
- * __clear_bit_unlock - Clears a bit in memory
+ * arch___clear_bit_unlock - Clears a bit in memory
  * @nr: Bit to clear
  * @addr: Address to start counting from
  *
- * __clear_bit() is non-atomic and implies release semantics before the memory
- * operation. It can be used for an unlock if no other CPUs can concurrently
- * modify other bits in the word.
+ * arch___clear_bit_unlock() is non-atomic and implies release semantics before
+ * the memory operation. It can be used for an unlock if no other CPUs can
+ * concurrently modify other bits in the word.
  *
  * No memory barrier is required here, because x86 cannot reorder stores past
  * older loads. Same principle as spin_unlock.
  */
-static __always_inline void __clear_bit_unlock(long nr, volatile unsigned long *addr)
+static __always_inline void arch___clear_bit_unlock(long nr, volatile unsigned long *addr)
 {
 	barrier();
-	__clear_bit(nr, addr);
+	arch___clear_bit(nr, addr);
 }
 
 /**
- * __change_bit - Toggle a bit in memory
+ * arch___change_bit - Toggle a bit in memory
  * @nr: the bit to change
  * @addr: the address to start counting from
  *
- * Unlike change_bit(), this function is non-atomic and may be reordered.
+ * Unlike arch_change_bit(), this function is non-atomic and may be reordered.
  * If it's called on the same region of memory simultaneously, the effect
  * may be that only one operation succeeds.
  */
-static __always_inline void __change_bit(long nr, volatile unsigned long *addr)
+static __always_inline void
+arch___change_bit(long nr, volatile unsigned long *addr)
 {
 	asm volatile("btc %1,%0" : ADDR : "Ir" (nr));
 }
 
 /**
- * change_bit - Toggle a bit in memory
+ * arch_change_bit - Toggle a bit in memory
  * @nr: Bit to change
  * @addr: Address to start counting from
  *
- * change_bit() is atomic and may not be reordered.
+ * arch_change_bit() is atomic and may not be reordered.
  * Note that @nr may be almost arbitrarily large; this function is not
  * restricted to acting on a single-word quantity.
  */
-static __always_inline void change_bit(long nr, volatile unsigned long *addr)
+static __always_inline void
+arch_change_bit(long nr, volatile unsigned long *addr)
 {
 	if (IS_IMMEDIATE(nr)) {
 		asm volatile(LOCK_PREFIX "xorb %1,%0"
@@ -207,33 +210,33 @@ static __always_inline void change_bit(long nr, volatile unsigned long *addr)
 }
 
 /**
- * test_and_set_bit - Set a bit and return its old value
+ * arch_test_and_set_bit - Set a bit and return its old value
  * @nr: Bit to set
  * @addr: Address to count from
  *
  * This operation is atomic and cannot be reordered.
  * It also implies a memory barrier.
  */
-static __always_inline bool test_and_set_bit(long nr, volatile unsigned long *addr)
+static __always_inline bool arch_test_and_set_bit(long nr, volatile unsigned long *addr)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "bts", *addr, "Ir", nr, "%0", c);
 }
 
 /**
- * test_and_set_bit_lock - Set a bit and return its old value for lock
+ * arch_test_and_set_bit_lock - Set a bit and return its old value for lock
  * @nr: Bit to set
  * @addr: Address to count from
  *
- * This is the same as test_and_set_bit on x86.
+ * This is the same as arch_test_and_set_bit on x86.
  */
 static __always_inline bool
-test_and_set_bit_lock(long nr, volatile unsigned long *addr)
+arch_test_and_set_bit_lock(long nr, volatile unsigned long *addr)
 {
-	return test_and_set_bit(nr, addr);
+	return arch_test_and_set_bit(nr, addr);
 }
 
 /**
- * __test_and_set_bit - Set a bit and return its old value
+ * arch___test_and_set_bit - Set a bit and return its old value
  * @nr: Bit to set
  * @addr: Address to count from
  *
@@ -241,7 +244,7 @@ test_and_set_bit_lock(long nr, volatile unsigned long *addr)
  * If two examples of this operation race, one can appear to succeed
  * but actually fail.  You must protect multiple accesses with a lock.
  */
-static __always_inline bool __test_and_set_bit(long nr, volatile unsigned long *addr)
+static __always_inline bool arch___test_and_set_bit(long nr, volatile unsigned long *addr)
 {
 	bool oldbit;
 
@@ -253,20 +256,20 @@ static __always_inline bool __test_and_set_bit(long nr, volatile unsigned long *
 }
 
 /**
- * test_and_clear_bit - Clear a bit and return its old value
+ * arch_test_and_clear_bit - Clear a bit and return its old value
  * @nr: Bit to clear
  * @addr: Address to count from
  *
  * This operation is atomic and cannot be reordered.
  * It also implies a memory barrier.
  */
-static __always_inline bool test_and_clear_bit(long nr, volatile unsigned long *addr)
+static __always_inline bool arch_test_and_clear_bit(long nr, volatile unsigned long *addr)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "btr", *addr, "Ir", nr, "%0", c);
 }
 
 /**
- * __test_and_clear_bit - Clear a bit and return its old value
+ * arch___test_and_clear_bit - Clear a bit and return its old value
  * @nr: Bit to clear
  * @addr: Address to count from
  *
@@ -281,7 +284,7 @@ static __always_inline bool test_and_clear_bit(long nr, volatile unsigned long *
  * accessed from a hypervisor on the same CPU if running in a VM: don't change
  * this without also updating arch/x86/kernel/kvm.c
  */
-static __always_inline bool __test_and_clear_bit(long nr, volatile unsigned long *addr)
+static __always_inline bool arch___test_and_clear_bit(long nr, volatile unsigned long *addr)
 {
 	bool oldbit;
 
@@ -293,7 +296,7 @@ static __always_inline bool __test_and_clear_bit(long nr, volatile unsigned long
 }
 
 /* WARNING: non atomic and it can be reordered! */
-static __always_inline bool __test_and_change_bit(long nr, volatile unsigned long *addr)
+static __always_inline bool arch___test_and_change_bit(long nr, volatile unsigned long *addr)
 {
 	bool oldbit;
 
@@ -306,14 +309,14 @@ static __always_inline bool __test_and_change_bit(long nr, volatile unsigned lon
 }
 
 /**
- * test_and_change_bit - Change a bit and return its old value
+ * arch_test_and_change_bit - Change a bit and return its old value
  * @nr: Bit to change
  * @addr: Address to count from
  *
  * This operation is atomic and cannot be reordered.
  * It also implies a memory barrier.
  */
-static __always_inline bool test_and_change_bit(long nr, volatile unsigned long *addr)
+static __always_inline bool arch_test_and_change_bit(long nr, volatile unsigned long *addr)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "btc", *addr, "Ir", nr, "%0", c);
 }
@@ -342,10 +345,10 @@ static __always_inline bool variable_test_bit(long nr, volatile const unsigned l
  * @nr: bit number to test
  * @addr: Address to start counting from
  */
-static bool test_bit(int nr, const volatile unsigned long *addr);
+static bool arch_test_bit(int nr, const volatile unsigned long *addr);
 #endif
 
-#define test_bit(nr, addr)			\
+#define arch_test_bit(nr, addr)			\
 	(__builtin_constant_p((nr))		\
 	 ? constant_test_bit((nr), (addr))	\
 	 : variable_test_bit((nr), (addr)))
@@ -505,6 +508,8 @@ static __always_inline int fls64(__u64 x)
 #else
 #include <asm-generic/bitops/fls64.h>
 #endif
+
+#include <asm-generic/bitops-instrumented.h>
 
 #include <asm-generic/bitops/find.h>
 
