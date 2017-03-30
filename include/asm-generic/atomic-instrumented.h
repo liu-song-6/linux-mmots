@@ -240,18 +240,23 @@ INSTR_RET_BOOL2(add_negative);
 	arch_cmpxchg64_local(____ptr, (old), (new));	\
 })
 
+/*
+ * Originally we had the following code here:
+ *	__typeof__(p1) ____p1 = (p1);
+ *	kasan_check_write(____p1, 2 * sizeof(*____p1));
+ *	arch_cmpxchg_double(____p1, (p2), (o1), (o2), (n1), (n2));
+ * But it leads to compilation failures (see gcc issue 72873).
+ * So for now it's left non-instrumented.
+ * There are few callers of cmpxchg_double(), so it's not critical.
+ */
 #define cmpxchg_double(p1, p2, o1, o2, n1, n2)				\
 ({									\
-	__typeof__(p1) ____p1 = (p1);					\
-	kasan_check_write(____p1, 2 * sizeof(*____p1));			\
-	arch_cmpxchg_double(____p1, (p2), (o1), (o2), (n1), (n2));	\
+	arch_cmpxchg_double((p1), (p2), (o1), (o2), (n1), (n2));	\
 })
 
 #define cmpxchg_double_local(p1, p2, o1, o2, n1, n2)			\
 ({									\
-	__typeof__(p1) ____p1 = (p1);					\
-	kasan_check_write(____p1, 2 * sizeof(*____p1));			\
-	arch_cmpxchg_double_local(____p1, (p2), (o1), (o2), (n1), (n2));\
+	arch_cmpxchg_double_local((p1), (p2), (o1), (o2), (n1), (n2));	\
 })
 
 #endif /* _LINUX_ATOMIC_INSTRUMENTED_H */
