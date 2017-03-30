@@ -18,7 +18,7 @@
  */
 static inline long arch_atomic64_read(const atomic64_t *v)
 {
-	return READ_ONCE_NOCHECK((v)->counter);
+	return READ_ONCE((v)->counter);
 }
 
 /**

@@ -24,10 +24,13 @@
 static __always_inline int arch_atomic_read(const atomic_t *v)
 {
 	/*
-	 * We use READ_ONCE_NOCHECK() because atomic_read() contains KASAN
-	 * instrumentation. Double instrumentation is unnecessary.
+	 * Note: READ_ONCE() here leads to double instrumentation as
+	 * both READ_ONCE() and atomic_read() contain instrumentation.
+	 * This is deliberate choice. READ_ONCE_NOCHECK() is compiled to a
+	 * non-inlined function call that considerably increases binary size
+	 * and stack usage under KASAN.
 	 */
-	return READ_ONCE_NOCHECK((v)->counter);
+	return READ_ONCE((v)->counter);
 }
 
 /**
@@ -39,12 +42,6 @@ static __always_inline int arch_atomic_read(const atomic_t *v)
  */
 static __always_inline void arch_atomic_set(atomic_t *v, int i)
 {
-	/*
-	 * We could use WRITE_ONCE_NOCHECK() if it exists, similar to
-	 * READ_ONCE_NOCHECK() in arch_atomic_read(). But there is no such
-	 * thing at the moment, and introducing it for this case does not
-	 * worth it.
-	 */
 	WRITE_ONCE(v->counter, i);
 }
 
