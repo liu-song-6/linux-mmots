@@ -89,12 +89,6 @@ static __always_inline bool atomic64_add_unless(atomic64_t *v, long long a,
 	return arch_atomic64_add_unless(v, a, u);
 }
 
-static __always_inline short int atomic_inc_short(short int *v)
-{
-	kasan_check_write(v, sizeof(*v));
-	return arch_atomic_inc_short(v);
-}
-
 #define __INSTR_VOID1(op, sz)						\
 static __always_inline void atomic##sz##_##op(atomic##sz##_t *v)	\
 {									\

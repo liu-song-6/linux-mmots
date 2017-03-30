@@ -254,19 +254,6 @@ static __always_inline int __arch_atomic_add_unless(atomic_t *v, int a, int u)
 	return c;
 }
 
-/**
- * arch_atomic_inc_short - increment of a short integer
- * @v: pointer to type int
- *
- * Atomically adds 1 to @v
- * Returns the new value of @u
- */
-static __always_inline short int arch_atomic_inc_short(short int *v)
-{
-	asm(LOCK_PREFIX "addw $1, %0" : "+m" (*v));
-	return *v;
-}
-
 #ifdef CONFIG_X86_32
 # include <asm/atomic64_32.h>
 #else
