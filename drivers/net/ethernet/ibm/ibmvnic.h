@@ -953,7 +953,6 @@ struct ibmvnic_adapter {
 	dma_addr_t bounce_buffer_dma;
 
 	/* Statistics */
-	struct net_device_stats net_stats;
 	struct ibmvnic_statistics stats;
 	dma_addr_t stats_token;
 	struct completion stats_done;
@@ -1052,4 +1051,5 @@ struct ibmvnic_adapter {
 	struct work_struct ibmvnic_xport;
 	struct tasklet_struct tasklet;
 	bool failover;
+	bool is_closed;
 };

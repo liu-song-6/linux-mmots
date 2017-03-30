@@ -101,7 +101,7 @@ struct proto smc_proto = {
 	.unhash		= smc_unhash_sk,
 	.obj_size	= sizeof(struct smc_sock),
 	.h.smc_hash	= &smc_v4_hashinfo,
-	.slab_flags	= SLAB_DESTROY_BY_RCU,
+	.slab_flags	= SLAB_TYPESAFE_BY_RCU,
 };
 EXPORT_SYMBOL_GPL(smc_proto);
 
@@ -1244,10 +1244,11 @@ out:
 	return rc;
 }
 
-static ssize_t smc_splice_read(struct socket *sock, loff_t *ppos,
+static ssize_t smc_splice_read(struct file *file, loff_t *ppos,
 			       struct pipe_inode_info *pipe, size_t len,
 				    unsigned int flags)
 {
+	struct socket *sock = file->private_data;
 	struct sock *sk = sock->sk;
 	struct smc_sock *smc;
 	int rc = -ENOTCONN;
@@ -1257,7 +1258,7 @@ static ssize_t smc_splice_read(struct socket *sock, loff_t *ppos,
 	if ((sk->sk_state != SMC_ACTIVE) && (sk->sk_state != SMC_CLOSED))
 		goto out;
 	if (smc->use_fallback) {
-		rc = smc->clcsock->ops->splice_read(smc->clcsock, ppos,
+		rc = smc->clcsock->ops->splice_read(file, ppos,
 						    pipe, len, flags);
 	} else {
 		rc = -EOPNOTSUPP;

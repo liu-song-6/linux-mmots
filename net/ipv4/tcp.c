@@ -311,7 +311,6 @@ EXPORT_SYMBOL(tcp_sockets_allocated);
 struct tcp_splice_state {
 	struct pipe_inode_info *pipe;
 	size_t len;
-	unsigned int flags;
 };
 
 /*
@@ -690,7 +689,7 @@ static int tcp_splice_data_recv(read_descriptor_t *rd_desc, struct sk_buff *skb,
 	int ret;
 
 	ret = skb_splice_bits(skb, skb->sk, offset, tss->pipe,
-			      min(rd_desc->count, len), tss->flags);
+			      min(rd_desc->count, len));
 	if (ret > 0)
 		rd_desc->count -= ret;
 	return ret;
@@ -719,15 +718,15 @@ static int __tcp_splice_read(struct sock *sk, struct tcp_splice_state *tss)
  *    Will read pages from given socket and fill them into a pipe.
  *
  **/
-ssize_t tcp_splice_read(struct socket *sock, loff_t *ppos,
+ssize_t tcp_splice_read(struct file *file, loff_t *ppos,
 			struct pipe_inode_info *pipe, size_t len,
 			unsigned int flags)
 {
+	struct socket *sock = file->private_data;
 	struct sock *sk = sock->sk;
 	struct tcp_splice_state tss = {
 		.pipe = pipe,
 		.len = len,
-		.flags = flags,
 	};
 	long timeo;
 	ssize_t spliced;
@@ -2470,7 +2469,7 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 		/* Values greater than interface MTU won't take effect. However
 		 * at the point when this call is done we typically don't yet
 		 * know which interface is going to be used */
-		if (val < TCP_MIN_MSS || val > MAX_TCP_WINDOW) {
+		if (val && (val < TCP_MIN_MSS || val > MAX_TCP_WINDOW)) {
 			err = -EINVAL;
 			break;
 		}
