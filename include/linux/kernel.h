@@ -50,6 +50,7 @@
 #define __ALIGN_MASK(x, mask)	__ALIGN_KERNEL_MASK((x), (mask))
 #define PTR_ALIGN(p, a)		((typeof(p))ALIGN((unsigned long)(p), (a)))
 #define IS_ALIGNED(x, a)		(((x) & ((typeof(x))(a) - 1)) == 0)
+#define IS_PTR_ALIGNED(p, a)		(IS_ALIGNED((unsigned long)p, a))
 
 /* generic data direction definitions */
 #define READ			0
