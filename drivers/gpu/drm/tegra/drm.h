@@ -42,6 +42,7 @@ struct tegra_drm {
 	struct drm_device *drm;
 
 	struct iommu_domain *domain;
+	struct mutex mm_lock;
 	struct drm_mm mm;
 
 	struct mutex clients_lock;
@@ -67,7 +68,7 @@ struct tegra_drm_client;
 struct tegra_drm_context {
 	struct tegra_drm_client *client;
 	struct host1x_channel *channel;
-	struct list_head list;
+	unsigned int id;
 };
 
 struct tegra_drm_client_ops {
@@ -193,9 +194,6 @@ struct tegra_dc_window {
 };
 
 /* from dc.c */
-u32 tegra_dc_get_vblank_counter(struct tegra_dc *dc);
-void tegra_dc_enable_vblank(struct tegra_dc *dc);
-void tegra_dc_disable_vblank(struct tegra_dc *dc);
 void tegra_dc_commit(struct tegra_dc *dc);
 int tegra_dc_state_setup_clock(struct tegra_dc *dc,
 			       struct drm_crtc_state *crtc_state,

@@ -1837,11 +1837,15 @@ static int emulate_gtt_mmio_write(struct intel_vgpu *vgpu, unsigned int off,
 		ret = gtt_entry_p2m(vgpu, &e, &m);
 		if (ret) {
 			gvt_vgpu_err("fail to translate guest gtt entry\n");
-			return ret;
+			/* guest driver may read/write the entry when partial
+			 * update the entry in this situation p2m will fail
+			 * settting the shadow entry to point to a scratch page
+			 */
+			ops->set_pfn(&m, gvt->gtt.scratch_ggtt_mfn);
 		}
 	} else {
 		m = e;
-		m.val64 = 0;
+		ops->set_pfn(&m, gvt->gtt.scratch_ggtt_mfn);
 	}
 
 	ggtt_set_shadow_entry(ggtt_mm, &m, g_gtt_index);
@@ -2220,7 +2224,8 @@ int intel_gvt_init_gtt(struct intel_gvt *gvt)
 
 	gvt_dbg_core("init gtt\n");
 
-	if (IS_BROADWELL(gvt->dev_priv) || IS_SKYLAKE(gvt->dev_priv)) {
+	if (IS_BROADWELL(gvt->dev_priv) || IS_SKYLAKE(gvt->dev_priv)
+		|| IS_KABYLAKE(gvt->dev_priv)) {
 		gvt->gtt.pte_ops = &gen8_gtt_pte_ops;
 		gvt->gtt.gma_ops = &gen8_gtt_gma_ops;
 		gvt->gtt.mm_alloc_page_table = gen8_mm_alloc_page_table;
