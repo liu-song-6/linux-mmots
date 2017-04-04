@@ -1207,7 +1207,7 @@ static void hns_set_irq_affinity(struct hns_nic_priv *priv)
 	if (!alloc_cpumask_var(&mask, GFP_KERNEL))
 		return;
 
-	/*diffrent irq banlance for 16core and 32core*/
+	/* different irq balance for 16core and 32core */
 	if (h->q_num == num_possible_cpus()) {
 		for (i = 0; i < h->q_num * 2; i++) {
 			rd = &priv->ring_data[i];
