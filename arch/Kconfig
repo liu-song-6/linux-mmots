@@ -324,6 +324,9 @@ config HAVE_CMPXCHG_LOCAL
 config HAVE_CMPXCHG_DOUBLE
 	bool
 
+config ARCH_WEAK_RELEASE_ACQUIRE
+	bool
+
 config ARCH_WANT_IPC_PARSE_VERSION
 	bool
 
@@ -417,6 +420,46 @@ config GCC_PLUGIN_LATENT_ENTROPY
 	  This plugin was ported from grsecurity/PaX. More information at:
 	   * https://grsecurity.net/
 	   * https://pax.grsecurity.net/
+
+config GCC_PLUGIN_INITIFY
+	bool "Free more kernel memory after init"
+	depends on GCC_PLUGINS
+	help
+	  The kernel has a mechanism to free up code and data memory that is
+	  only used during kernel or module initialization.  Enabling this
+	  feature will teach the compiler to find more such code and data
+	  that can be freed after initialization.
+
+	  This plugin currently triggers false positive warnings from the
+	  section mismatch checker.
+
+	  This plugin is the part of grsecurity/PaX. More information at:
+	   * https://grsecurity.net/
+	   * https://pax.grsecurity.net/
+
+config GCC_PLUGIN_INITIFY_VERBOSE
+	bool "Report initification"
+	depends on GCC_PLUGIN_INITIFY
+	depends on !COMPILE_TEST
+	help
+	  Print all initified strings and all functions which should be
+	  __init/__exit.
+	  Note that the candidates identified for __init/__exit markings
+	  depend on the current kernel configuration and thus should be
+	  verified manually before the source code is patched.
+
+config HAVE_GCC_PLUGIN_INITIFY_INIT_EXIT
+	bool
+	depends on GCC_PLUGINS
+	help
+	  The architecture supports moving functions to the exit section
+	  if they are called by both __init and __exit functions. This
+	  requires that exit sections are not removed from non-modular
+	  builds.
+
+config GCC_PLUGIN_INITIFY_INIT_EXIT
+	bool
+	depends on GCC_PLUGIN_INITIFY && HAVE_GCC_PLUGIN_INITIFY_INIT_EXIT
 
 config GCC_PLUGIN_STRUCTLEAK
 	bool "Force initialization of variables containing userspace addresses"
@@ -704,6 +747,13 @@ config ARCH_MMAP_RND_COMPAT_BITS
 	  This value can be changed after boot using the
 	  /proc/sys/vm/mmap_rnd_compat_bits tunable
 
+config HAVE_ARCH_COMPAT_MMAP_BASES
+	bool
+	help
+	  This allows 64bit applications to invoke 32-bit mmap() syscall
+	  and vice-versa 32-bit applications to call 64-bit mmap().
+	  Required for applications doing different bitness syscalls.
+
 config HAVE_COPY_THREAD_TLS
 	bool
 	help
@@ -716,6 +766,12 @@ config HAVE_STACK_VALIDATION
 	help
 	  Architecture supports the 'objtool check' host tool command, which
 	  performs compile-time stack metadata validation.
+
+config HAVE_RELIABLE_STACKTRACE
+	bool
+	help
+	  Architecture has a save_stack_trace_tsk_reliable() function which
+	  only returns a stack trace if it can guarantee the trace is reliable.
 
 config HAVE_ARCH_HASH
 	bool

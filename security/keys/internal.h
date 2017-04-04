@@ -17,6 +17,7 @@
 #include <linux/key-type.h>
 #include <linux/task_work.h>
 #include <linux/keyctl.h>
+#include <linux/refcount.h>
 
 struct iovec;
 
@@ -53,7 +54,7 @@ struct key_user {
 	struct rb_node		node;
 	struct mutex		cons_lock;	/* construction initiation lock */
 	spinlock_t		lock;
-	atomic_t		usage;		/* for accessing qnkeys & qnbytes */
+	refcount_t		usage;		/* for accessing qnkeys & qnbytes */
 	atomic_t		nkeys;		/* number of keys */
 	atomic_t		nikeys;		/* number of instantiated keys */
 	kuid_t			uid;
@@ -266,6 +267,45 @@ extern long keyctl_dh_compute(struct keyctl_dh_params __user *, char __user *,
 static inline long keyctl_dh_compute(struct keyctl_dh_params __user *params,
 				     char __user *buffer, size_t buflen,
 				     void __user *reserved)
+{
+	return -EOPNOTSUPP;
+}
+#endif
+
+#ifdef CONFIG_ASYMMETRIC_KEY_TYPE
+extern long keyctl_pkey_query(key_serial_t,
+			      const char __user *,
+			      struct keyctl_pkey_query __user *);
+
+extern long keyctl_pkey_verify(const struct keyctl_pkey_params __user *,
+			       const char __user *,
+			       const void __user *, const void __user *);
+
+extern long keyctl_pkey_e_d_s(int,
+			      const struct keyctl_pkey_params __user *,
+			      const char __user *,
+			      const void __user *, void __user *);
+#else
+static inline long keyctl_pkey_query(key_serial_t id,
+				     const char __user *_info,
+				     struct keyctl_pkey_query __user *_res)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline long keyctl_pkey_verify(const struct keyctl_pkey_params __user *params,
+				      const char __user *_info,
+				      const void __user *_in,
+				      const void __user *_in2)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline long keyctl_pkey_e_d_s(int op,
+				     const struct keyctl_pkey_params __user *params,
+				     const char __user *_info,
+				     const void __user *_in,
+				     void __user *_out)
 {
 	return -EOPNOTSUPP;
 }

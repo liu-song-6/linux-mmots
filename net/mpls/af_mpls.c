@@ -32,7 +32,9 @@
 #define MPLS_NEIGH_TABLE_UNSPEC (NEIGH_LINK_TABLE + 1)
 
 static int zero = 0;
+static int one = 1;
 static int label_limit = (1 << 20) - 1;
+static int ttl_max = 255;
 
 static void rtmsg_lfib(int event, u32 label, struct mpls_route *rt,
 		       struct nlmsghdr *nlh, struct net *net, u32 portid,
@@ -220,8 +222,8 @@ out:
 	return &rt->rt_nh[nh_index];
 }
 
-static bool mpls_egress(struct mpls_route *rt, struct sk_buff *skb,
-			struct mpls_entry_decoded dec)
+static bool mpls_egress(struct net *net, struct mpls_route *rt,
+			struct sk_buff *skb, struct mpls_entry_decoded dec)
 {
 	enum mpls_payload_type payload_type;
 	bool success = false;
@@ -246,22 +248,46 @@ static bool mpls_egress(struct mpls_route *rt, struct sk_buff *skb,
 	switch (payload_type) {
 	case MPT_IPV4: {
 		struct iphdr *hdr4 = ip_hdr(skb);
+		u8 new_ttl;
 		skb->protocol = htons(ETH_P_IP);
+
+		/* If propagating TTL, take the decremented TTL from
+		 * the incoming MPLS header, otherwise decrement the
+		 * TTL, but only if not 0 to avoid underflow.
+		 */
+		if (rt->rt_ttl_propagate == MPLS_TTL_PROP_ENABLED ||
+		    (rt->rt_ttl_propagate == MPLS_TTL_PROP_DEFAULT &&
+		     net->mpls.ip_ttl_propagate))
+			new_ttl = dec.ttl;
+		else
+			new_ttl = hdr4->ttl ? hdr4->ttl - 1 : 0;
+
 		csum_replace2(&hdr4->check,
 			      htons(hdr4->ttl << 8),
-			      htons(dec.ttl << 8));
-		hdr4->ttl = dec.ttl;
+			      htons(new_ttl << 8));
+		hdr4->ttl = new_ttl;
 		success = true;
 		break;
 	}
 	case MPT_IPV6: {
 		struct ipv6hdr *hdr6 = ipv6_hdr(skb);
 		skb->protocol = htons(ETH_P_IPV6);
-		hdr6->hop_limit = dec.ttl;
+
+		/* If propagating TTL, take the decremented TTL from
+		 * the incoming MPLS header, otherwise decrement the
+		 * hop limit, but only if not 0 to avoid underflow.
+		 */
+		if (rt->rt_ttl_propagate == MPLS_TTL_PROP_ENABLED ||
+		    (rt->rt_ttl_propagate == MPLS_TTL_PROP_DEFAULT &&
+		     net->mpls.ip_ttl_propagate))
+			hdr6->hop_limit = dec.ttl;
+		else if (hdr6->hop_limit)
+			hdr6->hop_limit = hdr6->hop_limit - 1;
 		success = true;
 		break;
 	}
 	case MPT_UNSPEC:
+		/* Should have decided which protocol it is by now */
 		break;
 	}
 
@@ -361,7 +387,7 @@ static int mpls_forward(struct sk_buff *skb, struct net_device *dev,
 
 	if (unlikely(!new_header_size && dec.bos)) {
 		/* Penultimate hop popping */
-		if (!mpls_egress(rt, skb, dec))
+		if (!mpls_egress(dev_net(out_dev), rt, skb, dec))
 			goto err;
 	} else {
 		bool bos;
@@ -412,6 +438,7 @@ static struct packet_type mpls_packet_type __read_mostly = {
 static const struct nla_policy rtm_mpls_policy[RTA_MAX+1] = {
 	[RTA_DST]		= { .type = NLA_U32 },
 	[RTA_OIF]		= { .type = NLA_U32 },
+	[RTA_TTL_PROPAGATE]	= { .type = NLA_U8 },
 };
 
 struct mpls_route_config {
@@ -421,6 +448,7 @@ struct mpls_route_config {
 	u8			rc_via_alen;
 	u8			rc_via[MAX_VIA_ALEN];
 	u32			rc_label;
+	u8			rc_ttl_propagate;
 	u8			rc_output_labels;
 	u32			rc_output_label[MAX_NEW_LABELS];
 	u32			rc_nlflags;
@@ -856,6 +884,7 @@ static int mpls_route_add(struct mpls_route_config *cfg)
 
 	rt->rt_protocol = cfg->rc_protocol;
 	rt->rt_payload_type = cfg->rc_payload_type;
+	rt->rt_ttl_propagate = cfg->rc_ttl_propagate;
 
 	if (cfg->rc_mp)
 		err = mpls_nh_build_multi(cfg, rt);
@@ -1011,8 +1040,8 @@ static int mpls_netconf_msgsize_devconf(int type)
 	return size;
 }
 
-static void mpls_netconf_notify_devconf(struct net *net, int type,
-					struct mpls_dev *mdev)
+static void mpls_netconf_notify_devconf(struct net *net, int event,
+					int type, struct mpls_dev *mdev)
 {
 	struct sk_buff *skb;
 	int err = -ENOBUFS;
@@ -1021,8 +1050,7 @@ static void mpls_netconf_notify_devconf(struct net *net, int type,
 	if (!skb)
 		goto errout;
 
-	err = mpls_netconf_fill_devconf(skb, mdev, 0, 0, RTM_NEWNETCONF,
-					0, type);
+	err = mpls_netconf_fill_devconf(skb, mdev, 0, 0, event, 0, type);
 	if (err < 0) {
 		/* -EMSGSIZE implies BUG in mpls_netconf_msgsize_devconf() */
 		WARN_ON(err == -EMSGSIZE);
@@ -1155,9 +1183,8 @@ static int mpls_conf_proc(struct ctl_table *ctl, int write,
 
 		if (i == offsetof(struct mpls_dev, input_enabled) &&
 		    val != oval) {
-			mpls_netconf_notify_devconf(net,
-						    NETCONFA_INPUT,
-						    mdev);
+			mpls_netconf_notify_devconf(net, RTM_NEWNETCONF,
+						    NETCONFA_INPUT, mdev);
 		}
 	}
 
@@ -1198,10 +1225,11 @@ static int mpls_dev_sysctl_register(struct net_device *dev,
 
 	snprintf(path, sizeof(path), "net/mpls/conf/%s", dev->name);
 
-	mdev->sysctl = register_net_sysctl(dev_net(dev), path, table);
+	mdev->sysctl = register_net_sysctl(net, path, table);
 	if (!mdev->sysctl)
 		goto free;
 
+	mpls_netconf_notify_devconf(net, RTM_NEWNETCONF, NETCONFA_ALL, mdev);
 	return 0;
 
 free:
@@ -1210,13 +1238,17 @@ out:
 	return -ENOBUFS;
 }
 
-static void mpls_dev_sysctl_unregister(struct mpls_dev *mdev)
+static void mpls_dev_sysctl_unregister(struct net_device *dev,
+				       struct mpls_dev *mdev)
 {
+	struct net *net = dev_net(dev);
 	struct ctl_table *table;
 
 	table = mdev->sysctl->ctl_table_arg;
 	unregister_net_sysctl_table(mdev->sysctl);
 	kfree(table);
+
+	mpls_netconf_notify_devconf(net, RTM_DELNETCONF, 0, mdev);
 }
 
 static struct mpls_dev *mpls_add_dev(struct net_device *dev)
@@ -1242,11 +1274,12 @@ static struct mpls_dev *mpls_add_dev(struct net_device *dev)
 		u64_stats_init(&mpls_stats->syncp);
 	}
 
+	mdev->dev = dev;
+
 	err = mpls_dev_sysctl_register(dev, mdev);
 	if (err)
 		goto free;
 
-	mdev->dev = dev;
 	rcu_assign_pointer(dev->mpls_ptr, mdev);
 
 	return mdev;
@@ -1270,7 +1303,7 @@ static void mpls_ifdown(struct net_device *dev, int event)
 	struct mpls_route __rcu **platform_label;
 	struct net *net = dev_net(dev);
 	unsigned int nh_flags = RTNH_F_DEAD | RTNH_F_LINKDOWN;
-	unsigned int alive;
+	unsigned int alive, deleted;
 	unsigned index;
 
 	platform_label = rtnl_dereference(net->mpls.platform_label);
@@ -1281,6 +1314,7 @@ static void mpls_ifdown(struct net_device *dev, int event)
 			continue;
 
 		alive = 0;
+		deleted = 0;
 		change_nexthops(rt) {
 			if (rtnl_dereference(nh->nh_dev) != dev)
 				goto next;
@@ -1299,9 +1333,15 @@ static void mpls_ifdown(struct net_device *dev, int event)
 next:
 			if (!(nh->nh_flags & nh_flags))
 				alive++;
+			if (!rtnl_dereference(nh->nh_dev))
+				deleted++;
 		} endfor_nexthops(rt);
 
 		WRITE_ONCE(rt->rt_nhn_alive, alive);
+
+		/* if there are no more nexthops, delete the route */
+		if (event == NETDEV_UNREGISTER && deleted == rt->rt_nhn)
+			mpls_route_update(net, index, NULL, NULL);
 	}
 }
 
@@ -1385,7 +1425,7 @@ static int mpls_dev_notify(struct notifier_block *this, unsigned long event,
 		mpls_ifdown(dev, event);
 		mdev = mpls_dev_get(dev);
 		if (mdev) {
-			mpls_dev_sysctl_unregister(mdev);
+			mpls_dev_sysctl_unregister(dev, mdev);
 			RCU_INIT_POINTER(dev->mpls_ptr, NULL);
 			call_rcu(&mdev->rcu, mpls_dev_destroy_rcu);
 		}
@@ -1395,7 +1435,7 @@ static int mpls_dev_notify(struct notifier_block *this, unsigned long event,
 		if (mdev) {
 			int err;
 
-			mpls_dev_sysctl_unregister(mdev);
+			mpls_dev_sysctl_unregister(dev, mdev);
 			err = mpls_dev_sysctl_register(dev, mdev);
 			if (err)
 				return notifier_from_errno(err);
@@ -1584,6 +1624,7 @@ static int rtm_to_route_config(struct sk_buff *skb,  struct nlmsghdr *nlh,
 	cfg->rc_label		= LABEL_NOT_SPECIFIED;
 	cfg->rc_protocol	= rtm->rtm_protocol;
 	cfg->rc_via_table	= MPLS_NEIGH_TABLE_UNSPEC;
+	cfg->rc_ttl_propagate	= MPLS_TTL_PROP_DEFAULT;
 	cfg->rc_nlflags		= nlh->nlmsg_flags;
 	cfg->rc_nlinfo.portid	= NETLINK_CB(skb).portid;
 	cfg->rc_nlinfo.nlh	= nlh;
@@ -1628,6 +1669,17 @@ static int rtm_to_route_config(struct sk_buff *skb,  struct nlmsghdr *nlh,
 		{
 			cfg->rc_mp = nla_data(nla);
 			cfg->rc_mp_len = nla_len(nla);
+			break;
+		}
+		case RTA_TTL_PROPAGATE:
+		{
+			u8 ttl_propagate = nla_get_u8(nla);
+
+			if (ttl_propagate > 1)
+				goto errout;
+			cfg->rc_ttl_propagate = ttl_propagate ?
+				MPLS_TTL_PROP_ENABLED :
+				MPLS_TTL_PROP_DISABLED;
 			break;
 		}
 		default:
@@ -1690,6 +1742,15 @@ static int mpls_dump_route(struct sk_buff *skb, u32 portid, u32 seq, int event,
 
 	if (nla_put_labels(skb, RTA_DST, 1, &label))
 		goto nla_put_failure;
+
+	if (rt->rt_ttl_propagate != MPLS_TTL_PROP_DEFAULT) {
+		bool ttl_propagate =
+			rt->rt_ttl_propagate == MPLS_TTL_PROP_ENABLED;
+
+		if (nla_put_u8(skb, RTA_TTL_PROPAGATE,
+			       ttl_propagate))
+			goto nla_put_failure;
+	}
 	if (rt->rt_nhn == 1) {
 		const struct mpls_nh *nh = rt->rt_nh;
 
@@ -1719,13 +1780,15 @@ static int mpls_dump_route(struct sk_buff *skb, u32 portid, u32 seq, int event,
 			goto nla_put_failure;
 
 		for_nexthops(rt) {
+			dev = rtnl_dereference(nh->nh_dev);
+			if (!dev)
+				continue;
+
 			rtnh = nla_reserve_nohdr(skb, sizeof(*rtnh));
 			if (!rtnh)
 				goto nla_put_failure;
 
-			dev = rtnl_dereference(nh->nh_dev);
-			if (dev)
-				rtnh->rtnh_ifindex = dev->ifindex;
+			rtnh->rtnh_ifindex = dev->ifindex;
 			if (nh->nh_flags & RTNH_F_LINKDOWN) {
 				rtnh->rtnh_flags |= RTNH_F_LINKDOWN;
 				linkdown++;
@@ -1800,7 +1863,8 @@ static inline size_t lfib_nlmsg_size(struct mpls_route *rt)
 {
 	size_t payload =
 		NLMSG_ALIGN(sizeof(struct rtmsg))
-		+ nla_total_size(4);			/* RTA_DST */
+		+ nla_total_size(4)			/* RTA_DST */
+		+ nla_total_size(1);			/* RTA_TTL_PROPAGATE */
 
 	if (rt->rt_nhn == 1) {
 		struct mpls_nh *nh = rt->rt_nh;
@@ -1816,6 +1880,8 @@ static inline size_t lfib_nlmsg_size(struct mpls_route *rt)
 		size_t nhsize = 0;
 
 		for_nexthops(rt) {
+			if (!rtnl_dereference(nh->nh_dev))
+				continue;
 			nhsize += nla_total_size(sizeof(struct rtnexthop));
 			/* RTA_VIA */
 			if (nh->nh_via_table != MPLS_NEIGH_TABLE_UNSPEC)
@@ -1884,6 +1950,7 @@ static int resize_platform_label_table(struct net *net, size_t limit)
 		RCU_INIT_POINTER(rt0->rt_nh->nh_dev, lo);
 		rt0->rt_protocol = RTPROT_KERNEL;
 		rt0->rt_payload_type = MPT_IPV4;
+		rt0->rt_ttl_propagate = MPLS_TTL_PROP_DEFAULT;
 		rt0->rt_nh->nh_via_table = NEIGH_LINK_TABLE;
 		rt0->rt_nh->nh_via_alen = lo->addr_len;
 		memcpy(__mpls_nh_via(rt0, rt0->rt_nh), lo->dev_addr,
@@ -1897,6 +1964,7 @@ static int resize_platform_label_table(struct net *net, size_t limit)
 		RCU_INIT_POINTER(rt2->rt_nh->nh_dev, lo);
 		rt2->rt_protocol = RTPROT_KERNEL;
 		rt2->rt_payload_type = MPT_IPV6;
+		rt2->rt_ttl_propagate = MPLS_TTL_PROP_DEFAULT;
 		rt2->rt_nh->nh_via_table = NEIGH_LINK_TABLE;
 		rt2->rt_nh->nh_via_alen = lo->addr_len;
 		memcpy(__mpls_nh_via(rt2, rt2->rt_nh), lo->dev_addr,
@@ -1978,6 +2046,9 @@ static int mpls_platform_labels(struct ctl_table *table, int write,
 	return ret;
 }
 
+#define MPLS_NS_SYSCTL_OFFSET(field)		\
+	(&((struct net *)0)->field)
+
 static const struct ctl_table mpls_table[] = {
 	{
 		.procname	= "platform_labels",
@@ -1986,21 +2057,47 @@ static const struct ctl_table mpls_table[] = {
 		.mode		= 0644,
 		.proc_handler	= mpls_platform_labels,
 	},
+	{
+		.procname	= "ip_ttl_propagate",
+		.data		= MPLS_NS_SYSCTL_OFFSET(mpls.ip_ttl_propagate),
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &one,
+	},
+	{
+		.procname	= "default_ttl",
+		.data		= MPLS_NS_SYSCTL_OFFSET(mpls.default_ttl),
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &one,
+		.extra2		= &ttl_max,
+	},
 	{ }
 };
 
 static int mpls_net_init(struct net *net)
 {
 	struct ctl_table *table;
+	int i;
 
 	net->mpls.platform_labels = 0;
 	net->mpls.platform_label = NULL;
+	net->mpls.ip_ttl_propagate = 1;
+	net->mpls.default_ttl = 255;
 
 	table = kmemdup(mpls_table, sizeof(mpls_table), GFP_KERNEL);
 	if (table == NULL)
 		return -ENOMEM;
 
-	table[0].data = net;
+	/* Table data contains only offsets relative to the base of
+	 * the mdev at this point, so make them absolute.
+	 */
+	for (i = 0; i < ARRAY_SIZE(mpls_table) - 1; i++)
+		table[i].data = (char *)net + (uintptr_t)table[i].data;
+
 	net->mpls.ctl = register_net_sysctl(net, "net/mpls", table);
 	if (net->mpls.ctl == NULL) {
 		kfree(table);

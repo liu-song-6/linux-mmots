@@ -5,6 +5,8 @@
 
 #ifdef CONFIG_GENERIC_BUG
 #define BUGFLAG_WARNING		(1 << 0)
+#define BUGFLAG_ONCE		(1 << 1)
+#define BUGFLAG_DONE		(1 << 2)
 #define BUGFLAG_TAINT(taint)	(BUGFLAG_WARNING | ((taint) << 8))
 #define BUG_GET_TAINT(bug)	((bug)->flags >> 8)
 #endif
@@ -55,6 +57,18 @@ struct bug_entry {
 #define BUG_ON(condition) do { if (unlikely(condition)) BUG(); } while (0)
 #endif
 
+#ifdef __WARN_FLAGS
+#define __WARN_TAINT(taint)		__WARN_FLAGS(BUGFLAG_TAINT(taint))
+#define __WARN_ONCE_TAINT(taint)	__WARN_FLAGS(BUGFLAG_ONCE|BUGFLAG_TAINT(taint))
+
+#define WARN_ON_ONCE(condition) ({				\
+	int __ret_warn_on = !!(condition);			\
+	if (unlikely(__ret_warn_on))				\
+		__WARN_ONCE_TAINT(TAINT_WARN);			\
+	unlikely(__ret_warn_on);				\
+})
+#endif
+
 /*
  * WARN(), WARN_ON(), WARN_ON_ONCE, and so on can be used to report
  * significant issues that need prompt attention if they should ever
@@ -62,13 +76,13 @@ struct bug_entry {
  * to provide better diagnostics.
  */
 #ifndef __WARN_TAINT
-extern __printf(3, 4)
+extern __printf(3, 4) __nocapture(1)
 void warn_slowpath_fmt(const char *file, const int line,
 		       const char *fmt, ...);
-extern __printf(4, 5)
+extern __printf(4, 5) __nocapture(1)
 void warn_slowpath_fmt_taint(const char *file, const int line, unsigned taint,
 			     const char *fmt, ...);
-extern void warn_slowpath_null(const char *file, const int line);
+extern __nocapture(1) void warn_slowpath_null(const char *file, const int line);
 #define WANT_WARN_ON_SLOWPATH
 #define __WARN()		warn_slowpath_null(__FILE__, __LINE__)
 #define __WARN_printf(arg...)	warn_slowpath_fmt(__FILE__, __LINE__, arg)
@@ -84,6 +98,7 @@ extern void warn_slowpath_null(const char *file, const int line);
 /* used internally by panic.c */
 struct warn_args;
 
+__nocapture(1, 0)
 void __warn(const char *file, int line, void *caller, unsigned taint,
 	    struct pt_regs *regs, struct warn_args *args);
 
@@ -97,7 +112,7 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
 #endif
 
 #ifndef WARN
-#define WARN(condition, format...) ({						\
+#define WARN(condition, format...) ({					\
 	int __ret_warn_on = !!(condition);				\
 	if (unlikely(__ret_warn_on))					\
 		__WARN_printf(format);					\
@@ -112,6 +127,7 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
 	unlikely(__ret_warn_on);					\
 })
 
+#ifndef WARN_ON_ONCE
 #define WARN_ON_ONCE(condition)	({				\
 	static bool __section(.data.unlikely) __warned;		\
 	int __ret_warn_once = !!(condition);			\
@@ -122,6 +138,7 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
 	}							\
 	unlikely(__ret_warn_once);				\
 })
+#endif
 
 #define WARN_ONCE(condition, format...)	({			\
 	static bool __section(.data.unlikely) __warned;		\
