@@ -440,10 +440,6 @@ void adreno_gpu_cleanup(struct adreno_gpu *adreno_gpu)
 	if (gpu->aspace) {
 		gpu->aspace->mmu->funcs->detach(gpu->aspace->mmu,
 			iommu_ports, ARRAY_SIZE(iommu_ports));
-<<<<<<< HEAD
-		msm_gem_address_space_destroy(gpu->aspace);
-=======
 		msm_gem_address_space_put(gpu->aspace);
->>>>>>> linux-next/akpm-base
 	}
 }
