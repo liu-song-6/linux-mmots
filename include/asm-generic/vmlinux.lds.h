@@ -287,8 +287,6 @@
 		*(.rodata1)						\
 	}								\
 									\
-	BUG_TABLE							\
-									\
 	/* PCI quirks */						\
 	.pci_fixup        : AT(ADDR(.pci_fixup) - LOAD_OFFSET) {	\
 		VMLINUX_SYMBOL(__start_pci_fixups_early) = .;		\
@@ -552,6 +550,7 @@
 	MEM_DISCARD(init.data)						\
 	KERNEL_CTORS()							\
 	MCOUNT_REC()							\
+	*(.init.rodata.str)						\
 	*(.init.rodata)							\
 	FTRACE_EVENTS()							\
 	TRACE_SYSCALLS()						\
@@ -581,6 +580,7 @@
 	*(.fini_array)							\
 	*(.dtors)							\
 	MEM_DISCARD(exit.data)						\
+	*(.exit.rodata.str)						\
 	MEM_DISCARD(exit.rodata)
 
 #define EXIT_TEXT							\
@@ -857,7 +857,8 @@
 		READ_MOSTLY_DATA(cacheline)				\
 		DATA_DATA						\
 		CONSTRUCTORS						\
-	}
+	}								\
+	BUG_TABLE
 
 #define INIT_TEXT_SECTION(inittext_align)				\
 	. = ALIGN(inittext_align);					\

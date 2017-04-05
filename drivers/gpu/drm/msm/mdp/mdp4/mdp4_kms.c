@@ -169,7 +169,7 @@ static void mdp4_destroy(struct msm_kms *kms)
 	if (aspace) {
 		aspace->mmu->funcs->detach(aspace->mmu,
 				iommu_ports, ARRAY_SIZE(iommu_ports));
-		msm_gem_address_space_destroy(aspace);
+		msm_gem_address_space_put(aspace);
 	}
 
 	if (mdp4_kms->rpm_enabled)
@@ -434,7 +434,7 @@ fail:
 
 struct msm_kms *mdp4_kms_init(struct drm_device *dev)
 {
-	struct platform_device *pdev = dev->platformdev;
+	struct platform_device *pdev = to_platform_device(dev->dev);
 	struct mdp4_platform_config *config = mdp4_get_config(pdev);
 	struct mdp4_kms *mdp4_kms;
 	struct msm_kms *kms = NULL;

@@ -38,6 +38,12 @@ static struct {
 	{HID_USAGE_SENSOR_ACCEL_3D,
 		HID_USAGE_SENSOR_UNITS_G, 9, 806650000},
 
+	{HID_USAGE_SENSOR_GRAVITY_VECTOR, 0, 9, 806650000},
+	{HID_USAGE_SENSOR_GRAVITY_VECTOR,
+		HID_USAGE_SENSOR_UNITS_METERS_PER_SEC_SQRD, 1, 0},
+	{HID_USAGE_SENSOR_GRAVITY_VECTOR,
+		HID_USAGE_SENSOR_UNITS_G, 9, 806650000},
+
 	{HID_USAGE_SENSOR_GYRO_3D, 0, 0, 17453293},
 	{HID_USAGE_SENSOR_GYRO_3D,
 		HID_USAGE_SENSOR_UNITS_RADIANS_PER_SECOND, 1, 0},
@@ -62,6 +68,11 @@ static struct {
 	{HID_USAGE_SENSOR_TIME_TIMESTAMP, 0, 1000000000, 0},
 	{HID_USAGE_SENSOR_TIME_TIMESTAMP, HID_USAGE_SENSOR_UNITS_MILLISECOND,
 		1000000, 0},
+
+	{HID_USAGE_SENSOR_TEMPERATURE, 0, 1000, 0},
+	{HID_USAGE_SENSOR_TEMPERATURE, HID_USAGE_SENSOR_UNITS_DEGREES, 1000, 0},
+
+	{HID_USAGE_SENSOR_HUMIDITY, 0, 1000, 0},
 };
 
 static int pow_10(unsigned power)
@@ -379,6 +390,8 @@ int hid_sensor_parse_common_attributes(struct hid_sensor_hub_device *hsdev,
 {
 
 	struct hid_sensor_hub_attribute_info timestamp;
+	s32 value;
+	int ret;
 
 	hid_sensor_get_reporting_interval(hsdev, usage_id, st);
 
@@ -416,6 +429,14 @@ int hid_sensor_parse_common_attributes(struct hid_sensor_hub_device *hsdev,
 		st->power_state.index, st->power_state.report_id,
 		st->sensitivity.index, st->sensitivity.report_id,
 		timestamp.index, timestamp.report_id);
+
+	ret = sensor_hub_get_feature(hsdev,
+				st->power_state.report_id,
+				st->power_state.index, sizeof(value), &value);
+	if (ret < 0)
+		return ret;
+	if (value < 0)
+		return -EINVAL;
 
 	return 0;
 }

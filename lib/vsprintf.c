@@ -118,7 +118,7 @@ long long simple_strtoll(const char *cp, char **endp, unsigned int base)
 }
 EXPORT_SYMBOL(simple_strtoll);
 
-static noinline_for_stack
+static noinline_for_stack __nocapture(1) __unverified_nocapture(1)
 int skip_atoi(const char **s)
 {
 	int i = 0;
@@ -1573,7 +1573,7 @@ int kptr_restrict __read_mostly;
  * function pointers are really function descriptors, which contain a
  * pointer to the real address.
  */
-static noinline_for_stack
+static noinline_for_stack __nocapture(1) __unverified_nocapture(1)
 char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 	      struct printf_spec spec)
 {
@@ -1753,7 +1753,7 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
  * @precision: precision of a number
  * @qualifier: qualifier of a number (long, size_t, ...)
  */
-static noinline_for_stack
+static noinline_for_stack __nocapture(1)
 int format_decode(const char *fmt, struct printf_spec *spec)
 {
 	const char *start = fmt;
@@ -1957,13 +1957,13 @@ set_precision(struct printf_spec *spec, int prec)
  * This function generally follows C99 vsnprintf, but has some
  * extensions and a few limitations:
  *
- * %n is unsupported
- * %p* is handled by pointer()
+ *  - ``%n`` is unsupported
+ *  - ``%p*`` is handled by pointer()
  *
  * See pointer() or Documentation/printk-formats.txt for more
  * extensive description.
  *
- * ** Please update the documentation in both places when making changes **
+ * **Please update the documentation in both places when making changes**
  *
  * The return value is the number of characters which would
  * be generated for the given input, excluding the trailing
