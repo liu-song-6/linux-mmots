@@ -35,6 +35,7 @@
 #include <linux/pagevec.h>
 #include <linux/freezer.h>
 #include <linux/namei.h>
+#include <linux/uuid.h>
 #include <linux/uaccess.h>
 #include <asm/processor.h>
 #include <linux/inet.h>
@@ -904,10 +905,19 @@ cifs_demultiplex_thread(void *p)
 
 		server->lstrp = jiffies;
 		if (mid_entry != NULL) {
+			if ((mid_entry->mid_flags & MID_WAIT_CANCELLED) &&
+			     mid_entry->mid_state == MID_RESPONSE_RECEIVED &&
+					(server->ops->handle_cancelled_mid))
+				server->ops->handle_cancelled_mid(
+							mid_entry->resp_buf,
+							server);
+
 			if (!mid_entry->multiRsp || mid_entry->multiEnd)
 				mid_entry->callback(mid_entry);
-		} else if (!server->ops->is_oplock_break ||
-			   !server->ops->is_oplock_break(buf, server)) {
+		} else if (server->ops->is_oplock_break &&
+			   server->ops->is_oplock_break(buf, server)) {
+			cifs_dbg(FYI, "Received oplock break\n");
+		} else {
 			cifs_dbg(VFS, "No task to wake, unknown frame received! NumMids %d\n",
 				 atomic_read(&midCount));
 			cifs_dump_mem("Received Data is: ", buf,

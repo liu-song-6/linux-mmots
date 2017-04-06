@@ -360,6 +360,14 @@ static const struct rpmsg_device_ops virtio_rpmsg_ops = {
 	.announce_destroy = virtio_rpmsg_announce_destroy,
 };
 
+static void virtio_rpmsg_release_device(struct device *dev)
+{
+	struct rpmsg_device *rpdev = to_rpmsg_device(dev);
+	struct virtio_rpmsg_channel *vch = to_virtio_rpmsg_channel(rpdev);
+
+	kfree(vch);
+}
+
 /*
  * create an rpmsg channel using its name and address info.
  * this function will be used to create both static and dynamic
@@ -408,6 +416,7 @@ static struct rpmsg_device *rpmsg_create_channel(struct virtproc_info *vrp,
 	strncpy(rpdev->id.name, chinfo->name, RPMSG_NAME_SIZE);
 
 	rpdev->dev.parent = &vrp->vdev->dev;
+	rpdev->dev.release = virtio_rpmsg_release_device;
 	ret = rpmsg_register_device(rpdev);
 	if (ret)
 		return NULL;
@@ -869,7 +878,7 @@ static int rpmsg_probe(struct virtio_device *vdev)
 	init_waitqueue_head(&vrp->sendq);
 
 	/* We expect two virtqueues, rx and tx (and in this order) */
-	err = vdev->config->find_vqs(vdev, 2, vqs, vq_cbs, names, NULL);
+	err = virtio_find_vqs(vdev, 2, vqs, vq_cbs, names, NULL);
 	if (err)
 		goto free_vrp;
 
