@@ -138,7 +138,8 @@ extern long __get_user_bad(void);
 
 #define __get_user_nocheck(x, ptr, size)			\
 ({                                                              \
-	long __gu_err, __gu_val;                                \
+	long __gu_err;						\
+	long long __gu_val;					\
 	__get_user_size(__gu_val, (ptr), (size), __gu_err);	\
 	(x) = (__force __typeof__(*(ptr)))__gu_val;             \
 	__gu_err;                                               \
@@ -146,7 +147,8 @@ extern long __get_user_bad(void);
 
 #define __get_user_check(x, ptr, size)					\
 ({                                                                      \
-	long __gu_err = -EFAULT, __gu_val = 0;                          \
+	long __gu_err = -EFAULT;					\
+	long long __gu_val = 0;						\
 	const __typeof__(*(ptr)) __user *__gu_addr = (ptr);		\
 	if (access_ok(VERIFY_READ, __gu_addr, size))			\
 		__get_user_size(__gu_val, __gu_addr, (size), __gu_err);	\
@@ -157,6 +159,7 @@ extern long __get_user_bad(void);
 extern unsigned char __get_user_asm_b(const void __user *addr, long *err);
 extern unsigned short __get_user_asm_w(const void __user *addr, long *err);
 extern unsigned int __get_user_asm_d(const void __user *addr, long *err);
+extern unsigned long long __get_user_asm_l(const void __user *addr, long *err);
 
 #define __get_user_size(x, ptr, size, retval)			\
 do {                                                            \
@@ -168,6 +171,8 @@ do {                                                            \
 		x = __get_user_asm_w(ptr, &retval); break;	\
 	case 4:							\
 		x = __get_user_asm_d(ptr, &retval); break;	\
+	case 8:							\
+		x = __get_user_asm_l(ptr, &retval); break;	\
 	default:						\
 		(x) = __get_user_bad();				\
 	}                                                       \
@@ -197,20 +202,21 @@ extern long __must_check strnlen_user(const char __user *src, long count);
 
 #define strlen_user(str) strnlen_user(str, 32767)
 
-extern unsigned long __must_check __copy_user_zeroing(void *to,
-						      const void __user *from,
-						      unsigned long n);
+extern unsigned long raw_copy_from_user(void *to, const void __user *from,
+					unsigned long n);
 
 static inline unsigned long
 copy_from_user(void *to, const void __user *from, unsigned long n)
 {
+	unsigned long res = n;
 	if (likely(access_ok(VERIFY_READ, from, n)))
-		return __copy_user_zeroing(to, from, n);
-	memset(to, 0, n);
-	return n;
+		res = raw_copy_from_user(to, from, n);
+	if (unlikely(res))
+		memset(to + (n - res), 0, res);
+	return res;
 }
 
-#define __copy_from_user(to, from, n) __copy_user_zeroing(to, from, n)
+#define __copy_from_user(to, from, n) raw_copy_from_user(to, from, n)
 #define __copy_from_user_inatomic __copy_from_user
 
 extern unsigned long __must_check __copy_user(void __user *to,
