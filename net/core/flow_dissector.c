@@ -576,36 +576,6 @@ mpls:
 		goto out_good;
 
 	case htons(ETH_P_ARP):
-<<<<<<< HEAD
-	case htons(ETH_P_RARP): {
-		struct {
-			unsigned char ar_sha[ETH_ALEN];
-			unsigned char ar_sip[4];
-			unsigned char ar_tha[ETH_ALEN];
-			unsigned char ar_tip[4];
-		} *arp_eth, _arp_eth;
-		const struct arphdr *arp;
-		struct arphdr _arp;
-
-		arp = __skb_header_pointer(skb, nhoff, sizeof(_arp), data,
-					   hlen, &_arp);
-		if (!arp)
-			goto out_bad;
-
-		if (arp->ar_hrd != htons(ARPHRD_ETHER) ||
-		    arp->ar_pro != htons(ETH_P_IP) ||
-		    arp->ar_hln != ETH_ALEN ||
-		    arp->ar_pln != 4 ||
-		    (arp->ar_op != htons(ARPOP_REPLY) &&
-		     arp->ar_op != htons(ARPOP_REQUEST)))
-			goto out_bad;
-
-		arp_eth = __skb_header_pointer(skb, nhoff + sizeof(_arp),
-					       sizeof(_arp_eth), data,
-					       hlen,
-					       &_arp_eth);
-		if (!arp_eth)
-=======
 	case htons(ETH_P_RARP):
 		switch (__skb_flow_dissect_arp(skb, flow_dissector,
 					       target_container, data,
@@ -614,7 +584,6 @@ mpls:
 			goto out_good;
 		case FLOW_DISSECT_RET_OUT_BAD:
 		default:
->>>>>>> linux-next/akpm-base
 			goto out_bad;
 		}
 	default:

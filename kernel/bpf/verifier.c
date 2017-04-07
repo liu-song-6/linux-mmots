@@ -782,7 +782,6 @@ static int check_pkt_ptr_alignment(const struct bpf_reg_state *reg,
 		return -EACCES;
 	}
 
-<<<<<<< HEAD
 	return 0;
 }
 
@@ -797,22 +796,6 @@ static int check_val_ptr_alignment(const struct bpf_reg_state *reg,
 	return 0;
 }
 
-=======
-	return 0;
-}
-
-static int check_val_ptr_alignment(const struct bpf_reg_state *reg,
-				   int size)
-{
-	if (size != 1) {
-		verbose("Unknown alignment. Only byte-sized access allowed in value access.\n");
-		return -EACCES;
-	}
-
-	return 0;
-}
-
->>>>>>> linux-next/akpm-base
 static int check_ptr_alignment(const struct bpf_reg_state *reg,
 			       int off, int size)
 {

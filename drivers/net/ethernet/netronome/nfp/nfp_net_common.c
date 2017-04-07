@@ -3295,18 +3295,9 @@ void nfp_net_netdev_clean(struct net_device *netdev)
 {
 	struct nfp_net *nn = netdev_priv(netdev);
 
-<<<<<<< HEAD
-	unregister_netdev(nn->netdev);
-
-	if (nn->xdp_prog)
-		bpf_prog_put(nn->xdp_prog);
-	if (nn->bpf_offload_xdp)
-		nfp_net_xdp_offload(nn, NULL);
-=======
 	if (nn->dp.xdp_prog)
 		bpf_prog_put(nn->dp.xdp_prog);
 	if (nn->dp.bpf_offload_xdp)
 		nfp_net_xdp_offload(nn, NULL);
 	unregister_netdev(nn->dp.netdev);
->>>>>>> linux-next/akpm-base
 }

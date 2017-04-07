@@ -3717,15 +3717,6 @@ static int rtl8152_resume(struct usb_interface *intf)
 			napi_disable(napi);
 			set_bit(WORK_ENABLE, &tp->flags);
 
-<<<<<<< HEAD
-			if (netif_carrier_ok(tp->netdev)) {
-				if (rtl8152_get_speed(tp) & LINK_STATUS) {
-					rtl_start_rx(tp);
-				} else {
-					netif_carrier_off(tp->netdev);
-					tp->rtl_ops.disable(tp);
-					netif_info(tp, link, tp->netdev,
-=======
 			if (netif_carrier_ok(netdev)) {
 				if (rtl8152_get_speed(tp) & LINK_STATUS) {
 					rtl_start_rx(tp);
@@ -3733,16 +3724,11 @@ static int rtl8152_resume(struct usb_interface *intf)
 					netif_carrier_off(netdev);
 					tp->rtl_ops.disable(tp);
 					netif_info(tp, link, netdev,
->>>>>>> linux-next/akpm-base
 						   "linking down\n");
 				}
 			}
 
-<<<<<<< HEAD
-			napi_enable(&tp->napi);
-=======
 			napi_enable(napi);
->>>>>>> linux-next/akpm-base
 			clear_bit(SELECTIVE_SUSPEND, &tp->flags);
 			smp_mb__after_atomic();
 			if (!list_empty(&tp->rx_done))

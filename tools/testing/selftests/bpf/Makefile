@@ -7,12 +7,6 @@ GENHDR := $(GENDIR)/autoconf.h
 ifneq ($(wildcard $(GENHDR)),)
   GENFLAGS := -DHAVE_GENHDR
 endif
-<<<<<<< HEAD
-
-CFLAGS += -Wall -O2 -I$(APIDIR) -I$(LIBDIR) -I$(GENDIR) $(GENFLAGS)
-LDLIBS += -lcap
-=======
->>>>>>> linux-next/akpm-base
 
 CFLAGS += -Wall -O2 -I$(APIDIR) -I$(LIBDIR) -I$(GENDIR) -I../../../include $(GENFLAGS)
 LDLIBS += -lcap -lelf

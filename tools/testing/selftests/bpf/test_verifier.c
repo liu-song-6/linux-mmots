@@ -4724,9 +4724,6 @@ static struct bpf_test tests[] = {
 		.result = REJECT,
 		.result_unpriv = REJECT,
 		.flags = F_NEEDS_EFFICIENT_UNALIGNED_ACCESS,
-<<<<<<< HEAD
-	}
-=======
 	},
 	{
 		"map in map access",
@@ -4797,7 +4794,6 @@ static struct bpf_test tests[] = {
 		.errstr = "R1 type=map_value_or_null expected=map_ptr",
 		.result = REJECT,
 	},
->>>>>>> linux-next/akpm-base
 };
 
 static int probe_filter_length(const struct bpf_insn *fp)
@@ -4910,11 +4906,7 @@ static void do_test_single(struct bpf_test *test, bool unpriv,
 	struct bpf_insn *prog = test->insns;
 	int prog_len = probe_filter_length(prog);
 	int prog_type = test->prog_type;
-<<<<<<< HEAD
-	int fd_f1 = -1, fd_f2 = -1, fd_f3 = -1;
-=======
 	int map_fds[MAX_NR_MAPS];
->>>>>>> linux-next/akpm-base
 	const char *expected_err;
 	int i;
 

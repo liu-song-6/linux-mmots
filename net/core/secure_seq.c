@@ -64,13 +64,8 @@ static u32 secure_tcpv6_ts_off(const __be32 *saddr, const __be32 *daddr)
 		       &ts_secret);
 }
 
-<<<<<<< HEAD
-u32 secure_tcpv6_sequence_number(const __be32 *saddr, const __be32 *daddr,
-				 __be16 sport, __be16 dport, u32 *tsoff)
-=======
 u32 secure_tcpv6_seq_and_tsoff(const __be32 *saddr, const __be32 *daddr,
 			       __be16 sport, __be16 dport, u32 *tsoff)
->>>>>>> linux-next/akpm-base
 {
 	const struct {
 		struct in6_addr saddr;
@@ -116,13 +111,6 @@ static u32 secure_tcp_ts_off(__be32 saddr, __be32 daddr)
 {
 	if (sysctl_tcp_timestamps != 1)
 		return 0;
-<<<<<<< HEAD
-
-	return siphash_2u32((__force u32)saddr, (__force u32)daddr,
-			    &ts_secret);
-}
-=======
->>>>>>> linux-next/akpm-base
 
 	return siphash_2u32((__force u32)saddr, (__force u32)daddr,
 			    &ts_secret);
