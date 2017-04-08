@@ -232,7 +232,8 @@ void radeon_crtc_fb_gamma_get(struct drm_crtc *crtc, u16 *red, u16 *green,
 }
 
 static int radeon_crtc_gamma_set(struct drm_crtc *crtc, u16 *red, u16 *green,
-				 u16 *blue, uint32_t size)
+				 u16 *blue, uint32_t size,
+				 struct drm_modeset_acquire_ctx *ctx)
 {
 	struct radeon_crtc *radeon_crtc = to_radeon_crtc(crtc);
 	int i;
@@ -485,7 +486,8 @@ static int radeon_crtc_page_flip_target(struct drm_crtc *crtc,
 					struct drm_framebuffer *fb,
 					struct drm_pending_vblank_event *event,
 					uint32_t page_flip_flags,
-					uint32_t target)
+					uint32_t target,
+					struct drm_modeset_acquire_ctx *ctx)
 {
 	struct drm_device *dev = crtc->dev;
 	struct radeon_device *rdev = dev->dev_private;
@@ -623,7 +625,8 @@ cleanup:
 }
 
 static int
-radeon_crtc_set_config(struct drm_mode_set *set)
+radeon_crtc_set_config(struct drm_mode_set *set,
+		       struct drm_modeset_acquire_ctx *ctx)
 {
 	struct drm_device *dev;
 	struct radeon_device *rdev;
@@ -640,7 +643,7 @@ radeon_crtc_set_config(struct drm_mode_set *set)
 	if (ret < 0)
 		return ret;
 
-	ret = drm_crtc_helper_set_config(set);
+	ret = drm_crtc_helper_set_config(set, ctx);
 
 	list_for_each_entry(crtc, &dev->mode_config.crtc_list, head)
 		if (crtc->enabled)

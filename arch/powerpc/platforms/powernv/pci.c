@@ -758,7 +758,7 @@ void pnv_tce_free(struct iommu_table *tbl, long index, long npages)
 
 unsigned long pnv_tce_get(struct iommu_table *tbl, long index)
 {
-	return *(pnv_tce(tbl, index - tbl->it_offset));
+	return be64_to_cpu(*(pnv_tce(tbl, index - tbl->it_offset)));
 }
 
 struct iommu_table *pnv_pci_table_alloc(int nid)
@@ -767,6 +767,7 @@ struct iommu_table *pnv_pci_table_alloc(int nid)
 
 	tbl = kzalloc_node(sizeof(struct iommu_table), GFP_KERNEL, nid);
 	INIT_LIST_HEAD_RCU(&tbl->it_group_list);
+	kref_init(&tbl->it_kref);
 
 	return tbl;
 }

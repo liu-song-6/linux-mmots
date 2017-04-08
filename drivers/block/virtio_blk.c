@@ -455,8 +455,7 @@ static int init_vq(struct virtio_blk *vblk)
 	}
 
 	/* Discover virtqueues and write information to configuration.  */
-	err = vdev->config->find_vqs(vdev, num_vqs, vqs, callbacks, names,
-			&desc);
+	err = virtio_find_vqs(vdev, num_vqs, vqs, callbacks, names, &desc);
 	if (err)
 		goto out;
 
@@ -597,7 +596,7 @@ static int virtblk_map_queues(struct blk_mq_tag_set *set)
 	return blk_mq_virtio_map_queues(set, vblk->vdev, 0);
 }
 
-static struct blk_mq_ops virtio_mq_ops = {
+static const struct blk_mq_ops virtio_mq_ops = {
 	.queue_rq	= virtio_queue_rq,
 	.complete	= virtblk_request_done,
 	.init_request	= virtblk_init_request,

@@ -987,7 +987,7 @@ EXPORT_SYMBOL_GPL(hrtimer_start_range_ns);
  * Returns:
  *  0 when the timer was not active
  *  1 when the timer was active
- * -1 when the timer is currently excuting the callback function and
+ * -1 when the timer is currently executing the callback function and
  *    cannot be stopped
  */
 int hrtimer_try_to_cancel(struct hrtimer *timer)
@@ -1368,10 +1368,7 @@ retry:
 		    ktime_to_ns(delta));
 }
 
-/*
- * local version of hrtimer_peek_ahead_timers() called with interrupts
- * disabled.
- */
+/* called with interrupts disabled */
 static inline void __hrtimer_peek_ahead_timers(void)
 {
 	struct tick_device *td;
