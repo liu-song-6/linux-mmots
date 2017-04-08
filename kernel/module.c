@@ -4275,6 +4275,59 @@ struct module *__module_text_address(unsigned long addr)
 }
 EXPORT_SYMBOL_GPL(__module_text_address);
 
+/**
+ * is_module_rodata_address - is this address inside read-only module data?
+ * @addr: the address to check.
+ *
+ */
+bool is_module_rodata_address(unsigned long addr)
+{
+	bool ret;
+
+	preempt_disable();
+	ret = __module_rodata_address(addr) != NULL;
+	preempt_enable();
+
+	return ret;
+}
+
+/*
+ * __module_rodata_address - get the module whose rodata/ro_after_init sections
+ * contain the given address.
+ * @addr: the address.
+ *
+ * Must be called with preempt disabled or module mutex held so that
+ * module doesn't get freed during this.
+ */
+struct module *__module_rodata_address(unsigned long addr)
+{
+	struct module *mod = __module_address(addr);
+
+	/*
+	 * Make sure module is within the read-only section.
+	 * range(base + text_size, base + ro_after_init_size)
+	 * encompasses both the rodata and ro_after_init regions.
+	 * See comment above frob_text() for the layout diagram.
+	 */
+	if (mod) {
+		void *init_base = mod->init_layout.base;
+		unsigned int init_text_size = mod->init_layout.text_size;
+		unsigned int init_ro_after_init_size = mod->init_layout.ro_after_init_size;
+
+		void *core_base = mod->core_layout.base;
+		unsigned int core_text_size = mod->core_layout.text_size;
+		unsigned int core_ro_after_init_size = mod->core_layout.ro_after_init_size;
+
+		if (!within(addr, init_base + init_text_size,
+			    init_ro_after_init_size - init_text_size)
+		    && !within(addr, core_base + core_text_size,
+			       core_ro_after_init_size - core_text_size))
+			mod = NULL;
+	}
+	return mod;
+}
+EXPORT_SYMBOL_GPL(__module_rodata_address);
+
 /* Don't grab lock, we're oopsing. */
 void print_modules(void)
 {
