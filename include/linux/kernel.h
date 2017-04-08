@@ -444,6 +444,8 @@ extern int core_kernel_data(unsigned long addr);
 extern int __kernel_text_address(unsigned long addr);
 extern int kernel_text_address(unsigned long addr);
 extern int func_ptr_is_kernel_text(void *ptr);
+extern int core_kernel_rodata(unsigned long addr);
+extern int kernel_ro_address(unsigned long addr);
 
 unsigned long int_sqrt(unsigned long);
 

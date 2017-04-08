@@ -154,3 +154,32 @@ int func_ptr_is_kernel_text(void *ptr)
 		return 1;
 	return is_module_text_address(addr);
 }
+
+/**
+ * core_kernel_rodata - Verify address points to read-only section
+ * @addr: address to test
+ *
+ */
+int core_kernel_rodata(unsigned long addr)
+{
+	if (addr >= (unsigned long)__start_rodata &&
+	    addr < (unsigned long)__end_rodata)
+		return 1;
+
+	if (addr >= (unsigned long)__start_ro_after_init &&
+	    addr < (unsigned long)__end_ro_after_init)
+		return 1;
+
+	return 0;
+}
+
+/* Verify that address is const or ro_after_init. */
+int kernel_ro_address(unsigned long addr)
+{
+	if (core_kernel_rodata(addr))
+		return 1;
+	if (is_module_rodata_address(addr))
+		return 1;
+
+	return 0;
+}
