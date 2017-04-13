@@ -219,7 +219,7 @@ config BLK_DEV_LOOP
 
 	  To use the loop device, you need the losetup utility, found in the
 	  util-linux package, see
-	  <ftp://ftp.kernel.org/pub/linux/utils/util-linux/>.
+	  <https://www.kernel.org/pub/linux/utils/util-linux/>.
 
 	  The loop device driver can also be used to "hide" a file system in
 	  a disk partition, floppy, or regular file, either using encryption
@@ -513,18 +513,6 @@ config VIRTIO_BLK_SCSI
 	  virtio-blk devices.  This is only supported for the legacy
 	  virtio protocol and not enabled by default by any hypervisor.
 	  Your probably want to virtio-scsi instead.
-
-config BLK_DEV_HD
-	bool "Very old hard disk (MFM/RLL/IDE) driver"
-	depends on HAVE_IDE
-	depends on !ARM || ARCH_RPC || BROKEN
-	help
-	  This is a very old hard disk driver that lacks the enhanced
-	  functionality of the newer ones.
-
-	  It is required for systems with ancient MFM/RLL/ESDI drives.
-
-	  If unsure, say N.
 
 config BLK_DEV_RBD
 	tristate "Rados block device (RBD)"
