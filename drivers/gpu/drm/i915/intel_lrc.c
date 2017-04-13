@@ -1273,10 +1273,7 @@ static void reset_common_ring(struct intel_engine_cs *engine,
 	request->tail =
 		intel_ring_wrap(request->ring,
 				request->wa_tail - WA_TAIL_DWORDS*sizeof(u32));
-<<<<<<< HEAD
-=======
 	assert_ring_tail_valid(request->ring, request->tail);
->>>>>>> linux-next/akpm-base
 }
 
 static int intel_logical_ring_emit_pdps(struct drm_i915_gem_request *req)

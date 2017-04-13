@@ -53,20 +53,12 @@ static bool shrinker_lock(struct drm_i915_private *dev_priv, bool *unlock)
 	BUG();
 }
 
-<<<<<<< HEAD
-static void i915_gem_shrinker_unlock(struct drm_device *dev, bool unlock)
-=======
 static void shrinker_unlock(struct drm_i915_private *dev_priv, bool unlock)
->>>>>>> linux-next/akpm-base
 {
 	if (!unlock)
 		return;
 
-<<<<<<< HEAD
-	mutex_unlock(&dev->struct_mutex);
-=======
 	mutex_unlock(&dev_priv->drm.struct_mutex);
->>>>>>> linux-next/akpm-base
 
 	/* expedite the RCU grace period to free some request slabs */
 	synchronize_rcu_expedited();
@@ -252,11 +244,7 @@ i915_gem_shrink(struct drm_i915_private *dev_priv,
 
 	i915_gem_retire_requests(dev_priv);
 
-<<<<<<< HEAD
-	i915_gem_shrinker_unlock(&dev_priv->drm, unlock);
-=======
 	shrinker_unlock(dev_priv, unlock);
->>>>>>> linux-next/akpm-base
 
 	return count;
 }
@@ -315,11 +303,7 @@ i915_gem_shrinker_count(struct shrinker *shrinker, struct shrink_control *sc)
 			count += obj->base.size >> PAGE_SHIFT;
 	}
 
-<<<<<<< HEAD
-	i915_gem_shrinker_unlock(dev, unlock);
-=======
 	shrinker_unlock(dev_priv, unlock);
->>>>>>> linux-next/akpm-base
 
 	return count;
 }
@@ -346,11 +330,7 @@ i915_gem_shrinker_scan(struct shrinker *shrinker, struct shrink_control *sc)
 					 I915_SHRINK_BOUND |
 					 I915_SHRINK_UNBOUND);
 
-<<<<<<< HEAD
-	i915_gem_shrinker_unlock(dev, unlock);
-=======
 	shrinker_unlock(dev_priv, unlock);
->>>>>>> linux-next/akpm-base
 
 	return freed;
 }
@@ -379,17 +359,6 @@ shrinker_lock_uninterruptible(struct drm_i915_private *dev_priv, bool *unlock,
 	return true;
 }
 
-<<<<<<< HEAD
-static void
-i915_gem_shrinker_unlock_uninterruptible(struct drm_i915_private *dev_priv,
-					 struct shrinker_lock_uninterruptible *slu)
-{
-	dev_priv->mm.interruptible = slu->was_interruptible;
-	i915_gem_shrinker_unlock(&dev_priv->drm, slu->unlock);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static int
 i915_gem_shrinker_oom(struct notifier_block *nb, unsigned long event, void *ptr)
 {

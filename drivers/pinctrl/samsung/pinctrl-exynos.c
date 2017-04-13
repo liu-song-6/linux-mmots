@@ -1549,8 +1549,6 @@ static const struct samsung_pin_bank_data exynos5433_pin_banks8[] __initconst = 
 /* pin banks of exynos5433 pin-controller - TOUCH */
 static const struct samsung_pin_bank_data exynos5433_pin_banks9[] __initconst = {
 	EXYNOS5433_PIN_BANK_EINTG(3, 0x000, "gpj1", 0x00),
-<<<<<<< HEAD
-=======
 };
 
 /* PMU pin retention groups registers for Exynos5433 (without audio & fsys) */
@@ -1599,7 +1597,6 @@ static const struct samsung_retention_data exynos5433_fsys_retention_data __init
 	.nr_regs = ARRAY_SIZE(exynos5433_fsys_retention_regs),
 	.value	 = EXYNOS_WAKEUP_FROM_LOWPWR,
 	.init	 = exynos_retention_init,
->>>>>>> linux-next/akpm-base
 };
 
 /*

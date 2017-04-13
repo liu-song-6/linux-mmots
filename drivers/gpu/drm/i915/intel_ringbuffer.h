@@ -527,18 +527,6 @@ intel_ring_wrap(const struct intel_ring *ring, u32 pos)
 }
 
 static inline u32
-<<<<<<< HEAD
-intel_ring_wrap(const struct intel_ring *ring, u32 pos)
-{
-	return pos & (ring->size - 1);
-}
-
-static inline u32 intel_ring_offset(struct intel_ring *ring, void *addr)
-{
-	/* Don't write ring->size (equivalent to 0) as that hangs some GPUs. */
-	u32 offset = addr - ring->vaddr;
-	return intel_ring_wrap(ring, offset);
-=======
 intel_ring_offset(const struct drm_i915_gem_request *req, void *addr)
 {
 	/* Don't write ring->size (equivalent to 0) as that hangs some GPUs. */
@@ -556,7 +544,6 @@ assert_ring_tail_valid(const struct intel_ring *ring, unsigned int tail)
 	 */
 	GEM_BUG_ON(!IS_ALIGNED(tail, 8));
 	GEM_BUG_ON(tail >= ring->size);
->>>>>>> linux-next/akpm-base
 }
 
 void intel_ring_update_space(struct intel_ring *ring);
