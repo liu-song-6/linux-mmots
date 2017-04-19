@@ -92,9 +92,9 @@ echo "NOTE: The above hugetlb tests provide minimal coverage.  Use"
 echo "      https://github.com/libhugetlbfs/libhugetlbfs.git for"
 echo "      hugetlb regression testing."
 
-echo "--------------------"
+echo "-------------------"
 echo "running userfaultfd"
-echo "--------------------"
+echo "-------------------"
 ./userfaultfd anon 128 32
 if [ $? -ne 0 ]; then
 	echo "[FAIL]"
@@ -116,9 +116,9 @@ else
 fi
 rm -f $mnt/ufd_test_file
 
-echo "----------------------------"
+echo "-------------------------"
 echo "running userfaultfd_shmem"
-echo "----------------------------"
+echo "-------------------------"
 ./userfaultfd shmem 128 32
 if [ $? -ne 0 ]; then
 	echo "[FAIL]"
