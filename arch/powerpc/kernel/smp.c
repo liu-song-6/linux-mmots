@@ -439,7 +439,14 @@ int generic_cpu_disable(void)
 #ifdef CONFIG_PPC64
 	vdso_data->processorCount--;
 #endif
-	migrate_irqs();
+	/* Update affinity of all IRQs previously aimed at this CPU */
+	irq_migrate_all_off_this_cpu();
+
+	/* Give the CPU time to drain in-flight ones */
+	local_irq_enable();
+	mdelay(1);
+	local_irq_disable();
+
 	return 0;
 }
 
@@ -520,6 +527,16 @@ int __cpu_up(unsigned int cpu, struct task_struct *tidle)
 		return -EINVAL;
 
 	cpu_idle_thread_init(cpu, tidle);
+
+	/*
+	 * The platform might need to allocate resources prior to bringing
+	 * up the CPU
+	 */
+	if (smp_ops->prepare_cpu) {
+		rc = smp_ops->prepare_cpu(cpu);
+		if (rc)
+			return rc;
+	}
 
 	/* Make sure callin-map entry is 0 (can be leftover a CPU
 	 * hotplug
@@ -787,24 +804,21 @@ static struct sched_domain_topology_level powerpc_topology[] = {
 	{ NULL, },
 };
 
+static __init long smp_setup_cpu_workfn(void *data __always_unused)
+{
+	smp_ops->setup_cpu(boot_cpuid);
+	return 0;
+}
+
 void __init smp_cpus_done(unsigned int max_cpus)
 {
-	cpumask_var_t old_mask;
-
-	/* We want the setup_cpu() here to be called from CPU 0, but our
-	 * init thread may have been "borrowed" by another CPU in the meantime
-	 * se we pin us down to CPU 0 for a short while
+	/*
+	 * We want the setup_cpu() here to be called on the boot CPU, but
+	 * init might run on any CPU, so make sure it's invoked on the boot
+	 * CPU.
 	 */
-	alloc_cpumask_var(&old_mask, GFP_NOWAIT);
-	cpumask_copy(old_mask, &current->cpus_allowed);
-	set_cpus_allowed_ptr(current, cpumask_of(boot_cpuid));
-	
 	if (smp_ops && smp_ops->setup_cpu)
-		smp_ops->setup_cpu(boot_cpuid);
-
-	set_cpus_allowed_ptr(current, old_mask);
-
-	free_cpumask_var(old_mask);
+		work_on_cpu_safe(boot_cpuid, smp_setup_cpu_workfn, NULL);
 
 	if (smp_ops && smp_ops->bringup_done)
 		smp_ops->bringup_done();
@@ -812,7 +826,6 @@ void __init smp_cpus_done(unsigned int max_cpus)
 	dump_numa_cpu_topology();
 
 	set_sched_topology(powerpc_topology);
-
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
