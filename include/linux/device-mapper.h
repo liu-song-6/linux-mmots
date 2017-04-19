@@ -221,6 +221,12 @@ struct target_type {
  */
 typedef unsigned (*dm_num_write_bios_fn) (struct dm_target *ti, struct bio *bio);
 
+/*
+ * A target implements own bio data integrity.
+ */
+#define DM_TARGET_INTEGRITY		0x00000010
+#define dm_target_has_integrity(type)	((type)->features & DM_TARGET_INTEGRITY)
+
 struct dm_target {
 	struct dm_table *table;
 	struct target_type *type;
@@ -253,6 +259,12 @@ struct dm_target {
 	 * The bio number can be accessed with dm_bio_get_target_bio_nr.
 	 */
 	unsigned num_write_same_bios;
+
+	/*
+	 * The number of WRITE ZEROES bios that will be submitted to the target.
+	 * The bio number can be accessed with dm_bio_get_target_bio_nr.
+	 */
+	unsigned num_write_zeroes_bios;
 
 	/*
 	 * The minimum number of extra bytes allocated in each io for the
@@ -290,11 +302,6 @@ struct dm_target {
 	 * on max_io_len boundary.
 	 */
 	bool split_discard_bios:1;
-
-	/*
-	 * Set if this target does not return zeroes on discarded blocks.
-	 */
-	bool discard_zeroes_data_unsupported:1;
 };
 
 /* Each target can link one of these into the table */

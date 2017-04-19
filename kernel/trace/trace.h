@@ -896,7 +896,11 @@ int using_ftrace_ops_list_func(void);
 void ftrace_init_tracefs(struct trace_array *tr, struct dentry *d_tracer);
 void ftrace_init_tracefs_toplevel(struct trace_array *tr,
 				  struct dentry *d_tracer);
+<<<<<<< HEAD
 void ftrace_clear_pids(struct trace_array *tr);
+=======
+int init_function_trace(void);
+>>>>>>> linux-next/akpm-base
 #else
 static inline int ftrace_trace_task(struct trace_array *tr)
 {
@@ -915,7 +919,11 @@ ftrace_init_global_array_ops(struct trace_array *tr) { }
 static inline void ftrace_reset_array_ops(struct trace_array *tr) { }
 static inline void ftrace_init_tracefs(struct trace_array *tr, struct dentry *d) { }
 static inline void ftrace_init_tracefs_toplevel(struct trace_array *tr, struct dentry *d) { }
+<<<<<<< HEAD
 static inline void ftrace_clear_pids(struct trace_array *tr) { }
+=======
+static inline int init_function_trace(void) { return 0; }
+>>>>>>> linux-next/akpm-base
 /* ftace_func_t type is not defined, use macro instead of static inline */
 #define ftrace_init_array_ops(tr, func) do { } while (0)
 #endif /* CONFIG_FUNCTION_TRACER */
