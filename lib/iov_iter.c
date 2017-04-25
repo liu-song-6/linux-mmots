@@ -413,7 +413,7 @@ void iov_iter_init(struct iov_iter *i, int direction,
 			size_t count)
 {
 	/* It will get better.  Eventually... */
-	if (segment_eq(get_fs(), KERNEL_DS)) {
+	if (uaccess_kernel()) {
 		direction |= ITER_KVEC;
 		i->type = direction;
 		i->kvec = (struct kvec *)iov;
@@ -571,6 +571,31 @@ size_t copy_from_iter(void *addr, size_t bytes, struct iov_iter *i)
 }
 EXPORT_SYMBOL(copy_from_iter);
 
+#ifdef CONFIG_COPY_FROM_ITER_OPS
+size_t copy_from_iter_ops(void *addr, size_t bytes, struct iov_iter *i,
+		int (*user)(void *, const void __user *, unsigned),
+		void (*page)(char *, struct page *, size_t, size_t),
+		void (*copy)(void *, void *, unsigned))
+{
+	char *to = addr;
+
+	if (unlikely(i->type & ITER_PIPE)) {
+		WARN_ON(1);
+		return 0;
+	}
+	iterate_and_advance(i, bytes, v,
+		user((to += v.iov_len) - v.iov_len, v.iov_base,
+				 v.iov_len),
+		page((to += v.bv_len) - v.bv_len, v.bv_page, v.bv_offset,
+				v.bv_len),
+		copy((to += v.iov_len) - v.iov_len, v.iov_base, v.iov_len)
+	)
+
+	return bytes;
+}
+EXPORT_SYMBOL_GPL(copy_from_iter_ops);
+#endif
+
 bool copy_from_iter_full(void *addr, size_t bytes, struct iov_iter *i)
 {
 	char *to = addr;
@@ -604,7 +629,7 @@ size_t copy_from_iter_nocache(void *addr, size_t bytes, struct iov_iter *i)
 		return 0;
 	}
 	iterate_and_advance(i, bytes, v,
-		__copy_from_user_nocache((to += v.iov_len) - v.iov_len,
+		__copy_from_user_inatomic_nocache((to += v.iov_len) - v.iov_len,
 					 v.iov_base, v.iov_len),
 		memcpy_from_page((to += v.bv_len) - v.bv_len, v.bv_page,
 				 v.bv_offset, v.bv_len),
@@ -625,7 +650,7 @@ bool copy_from_iter_full_nocache(void *addr, size_t bytes, struct iov_iter *i)
 	if (unlikely(i->count < bytes))
 		return false;
 	iterate_all_kinds(i, bytes, v, ({
-		if (__copy_from_user_nocache((to += v.iov_len) - v.iov_len,
+		if (__copy_from_user_inatomic_nocache((to += v.iov_len) - v.iov_len,
 					     v.iov_base, v.iov_len))
 			return false;
 		0;}),

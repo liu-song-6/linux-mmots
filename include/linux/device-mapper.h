@@ -128,13 +128,19 @@ typedef int (*dm_busy_fn) (struct dm_target *ti);
  *  < 0 : error
  * >= 0 : the number of bytes accessible at the address
  */
-typedef long (*dm_direct_access_fn) (struct dm_target *ti, sector_t sector,
-				     void **kaddr, pfn_t *pfn, long size);
+typedef long (*dm_dax_direct_access_fn) (struct dm_target *ti, pgoff_t pgoff,
+		long nr_pages, void **kaddr, pfn_t *pfn);
+typedef size_t (*dm_dax_copy_from_iter_fn)(struct dm_target *ti, pgoff_t pgoff,
+		void *addr, size_t bytes, struct iov_iter *i);
+typedef void (*dm_dax_flush_fn)(struct dm_target *ti, pgoff_t pgoff, void *addr,
+		size_t size);
+#define PAGE_SECTORS (PAGE_SIZE / 512)
 
 void dm_error(const char *message);
 
 struct dm_dev {
 	struct block_device *bdev;
+	struct dax_device *dax_dev;
 	fmode_t mode;
 	char name[16];
 };
@@ -176,7 +182,9 @@ struct target_type {
 	dm_busy_fn busy;
 	dm_iterate_devices_fn iterate_devices;
 	dm_io_hints_fn io_hints;
-	dm_direct_access_fn direct_access;
+	dm_dax_direct_access_fn direct_access;
+	dm_dax_copy_from_iter_fn dax_copy_from_iter;
+	dm_dax_flush_fn dax_flush;
 
 	/* For internal device-mapper use. */
 	struct list_head list;
@@ -221,6 +229,12 @@ struct target_type {
  */
 typedef unsigned (*dm_num_write_bios_fn) (struct dm_target *ti, struct bio *bio);
 
+/*
+ * A target implements own bio data integrity.
+ */
+#define DM_TARGET_INTEGRITY		0x00000010
+#define dm_target_has_integrity(type)	((type)->features & DM_TARGET_INTEGRITY)
+
 struct dm_target {
 	struct dm_table *table;
 	struct target_type *type;
@@ -253,6 +267,12 @@ struct dm_target {
 	 * The bio number can be accessed with dm_bio_get_target_bio_nr.
 	 */
 	unsigned num_write_same_bios;
+
+	/*
+	 * The number of WRITE ZEROES bios that will be submitted to the target.
+	 * The bio number can be accessed with dm_bio_get_target_bio_nr.
+	 */
+	unsigned num_write_zeroes_bios;
 
 	/*
 	 * The minimum number of extra bytes allocated in each io for the
@@ -290,11 +310,6 @@ struct dm_target {
 	 * on max_io_len boundary.
 	 */
 	bool split_discard_bios:1;
-
-	/*
-	 * Set if this target does not return zeroes on discarded blocks.
-	 */
-	bool discard_zeroes_data_unsupported:1;
 };
 
 /* Each target can link one of these into the table */
