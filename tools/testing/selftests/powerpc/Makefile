@@ -8,12 +8,13 @@ ifeq ($(ARCH),powerpc)
 
 GIT_VERSION = $(shell git describe --always --long --dirty || echo "unknown")
 
-CFLAGS := -std=gnu99 -Wall -O2 -Wall -Werror -DGIT_VERSION='"$(GIT_VERSION)"' -I$(CURDIR)/include $(CFLAGS)
+CFLAGS := -std=gnu99 -O2 -Wall -Werror -DGIT_VERSION='"$(GIT_VERSION)"' -I$(CURDIR)/include $(CFLAGS)
 
 export CFLAGS
 
 SUB_DIRS = alignment		\
 	   benchmarks		\
+	   cache_shape		\
 	   copyloops		\
 	   context_switch	\
 	   dscr			\
