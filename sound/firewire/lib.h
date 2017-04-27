@@ -25,6 +25,7 @@ static inline bool rcode_is_permanent_error(int rcode)
 void snd_fw_schedule_registration(struct fw_unit *unit,
 				  struct delayed_work *dwork);
 
+<<<<<<< HEAD
 struct snd_fw_async_midi_port;
 typedef int (*snd_fw_async_midi_port_fill)(
 				struct snd_rawmidi_substream *substream,
@@ -79,4 +80,6 @@ snd_fw_async_midi_port_finish(struct snd_fw_async_midi_port *port)
 	port->error = false;
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 #endif

@@ -1590,8 +1590,9 @@ static int parse_sa_config(struct nlattr **attrs, struct nlattr **tb_sa)
 	if (!attrs[MACSEC_ATTR_SA_CONFIG])
 		return -EINVAL;
 
-	if (nla_parse_nested(tb_sa, MACSEC_SA_ATTR_MAX, attrs[MACSEC_ATTR_SA_CONFIG],
-			     macsec_genl_sa_policy))
+	if (nla_parse_nested(tb_sa, MACSEC_SA_ATTR_MAX,
+			     attrs[MACSEC_ATTR_SA_CONFIG],
+			     macsec_genl_sa_policy, NULL))
 		return -EINVAL;
 
 	return 0;
@@ -1602,8 +1603,9 @@ static int parse_rxsc_config(struct nlattr **attrs, struct nlattr **tb_rxsc)
 	if (!attrs[MACSEC_ATTR_RXSC_CONFIG])
 		return -EINVAL;
 
-	if (nla_parse_nested(tb_rxsc, MACSEC_RXSC_ATTR_MAX, attrs[MACSEC_ATTR_RXSC_CONFIG],
-			     macsec_genl_rxsc_policy))
+	if (nla_parse_nested(tb_rxsc, MACSEC_RXSC_ATTR_MAX,
+			     attrs[MACSEC_ATTR_RXSC_CONFIG],
+			     macsec_genl_rxsc_policy, NULL))
 		return -EINVAL;
 
 	return 0;
@@ -2716,7 +2718,7 @@ static netdev_tx_t macsec_start_xmit(struct sk_buff *skb,
 }
 
 #define MACSEC_FEATURES \
-	(NETIF_F_SG | NETIF_F_HIGHDMA | NETIF_F_FRAGLIST)
+	(NETIF_F_SG | NETIF_F_HIGHDMA)
 static struct lock_class_key macsec_netdev_addr_lock_key;
 
 static int macsec_dev_init(struct net_device *dev)

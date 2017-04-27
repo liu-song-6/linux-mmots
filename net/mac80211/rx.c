@@ -95,24 +95,13 @@ static u8 *ieee80211_get_bssid(struct ieee80211_hdr *hdr, size_t len,
  * This function cleans up the SKB, i.e. it removes all the stuff
  * only useful for monitoring.
  */
-static struct sk_buff *remove_monitor_info(struct ieee80211_local *local,
-					   struct sk_buff *skb,
-					   unsigned int rtap_vendor_space)
+static void remove_monitor_info(struct sk_buff *skb,
+				unsigned int present_fcs_len,
+				unsigned int rtap_vendor_space)
 {
-	if (ieee80211_hw_check(&local->hw, RX_INCLUDES_FCS)) {
-		if (likely(skb->len > FCS_LEN))
-			__pskb_trim(skb, skb->len - FCS_LEN);
-		else {
-			/* driver bug */
-			WARN_ON(1);
-			dev_kfree_skb(skb);
-			return NULL;
-		}
-	}
-
+	if (present_fcs_len)
+		__pskb_trim(skb, skb->len - present_fcs_len);
 	__pskb_pull(skb, rtap_vendor_space);
-
-	return skb;
 }
 
 static inline bool should_drop_frame(struct sk_buff *skb, int present_fcs_len,
@@ -544,69 +533,24 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	}
 }
 
-/*
- * This function copies a received frame to all monitor interfaces and
- * returns a cleaned-up SKB that no longer includes the FCS nor the
- * radiotap header the driver might have added.
- */
 static struct sk_buff *
-ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
-		     struct ieee80211_rate *rate)
+ieee80211_make_monitor_skb(struct ieee80211_local *local,
+			   struct sk_buff **origskb,
+			   struct ieee80211_rate *rate,
+			   int rtap_vendor_space, bool use_origskb)
 {
-	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(origskb);
-	struct ieee80211_sub_if_data *sdata;
+	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(*origskb);
 	int rt_hdrlen, needed_headroom;
-	struct sk_buff *skb, *skb2;
-	struct net_device *prev_dev = NULL;
-	int present_fcs_len = 0;
-	unsigned int rtap_vendor_space = 0;
-	struct ieee80211_sub_if_data *monitor_sdata =
-		rcu_dereference(local->monitor_sdata);
-
-	if (unlikely(status->flag & RX_FLAG_RADIOTAP_VENDOR_DATA)) {
-		struct ieee80211_vendor_radiotap *rtap = (void *)origskb->data;
-
-		rtap_vendor_space = sizeof(*rtap) + rtap->len + rtap->pad;
-	}
-
-	/*
-	 * First, we may need to make a copy of the skb because
-	 *  (1) we need to modify it for radiotap (if not present), and
-	 *  (2) the other RX handlers will modify the skb we got.
-	 *
-	 * We don't need to, of course, if we aren't going to return
-	 * the SKB because it has a bad FCS/PLCP checksum.
-	 */
-
-	if (ieee80211_hw_check(&local->hw, RX_INCLUDES_FCS))
-		present_fcs_len = FCS_LEN;
-
-	/* ensure hdr->frame_control and vendor radiotap data are in skb head */
-	if (!pskb_may_pull(origskb, 2 + rtap_vendor_space)) {
-		dev_kfree_skb(origskb);
-		return NULL;
-	}
-
-	if (!local->monitors || (status->flag & RX_FLAG_SKIP_MONITOR)) {
-		if (should_drop_frame(origskb, present_fcs_len,
-				      rtap_vendor_space)) {
-			dev_kfree_skb(origskb);
-			return NULL;
-		}
-
-		return remove_monitor_info(local, origskb, rtap_vendor_space);
-	}
-
-	ieee80211_handle_mu_mimo_mon(monitor_sdata, origskb, rtap_vendor_space);
+	struct sk_buff *skb;
 
 	/* room for the radiotap header based on driver features */
-	rt_hdrlen = ieee80211_rx_radiotap_hdrlen(local, status, origskb);
+	rt_hdrlen = ieee80211_rx_radiotap_hdrlen(local, status, *origskb);
 	needed_headroom = rt_hdrlen - rtap_vendor_space;
 
-	if (should_drop_frame(origskb, present_fcs_len, rtap_vendor_space)) {
+	if (use_origskb) {
 		/* only need to expand headroom if necessary */
-		skb = origskb;
-		origskb = NULL;
+		skb = *origskb;
+		*origskb = NULL;
 
 		/*
 		 * This shouldn't trigger often because most devices have an
@@ -625,13 +569,10 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 		 * Need to make a copy and possibly remove radiotap header
 		 * and FCS from the original.
 		 */
-		skb = skb_copy_expand(origskb, needed_headroom, 0, GFP_ATOMIC);
-
-		origskb = remove_monitor_info(local, origskb,
-					      rtap_vendor_space);
+		skb = skb_copy_expand(*origskb, needed_headroom, 0, GFP_ATOMIC);
 
 		if (!skb)
-			return origskb;
+			return NULL;
 	}
 
 	/* prepend radiotap information */
@@ -642,34 +583,114 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 	skb->pkt_type = PACKET_OTHERHOST;
 	skb->protocol = htons(ETH_P_802_2);
 
-	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
-		if (sdata->vif.type != NL80211_IFTYPE_MONITOR)
-			continue;
+	return skb;
+}
 
-		if (sdata->u.mntr.flags & MONITOR_FLAG_COOK_FRAMES)
-			continue;
+/*
+ * This function copies a received frame to all monitor interfaces and
+ * returns a cleaned-up SKB that no longer includes the FCS nor the
+ * radiotap header the driver might have added.
+ */
+static struct sk_buff *
+ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
+		     struct ieee80211_rate *rate)
+{
+	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(origskb);
+	struct ieee80211_sub_if_data *sdata;
+	struct sk_buff *monskb = NULL;
+	int present_fcs_len = 0;
+	unsigned int rtap_vendor_space = 0;
+	struct ieee80211_sub_if_data *monitor_sdata =
+		rcu_dereference(local->monitor_sdata);
+	bool only_monitor = false;
 
-		if (!ieee80211_sdata_running(sdata))
-			continue;
+	if (unlikely(status->flag & RX_FLAG_RADIOTAP_VENDOR_DATA)) {
+		struct ieee80211_vendor_radiotap *rtap = (void *)origskb->data;
 
-		if (prev_dev) {
-			skb2 = skb_clone(skb, GFP_ATOMIC);
-			if (skb2) {
-				skb2->dev = prev_dev;
-				netif_receive_skb(skb2);
+		rtap_vendor_space = sizeof(*rtap) + rtap->len + rtap->pad;
+	}
+
+	/*
+	 * First, we may need to make a copy of the skb because
+	 *  (1) we need to modify it for radiotap (if not present), and
+	 *  (2) the other RX handlers will modify the skb we got.
+	 *
+	 * We don't need to, of course, if we aren't going to return
+	 * the SKB because it has a bad FCS/PLCP checksum.
+	 */
+
+	if (ieee80211_hw_check(&local->hw, RX_INCLUDES_FCS)) {
+		if (unlikely(origskb->len <= FCS_LEN)) {
+			/* driver bug */
+			WARN_ON(1);
+			dev_kfree_skb(origskb);
+			return NULL;
+		}
+		present_fcs_len = FCS_LEN;
+	}
+
+	/* ensure hdr->frame_control and vendor radiotap data are in skb head */
+	if (!pskb_may_pull(origskb, 2 + rtap_vendor_space)) {
+		dev_kfree_skb(origskb);
+		return NULL;
+	}
+
+	only_monitor = should_drop_frame(origskb, present_fcs_len,
+					 rtap_vendor_space);
+
+	if (!local->monitors || (status->flag & RX_FLAG_SKIP_MONITOR)) {
+		if (only_monitor) {
+			dev_kfree_skb(origskb);
+			return NULL;
+		}
+
+		remove_monitor_info(origskb, present_fcs_len,
+				    rtap_vendor_space);
+		return origskb;
+	}
+
+	ieee80211_handle_mu_mimo_mon(monitor_sdata, origskb, rtap_vendor_space);
+
+	list_for_each_entry_rcu(sdata, &local->mon_list, u.mntr.list) {
+		bool last_monitor = list_is_last(&sdata->u.mntr.list,
+						 &local->mon_list);
+
+		if (!monskb)
+			monskb = ieee80211_make_monitor_skb(local, &origskb,
+							    rate,
+							    rtap_vendor_space,
+							    only_monitor &&
+							    last_monitor);
+
+		if (monskb) {
+			struct sk_buff *skb;
+
+			if (last_monitor) {
+				skb = monskb;
+				monskb = NULL;
+			} else {
+				skb = skb_clone(monskb, GFP_ATOMIC);
+			}
+
+			if (skb) {
+				skb->dev = sdata->dev;
+				ieee80211_rx_stats(skb->dev, skb->len);
+				netif_receive_skb(skb);
 			}
 		}
 
-		prev_dev = sdata->dev;
-		ieee80211_rx_stats(sdata->dev, skb->len);
+		if (last_monitor)
+			break;
 	}
 
-	if (prev_dev) {
-		skb->dev = prev_dev;
-		netif_receive_skb(skb);
-	} else
-		dev_kfree_skb(skb);
+	/* this happens if last_monitor was erroneously false */
+	dev_kfree_skb(monskb);
 
+	/* ditto */
+	if (!origskb)
+		return NULL;
+
+	remove_monitor_info(origskb, present_fcs_len, rtap_vendor_space);
 	return origskb;
 }
 
