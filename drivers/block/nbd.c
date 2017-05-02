@@ -381,7 +381,7 @@ static int sock_xmit(struct nbd_device *nbd, int index, int send,
 			*sent += result;
 	} while (msg_data_left(&msg));
 
-	tsk_restore_flags(current, pflags, PF_MEMALLOC);
+	current_restore_flags(pflags, PF_MEMALLOC);
 
 	return result;
 }
@@ -1662,7 +1662,11 @@ again:
 				goto out;
 			}
 			ret = nla_parse_nested(socks, NBD_SOCK_MAX, attr,
+<<<<<<< HEAD
 					       nbd_sock_policy);
+=======
+					       nbd_sock_policy, NULL);
+>>>>>>> linux-next/akpm-base
 			if (ret != 0) {
 				printk(KERN_ERR "nbd: error processing sock list\n");
 				ret = -EINVAL;
@@ -1818,7 +1822,11 @@ static int nbd_genl_reconfigure(struct sk_buff *skb, struct genl_info *info)
 				goto out;
 			}
 			ret = nla_parse_nested(socks, NBD_SOCK_MAX, attr,
+<<<<<<< HEAD
 					       nbd_sock_policy);
+=======
+					       nbd_sock_policy, NULL);
+>>>>>>> linux-next/akpm-base
 			if (ret != 0) {
 				printk(KERN_ERR "nbd: error processing sock list\n");
 				ret = -EINVAL;
