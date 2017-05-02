@@ -268,9 +268,15 @@ static int acpi_processor_start(struct device *dev)
 		return -ENODEV;
 
 	/* Protect against concurrent CPU hotplug operations */
+<<<<<<< HEAD
 	get_online_cpus();
 	ret = __acpi_processor_start(device);
 	put_online_cpus();
+=======
+	cpu_hotplug_disable();
+	ret = __acpi_processor_start(device);
+	cpu_hotplug_enable();
+>>>>>>> linux-next/akpm-base
 	return ret;
 }
 

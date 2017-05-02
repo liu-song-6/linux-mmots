@@ -1,95 +1,16 @@
-/*
- * Core of Xen paravirt_ops implementation.
- *
- * This file contains the xen_paravirt_ops structure itself, and the
- * implementations for:
- * - privileged instructions
- * - interrupt flags
- * - segment operations
- * - booting and setup
- *
- * Jeremy Fitzhardinge <jeremy@xensource.com>, XenSource Inc, 2007
- */
-
 #include <linux/cpu.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/smp.h>
-#include <linux/preempt.h>
-#include <linux/hardirq.h>
-#include <linux/percpu.h>
-#include <linux/delay.h>
-#include <linux/start_kernel.h>
-#include <linux/sched.h>
-#include <linux/kprobes.h>
-#include <linux/bootmem.h>
-#include <linux/export.h>
-#include <linux/mm.h>
-#include <linux/page-flags.h>
-#include <linux/highmem.h>
-#include <linux/console.h>
-#include <linux/pci.h>
-#include <linux/gfp.h>
-#include <linux/memblock.h>
-#include <linux/edd.h>
-#include <linux/frame.h>
-
 #include <linux/kexec.h>
 
-#include <xen/xen.h>
-#include <xen/events.h>
-#include <xen/interface/xen.h>
-#include <xen/interface/version.h>
-#include <xen/interface/physdev.h>
-#include <xen/interface/vcpu.h>
-#include <xen/interface/memory.h>
-#include <xen/interface/nmi.h>
-#include <xen/interface/xen-mca.h>
-#include <xen/interface/hvm/start_info.h>
 #include <xen/features.h>
 #include <xen/page.h>
-#include <xen/hvm.h>
-#include <xen/hvc-console.h>
-#include <xen/acpi.h>
 
-#include <asm/paravirt.h>
-#include <asm/apic.h>
-#include <asm/page.h>
-#include <asm/xen/pci.h>
 #include <asm/xen/hypercall.h>
 #include <asm/xen/hypervisor.h>
-#include <asm/xen/cpuid.h>
-#include <asm/fixmap.h>
-#include <asm/processor.h>
-#include <asm/proto.h>
-#include <asm/msr-index.h>
-#include <asm/traps.h>
-#include <asm/setup.h>
-#include <asm/desc.h>
-#include <asm/pgalloc.h>
-#include <asm/pgtable.h>
-#include <asm/tlbflush.h>
-#include <asm/reboot.h>
-#include <asm/stackprotector.h>
-#include <asm/hypervisor.h>
-#include <asm/mach_traps.h>
-#include <asm/mwait.h>
-#include <asm/pci_x86.h>
 #include <asm/cpu.h>
 #include <asm/e820/api.h> 
 
-#ifdef CONFIG_ACPI
-#include <linux/acpi.h>
-#include <asm/acpi.h>
-#include <acpi/pdc_intel.h>
-#include <acpi/processor.h>
-#include <xen/interface/platform.h>
-#endif
-
 #include "xen-ops.h"
-#include "mmu.h"
 #include "smp.h"
-#include "multicalls.h"
 #include "pmu.h"
 
 EXPORT_SYMBOL_GPL(hypercall_page);
@@ -136,14 +57,6 @@ EXPORT_SYMBOL_GPL(xen_start_info);
 
 struct shared_info xen_dummy_shared_info;
 
-void *xen_initial_gdt;
-
-RESERVE_BRK(shared_info_page_brk, PAGE_SIZE);
-
-static int xen_cpu_up_prepare(unsigned int cpu);
-static int xen_cpu_up_online(unsigned int cpu);
-static int xen_cpu_dead(unsigned int cpu);
-
 /*
  * Point at some empty memory to start with. We map the real shared_info
  * page as soon as fixmap is up and running.
@@ -163,34 +76,32 @@ struct shared_info *HYPERVISOR_shared_info = &xen_dummy_shared_info;
  *
  * 0: not available, 1: available
  */
-static int have_vcpu_info_placement = 1;
+int xen_have_vcpu_info_placement = 1;
 
-struct tls_descs {
-	struct desc_struct desc[3];
-};
+static int xen_cpu_up_online(unsigned int cpu)
+{
+	xen_init_lock_cpu(cpu);
+	return 0;
+}
 
-/*
- * Updating the 3 TLS descriptors in the GDT on every task switch is
- * surprisingly expensive so we avoid updating them if they haven't
- * changed.  Since Xen writes different descriptors than the one
- * passed in the update_descriptor hypercall we keep shadow copies to
- * compare against.
- */
-static DEFINE_PER_CPU(struct tls_descs, shadow_tls_desc);
+int xen_cpuhp_setup(int (*cpu_up_prepare_cb)(unsigned int),
+		    int (*cpu_dead_cb)(unsigned int))
+{
+	int rc;
 
-#ifdef CONFIG_XEN_PVH
-/*
- * PVH variables.
- *
- * xen_pvh and pvh_bootparams need to live in data segment since they
- * are used after startup_{32|64}, which clear .bss, are invoked.
- */
-bool xen_pvh __attribute__((section(".data"))) = 0;
-struct boot_params pvh_bootparams __attribute__((section(".data")));
+	rc = cpuhp_setup_state_nocalls(CPUHP_XEN_PREPARE,
+				       "x86/xen/hvm_guest:prepare",
+				       cpu_up_prepare_cb, cpu_dead_cb);
+	if (rc >= 0) {
+		rc = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN,
+					       "x86/xen/hvm_guest:online",
+					       xen_cpu_up_online, NULL);
+		if (rc < 0)
+			cpuhp_remove_state_nocalls(CPUHP_XEN_PREPARE);
+	}
 
-struct hvm_start_info pvh_start_info;
-unsigned int pvh_start_info_sz = sizeof(pvh_start_info);
-#endif
+	return rc >= 0 ? 0 : rc;
+}
 
 static void clamp_max_cpus(void)
 {
@@ -227,7 +138,7 @@ void xen_vcpu_setup(int cpu)
 		per_cpu(xen_vcpu, cpu) =
 			&HYPERVISOR_shared_info->vcpu_info[xen_vcpu_nr(cpu)];
 
-	if (!have_vcpu_info_placement) {
+	if (!xen_have_vcpu_info_placement) {
 		if (cpu >= MAX_VIRT_CPUS)
 			clamp_max_cpus();
 		return;
@@ -250,7 +161,7 @@ void xen_vcpu_setup(int cpu)
 
 	if (err) {
 		printk(KERN_DEBUG "register_vcpu_info failed: err=%d\n", err);
-		have_vcpu_info_placement = 0;
+		xen_have_vcpu_info_placement = 0;
 		clamp_max_cpus();
 	} else {
 		/* This cpu is using the registered vcpu info, even if
@@ -259,456 +170,52 @@ void xen_vcpu_setup(int cpu)
 	}
 }
 
-/*
- * On restore, set the vcpu placement up again.
- * If it fails, then we're in a bad state, since
- * we can't back out from using it...
- */
-void xen_vcpu_restore(void)
+void xen_reboot(int reason)
 {
+	struct sched_shutdown r = { .reason = reason };
 	int cpu;
 
-	for_each_possible_cpu(cpu) {
-		bool other_cpu = (cpu != smp_processor_id());
-		bool is_up = HYPERVISOR_vcpu_op(VCPUOP_is_up, xen_vcpu_nr(cpu),
-						NULL);
+	for_each_online_cpu(cpu)
+		xen_pmu_finish(cpu);
 
-		if (other_cpu && is_up &&
-		    HYPERVISOR_vcpu_op(VCPUOP_down, xen_vcpu_nr(cpu), NULL))
-			BUG();
-
-		xen_setup_runstate_info(cpu);
-
-		if (have_vcpu_info_placement)
-			xen_vcpu_setup(cpu);
-
-		if (other_cpu && is_up &&
-		    HYPERVISOR_vcpu_op(VCPUOP_up, xen_vcpu_nr(cpu), NULL))
-			BUG();
-	}
+	if (HYPERVISOR_sched_op(SCHEDOP_shutdown, &r))
+		BUG();
 }
 
-static void __init xen_banner(void)
+void xen_emergency_restart(void)
 {
-	unsigned version = HYPERVISOR_xen_version(XENVER_version, NULL);
-	struct xen_extraversion extra;
-	HYPERVISOR_xen_version(XENVER_extraversion, &extra);
-
-	pr_info("Booting paravirtualized kernel %son %s\n",
-		xen_feature(XENFEAT_auto_translated_physmap) ?
-			"with PVH extensions " : "", pv_info.name);
-	printk(KERN_INFO "Xen version: %d.%d%s%s\n",
-	       version >> 16, version & 0xffff, extra.extraversion,
-	       xen_feature(XENFEAT_mmu_pt_update_preserve_ad) ? " (preserve-AD)" : "");
-}
-/* Check if running on Xen version (major, minor) or later */
-bool
-xen_running_on_version_or_later(unsigned int major, unsigned int minor)
-{
-	unsigned int version;
-
-	if (!xen_domain())
-		return false;
-
-	version = HYPERVISOR_xen_version(XENVER_version, NULL);
-	if ((((version >> 16) == major) && ((version & 0xffff) >= minor)) ||
-		((version >> 16) > major))
-		return true;
-	return false;
+	xen_reboot(SHUTDOWN_reboot);
 }
 
-#define CPUID_THERM_POWER_LEAF 6
-#define APERFMPERF_PRESENT 0
-
-static __read_mostly unsigned int cpuid_leaf1_edx_mask = ~0;
-static __read_mostly unsigned int cpuid_leaf1_ecx_mask = ~0;
-
-static __read_mostly unsigned int cpuid_leaf1_ecx_set_mask;
-static __read_mostly unsigned int cpuid_leaf5_ecx_val;
-static __read_mostly unsigned int cpuid_leaf5_edx_val;
-
-static void xen_cpuid(unsigned int *ax, unsigned int *bx,
-		      unsigned int *cx, unsigned int *dx)
+static int
+xen_panic_event(struct notifier_block *this, unsigned long event, void *ptr)
 {
-	unsigned maskebx = ~0;
-	unsigned maskecx = ~0;
-	unsigned maskedx = ~0;
-	unsigned setecx = 0;
-	/*
-	 * Mask out inconvenient features, to try and disable as many
-	 * unsupported kernel subsystems as possible.
-	 */
-	switch (*ax) {
-	case 1:
-		maskecx = cpuid_leaf1_ecx_mask;
-		setecx = cpuid_leaf1_ecx_set_mask;
-		maskedx = cpuid_leaf1_edx_mask;
-		break;
-
-	case CPUID_MWAIT_LEAF:
-		/* Synthesize the values.. */
-		*ax = 0;
-		*bx = 0;
-		*cx = cpuid_leaf5_ecx_val;
-		*dx = cpuid_leaf5_edx_val;
-		return;
-
-	case CPUID_THERM_POWER_LEAF:
-		/* Disabling APERFMPERF for kernel usage */
-		maskecx = ~(1 << APERFMPERF_PRESENT);
-		break;
-
-	case 0xb:
-		/* Suppress extended topology stuff */
-		maskebx = 0;
-		break;
-	}
-
-	asm(XEN_EMULATE_PREFIX "cpuid"
-		: "=a" (*ax),
-		  "=b" (*bx),
-		  "=c" (*cx),
-		  "=d" (*dx)
-		: "0" (*ax), "2" (*cx));
-
-	*bx &= maskebx;
-	*cx &= maskecx;
-	*cx |= setecx;
-	*dx &= maskedx;
-}
-STACK_FRAME_NON_STANDARD(xen_cpuid); /* XEN_EMULATE_PREFIX */
-
-static bool __init xen_check_mwait(void)
-{
-#ifdef CONFIG_ACPI
-	struct xen_platform_op op = {
-		.cmd			= XENPF_set_processor_pminfo,
-		.u.set_pminfo.id	= -1,
-		.u.set_pminfo.type	= XEN_PM_PDC,
-	};
-	uint32_t buf[3];
-	unsigned int ax, bx, cx, dx;
-	unsigned int mwait_mask;
-
-	/* We need to determine whether it is OK to expose the MWAIT
-	 * capability to the kernel to harvest deeper than C3 states from ACPI
-	 * _CST using the processor_harvest_xen.c module. For this to work, we
-	 * need to gather the MWAIT_LEAF values (which the cstate.c code
-	 * checks against). The hypervisor won't expose the MWAIT flag because
-	 * it would break backwards compatibility; so we will find out directly
-	 * from the hardware and hypercall.
-	 */
-	if (!xen_initial_domain())
-		return false;
-
-	/*
-	 * When running under platform earlier than Xen4.2, do not expose
-	 * mwait, to avoid the risk of loading native acpi pad driver
-	 */
-	if (!xen_running_on_version_or_later(4, 2))
-		return false;
-
-	ax = 1;
-	cx = 0;
-
-	native_cpuid(&ax, &bx, &cx, &dx);
-
-	mwait_mask = (1 << (X86_FEATURE_EST % 32)) |
-		     (1 << (X86_FEATURE_MWAIT % 32));
-
-	if ((cx & mwait_mask) != mwait_mask)
-		return false;
-
-	/* We need to emulate the MWAIT_LEAF and for that we need both
-	 * ecx and edx. The hypercall provides only partial information.
-	 */
-
-	ax = CPUID_MWAIT_LEAF;
-	bx = 0;
-	cx = 0;
-	dx = 0;
-
-	native_cpuid(&ax, &bx, &cx, &dx);
-
-	/* Ask the Hypervisor whether to clear ACPI_PDC_C_C2C3_FFH. If so,
-	 * don't expose MWAIT_LEAF and let ACPI pick the IOPORT version of C3.
-	 */
-	buf[0] = ACPI_PDC_REVISION_ID;
-	buf[1] = 1;
-	buf[2] = (ACPI_PDC_C_CAPABILITY_SMP | ACPI_PDC_EST_CAPABILITY_SWSMP);
-
-	set_xen_guest_handle(op.u.set_pminfo.pdc, buf);
-
-	if ((HYPERVISOR_platform_op(&op) == 0) &&
-	    (buf[2] & (ACPI_PDC_C_C1_FFH | ACPI_PDC_C_C2C3_FFH))) {
-		cpuid_leaf5_ecx_val = cx;
-		cpuid_leaf5_edx_val = dx;
-	}
-	return true;
-#else
-	return false;
-#endif
-}
-static void __init xen_init_cpuid_mask(void)
-{
-	unsigned int ax, bx, cx, dx;
-	unsigned int xsave_mask;
-
-	cpuid_leaf1_edx_mask =
-		~((1 << X86_FEATURE_MTRR) |  /* disable MTRR */
-		  (1 << X86_FEATURE_ACC));   /* thermal monitoring */
-
-	if (!xen_initial_domain())
-		cpuid_leaf1_edx_mask &=
-			~((1 << X86_FEATURE_ACPI));  /* disable ACPI */
-
-	cpuid_leaf1_ecx_mask &= ~(1 << (X86_FEATURE_X2APIC % 32));
-
-	ax = 1;
-	cx = 0;
-	cpuid(1, &ax, &bx, &cx, &dx);
-
-	xsave_mask =
-		(1 << (X86_FEATURE_XSAVE % 32)) |
-		(1 << (X86_FEATURE_OSXSAVE % 32));
-
-	/* Xen will set CR4.OSXSAVE if supported and not disabled by force */
-	if ((cx & xsave_mask) != xsave_mask)
-		cpuid_leaf1_ecx_mask &= ~xsave_mask; /* disable XSAVE & OSXSAVE */
-	if (xen_check_mwait())
-		cpuid_leaf1_ecx_set_mask = (1 << (X86_FEATURE_MWAIT % 32));
+	if (!kexec_crash_loaded())
+		xen_reboot(SHUTDOWN_crash);
+	return NOTIFY_DONE;
 }
 
-static void xen_set_debugreg(int reg, unsigned long val)
-{
-	HYPERVISOR_set_debugreg(reg, val);
-}
+static struct notifier_block xen_panic_block = {
+	.notifier_call = xen_panic_event,
+	.priority = INT_MIN
+};
 
-static unsigned long xen_get_debugreg(int reg)
+int xen_panic_handler_init(void)
 {
-	return HYPERVISOR_get_debugreg(reg);
-}
-
-static void xen_end_context_switch(struct task_struct *next)
-{
-	xen_mc_flush();
-	paravirt_end_context_switch(next);
-}
-
-static unsigned long xen_store_tr(void)
-{
+	atomic_notifier_chain_register(&panic_notifier_list, &xen_panic_block);
 	return 0;
 }
 
-/*
- * Set the page permissions for a particular virtual address.  If the
- * address is a vmalloc mapping (or other non-linear mapping), then
- * find the linear mapping of the page and also set its protections to
- * match.
- */
-static void set_aliased_prot(void *v, pgprot_t prot)
+void xen_pin_vcpu(int cpu)
 {
-	int level;
-	pte_t *ptep;
-	pte_t pte;
-	unsigned long pfn;
-	struct page *page;
-	unsigned char dummy;
+	static bool disable_pinning;
+	struct sched_pin_override pin_override;
+	int ret;
 
-	ptep = lookup_address((unsigned long)v, &level);
-	BUG_ON(ptep == NULL);
-
-	pfn = pte_pfn(*ptep);
-	page = pfn_to_page(pfn);
-
-	pte = pfn_pte(pfn, prot);
-
-	/*
-	 * Careful: update_va_mapping() will fail if the virtual address
-	 * we're poking isn't populated in the page tables.  We don't
-	 * need to worry about the direct map (that's always in the page
-	 * tables), but we need to be careful about vmap space.  In
-	 * particular, the top level page table can lazily propagate
-	 * entries between processes, so if we've switched mms since we
-	 * vmapped the target in the first place, we might not have the
-	 * top-level page table entry populated.
-	 *
-	 * We disable preemption because we want the same mm active when
-	 * we probe the target and when we issue the hypercall.  We'll
-	 * have the same nominal mm, but if we're a kernel thread, lazy
-	 * mm dropping could change our pgd.
-	 *
-	 * Out of an abundance of caution, this uses __get_user() to fault
-	 * in the target address just in case there's some obscure case
-	 * in which the target address isn't readable.
-	 */
-
-	preempt_disable();
-
-	probe_kernel_read(&dummy, v, 1);
-
-	if (HYPERVISOR_update_va_mapping((unsigned long)v, pte, 0))
-		BUG();
-
-	if (!PageHighMem(page)) {
-		void *av = __va(PFN_PHYS(pfn));
-
-		if (av != v)
-			if (HYPERVISOR_update_va_mapping((unsigned long)av, pte, 0))
-				BUG();
-	} else
-		kmap_flush_unused();
-
-	preempt_enable();
-}
-
-static void xen_alloc_ldt(struct desc_struct *ldt, unsigned entries)
-{
-	const unsigned entries_per_page = PAGE_SIZE / LDT_ENTRY_SIZE;
-	int i;
-
-	/*
-	 * We need to mark the all aliases of the LDT pages RO.  We
-	 * don't need to call vm_flush_aliases(), though, since that's
-	 * only responsible for flushing aliases out the TLBs, not the
-	 * page tables, and Xen will flush the TLB for us if needed.
-	 *
-	 * To avoid confusing future readers: none of this is necessary
-	 * to load the LDT.  The hypervisor only checks this when the
-	 * LDT is faulted in due to subsequent descriptor access.
-	 */
-
-	for(i = 0; i < entries; i += entries_per_page)
-		set_aliased_prot(ldt + i, PAGE_KERNEL_RO);
-}
-
-static void xen_free_ldt(struct desc_struct *ldt, unsigned entries)
-{
-	const unsigned entries_per_page = PAGE_SIZE / LDT_ENTRY_SIZE;
-	int i;
-
-	for(i = 0; i < entries; i += entries_per_page)
-		set_aliased_prot(ldt + i, PAGE_KERNEL);
-}
-
-static void xen_set_ldt(const void *addr, unsigned entries)
-{
-	struct mmuext_op *op;
-	struct multicall_space mcs = xen_mc_entry(sizeof(*op));
-
-	trace_xen_cpu_set_ldt(addr, entries);
-
-	op = mcs.args;
-	op->cmd = MMUEXT_SET_LDT;
-	op->arg1.linear_addr = (unsigned long)addr;
-	op->arg2.nr_ents = entries;
-
-	MULTI_mmuext_op(mcs.mc, op, 1, NULL, DOMID_SELF);
-
-	xen_mc_issue(PARAVIRT_LAZY_CPU);
-}
-
-static void xen_load_gdt(const struct desc_ptr *dtr)
-{
-	unsigned long va = dtr->address;
-	unsigned int size = dtr->size + 1;
-	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
-	unsigned long frames[pages];
-	int f;
-
-	/*
-	 * A GDT can be up to 64k in size, which corresponds to 8192
-	 * 8-byte entries, or 16 4k pages..
-	 */
-
-	BUG_ON(size > 65536);
-	BUG_ON(va & ~PAGE_MASK);
-
-	for (f = 0; va < dtr->address + size; va += PAGE_SIZE, f++) {
-		int level;
-		pte_t *ptep;
-		unsigned long pfn, mfn;
-		void *virt;
-
-		/*
-		 * The GDT is per-cpu and is in the percpu data area.
-		 * That can be virtually mapped, so we need to do a
-		 * page-walk to get the underlying MFN for the
-		 * hypercall.  The page can also be in the kernel's
-		 * linear range, so we need to RO that mapping too.
-		 */
-		ptep = lookup_address(va, &level);
-		BUG_ON(ptep == NULL);
-
-		pfn = pte_pfn(*ptep);
-		mfn = pfn_to_mfn(pfn);
-		virt = __va(PFN_PHYS(pfn));
-
-		frames[f] = mfn;
-
-		make_lowmem_page_readonly((void *)va);
-		make_lowmem_page_readonly(virt);
-	}
-
-	if (HYPERVISOR_set_gdt(frames, size / sizeof(struct desc_struct)))
-		BUG();
-}
-
-/*
- * load_gdt for early boot, when the gdt is only mapped once
- */
-static void __init xen_load_gdt_boot(const struct desc_ptr *dtr)
-{
-	unsigned long va = dtr->address;
-	unsigned int size = dtr->size + 1;
-	unsigned pages = DIV_ROUND_UP(size, PAGE_SIZE);
-	unsigned long frames[pages];
-	int f;
-
-	/*
-	 * A GDT can be up to 64k in size, which corresponds to 8192
-	 * 8-byte entries, or 16 4k pages..
-	 */
-
-	BUG_ON(size > 65536);
-	BUG_ON(va & ~PAGE_MASK);
-
-	for (f = 0; va < dtr->address + size; va += PAGE_SIZE, f++) {
-		pte_t pte;
-		unsigned long pfn, mfn;
-
-		pfn = virt_to_pfn(va);
-		mfn = pfn_to_mfn(pfn);
-
-		pte = pfn_pte(pfn, PAGE_KERNEL_RO);
-
-		if (HYPERVISOR_update_va_mapping((unsigned long)va, pte, 0))
-			BUG();
-
-		frames[f] = mfn;
-	}
-
-	if (HYPERVISOR_set_gdt(frames, size / sizeof(struct desc_struct)))
-		BUG();
-}
-
-static inline bool desc_equal(const struct desc_struct *d1,
-			      const struct desc_struct *d2)
-{
-	return d1->a == d2->a && d1->b == d2->b;
-}
-
-static void load_TLS_descriptor(struct thread_struct *t,
-				unsigned int cpu, unsigned int i)
-{
-	struct desc_struct *shadow = &per_cpu(shadow_tls_desc, cpu).desc[i];
-	struct desc_struct *gdt;
-	xmaddr_t maddr;
-	struct multicall_space mc;
-
-	if (desc_equal(shadow, &t->tls_array[i]))
+	if (disable_pinning)
 		return;
 
+<<<<<<< HEAD
 	*shadow = t->tls_array[i];
 
 	gdt = get_cpu_gdt_rw(cpu);
@@ -787,57 +294,39 @@ static int cvt_gate_to_trap(int vector, const gate_desc *val,
 
 	if (val->type != GATE_TRAP && val->type != GATE_INTERRUPT)
 		return 0;
+=======
+	pin_override.pcpu = cpu;
+	ret = HYPERVISOR_sched_op(SCHEDOP_pin_override, &pin_override);
+>>>>>>> linux-next/akpm-base
 
-	info->vector = vector;
+	/* Ignore errors when removing override. */
+	if (cpu < 0)
+		return;
 
-	addr = gate_offset(*val);
-#ifdef CONFIG_X86_64
-	/*
-	 * Look for known traps using IST, and substitute them
-	 * appropriately.  The debugger ones are the only ones we care
-	 * about.  Xen will handle faults like double_fault,
-	 * so we should never see them.  Warn if
-	 * there's an unexpected IST-using fault handler.
-	 */
-	if (addr == (unsigned long)debug)
-		addr = (unsigned long)xen_debug;
-	else if (addr == (unsigned long)int3)
-		addr = (unsigned long)xen_int3;
-	else if (addr == (unsigned long)stack_segment)
-		addr = (unsigned long)xen_stack_segment;
-	else if (addr == (unsigned long)double_fault) {
-		/* Don't need to handle these */
-		return 0;
-#ifdef CONFIG_X86_MCE
-	} else if (addr == (unsigned long)machine_check) {
-		/*
-		 * when xen hypervisor inject vMCE to guest,
-		 * use native mce handler to handle it
-		 */
-		;
-#endif
-	} else if (addr == (unsigned long)nmi)
-		/*
-		 * Use the native version as well.
-		 */
-		;
-	else {
-		/* Some other trap using IST? */
-		if (WARN_ON(val->ist != 0))
-			return 0;
+	switch (ret) {
+	case -ENOSYS:
+		pr_warn("Unable to pin on physical cpu %d. In case of problems consider vcpu pinning.\n",
+			cpu);
+		disable_pinning = true;
+		break;
+	case -EPERM:
+		WARN(1, "Trying to pin vcpu without having privilege to do so\n");
+		disable_pinning = true;
+		break;
+	case -EINVAL:
+	case -EBUSY:
+		pr_warn("Physical cpu %d not available for pinning. Check Xen cpu configuration.\n",
+			cpu);
+		break;
+	case 0:
+		break;
+	default:
+		WARN(1, "rc %d while trying to pin vcpu\n", ret);
+		disable_pinning = true;
 	}
-#endif	/* CONFIG_X86_64 */
-	info->address = addr;
-
-	info->cs = gate_segment(*val);
-	info->flags = val->dpl;
-	/* interrupt gates clear IF */
-	if (val->type == GATE_INTERRUPT)
-		info->flags |= 1 << 2;
-
-	return 1;
 }
 
+<<<<<<< HEAD
 /* Locations of each CPU's IDT */
 static DEFINE_PER_CPU(struct desc_ptr, idt_desc);
 
@@ -2021,6 +1510,8 @@ const struct hypervisor_x86 x86_hyper_xen = {
 };
 EXPORT_SYMBOL(x86_hyper_xen);
 
+=======
+>>>>>>> linux-next/akpm-base
 #ifdef CONFIG_HOTPLUG_CPU
 void xen_arch_register_cpu(int num)
 {

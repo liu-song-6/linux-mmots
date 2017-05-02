@@ -1,63 +1,21 @@
-/*
- * Xen SMP support
- *
- * This file implements the Xen versions of smp_ops.  SMP under Xen is
- * very straightforward.  Bringing a CPU up is simply a matter of
- * loading its initial context and setting it running.
- *
- * IPIs are handled through the Xen event mechanism.
- *
- * Because virtual CPUs can be scheduled onto any real CPU, there's no
- * useful topology information for the kernel to make use of.  As a
- * result, all CPUs are treated as if they're single-core and
- * single-threaded.
- */
-#include <linux/sched.h>
-#include <linux/err.h>
-#include <linux/slab.h>
 #include <linux/smp.h>
-#include <linux/irq_work.h>
-#include <linux/tick.h>
-#include <linux/nmi.h>
+#include <linux/slab.h>
+#include <linux/cpumask.h>
+#include <linux/percpu.h>
 
-#include <asm/paravirt.h>
-#include <asm/desc.h>
-#include <asm/pgtable.h>
-#include <asm/cpu.h>
-
-#include <xen/interface/xen.h>
-#include <xen/interface/vcpu.h>
-#include <xen/interface/xenpmu.h>
-
-#include <asm/xen/interface.h>
-#include <asm/xen/hypercall.h>
-
-#include <xen/xen.h>
-#include <xen/page.h>
 #include <xen/events.h>
 
 #include <xen/hvc-console.h>
 #include "xen-ops.h"
-#include "mmu.h"
 #include "smp.h"
-#include "pmu.h"
 
-cpumask_var_t xen_cpu_initialized_map;
-
-struct xen_common_irq {
-	int irq;
-	char *name;
-};
 static DEFINE_PER_CPU(struct xen_common_irq, xen_resched_irq) = { .irq = -1 };
 static DEFINE_PER_CPU(struct xen_common_irq, xen_callfunc_irq) = { .irq = -1 };
 static DEFINE_PER_CPU(struct xen_common_irq, xen_callfuncsingle_irq) = { .irq = -1 };
-static DEFINE_PER_CPU(struct xen_common_irq, xen_irq_work) = { .irq = -1 };
 static DEFINE_PER_CPU(struct xen_common_irq, xen_debug_irq) = { .irq = -1 };
-static DEFINE_PER_CPU(struct xen_common_irq, xen_pmu_irq) = { .irq = -1 };
 
 static irqreturn_t xen_call_function_interrupt(int irq, void *dev_id);
 static irqreturn_t xen_call_function_single_interrupt(int irq, void *dev_id);
-static irqreturn_t xen_irq_work_interrupt(int irq, void *dev_id);
 
 /*
  * Reschedule call back.
@@ -68,42 +26,6 @@ static irqreturn_t xen_reschedule_interrupt(int irq, void *dev_id)
 	scheduler_ipi();
 
 	return IRQ_HANDLED;
-}
-
-static void cpu_bringup(void)
-{
-	int cpu;
-
-	cpu_init();
-	touch_softlockup_watchdog();
-	preempt_disable();
-
-	/* PVH runs in ring 0 and allows us to do native syscalls. Yay! */
-	if (!xen_feature(XENFEAT_supervisor_mode_kernel)) {
-		xen_enable_sysenter();
-		xen_enable_syscall();
-	}
-	cpu = smp_processor_id();
-	smp_store_cpu_info(cpu);
-	cpu_data(cpu).x86_max_cores = 1;
-	set_cpu_sibling_map(cpu);
-
-	xen_setup_cpu_clockevents();
-
-	notify_cpu_starting(cpu);
-
-	set_cpu_online(cpu, true);
-
-	cpu_set_state_online(cpu);  /* Implies full memory barrier. */
-
-	/* We can take interrupts now: we're officially "up". */
-	local_irq_enable();
-}
-
-asmlinkage __visible void cpu_bringup_and_idle(void)
-{
-	cpu_bringup();
-	cpu_startup_entry(CPUHP_AP_ONLINE_IDLE);
 }
 
 void xen_smp_intr_free(unsigned int cpu)
@@ -133,27 +55,12 @@ void xen_smp_intr_free(unsigned int cpu)
 		kfree(per_cpu(xen_callfuncsingle_irq, cpu).name);
 		per_cpu(xen_callfuncsingle_irq, cpu).name = NULL;
 	}
-	if (xen_hvm_domain())
-		return;
+}
 
-	if (per_cpu(xen_irq_work, cpu).irq >= 0) {
-		unbind_from_irqhandler(per_cpu(xen_irq_work, cpu).irq, NULL);
-		per_cpu(xen_irq_work, cpu).irq = -1;
-		kfree(per_cpu(xen_irq_work, cpu).name);
-		per_cpu(xen_irq_work, cpu).name = NULL;
-	}
-
-	if (per_cpu(xen_pmu_irq, cpu).irq >= 0) {
-		unbind_from_irqhandler(per_cpu(xen_pmu_irq, cpu).irq, NULL);
-		per_cpu(xen_pmu_irq, cpu).irq = -1;
-		kfree(per_cpu(xen_pmu_irq, cpu).name);
-		per_cpu(xen_pmu_irq, cpu).name = NULL;
-	}
-};
 int xen_smp_intr_init(unsigned int cpu)
 {
 	int rc;
-	char *resched_name, *callfunc_name, *debug_name, *pmu_name;
+	char *resched_name, *callfunc_name, *debug_name;
 
 	resched_name = kasprintf(GFP_KERNEL, "resched%d", cpu);
 	rc = bind_ipi_to_irqhandler(XEN_RESCHEDULE_VECTOR,
@@ -200,37 +107,6 @@ int xen_smp_intr_init(unsigned int cpu)
 	per_cpu(xen_callfuncsingle_irq, cpu).irq = rc;
 	per_cpu(xen_callfuncsingle_irq, cpu).name = callfunc_name;
 
-	/*
-	 * The IRQ worker on PVHVM goes through the native path and uses the
-	 * IPI mechanism.
-	 */
-	if (xen_hvm_domain())
-		return 0;
-
-	callfunc_name = kasprintf(GFP_KERNEL, "irqwork%d", cpu);
-	rc = bind_ipi_to_irqhandler(XEN_IRQ_WORK_VECTOR,
-				    cpu,
-				    xen_irq_work_interrupt,
-				    IRQF_PERCPU|IRQF_NOBALANCING,
-				    callfunc_name,
-				    NULL);
-	if (rc < 0)
-		goto fail;
-	per_cpu(xen_irq_work, cpu).irq = rc;
-	per_cpu(xen_irq_work, cpu).name = callfunc_name;
-
-	if (is_xen_pmu(cpu)) {
-		pmu_name = kasprintf(GFP_KERNEL, "pmu%d", cpu);
-		rc = bind_virq_to_irqhandler(VIRQ_XENPMU, cpu,
-					     xen_pmu_irq_handler,
-					     IRQF_PERCPU|IRQF_NOBALANCING,
-					     pmu_name, NULL);
-		if (rc < 0)
-			goto fail;
-		per_cpu(xen_pmu_irq, cpu).irq = rc;
-		per_cpu(xen_pmu_irq, cpu).name = pmu_name;
-	}
-
 	return 0;
 
  fail:
@@ -238,6 +114,7 @@ int xen_smp_intr_init(unsigned int cpu)
 	return rc;
 }
 
+<<<<<<< HEAD
 static void __init xen_fill_possible_map(void)
 {
 	int i, rc;
@@ -565,6 +442,9 @@ static void xen_stop_other_cpus(int wait)
 }
 
 static void xen_smp_send_reschedule(int cpu)
+=======
+void xen_smp_send_reschedule(int cpu)
+>>>>>>> linux-next/akpm-base
 {
 	xen_send_IPI_one(cpu, XEN_RESCHEDULE_VECTOR);
 }
@@ -578,7 +458,7 @@ static void __xen_send_IPI_mask(const struct cpumask *mask,
 		xen_send_IPI_one(cpu, vector);
 }
 
-static void xen_smp_send_call_function_ipi(const struct cpumask *mask)
+void xen_smp_send_call_function_ipi(const struct cpumask *mask)
 {
 	int cpu;
 
@@ -593,7 +473,7 @@ static void xen_smp_send_call_function_ipi(const struct cpumask *mask)
 	}
 }
 
-static void xen_smp_send_call_function_single_ipi(int cpu)
+void xen_smp_send_call_function_single_ipi(int cpu)
 {
 	__xen_send_IPI_mask(cpumask_of(cpu),
 			  XEN_CALL_FUNCTION_SINGLE_VECTOR);
@@ -697,55 +577,4 @@ static irqreturn_t xen_call_function_single_interrupt(int irq, void *dev_id)
 	irq_exit();
 
 	return IRQ_HANDLED;
-}
-
-static irqreturn_t xen_irq_work_interrupt(int irq, void *dev_id)
-{
-	irq_enter();
-	irq_work_run();
-	inc_irq_stat(apic_irq_work_irqs);
-	irq_exit();
-
-	return IRQ_HANDLED;
-}
-
-static const struct smp_ops xen_smp_ops __initconst = {
-	.smp_prepare_boot_cpu = xen_smp_prepare_boot_cpu,
-	.smp_prepare_cpus = xen_smp_prepare_cpus,
-	.smp_cpus_done = xen_smp_cpus_done,
-
-	.cpu_up = xen_cpu_up,
-	.cpu_die = xen_cpu_die,
-	.cpu_disable = xen_cpu_disable,
-	.play_dead = xen_play_dead,
-
-	.stop_other_cpus = xen_stop_other_cpus,
-	.smp_send_reschedule = xen_smp_send_reschedule,
-
-	.send_call_func_ipi = xen_smp_send_call_function_ipi,
-	.send_call_func_single_ipi = xen_smp_send_call_function_single_ipi,
-};
-
-void __init xen_smp_init(void)
-{
-	smp_ops = xen_smp_ops;
-	xen_fill_possible_map();
-}
-
-static void __init xen_hvm_smp_prepare_cpus(unsigned int max_cpus)
-{
-	native_smp_prepare_cpus(max_cpus);
-	WARN_ON(xen_smp_intr_init(0));
-
-	xen_init_lock_cpu(0);
-}
-
-void __init xen_hvm_smp_init(void)
-{
-	smp_ops.smp_prepare_cpus = xen_hvm_smp_prepare_cpus;
-	smp_ops.smp_send_reschedule = xen_smp_send_reschedule;
-	smp_ops.cpu_die = xen_cpu_die;
-	smp_ops.send_call_func_ipi = xen_smp_send_call_function_ipi;
-	smp_ops.send_call_func_single_ipi = xen_smp_send_call_function_single_ipi;
-	smp_ops.smp_prepare_boot_cpu = xen_smp_prepare_boot_cpu;
 }

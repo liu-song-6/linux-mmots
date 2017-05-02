@@ -1578,6 +1578,15 @@
 			extended tables themselves, and also PASID support. With
 			this option set, extended tables will not be used even
 			on hardware which claims to support them.
+		tboot_noforce [Default Off]
+			Do not force the Intel IOMMU enabled under tboot.
+			By default, tboot will force Intel IOMMU on, which
+			could harm performance of some high-throughput
+			devices like 40GBit network cards, even if identity
+			mapping is enabled.
+			Note that using this option lowers the security
+			provided by tboot because it makes the system
+			vulnerable to DMA attacks.
 
 	intel_idle.max_cstate=	[KNL,HW,ACPI,X86]
 			0	disables intel_idle and fall back on acpi_idle.
@@ -1644,6 +1653,12 @@
 		nobypass	[PPC/POWERNV]
 			Disable IOMMU bypass, using IOMMU for PCI devices.
 
+	iommu.passthrough=
+			[ARM64] Configure DMA to bypass the IOMMU by default.
+			Format: { "0" | "1" }
+			0 - Use IOMMU translation for DMA.
+			1 - Bypass the IOMMU for DMA.
+			unset - Use IOMMU translation for DMA.
 
 	io7=		[HW] IO7 for Marvel based alpha systems
 			See comment before marvel_specify_io7 in
@@ -2419,6 +2434,7 @@
 			and gids from such clients.  This is intended to ease
 			migration from NFSv2/v3.
 
+<<<<<<< HEAD
 	objlayoutdriver.osd_login_prog=
 			[NFS] [OBJLAYOUT] sets the pathname to the program which
 			is used to automatically discover and login into new
@@ -2426,6 +2442,9 @@
 			Documentation/filesystems/pnfs.txt for more explanations
 
 	nmi_debug=	[KNL,SH] Specify one or more actions to take
+=======
+	nmi_debug=	[KNL,AVR32,SH] Specify one or more actions to take
+>>>>>>> linux-next/akpm-base
 			when a NMI is triggered.
 			Format: [state][,regs][,debounce][,die]
 
@@ -3310,6 +3329,17 @@
 			This wake_up() will be accompanied by a
 			WARN_ONCE() splat and an ftrace_dump().
 
+	rcuperf.gp_async= [KNL]
+			Measure performance of asynchronous
+			grace-period primitives such as call_rcu().
+
+	rcuperf.gp_async_max= [KNL]
+			Specify the maximum number of outstanding
+			callbacks per writer thread.  When a writer
+			thread exceeds this limit, it invokes the
+			corresponding flavor of rcu_barrier() to allow
+			previously posted callbacks to drain.
+
 	rcuperf.gp_exp= [KNL]
 			Measure performance of expedited synchronous
 			grace-period primitives.
@@ -3337,16 +3367,21 @@
 	rcuperf.perf_runnable= [BOOT]
 			Start rcuperf running at boot time.
 
+	rcuperf.perf_type= [KNL]
+			Specify the RCU implementation to test.
+
 	rcuperf.shutdown= [KNL]
 			Shut the system down after performance tests
 			complete.  This is useful for hands-off automated
 			testing.
 
-	rcuperf.perf_type= [KNL]
-			Specify the RCU implementation to test.
-
 	rcuperf.verbose= [KNL]
 			Enable additional printk() statements.
+
+	rcuperf.writer_holdoff= [KNL]
+			Write-side holdoff between grace periods,
+			in microseconds.  The default of zero says
+			no holdoff.
 
 	rcutorture.cbflood_inter_holdoff= [KNL]
 			Set holdoff time (jiffies) between successive
@@ -3785,6 +3820,14 @@
 	spia_pedr=
 	spia_peddr=
 
+	srcutree.exp_holdoff [KNL]
+			Specifies how many nanoseconds must elapse
+			since the end of the last SRCU grace period for
+			a given srcu_struct until the next normal SRCU
+			grace period will be considered for automatic
+			expediting.  Set to zero to disable automatic
+			expediting.
+
 	stacktrace	[FTRACE]
 			Enabled the stack tracer on boot up.
 
@@ -4126,6 +4169,9 @@
 
 	usbhid.mousepoll=
 			[USBHID] The interval which mice are to be polled at.
+
+	usbhid.jspoll=
+			[USBHID] The interval which joysticks are to be polled at.
 
 	usb-storage.delay_use=
 			[UMS] The delay in seconds before a new device is

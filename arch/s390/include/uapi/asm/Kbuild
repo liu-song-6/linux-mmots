@@ -10,6 +10,7 @@ generic-y += poll.h
 generic-y += resource.h
 generic-y += sockios.h
 generic-y += termbits.h
+<<<<<<< HEAD
 
 header-y += auxvec.h
 header-y += bitsperlong.h
@@ -56,3 +57,5 @@ header-y += unistd.h
 header-y += virtio-ccw.h
 header-y += vtoc.h
 header-y += zcrypt.h
+=======
+>>>>>>> linux-next/akpm-base

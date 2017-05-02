@@ -545,12 +545,16 @@
 };
 
 &global_timer {
+<<<<<<< HEAD
 	interrupts = <GIC_PPI 11 0xf04>;
+=======
+	interrupts = <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_EDGE_RISING)>;
+>>>>>>> linux-next/akpm-base
 	status = "disabled";
 };
 
 &local_timer {
-	interrupts = <GIC_PPI 13 0xf04>;
+	interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_EDGE_RISING)>;
 };
 
 &i2c0 {

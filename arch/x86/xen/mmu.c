@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*
  * Xen mmu operations
  *
@@ -2068,63 +2069,25 @@ static unsigned long __init xen_read_phys_ulong(phys_addr_t addr)
 {
 	unsigned long *vaddr;
 	unsigned long val;
+=======
+#include <linux/pfn.h>
+#include <asm/xen/page.h>
+#include <asm/xen/hypercall.h>
+#include <xen/interface/memory.h>
+>>>>>>> linux-next/akpm-base
 
-	vaddr = early_memremap_ro(addr, sizeof(val));
-	val = *vaddr;
-	early_memunmap(vaddr, sizeof(val));
-	return val;
-}
-
-/*
- * Translate a virtual address to a physical one without relying on mapped
- * page tables.
- */
-static phys_addr_t __init xen_early_virt_to_phys(unsigned long vaddr)
-{
-	phys_addr_t pa;
-	pgd_t pgd;
-	pud_t pud;
-	pmd_t pmd;
-	pte_t pte;
-
-	pa = read_cr3();
-	pgd = native_make_pgd(xen_read_phys_ulong(pa + pgd_index(vaddr) *
-						       sizeof(pgd)));
-	if (!pgd_present(pgd))
-		return 0;
-
-	pa = pgd_val(pgd) & PTE_PFN_MASK;
-	pud = native_make_pud(xen_read_phys_ulong(pa + pud_index(vaddr) *
-						       sizeof(pud)));
-	if (!pud_present(pud))
-		return 0;
-	pa = pud_pfn(pud) << PAGE_SHIFT;
-	if (pud_large(pud))
-		return pa + (vaddr & ~PUD_MASK);
-
-	pmd = native_make_pmd(xen_read_phys_ulong(pa + pmd_index(vaddr) *
-						       sizeof(pmd)));
-	if (!pmd_present(pmd))
-		return 0;
-	pa = pmd_pfn(pmd) << PAGE_SHIFT;
-	if (pmd_large(pmd))
-		return pa + (vaddr & ~PMD_MASK);
-
-	pte = native_make_pte(xen_read_phys_ulong(pa + pte_index(vaddr) *
-						       sizeof(pte)));
-	if (!pte_present(pte))
-		return 0;
-	pa = pte_pfn(pte) << PAGE_SHIFT;
-
-	return pa | (vaddr & ~PAGE_MASK);
-}
+#include "multicalls.h"
+#include "mmu.h"
 
 /*
- * Find a new area for the hypervisor supplied p2m list and relocate the p2m to
- * this area.
+ * Protects atomic reservation decrease/increase against concurrent increases.
+ * Also protects non-atomic updates of current_pages and balloon lists.
  */
-void __init xen_relocate_p2m(void)
+DEFINE_SPINLOCK(xen_reservation_lock);
+
+unsigned long arbitrary_virt_to_mfn(void *vaddr)
 {
+<<<<<<< HEAD
 	phys_addr_t size, new_area, pt_phys, pmd_phys, pud_phys, p4d_phys;
 	unsigned long p2m_pfn, p2m_pfn_end, n_frames, pfn, pfn_end;
 	int n_pte, n_pt, n_pmd, n_pud, n_p4d, idx_pte, idx_pt, idx_pmd, idx_pud, idx_p4d;
@@ -2260,33 +2223,25 @@ void __init xen_relocate_p2m(void)
 		make_lowmem_page_readwrite(__va(PFN_PHYS(pfn)));
 		pfn++;
 	}
+=======
+	xmaddr_t maddr = arbitrary_virt_to_machine(vaddr);
+>>>>>>> linux-next/akpm-base
 
-	xen_start_info->mfn_list = (unsigned long)xen_p2m_addr;
-	xen_start_info->first_p2m_pfn =  PFN_DOWN(new_area);
-	xen_start_info->nr_p2m_frames = n_frames;
+	return PFN_DOWN(maddr.maddr);
 }
 
-#else	/* !CONFIG_X86_64 */
-static RESERVE_BRK_ARRAY(pmd_t, initial_kernel_pmd, PTRS_PER_PMD);
-static RESERVE_BRK_ARRAY(pmd_t, swapper_kernel_pmd, PTRS_PER_PMD);
-
-static void __init xen_write_cr3_init(unsigned long cr3)
+xmaddr_t arbitrary_virt_to_machine(void *vaddr)
 {
-	unsigned long pfn = PFN_DOWN(__pa(swapper_pg_dir));
-
-	BUG_ON(read_cr3() != __pa(initial_page_table));
-	BUG_ON(cr3 != __pa(swapper_pg_dir));
+	unsigned long address = (unsigned long)vaddr;
+	unsigned int level;
+	pte_t *pte;
+	unsigned offset;
 
 	/*
-	 * We are switching to swapper_pg_dir for the first time (from
-	 * initial_page_table) and therefore need to mark that page
-	 * read-only and then pin it.
-	 *
-	 * Xen disallows sharing of kernel PMDs for PAE
-	 * guests. Therefore we must copy the kernel PMD from
-	 * initial_page_table into a new kernel PMD to be used in
-	 * swapper_pg_dir.
+	 * if the PFN is in the linear mapped vaddr range, we can just use
+	 * the (quick) virt_to_machine() p2m lookup
 	 */
+<<<<<<< HEAD
 	swapper_kernel_pmd =
 		extend_brk(sizeof(pmd_t) * PTRS_PER_PMD, PAGE_SIZE);
 	copy_page(swapper_kernel_pmd, initial_kernel_pmd);
@@ -2564,286 +2519,39 @@ void __init xen_init_mmu_ops(void)
 
 	if (xen_feature(XENFEAT_auto_translated_physmap))
 		return;
+=======
+	if (virt_addr_valid(vaddr))
+		return virt_to_machine(vaddr);
+>>>>>>> linux-next/akpm-base
 
-	pv_mmu_ops = xen_mmu_ops;
+	/* otherwise we have to do a (slower) full page-table walk */
 
-	memset(dummy_mapping, 0xff, PAGE_SIZE);
+	pte = lookup_address(address, &level);
+	BUG_ON(pte == NULL);
+	offset = address & ~PAGE_MASK;
+	return XMADDR(((phys_addr_t)pte_mfn(*pte) << PAGE_SHIFT) + offset);
 }
+EXPORT_SYMBOL_GPL(arbitrary_virt_to_machine);
 
-/* Protected by xen_reservation_lock. */
-#define MAX_CONTIG_ORDER 9 /* 2MB */
-static unsigned long discontig_frames[1<<MAX_CONTIG_ORDER];
-
-#define VOID_PTE (mfn_pte(0, __pgprot(0)))
-static void xen_zap_pfn_range(unsigned long vaddr, unsigned int order,
-				unsigned long *in_frames,
-				unsigned long *out_frames)
+void xen_flush_tlb_all(void)
 {
-	int i;
+	struct mmuext_op *op;
 	struct multicall_space mcs;
 
-	xen_mc_batch();
-	for (i = 0; i < (1UL<<order); i++, vaddr += PAGE_SIZE) {
-		mcs = __xen_mc_entry(0);
+	trace_xen_mmu_flush_tlb_all(0);
 
-		if (in_frames)
-			in_frames[i] = virt_to_mfn(vaddr);
+	preempt_disable();
 
-		MULTI_update_va_mapping(mcs.mc, vaddr, VOID_PTE, 0);
-		__set_phys_to_machine(virt_to_pfn(vaddr), INVALID_P2M_ENTRY);
+	mcs = xen_mc_entry(sizeof(*op));
 
-		if (out_frames)
-			out_frames[i] = virt_to_pfn(vaddr);
-	}
-	xen_mc_issue(0);
+	op = mcs.args;
+	op->cmd = MMUEXT_TLB_FLUSH_ALL;
+	MULTI_mmuext_op(mcs.mc, op, 1, NULL, DOMID_SELF);
+
+	xen_mc_issue(PARAVIRT_LAZY_MMU);
+
+	preempt_enable();
 }
-
-/*
- * Update the pfn-to-mfn mappings for a virtual address range, either to
- * point to an array of mfns, or contiguously from a single starting
- * mfn.
- */
-static void xen_remap_exchanged_ptes(unsigned long vaddr, int order,
-				     unsigned long *mfns,
-				     unsigned long first_mfn)
-{
-	unsigned i, limit;
-	unsigned long mfn;
-
-	xen_mc_batch();
-
-	limit = 1u << order;
-	for (i = 0; i < limit; i++, vaddr += PAGE_SIZE) {
-		struct multicall_space mcs;
-		unsigned flags;
-
-		mcs = __xen_mc_entry(0);
-		if (mfns)
-			mfn = mfns[i];
-		else
-			mfn = first_mfn + i;
-
-		if (i < (limit - 1))
-			flags = 0;
-		else {
-			if (order == 0)
-				flags = UVMF_INVLPG | UVMF_ALL;
-			else
-				flags = UVMF_TLB_FLUSH | UVMF_ALL;
-		}
-
-		MULTI_update_va_mapping(mcs.mc, vaddr,
-				mfn_pte(mfn, PAGE_KERNEL), flags);
-
-		set_phys_to_machine(virt_to_pfn(vaddr), mfn);
-	}
-
-	xen_mc_issue(0);
-}
-
-/*
- * Perform the hypercall to exchange a region of our pfns to point to
- * memory with the required contiguous alignment.  Takes the pfns as
- * input, and populates mfns as output.
- *
- * Returns a success code indicating whether the hypervisor was able to
- * satisfy the request or not.
- */
-static int xen_exchange_memory(unsigned long extents_in, unsigned int order_in,
-			       unsigned long *pfns_in,
-			       unsigned long extents_out,
-			       unsigned int order_out,
-			       unsigned long *mfns_out,
-			       unsigned int address_bits)
-{
-	long rc;
-	int success;
-
-	struct xen_memory_exchange exchange = {
-		.in = {
-			.nr_extents   = extents_in,
-			.extent_order = order_in,
-			.extent_start = pfns_in,
-			.domid        = DOMID_SELF
-		},
-		.out = {
-			.nr_extents   = extents_out,
-			.extent_order = order_out,
-			.extent_start = mfns_out,
-			.address_bits = address_bits,
-			.domid        = DOMID_SELF
-		}
-	};
-
-	BUG_ON(extents_in << order_in != extents_out << order_out);
-
-	rc = HYPERVISOR_memory_op(XENMEM_exchange, &exchange);
-	success = (exchange.nr_exchanged == extents_in);
-
-	BUG_ON(!success && ((exchange.nr_exchanged != 0) || (rc == 0)));
-	BUG_ON(success && (rc != 0));
-
-	return success;
-}
-
-int xen_create_contiguous_region(phys_addr_t pstart, unsigned int order,
-				 unsigned int address_bits,
-				 dma_addr_t *dma_handle)
-{
-	unsigned long *in_frames = discontig_frames, out_frame;
-	unsigned long  flags;
-	int            success;
-	unsigned long vstart = (unsigned long)phys_to_virt(pstart);
-
-	/*
-	 * Currently an auto-translated guest will not perform I/O, nor will
-	 * it require PAE page directories below 4GB. Therefore any calls to
-	 * this function are redundant and can be ignored.
-	 */
-
-	if (xen_feature(XENFEAT_auto_translated_physmap))
-		return 0;
-
-	if (unlikely(order > MAX_CONTIG_ORDER))
-		return -ENOMEM;
-
-	memset((void *) vstart, 0, PAGE_SIZE << order);
-
-	spin_lock_irqsave(&xen_reservation_lock, flags);
-
-	/* 1. Zap current PTEs, remembering MFNs. */
-	xen_zap_pfn_range(vstart, order, in_frames, NULL);
-
-	/* 2. Get a new contiguous memory extent. */
-	out_frame = virt_to_pfn(vstart);
-	success = xen_exchange_memory(1UL << order, 0, in_frames,
-				      1, order, &out_frame,
-				      address_bits);
-
-	/* 3. Map the new extent in place of old pages. */
-	if (success)
-		xen_remap_exchanged_ptes(vstart, order, NULL, out_frame);
-	else
-		xen_remap_exchanged_ptes(vstart, order, in_frames, 0);
-
-	spin_unlock_irqrestore(&xen_reservation_lock, flags);
-
-	*dma_handle = virt_to_machine(vstart).maddr;
-	return success ? 0 : -ENOMEM;
-}
-EXPORT_SYMBOL_GPL(xen_create_contiguous_region);
-
-void xen_destroy_contiguous_region(phys_addr_t pstart, unsigned int order)
-{
-	unsigned long *out_frames = discontig_frames, in_frame;
-	unsigned long  flags;
-	int success;
-	unsigned long vstart;
-
-	if (xen_feature(XENFEAT_auto_translated_physmap))
-		return;
-
-	if (unlikely(order > MAX_CONTIG_ORDER))
-		return;
-
-	vstart = (unsigned long)phys_to_virt(pstart);
-	memset((void *) vstart, 0, PAGE_SIZE << order);
-
-	spin_lock_irqsave(&xen_reservation_lock, flags);
-
-	/* 1. Find start MFN of contiguous extent. */
-	in_frame = virt_to_mfn(vstart);
-
-	/* 2. Zap current PTEs. */
-	xen_zap_pfn_range(vstart, order, NULL, out_frames);
-
-	/* 3. Do the exchange for non-contiguous MFNs. */
-	success = xen_exchange_memory(1, order, &in_frame, 1UL << order,
-					0, out_frames, 0);
-
-	/* 4. Map new pages in place of old pages. */
-	if (success)
-		xen_remap_exchanged_ptes(vstart, order, out_frames, 0);
-	else
-		xen_remap_exchanged_ptes(vstart, order, NULL, in_frame);
-
-	spin_unlock_irqrestore(&xen_reservation_lock, flags);
-}
-EXPORT_SYMBOL_GPL(xen_destroy_contiguous_region);
-
-#ifdef CONFIG_XEN_PVHVM
-#ifdef CONFIG_PROC_VMCORE
-/*
- * This function is used in two contexts:
- * - the kdump kernel has to check whether a pfn of the crashed kernel
- *   was a ballooned page. vmcore is using this function to decide
- *   whether to access a pfn of the crashed kernel.
- * - the kexec kernel has to check whether a pfn was ballooned by the
- *   previous kernel. If the pfn is ballooned, handle it properly.
- * Returns 0 if the pfn is not backed by a RAM page, the caller may
- * handle the pfn special in this case.
- */
-static int xen_oldmem_pfn_is_ram(unsigned long pfn)
-{
-	struct xen_hvm_get_mem_type a = {
-		.domid = DOMID_SELF,
-		.pfn = pfn,
-	};
-	int ram;
-
-	if (HYPERVISOR_hvm_op(HVMOP_get_mem_type, &a))
-		return -ENXIO;
-
-	switch (a.mem_type) {
-		case HVMMEM_mmio_dm:
-			ram = 0;
-			break;
-		case HVMMEM_ram_rw:
-		case HVMMEM_ram_ro:
-		default:
-			ram = 1;
-			break;
-	}
-
-	return ram;
-}
-#endif
-
-static void xen_hvm_exit_mmap(struct mm_struct *mm)
-{
-	struct xen_hvm_pagetable_dying a;
-	int rc;
-
-	a.domid = DOMID_SELF;
-	a.gpa = __pa(mm->pgd);
-	rc = HYPERVISOR_hvm_op(HVMOP_pagetable_dying, &a);
-	WARN_ON_ONCE(rc < 0);
-}
-
-static int is_pagetable_dying_supported(void)
-{
-	struct xen_hvm_pagetable_dying a;
-	int rc = 0;
-
-	a.domid = DOMID_SELF;
-	a.gpa = 0x00;
-	rc = HYPERVISOR_hvm_op(HVMOP_pagetable_dying, &a);
-	if (rc < 0) {
-		printk(KERN_DEBUG "HVMOP_pagetable_dying not supported\n");
-		return 0;
-	}
-	return 1;
-}
-
-void __init xen_hvm_init_mmu_ops(void)
-{
-	if (is_pagetable_dying_supported())
-		pv_mmu_ops.exit_mmap = xen_hvm_exit_mmap;
-#ifdef CONFIG_PROC_VMCORE
-	register_oldmem_pfn_is_ram(&xen_oldmem_pfn_is_ram);
-#endif
-}
-#endif
 
 #define REMAP_BATCH_SIZE 16
 
@@ -2973,7 +2681,6 @@ int xen_remap_domain_gfn_array(struct vm_area_struct *vma,
 	return do_remap_gfn(vma, addr, gfn, nr, err_ptr, prot, domid, pages);
 }
 EXPORT_SYMBOL_GPL(xen_remap_domain_gfn_array);
-
 
 /* Returns: 0 success */
 int xen_unmap_domain_gfn_range(struct vm_area_struct *vma,
