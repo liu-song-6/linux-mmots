@@ -492,28 +492,6 @@ static void raid0_make_request(struct mddev *mddev, struct bio *bio)
 		bio = split;
 	}
 
-<<<<<<< HEAD
-		zone = find_zone(mddev->private, &sector);
-		tmp_dev = map_sector(mddev, zone, sector, &sector);
-		split->bi_bdev = tmp_dev->bdev;
-		split->bi_iter.bi_sector = sector + zone->dev_start +
-			tmp_dev->data_offset;
-
-		if (unlikely((bio_op(split) == REQ_OP_DISCARD) &&
-			 !blk_queue_discard(bdev_get_queue(split->bi_bdev)))) {
-			/* Just ignore it */
-			bio_endio(split);
-		} else {
-			if (mddev->gendisk)
-				trace_block_bio_remap(bdev_get_queue(split->bi_bdev),
-						      split, disk_devt(mddev->gendisk),
-						      bio_sector);
-			mddev_check_writesame(mddev, split);
-			mddev_check_write_zeroes(mddev, split);
-			generic_make_request(split);
-		}
-	} while (split != bio);
-=======
 	zone = find_zone(mddev->private, &sector);
 	tmp_dev = map_sector(mddev, zone, sector, &sector);
 	bio->bi_bdev = tmp_dev->bdev;
@@ -533,7 +511,6 @@ static void raid0_make_request(struct mddev *mddev, struct bio *bio)
 		mddev_check_write_zeroes(mddev, bio);
 		generic_make_request(bio);
 	}
->>>>>>> linux-next/akpm-base
 }
 
 static void raid0_status(struct seq_file *seq, struct mddev *mddev)

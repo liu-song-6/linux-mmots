@@ -973,11 +973,7 @@ int __dax_zero_page_range(struct block_device *bdev,
 		sector_t start_sector = sector + (offset >> 9);
 
 		return blkdev_issue_zeroout(bdev, start_sector,
-<<<<<<< HEAD
-				length >> 9, GFP_NOFS, 0);
-=======
 				size >> 9, GFP_NOFS, 0);
->>>>>>> linux-next/akpm-base
 	} else {
 		pgoff_t pgoff;
 		long rc, id;

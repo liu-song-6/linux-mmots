@@ -725,8 +725,6 @@ static inline void mddev_check_write_zeroes(struct mddev *mddev, struct bio *bio
 	    !bdev_get_queue(bio->bi_bdev)->limits.max_write_zeroes_sectors)
 		mddev->queue->limits.max_write_zeroes_sectors = 0;
 }
-<<<<<<< HEAD
-=======
 
 /* Maximum size of each resync request */
 #define RESYNC_BLOCK_SIZE (64*1024)
@@ -782,5 +780,4 @@ static inline struct page *resync_fetch_page(struct resync_pages *rp,
 	return rp->pages[idx];
 }
 
->>>>>>> linux-next/akpm-base
 #endif /* _MD_MD_H */

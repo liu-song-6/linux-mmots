@@ -275,25 +275,6 @@ static void linear_make_request(struct mddev *mddev, struct bio *bio)
 		bio = split;
 	}
 
-<<<<<<< HEAD
-		split->bi_iter.bi_sector = split->bi_iter.bi_sector -
-			start_sector + data_offset;
-
-		if (unlikely((bio_op(split) == REQ_OP_DISCARD) &&
-			 !blk_queue_discard(bdev_get_queue(split->bi_bdev)))) {
-			/* Just ignore it */
-			bio_endio(split);
-		} else {
-			if (mddev->gendisk)
-				trace_block_bio_remap(bdev_get_queue(split->bi_bdev),
-						      split, disk_devt(mddev->gendisk),
-						      bio_sector);
-			mddev_check_writesame(mddev, split);
-			mddev_check_write_zeroes(mddev, split);
-			generic_make_request(split);
-		}
-	} while (split != bio);
-=======
 	bio->bi_bdev = tmp_dev->rdev->bdev;
 	bio->bi_iter.bi_sector = bio->bi_iter.bi_sector -
 		start_sector + data_offset;
@@ -311,7 +292,6 @@ static void linear_make_request(struct mddev *mddev, struct bio *bio)
 		mddev_check_write_zeroes(mddev, bio);
 		generic_make_request(bio);
 	}
->>>>>>> linux-next/akpm-base
 	return;
 
 out_of_bounds:

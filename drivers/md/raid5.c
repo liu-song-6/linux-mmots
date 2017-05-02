@@ -7372,17 +7372,6 @@ static int raid5_run(struct mddev *mddev)
 		mddev->queue->limits.discard_alignment = stripe;
 		mddev->queue->limits.discard_granularity = stripe;
 
-<<<<<<< HEAD
-		/*
-		 * We use 16-bit counter of active stripes in bi_phys_segments
-		 * (minus one for over-loaded initialization)
-		 */
-		blk_queue_max_hw_sectors(mddev->queue, 0xfffe * STRIPE_SECTORS);
-		blk_queue_max_discard_sectors(mddev->queue,
-					      0xfffe * STRIPE_SECTORS);
-
-=======
->>>>>>> linux-next/akpm-base
 		blk_queue_max_write_same_sectors(mddev->queue, 0);
 		blk_queue_max_write_zeroes_sectors(mddev->queue, 0);
 

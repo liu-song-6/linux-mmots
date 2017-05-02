@@ -1563,37 +1563,6 @@ static bool dm_table_supports_write_zeroes(struct dm_table *t)
 	return true;
 }
 
-<<<<<<< HEAD
-static int device_not_write_zeroes_capable(struct dm_target *ti, struct dm_dev *dev,
-					   sector_t start, sector_t len, void *data)
-{
-	struct request_queue *q = bdev_get_queue(dev->bdev);
-
-	return q && !q->limits.max_write_zeroes_sectors;
-}
-
-static bool dm_table_supports_write_zeroes(struct dm_table *t)
-{
-	struct dm_target *ti;
-	unsigned i = 0;
-
-	while (i < dm_table_get_num_targets(t)) {
-		ti = dm_table_get_target(t, i++);
-
-		if (!ti->num_write_zeroes_bios)
-			return false;
-
-		if (!ti->type->iterate_devices ||
-		    ti->type->iterate_devices(ti, device_not_write_zeroes_capable, NULL))
-			return false;
-	}
-
-	return true;
-}
-
-=======
->>>>>>> linux-next/akpm-base
-
 static int device_discard_capable(struct dm_target *ti, struct dm_dev *dev,
 				  sector_t start, sector_t len, void *data)
 {

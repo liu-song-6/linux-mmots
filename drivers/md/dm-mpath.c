@@ -1485,12 +1485,7 @@ static int multipath_end_io(struct dm_target *ti, struct request *clone,
 	if (error && !noretry_error(error)) {
 		struct multipath *m = ti->private;
 
-<<<<<<< HEAD
-	if (!error)
-		return 0;	/* I/O complete */
-=======
 		r = DM_ENDIO_REQUEUE;
->>>>>>> linux-next/akpm-base
 
 		if (pgpath)
 			fail_path(pgpath);

@@ -298,11 +298,7 @@ static void dm_done(struct request *clone, int error, bool mapped)
 			r = rq_end_io(tio->ti, clone, error, &tio->info);
 	}
 
-<<<<<<< HEAD
-	if (unlikely(r == -EREMOTEIO)) {
-=======
 	if (unlikely(error == -EREMOTEIO)) {
->>>>>>> linux-next/akpm-base
 		if (req_op(clone) == REQ_OP_WRITE_SAME &&
 		    !clone->q->limits.max_write_same_sectors)
 			disable_write_same(tio->md);
