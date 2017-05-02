@@ -425,10 +425,6 @@ static int __write_machine_check(struct kvm_vcpu *vcpu,
 	/* Extended save area */
 	rc = read_guest_lc(vcpu, __LC_MCESAD, &ext_sa_addr,
 			   sizeof(unsigned long));
-<<<<<<< HEAD
-	/* Only bits 0-53 are used for address formation */
-	ext_sa_addr &= ~0x3ffUL;
-=======
 	/* Only bits 0 through 63-LC are used for address formation */
 	lc = ext_sa_addr & MCESA_LC_MASK;
 	if (test_kvm_facility(vcpu->kvm, 133)) {
@@ -451,7 +447,6 @@ static int __write_machine_check(struct kvm_vcpu *vcpu,
 		ext_sa_addr &= ~0x3ffUL;
 	}
 
->>>>>>> linux-next/akpm-base
 	if (!rc && mci.vr && ext_sa_addr && test_kvm_facility(vcpu->kvm, 129)) {
 		if (write_guest_abs(vcpu, ext_sa_addr, vcpu->run->s.regs.vrs,
 				    512))

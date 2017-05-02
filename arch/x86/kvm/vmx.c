@@ -3442,17 +3442,8 @@ static int hardware_enable(void)
 		/* enable and lock */
 		wrmsrl(MSR_IA32_FEATURE_CONTROL, old | test_bits);
 	}
-<<<<<<< HEAD
-	cr4_set_bits(X86_CR4_VMXE);
-
-	if (vmm_exclusive) {
-		kvm_cpu_vmxon(phys_addr);
-		ept_sync_global();
-	}
-=======
 	kvm_cpu_vmxon(phys_addr);
 	ept_sync_global();
->>>>>>> linux-next/akpm-base
 
 	return 0;
 }

@@ -513,8 +513,6 @@ static void cntvct_read_handler(unsigned int esr, struct pt_regs *regs)
 	regs->pc += 4;
 }
 
-<<<<<<< HEAD
-=======
 static void cntfrq_read_handler(unsigned int esr, struct pt_regs *regs)
 {
 	int rt = (esr & ESR_ELx_SYS64_ISS_RT_MASK) >> ESR_ELx_SYS64_ISS_RT_SHIFT;
@@ -523,7 +521,6 @@ static void cntfrq_read_handler(unsigned int esr, struct pt_regs *regs)
 	regs->pc += 4;
 }
 
->>>>>>> linux-next/akpm-base
 struct sys64_hook {
 	unsigned int esr_mask;
 	unsigned int esr_val;
@@ -548,15 +545,12 @@ static struct sys64_hook sys64_hooks[] = {
 		.esr_val = ESR_ELx_SYS64_ISS_SYS_CNTVCT,
 		.handler = cntvct_read_handler,
 	},
-<<<<<<< HEAD
-=======
 	{
 		/* Trap read access to CNTFRQ_EL0 */
 		.esr_mask = ESR_ELx_SYS64_ISS_SYS_OP_MASK,
 		.esr_val = ESR_ELx_SYS64_ISS_SYS_CNTFRQ,
 		.handler = cntfrq_read_handler,
 	},
->>>>>>> linux-next/akpm-base
 	{},
 };
 

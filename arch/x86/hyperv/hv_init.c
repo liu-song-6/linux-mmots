@@ -27,10 +27,6 @@
 #include <linux/clockchips.h>
 #include <linux/hyperv.h>
 
-<<<<<<< HEAD
-
-=======
->>>>>>> linux-next/akpm-base
 #ifdef CONFIG_HYPERV_TSCPAGE
 
 static struct ms_hyperv_tsc_page *tsc_pg;

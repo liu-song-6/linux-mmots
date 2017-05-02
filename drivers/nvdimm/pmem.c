@@ -245,14 +245,6 @@ static void pmem_release_queue(void *q)
 }
 
 static void pmem_freeze_queue(void *q)
-<<<<<<< HEAD
-{
-	blk_freeze_queue_start(q);
-}
-
-static void pmem_release_disk(void *disk)
-=======
->>>>>>> linux-next/akpm-base
 {
 	blk_freeze_queue_start(q);
 }

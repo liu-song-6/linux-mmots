@@ -57,15 +57,8 @@ int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src);
 #define TIF_NEED_RESCHED	2	/* rescheduling necessary */
 #define TIF_UPROBE		3	/* breakpointed or single-stepping */
 #define TIF_GUARDED_STORAGE	4	/* load guarded storage control block */
-<<<<<<< HEAD
-#define TIF_SYSCALL_TRACE	8	/* syscall trace active */
-#define TIF_SYSCALL_AUDIT	9	/* syscall auditing active */
-#define TIF_SECCOMP		10	/* secure computing */
-#define TIF_SYSCALL_TRACEPOINT	11	/* syscall tracepoint instrumentation */
-=======
 #define TIF_PATCH_PENDING	5	/* pending live patching update */
 
->>>>>>> linux-next/akpm-base
 #define TIF_31BIT		16	/* 32bit process */
 #define TIF_MEMDIE		17	/* is terminating due to OOM killer */
 #define TIF_RESTORE_SIGMASK	18	/* restore signal mask in do_signal() */
@@ -93,12 +86,5 @@ int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src);
 #define _TIF_SYSCALL_AUDIT	_BITUL(TIF_SYSCALL_AUDIT)
 #define _TIF_SECCOMP		_BITUL(TIF_SECCOMP)
 #define _TIF_SYSCALL_TRACEPOINT	_BITUL(TIF_SYSCALL_TRACEPOINT)
-<<<<<<< HEAD
-#define _TIF_UPROBE		_BITUL(TIF_UPROBE)
-#define _TIF_31BIT		_BITUL(TIF_31BIT)
-#define _TIF_SINGLE_STEP	_BITUL(TIF_SINGLE_STEP)
-#define _TIF_GUARDED_STORAGE	_BITUL(TIF_GUARDED_STORAGE)
-=======
->>>>>>> linux-next/akpm-base
 
 #endif /* _ASM_THREAD_INFO_H */

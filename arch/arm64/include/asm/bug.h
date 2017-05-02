@@ -59,11 +59,7 @@ _BUGVERBOSE_LOCATION(__FILE__, __LINE__)		\
 	unreachable();					\
 } while (0)
 
-<<<<<<< HEAD
-#define __WARN_FLAGS(flags) _BUG_FLAGS(BUGFLAG_WARNING|(flags))
-=======
 #define __WARN_FLAGS(flags) __BUG_FLAGS(BUGFLAG_WARNING|(flags))
->>>>>>> linux-next/akpm-base
 
 #define HAVE_ARCH_BUG
 

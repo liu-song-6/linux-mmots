@@ -1405,11 +1405,7 @@ static kprobe_opcode_t *_kprobe_addr(kprobe_opcode_t *addr,
 		goto invalid;
 
 	if (symbol_name) {
-<<<<<<< HEAD
-		kprobe_lookup_name(symbol_name, addr);
-=======
 		addr = kprobe_lookup_name(symbol_name, offset);
->>>>>>> linux-next/akpm-base
 		if (!addr)
 			return ERR_PTR(-ENOENT);
 	}

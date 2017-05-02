@@ -47,11 +47,7 @@ STACK_SIZE  = 1 << STACK_SHIFT
 STACK_INIT = STACK_SIZE - STACK_FRAME_OVERHEAD - __PT_SIZE
 
 _TIF_WORK	= (_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_NEED_RESCHED | \
-<<<<<<< HEAD
-		   _TIF_UPROBE | _TIF_GUARDED_STORAGE)
-=======
 		   _TIF_UPROBE | _TIF_GUARDED_STORAGE | _TIF_PATCH_PENDING)
->>>>>>> linux-next/akpm-base
 _TIF_TRACE	= (_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT | _TIF_SECCOMP | \
 		   _TIF_SYSCALL_TRACEPOINT)
 _CIF_WORK	= (_CIF_MCCK_PENDING | _CIF_ASCE_PRIMARY | \
@@ -425,8 +421,6 @@ ENTRY(system_call)
 	larl	%r14,.Lsysc_return
 	jg	gs_load_bc_cb
 
-<<<<<<< HEAD
-=======
 # _TIF_PATCH_PENDING is set, call klp_update_patch_state
 #
 #ifdef CONFIG_LIVEPATCH
@@ -436,7 +430,6 @@ ENTRY(system_call)
 	jg	klp_update_patch_state
 #endif
 
->>>>>>> linux-next/akpm-base
 #
 # _PIF_PER_TRAP is set, call do_per_trap
 #

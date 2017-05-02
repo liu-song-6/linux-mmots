@@ -69,10 +69,7 @@ config MIPS
 	select HANDLE_DOMAIN_IRQ
 	select HAVE_EXIT_THREAD
 	select HAVE_REGS_AND_STACK_ACCESS_API
-<<<<<<< HEAD
-=======
 	select HAVE_COPY_THREAD_TLS
->>>>>>> linux-next/akpm-base
 
 menu "Machine selection"
 
