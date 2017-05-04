@@ -6882,10 +6882,6 @@ ftrace_trace_snapshot_callback(struct trace_array *tr, struct ftrace_hash *hash,
 		goto out;
 
 	ret = register_ftrace_function_probe(glob, tr, ops, count);
-<<<<<<< HEAD
-
-=======
->>>>>>> linux-next/akpm-base
  out:
 	return ret < 0 ? ret : 0;
 }

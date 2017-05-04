@@ -94,13 +94,8 @@ echo "      hugetlb regression testing."
 
 echo "-------------------"
 echo "running userfaultfd"
-<<<<<<< HEAD
-echo "--------------------"
-./userfaultfd anon 128 32
-=======
 echo "-------------------"
 ./userfaultfd 128 32
->>>>>>> linux-next/akpm-base
 if [ $? -ne 0 ]; then
 	echo "[FAIL]"
 	exitcode=1
@@ -110,15 +105,9 @@ fi
 
 echo "---------------------------"
 echo "running userfaultfd_hugetlb"
-<<<<<<< HEAD
-echo "----------------------------"
-# 258MB total huge pages == 128MB src and 128MB dst
-./userfaultfd hugetlb 128 32 $mnt/ufd_test_file
-=======
 echo "---------------------------"
 # 256MB total huge pages == 128MB src and 128MB dst
 ./userfaultfd_hugetlb 128 32 $mnt/ufd_test_file
->>>>>>> linux-next/akpm-base
 if [ $? -ne 0 ]; then
 	echo "[FAIL]"
 	exitcode=1
@@ -129,13 +118,8 @@ rm -f $mnt/ufd_test_file
 
 echo "-------------------------"
 echo "running userfaultfd_shmem"
-<<<<<<< HEAD
-echo "----------------------------"
-./userfaultfd shmem 128 32
-=======
 echo "-------------------------"
 ./userfaultfd_shmem 128 32
->>>>>>> linux-next/akpm-base
 if [ $? -ne 0 ]; then
 	echo "[FAIL]"
 	exitcode=1
