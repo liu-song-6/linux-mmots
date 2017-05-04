@@ -1045,22 +1045,13 @@ struct task_struct {
 	/* A live task holds one reference: */
 	atomic_t			stack_refcount;
 #endif
-<<<<<<< HEAD
-#ifdef CONFIG_LIVEPATCH
-	int patch_state;
-#endif
-=======
->>>>>>> linux-next/akpm-base
 #ifdef CONFIG_SECURITY
 	/* Used by LSM modules for access restriction: */
 	void				*security;
 #endif
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_LIVEPATCH
 	int patch_state;
 #endif
->>>>>>> linux-next/akpm-base
 	/* CPU-specific state of this task: */
 	struct thread_struct		thread;
 

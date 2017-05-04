@@ -237,45 +237,11 @@ static struct page *get_a_page(struct receive_queue *rq, gfp_t gfp_mask)
 
 static void virtqueue_napi_schedule(struct napi_struct *napi,
 				    struct virtqueue *vq)
-<<<<<<< HEAD
 {
 	if (napi_schedule_prep(napi)) {
 		virtqueue_disable_cb(vq);
 		__napi_schedule(napi);
 	}
-}
-
-static void virtqueue_napi_complete(struct napi_struct *napi,
-				    struct virtqueue *vq, int processed)
-{
-	int opaque;
-
-	opaque = virtqueue_enable_cb_prepare(vq);
-	if (napi_complete_done(napi, processed) &&
-	    unlikely(virtqueue_poll(vq, opaque)))
-		virtqueue_napi_schedule(napi, vq);
-}
-
-static void skb_xmit_done(struct virtqueue *vq)
-{
-	struct virtnet_info *vi = vq->vdev->priv;
-	struct napi_struct *napi = &vi->sq[vq2txq(vq)].napi;
-
-	/* Suppress further interrupts. */
-	virtqueue_disable_cb(vq);
-
-	if (napi->weight)
-		virtqueue_napi_schedule(napi, vq);
-	else
-		/* We were probably waiting for more output buffers. */
-		netif_wake_subqueue(vi->dev, vq2txq(vq));
-=======
-{
-	if (napi_schedule_prep(napi)) {
-		virtqueue_disable_cb(vq);
-		__napi_schedule(napi);
-	}
->>>>>>> linux-next/akpm-base
 }
 
 static void virtqueue_napi_complete(struct napi_struct *napi,

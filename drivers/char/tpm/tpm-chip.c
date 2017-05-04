@@ -218,9 +218,6 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
 	cdev_init(&chip->cdevs, &tpmrm_fops);
 	chip->cdev.owner = THIS_MODULE;
 	chip->cdevs.owner = THIS_MODULE;
-<<<<<<< HEAD
-	chip->cdev.kobj.parent = &chip->dev.kobj;
-	chip->cdevs.kobj.parent = &chip->devs.kobj;
 
 	chip->work_space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!chip->work_space.context_buf) {
@@ -233,20 +230,6 @@ struct tpm_chip *tpm_chip_alloc(struct device *pdev,
 		goto out;
 	}
 
-=======
-
-	chip->work_space.context_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
-	if (!chip->work_space.context_buf) {
-		rc = -ENOMEM;
-		goto out;
-	}
-	chip->work_space.session_buf = kzalloc(PAGE_SIZE, GFP_KERNEL);
-	if (!chip->work_space.session_buf) {
-		rc = -ENOMEM;
-		goto out;
-	}
-
->>>>>>> linux-next/akpm-base
 	chip->locality = -1;
 	return chip;
 
@@ -462,15 +445,8 @@ void tpm_chip_unregister(struct tpm_chip *chip)
 {
 	tpm_del_legacy_sysfs(chip);
 	tpm_bios_log_teardown(chip);
-<<<<<<< HEAD
-	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-		cdev_del(&chip->cdevs);
-		device_del(&chip->devs);
-	}
-=======
 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
 		cdev_device_del(&chip->cdevs, &chip->devs);
->>>>>>> linux-next/akpm-base
 	tpm_del_char_device(chip);
 }
 EXPORT_SYMBOL_GPL(tpm_chip_unregister);

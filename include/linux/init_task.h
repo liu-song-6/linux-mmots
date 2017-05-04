@@ -303,13 +303,8 @@ extern struct cred init_cred;
 	INIT_VTIME(tsk)							\
 	INIT_NUMA_BALANCING(tsk)					\
 	INIT_KASAN(tsk)							\
-<<<<<<< HEAD
-	INIT_LIVEPATCH(tsk)						\
-	INIT_TASK_SECURITY						\
-=======
 	INIT_TASK_SECURITY						\
 	INIT_LIVEPATCH(tsk)						\
->>>>>>> linux-next/akpm-base
 }
 
 

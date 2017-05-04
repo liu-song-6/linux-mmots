@@ -2037,10 +2037,7 @@ static int btusb_setup_intel_new(struct hci_dev *hdev)
 	switch (ver.hw_variant) {
 	case 0x0b:	/* SfP */
 	case 0x0c:	/* WsP */
-<<<<<<< HEAD
-=======
 	case 0x11:	/* JfP */
->>>>>>> linux-next/akpm-base
 	case 0x12:	/* ThP */
 		break;
 	default:

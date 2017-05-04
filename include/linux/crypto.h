@@ -124,11 +124,6 @@
 /*
  * Miscellaneous stuff.
  */
-<<<<<<< HEAD
-#define CRYPTO_MAX_ALG_NAME		128
-=======
->>>>>>> linux-next/akpm-base
-
 /*
  * The macro CRYPTO_MINALIGN_ATTR (along with the void * type in the actual
  * declaration) is used to ensure that the crypto_tfm context structure is

@@ -975,11 +975,7 @@ static int __pci_enable_msix(struct pci_dev *dev, struct msix_entry *entries,
 	return msix_capability_init(dev, entries, nvec, affd);
 }
 
-<<<<<<< HEAD
-void pci_msix_shutdown(struct pci_dev *dev)
-=======
 static void pci_msix_shutdown(struct pci_dev *dev)
->>>>>>> linux-next/akpm-base
 {
 	struct msi_desc *entry;
 

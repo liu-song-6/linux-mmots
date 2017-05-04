@@ -198,12 +198,8 @@ void serdev_device_set_flow_control(struct serdev_device *, bool);
 void serdev_device_wait_until_sent(struct serdev_device *, long);
 int serdev_device_get_tiocm(struct serdev_device *);
 int serdev_device_set_tiocm(struct serdev_device *, int, int);
-<<<<<<< HEAD
-int serdev_device_write_buf(struct serdev_device *, const unsigned char *, size_t);
-=======
 void serdev_device_write_wakeup(struct serdev_device *);
 int serdev_device_write(struct serdev_device *, const unsigned char *, size_t, unsigned long);
->>>>>>> linux-next/akpm-base
 void serdev_device_write_flush(struct serdev_device *);
 int serdev_device_write_room(struct serdev_device *);
 
@@ -249,12 +245,8 @@ static inline int serdev_device_set_tiocm(struct serdev_device *serdev, int set,
 {
 	return -ENOTSUPP;
 }
-<<<<<<< HEAD
-static inline int serdev_device_write_buf(struct serdev_device *sdev, const unsigned char *buf, size_t count)
-=======
 static inline int serdev_device_write(struct serdev_device *sdev, const unsigned char *buf,
 				      size_t count, unsigned long timeout)
->>>>>>> linux-next/akpm-base
 {
 	return -ENODEV;
 }
