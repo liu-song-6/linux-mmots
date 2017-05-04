@@ -93,6 +93,13 @@
 	status = "okay";
 };
 
+<<<<<<< HEAD
+=======
+&rtc {
+	status = "okay";
+};
+
+>>>>>>> linux-next/akpm-base
 &usart1 {
 	pinctrl-0 = <&usart1_pins_a>;
 	pinctrl-names = "default";

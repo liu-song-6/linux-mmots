@@ -75,8 +75,6 @@ static void hv_signal_on_write(u32 old_write, struct vmbus_channel *channel)
 	 */
 	if (old_write == READ_ONCE(rbi->ring_buffer->read_index))
 		vmbus_setevent(channel);
-
-	return;
 }
 
 /* Get the next write location for the specified ring buffer. */
@@ -210,6 +208,7 @@ void hv_ringbuffer_get_debuginfo(const struct hv_ring_buffer_info *ring_info,
 			ring_info->ring_buffer->interrupt_mask;
 	}
 }
+EXPORT_SYMBOL_GPL(hv_ringbuffer_get_debuginfo);
 
 /* Initialize the ring buffer. */
 int hv_ringbuffer_init(struct hv_ring_buffer_info *ring_info,
@@ -269,14 +268,13 @@ void hv_ringbuffer_cleanup(struct hv_ring_buffer_info *ring_info)
 int hv_ringbuffer_write(struct vmbus_channel *channel,
 			const struct kvec *kv_list, u32 kv_count)
 {
-	int i = 0;
+	int i;
 	u32 bytes_avail_towrite;
-	u32 totalbytes_towrite = 0;
-
+	u32 totalbytes_towrite = sizeof(u64);
 	u32 next_write_location;
 	u32 old_write;
-	u64 prev_indices = 0;
-	unsigned long flags = 0;
+	u64 prev_indices;
+	unsigned long flags;
 	struct hv_ring_buffer_info *outring_info = &channel->outbound;
 
 	if (channel->rescind)
@@ -284,8 +282,6 @@ int hv_ringbuffer_write(struct vmbus_channel *channel,
 
 	for (i = 0; i < kv_count; i++)
 		totalbytes_towrite += kv_list[i].iov_len;
-
-	totalbytes_towrite += sizeof(u64);
 
 	spin_lock_irqsave(&outring_info->ring_lock, flags);
 
@@ -349,17 +345,15 @@ int hv_ringbuffer_read(struct vmbus_channel *channel,
 		       u64 *requestid, bool raw)
 {
 	u32 bytes_avail_toread;
-	u32 next_read_location = 0;
+	u32 next_read_location;
 	u64 prev_indices = 0;
 	struct vmpacket_descriptor desc;
 	u32 offset;
 	u32 packetlen;
-	int ret = 0;
 	struct hv_ring_buffer_info *inring_info = &channel->inbound;
 
 	if (buflen <= 0)
 		return -EINVAL;
-
 
 	*buffer_actual_len = 0;
 	*requestid = 0;
@@ -371,7 +365,7 @@ int hv_ringbuffer_read(struct vmbus_channel *channel,
 		 * No error is set when there is even no header, drivers are
 		 * supposed to analyze buffer_actual_len.
 		 */
-		return ret;
+		return 0;
 	}
 
 	init_cached_read_index(inring_info);
@@ -417,7 +411,7 @@ int hv_ringbuffer_read(struct vmbus_channel *channel,
 
 	hv_signal_on_read(channel);
 
-	return ret;
+	return 0;
 }
 
 /*
@@ -501,4 +495,89 @@ void hv_pkt_iter_close(struct vmbus_channel *channel)
 
 	hv_signal_on_read(channel);
 }
+<<<<<<< HEAD
+
+/*
+ * Determine number of bytes available in ring buffer after
+ * the current iterator (priv_read_index) location.
+ *
+ * This is similar to hv_get_bytes_to_read but with private
+ * read index instead.
+ */
+static u32 hv_pkt_iter_avail(const struct hv_ring_buffer_info *rbi)
+{
+	u32 priv_read_loc = rbi->priv_read_index;
+	u32 write_loc = READ_ONCE(rbi->ring_buffer->write_index);
+
+	if (write_loc >= priv_read_loc)
+		return write_loc - priv_read_loc;
+	else
+		return (rbi->ring_datasize - priv_read_loc) + write_loc;
+}
+
+/*
+ * Get first vmbus packet from ring buffer after read_index
+ *
+ * If ring buffer is empty, returns NULL and no other action needed.
+ */
+struct vmpacket_descriptor *hv_pkt_iter_first(struct vmbus_channel *channel)
+{
+	struct hv_ring_buffer_info *rbi = &channel->inbound;
+
+	/* set state for later hv_signal_on_read() */
+	init_cached_read_index(rbi);
+
+	if (hv_pkt_iter_avail(rbi) < sizeof(struct vmpacket_descriptor))
+		return NULL;
+
+	return hv_get_ring_buffer(rbi) + rbi->priv_read_index;
+}
+EXPORT_SYMBOL_GPL(hv_pkt_iter_first);
+
+/*
+ * Get next vmbus packet from ring buffer.
+ *
+ * Advances the current location (priv_read_index) and checks for more
+ * data. If the end of the ring buffer is reached, then return NULL.
+ */
+struct vmpacket_descriptor *
+__hv_pkt_iter_next(struct vmbus_channel *channel,
+		   const struct vmpacket_descriptor *desc)
+{
+	struct hv_ring_buffer_info *rbi = &channel->inbound;
+	u32 packetlen = desc->len8 << 3;
+	u32 dsize = rbi->ring_datasize;
+
+	/* bump offset to next potential packet */
+	rbi->priv_read_index += packetlen + VMBUS_PKT_TRAILER;
+	if (rbi->priv_read_index >= dsize)
+		rbi->priv_read_index -= dsize;
+
+	/* more data? */
+	if (hv_pkt_iter_avail(rbi) < sizeof(struct vmpacket_descriptor))
+		return NULL;
+	else
+		return hv_get_ring_buffer(rbi) + rbi->priv_read_index;
+}
+EXPORT_SYMBOL_GPL(__hv_pkt_iter_next);
+
+/*
+ * Update host ring buffer after iterating over packets.
+ */
+void hv_pkt_iter_close(struct vmbus_channel *channel)
+{
+	struct hv_ring_buffer_info *rbi = &channel->inbound;
+
+	/*
+	 * Make sure all reads are done before we update the read index since
+	 * the writer may start writing to the read area once the read index
+	 * is updated.
+	 */
+	virt_rmb();
+	rbi->ring_buffer->read_index = rbi->priv_read_index;
+
+	hv_signal_on_read(channel);
+}
+=======
+>>>>>>> linux-next/akpm-base
 EXPORT_SYMBOL_GPL(hv_pkt_iter_close);

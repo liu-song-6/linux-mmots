@@ -430,6 +430,15 @@ ENTRY(system_call)
 	jg	klp_update_patch_state
 #endif
 
+# _TIF_PATCH_PENDING is set, call klp_update_patch_state
+#
+#ifdef CONFIG_LIVEPATCH
+.Lsysc_patch_pending:
+	lg	%r2,__LC_CURRENT	# pass pointer to task struct
+	larl	%r14,.Lsysc_return
+	jg	klp_update_patch_state
+#endif
+
 #
 # _PIF_PER_TRAP is set, call do_per_trap
 #

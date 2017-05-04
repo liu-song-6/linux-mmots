@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/uaccess.h>
+#include <uapi/linux/crypto.h>
 
 /*
  * Autoloaded crypto modules should only use a prefixed name to avoid allowing
@@ -123,7 +124,10 @@
 /*
  * Miscellaneous stuff.
  */
+<<<<<<< HEAD
 #define CRYPTO_MAX_ALG_NAME		128
+=======
+>>>>>>> linux-next/akpm-base
 
 /*
  * The macro CRYPTO_MINALIGN_ATTR (along with the void * type in the actual

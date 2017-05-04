@@ -1662,7 +1662,11 @@ again:
 				goto out;
 			}
 			ret = nla_parse_nested(socks, NBD_SOCK_MAX, attr,
+<<<<<<< HEAD
 					       nbd_sock_policy, info->extack);
+=======
+					       nbd_sock_policy, NULL);
+>>>>>>> linux-next/akpm-base
 			if (ret != 0) {
 				printk(KERN_ERR "nbd: error processing sock list\n");
 				ret = -EINVAL;
@@ -1818,7 +1822,11 @@ static int nbd_genl_reconfigure(struct sk_buff *skb, struct genl_info *info)
 				goto out;
 			}
 			ret = nla_parse_nested(socks, NBD_SOCK_MAX, attr,
+<<<<<<< HEAD
 					       nbd_sock_policy, info->extack);
+=======
+					       nbd_sock_policy, NULL);
+>>>>>>> linux-next/akpm-base
 			if (ret != 0) {
 				printk(KERN_ERR "nbd: error processing sock list\n");
 				ret = -EINVAL;
