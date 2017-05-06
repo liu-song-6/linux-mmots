@@ -31,7 +31,6 @@
 #define __KVM_HAVE_ARCH_INTC_INITIALIZED
 
 #define KVM_USER_MEM_SLOTS 512
-#define KVM_COALESCED_MMIO_PAGE_OFFSET 1
 #define KVM_HALT_POLL_NS_DEFAULT 500000
 
 #include <kvm/arm_vgic.h>
@@ -360,13 +359,6 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 	 * HYP code.
 	 */
 	__kvm_call_hyp((void *)pgd_ptr, hyp_stack_ptr, vector_ptr);
-}
-
-void __kvm_hyp_teardown(void);
-static inline void __cpu_reset_hyp_mode(unsigned long vector_ptr,
-					phys_addr_t phys_idmap_start)
-{
-	kvm_call_hyp(__kvm_hyp_teardown, phys_idmap_start);
 }
 
 static inline void kvm_arch_hardware_unsetup(void) {}

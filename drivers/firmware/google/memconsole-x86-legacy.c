@@ -20,6 +20,10 @@
 #include <linux/dmi.h>
 #include <linux/mm.h>
 #include <asm/bios_ebda.h>
+<<<<<<< HEAD
+=======
+#include <asm/e820/api.h>
+>>>>>>> linux-next/akpm-base
 #include <linux/acpi.h>
 
 #include "memconsole.h"

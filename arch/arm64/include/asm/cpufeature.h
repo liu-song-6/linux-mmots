@@ -145,7 +145,7 @@ static inline void cpus_set_cap(unsigned int num)
 			num, ARM64_NCAPS);
 	} else {
 		__set_bit(num, cpu_hwcaps);
-		static_branch_enable(&cpu_hwcap_keys[num]);
+		static_branch_enable_cpuslocked(&cpu_hwcap_keys[num]);
 	}
 }
 
@@ -223,10 +223,11 @@ void enable_cpu_capabilities(const struct arm64_cpu_capabilities *caps);
 void check_local_cpu_capabilities(void);
 
 void update_cpu_errata_workarounds(void);
+void update_cpu_errata_workarounds_cpuslocked(void);
 void __init enable_errata_workarounds(void);
 void verify_local_cpu_errata_workarounds(void);
 
-u64 read_system_reg(u32 id);
+u64 read_sanitised_ftr_reg(u32 id);
 
 static inline bool cpu_supports_mixed_endian_el0(void)
 {
@@ -240,7 +241,7 @@ static inline bool system_supports_32bit_el0(void)
 
 static inline bool system_supports_mixed_endian_el0(void)
 {
-	return id_aa64mmfr0_mixed_endian_el0(read_system_reg(SYS_ID_AA64MMFR0_EL1));
+	return id_aa64mmfr0_mixed_endian_el0(read_sanitised_ftr_reg(SYS_ID_AA64MMFR0_EL1));
 }
 
 static inline bool system_supports_fpsimd(void)
