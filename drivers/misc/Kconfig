@@ -489,8 +489,6 @@ config ASPEED_LPC_CTRL
 	  Control Aspeed ast2400/2500 HOST LPC to BMC mappings through
 	  ioctl()s, the driver also provides a read/write interface to a BMC ram
 	  region where the host LPC read/write region can be buffered.
-<<<<<<< HEAD
-=======
 
 config PCI_ENDPOINT_TEST
 	depends on PCI
@@ -498,7 +496,6 @@ config PCI_ENDPOINT_TEST
 	---help---
            Enable this configuration option to enable the host side test driver
            for PCI Endpoint.
->>>>>>> linux-next/akpm-base
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

@@ -282,17 +282,6 @@ static int tpm_add_char_device(struct tpm_chip *chip)
 		return rc;
 	}
 
-<<<<<<< HEAD
-	if (chip->flags & TPM_CHIP_FLAG_TPM2) {
-		rc = cdev_device_add(&chip->cdevs, &chip->devs);
-		if (rc) {
-			dev_err(&chip->devs,
-				"unable to cdev_device_add() %s, major %d, minor %d, err=%d\n",
-				dev_name(&chip->devs), MAJOR(chip->devs.devt),
-				MINOR(chip->devs.devt), rc);
-			return rc;
-		}
-=======
 	if (chip->flags & TPM_CHIP_FLAG_TPM2)
 		rc = cdev_device_add(&chip->cdevs, &chip->devs);
 	if (rc) {
@@ -301,7 +290,6 @@ static int tpm_add_char_device(struct tpm_chip *chip)
 			dev_name(&chip->devs), MAJOR(chip->devs.devt),
 			MINOR(chip->devs.devt), rc);
 		return rc;
->>>>>>> linux-next/akpm-base
 	}
 
 	/* Make the chip available. */
