@@ -87,11 +87,6 @@ static inline void *__vmalloc_node_flags_caller(unsigned long size, int node, gf
 	return __vmalloc_node_flags(size, node, flags);
 }
 #else
-/*
- * We really want to have this inlined due to caller tracking. This
- * function is used by the highlevel vmalloc apis and so we want to track
- * their callers and inlining will achieve that.
- */
 extern void *__vmalloc_node_flags_caller(unsigned long size,
 					int node, gfp_t flags, void* caller);
 #endif
