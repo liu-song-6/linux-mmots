@@ -1817,7 +1817,8 @@ static inline void *__vmalloc_node_flags(unsigned long size,
 }
 
 
-void *__vmalloc_node_flags_caller(unsigned long size, int node, gfp_t flags, void *caller)
+void *__vmalloc_node_flags_caller(unsigned long size, int node, gfp_t flags,
+				  void *caller)
 {
 	return __vmalloc_node(size, 1, flags, PAGE_KERNEL, node, caller);
 }
