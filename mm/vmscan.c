@@ -1472,10 +1472,10 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	unsigned long scan, total_scan, nr_pages;
 	LIST_HEAD(pages_skipped);
 
-	for (total_scan = scan = 0; scan < nr_to_scan &&
-					nr_taken < nr_to_scan &&
-					!list_empty(src);
-					total_scan++) {
+	scan = 0;
+	for (total_scan = 0;
+	     scan < nr_to_scan && nr_taken < nr_to_scan && !list_empty(src);
+	     total_scan++) {
 		struct page *page;
 
 		page = lru_to_page(src);
@@ -1490,10 +1490,10 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 		}
 
 		/*
-		 * Do not count skipped pages because it makes the function to
-		 * return with none isolated pages if the LRU mostly contains
-		 * ineligible pages so that VM cannot reclaim any pages and
-		 * trigger premature OOM.
+		 * Do not count skipped pages because that makes the function
+		 * return with no isolated pages if the LRU mostly contains
+		 * ineligible pages.  This causes the VM to not reclaim any
+		 * pages, triggering a premature OOM.
 		 */
 		scan++;
 		switch (__isolate_lru_page(page, mode)) {
