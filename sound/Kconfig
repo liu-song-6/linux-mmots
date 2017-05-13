@@ -54,7 +54,7 @@ config SOUND_OSS_CORE_PRECLAIM
 
 	  If unsure, say Y.
 
-source "sound/oss/dmasound/Kconfig"
+# source "sound/oss/dmasound/Kconfig"
 
 if !M68K && !UML
 
