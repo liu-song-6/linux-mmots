@@ -202,7 +202,7 @@ static int nand_ooblayout_free_lp_hamming(struct mtd_info *mtd, int section,
 	return 0;
 }
 
-const struct mtd_ooblayout_ops nand_ooblayout_lp_hamming_ops = {
+static const struct mtd_ooblayout_ops nand_ooblayout_lp_hamming_ops = {
 	.ecc = nand_ooblayout_ecc_lp_hamming,
 	.free = nand_ooblayout_free_lp_hamming,
 };
@@ -1421,7 +1421,10 @@ static int nand_check_erased_buf(void *buf, int len, int bitflips_threshold)
 
 	for (; len >= sizeof(long);
 	     len -= sizeof(long), bitmap += sizeof(long)) {
-		weight = hweight_long(*((unsigned long *)bitmap));
+		unsigned long d = *((unsigned long *)bitmap);
+		if (d == ~0UL)
+			continue;
+		weight = hweight_long(d);
 		bitflips += BITS_PER_LONG - weight;
 		if (unlikely(bitflips > bitflips_threshold))
 			return -EBADMSG;
@@ -1524,14 +1527,15 @@ EXPORT_SYMBOL(nand_check_erased_ecc_chunk);
  *
  * Not for syndrome calculating ECC controllers, which use a special oob layout.
  */
-static int nand_read_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
-			      uint8_t *buf, int oob_required, int page)
+int nand_read_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
+		       uint8_t *buf, int oob_required, int page)
 {
 	chip->read_buf(mtd, buf, mtd->writesize);
 	if (oob_required)
 		chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
 	return 0;
 }
+EXPORT_SYMBOL(nand_read_page_raw);
 
 /**
  * nand_read_page_raw_syndrome - [INTERN] read raw page data without ecc
@@ -2469,8 +2473,8 @@ static int nand_read_oob(struct mtd_info *mtd, loff_t from,
  *
  * Not for syndrome calculating ECC controllers, which use a special oob layout.
  */
-static int nand_write_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
-			       const uint8_t *buf, int oob_required, int page)
+int nand_write_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
+			const uint8_t *buf, int oob_required, int page)
 {
 	chip->write_buf(mtd, buf, mtd->writesize);
 	if (oob_required)
@@ -2478,6 +2482,7 @@ static int nand_write_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
 
 	return 0;
 }
+EXPORT_SYMBOL(nand_write_page_raw);
 
 /**
  * nand_write_page_raw_syndrome - [INTERN] raw page write function
@@ -4177,6 +4182,7 @@ static const char * const nand_ecc_modes[] = {
 	[NAND_ECC_HW]		= "hw",
 	[NAND_ECC_HW_SYNDROME]	= "hw_syndrome",
 	[NAND_ECC_HW_OOB_FIRST]	= "hw_oob_first",
+	[NAND_ECC_ON_DIE]	= "on-die",
 };
 
 static int of_get_nand_ecc_mode(struct device_node *np)
@@ -4361,7 +4367,7 @@ int nand_scan_ident(struct mtd_info *mtd, int maxchips,
 	/* Initialize the ->data_interface field. */
 	ret = nand_init_data_interface(chip);
 	if (ret)
-		return ret;
+		goto err_nand_init;
 
 	/*
 	 * Setup the data interface correctly on the chip and controller side.
@@ -4373,7 +4379,7 @@ int nand_scan_ident(struct mtd_info *mtd, int maxchips,
 	 */
 	ret = nand_setup_data_interface(chip);
 	if (ret)
-		return ret;
+		goto err_nand_init;
 
 	nand_maf_id = chip->id.data[0];
 	nand_dev_id = chip->id.data[1];
@@ -4404,6 +4410,12 @@ int nand_scan_ident(struct mtd_info *mtd, int maxchips,
 	mtd->size = i * chip->chipsize;
 
 	return 0;
+
+err_nand_init:
+	/* Free manufacturer priv data. */
+	nand_manufacturer_cleanup(chip);
+
+	return ret;
 }
 EXPORT_SYMBOL(nand_scan_ident);
 
@@ -4574,18 +4586,23 @@ int nand_scan_tail(struct mtd_info *mtd)
 
 	/* New bad blocks should be marked in OOB, flash-based BBT, or both */
 	if (WARN_ON((chip->bbt_options & NAND_BBT_NO_OOB_BBM) &&
-		   !(chip->bbt_options & NAND_BBT_USE_FLASH)))
-		return -EINVAL;
+		   !(chip->bbt_options & NAND_BBT_USE_FLASH))) {
+		ret = -EINVAL;
+		goto err_ident;
+	}
 
 	if (invalid_ecc_page_accessors(chip)) {
 		pr_err("Invalid ECC page accessors setup\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err_ident;
 	}
 
 	if (!(chip->options & NAND_OWN_BUFFERS)) {
 		nbuf = kzalloc(sizeof(*nbuf), GFP_KERNEL);
-		if (!nbuf)
-			return -ENOMEM;
+		if (!nbuf) {
+			ret = -ENOMEM;
+			goto err_ident;
+		}
 
 		nbuf->ecccalc = kmalloc(mtd->oobsize, GFP_KERNEL);
 		if (!nbuf->ecccalc) {
@@ -4608,8 +4625,10 @@ int nand_scan_tail(struct mtd_info *mtd)
 
 		chip->buffers = nbuf;
 	} else {
-		if (!chip->buffers)
-			return -ENOMEM;
+		if (!chip->buffers) {
+			ret = -ENOMEM;
+			goto err_ident;
+		}
 	}
 
 	/* Set the internal oob buffer location, just after the page data */
@@ -4715,6 +4734,18 @@ int nand_scan_tail(struct mtd_info *mtd)
 			ret = -EINVAL;
 			goto err_free;
 		}
+		break;
+
+	case NAND_ECC_ON_DIE:
+		if (!ecc->read_page || !ecc->write_page) {
+			WARN(1, "No ECC functions supplied; on-die ECC not possible\n");
+			ret = -EINVAL;
+			goto err_free;
+		}
+		if (!ecc->read_oob)
+			ecc->read_oob = nand_read_oob_std;
+		if (!ecc->write_oob)
+			ecc->write_oob = nand_write_oob_std;
 		break;
 
 	case NAND_ECC_NONE:
@@ -4842,7 +4873,11 @@ int nand_scan_tail(struct mtd_info *mtd)
 		return 0;
 
 	/* Build bad block table */
-	return chip->scan_bbt(mtd);
+	ret = chip->scan_bbt(mtd);
+	if (ret)
+		goto err_free;
+	return 0;
+
 err_free:
 	if (nbuf) {
 		kfree(nbuf->databuf);
@@ -4850,6 +4885,13 @@ err_free:
 		kfree(nbuf->ecccalc);
 		kfree(nbuf);
 	}
+
+err_ident:
+	/* Clean up nand_scan_ident(). */
+
+	/* Free manufacturer priv data. */
+	nand_manufacturer_cleanup(chip);
+
 	return ret;
 }
 EXPORT_SYMBOL(nand_scan_tail);
