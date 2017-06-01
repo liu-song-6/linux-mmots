@@ -70,7 +70,6 @@
 #include <drm/drm_fourcc.h>
 #include <drm/drm_global.h>
 #include <drm/drm_hashtab.h>
-#include <drm/drm_mem_util.h>
 #include <drm/drm_mm.h>
 #include <drm/drm_os_linux.h>
 #include <drm/drm_sarea.h>
@@ -293,23 +292,6 @@ struct pci_controller;
 /* Format strings and argument splitters to simplify printing
  * various "complex" objects
  */
-#define DRM_MODE_FMT    "%d:\"%s\" %d %d %d %d %d %d %d %d %d %d 0x%x 0x%x"
-#define DRM_MODE_ARG(m) \
-	(m)->base.id, (m)->name, (m)->vrefresh, (m)->clock, \
-	(m)->hdisplay, (m)->hsync_start, (m)->hsync_end, (m)->htotal, \
-	(m)->vdisplay, (m)->vsync_start, (m)->vsync_end, (m)->vtotal, \
-	(m)->type, (m)->flags
-
-#define DRM_RECT_FMT    "%dx%d%+d%+d"
-#define DRM_RECT_ARG(r) drm_rect_width(r), drm_rect_height(r), (r)->x1, (r)->y1
-
-/* for rect's in fixed-point format: */
-#define DRM_RECT_FP_FMT "%d.%06ux%d.%06u%+d.%06u%+d.%06u"
-#define DRM_RECT_FP_ARG(r) \
-		drm_rect_width(r) >> 16, ((drm_rect_width(r) & 0xffff) * 15625) >> 10, \
-		drm_rect_height(r) >> 16, ((drm_rect_height(r) & 0xffff) * 15625) >> 10, \
-		(r)->x1 >> 16, (((r)->x1 & 0xffff) * 15625) >> 10, \
-		(r)->y1 >> 16, (((r)->y1 & 0xffff) * 15625) >> 10
 
 /*@}*/
 
@@ -319,15 +301,6 @@ struct pci_controller;
 
 #define DRM_IF_VERSION(maj, min) (maj << 16 | min)
 
-
-/* Flags and return codes for get_vblank_timestamp() driver function. */
-#define DRM_CALLED_FROM_VBLIRQ 1
-#define DRM_VBLANKTIME_SCANOUTPOS_METHOD (1 << 0)
-
-/* get_scanout_position() return flags */
-#define DRM_SCANOUTPOS_VALID        (1 << 0)
-#define DRM_SCANOUTPOS_IN_VBLANK    (1 << 1)
-#define DRM_SCANOUTPOS_ACCURATE     (1 << 2)
 
 /**
  * DRM device structure. This structure represent a complete card that
@@ -438,8 +411,6 @@ struct drm_device {
 #ifdef __alpha__
 	struct pci_controller *hose;
 #endif
-
-	struct virtio_device *virtdev;
 
 	struct drm_sg_mem *sg;	/**< Scatter gather memory */
 	unsigned int num_crtcs;                  /**< Number of CRTCs on this device */

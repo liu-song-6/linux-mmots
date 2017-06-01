@@ -546,9 +546,10 @@ struct task_struct {
 
 #ifdef CONFIG_TASKS_RCU
 	unsigned long			rcu_tasks_nvcsw;
-	bool				rcu_tasks_holdout;
-	struct list_head		rcu_tasks_holdout_list;
+	u8				rcu_tasks_holdout;
+	u8				rcu_tasks_idx;
 	int				rcu_tasks_idle_cpu;
+	struct list_head		rcu_tasks_holdout_list;
 #endif /* #ifdef CONFIG_TASKS_RCU */
 
 	struct sched_info		sched_info;
@@ -1266,6 +1267,16 @@ extern struct pid *cad_pid;
 #define tsk_used_math(p)			((p)->flags & PF_USED_MATH)
 #define used_math()				tsk_used_math(current)
 
+static inline bool is_percpu_thread(void)
+{
+#ifdef CONFIG_SMP
+	return (current->flags & PF_NO_SETAFFINITY) &&
+		(current->nr_cpus_allowed  == 1);
+#else
+	return true;
+#endif
+}
+
 /* Per-process atomic flags. */
 #define PFA_NO_NEW_PRIVS		0	/* May not gain new privileges. */
 #define PFA_SPREAD_PAGE			1	/* Spread page cache over cpuset */
@@ -1473,10 +1484,11 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
  * cond_resched_lock() will drop the spinlock before scheduling,
  * cond_resched_softirq() will enable bhs before scheduling.
  */
+void rcu_all_qs(void);
 #ifndef CONFIG_PREEMPT
 extern int _cond_resched(void);
 #else
-static inline int _cond_resched(void) { return 0; }
+static inline int _cond_resched(void) { rcu_all_qs(); return 0; }
 #endif
 
 #define cond_resched() ({			\
