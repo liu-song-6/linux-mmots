@@ -1166,14 +1166,6 @@ target_cmd_size_check(struct se_cmd *cmd, unsigned int size)
 				cmd->data_length, size, cmd->t_task_cdb[0]);
 
 		if (cmd->data_direction == DMA_TO_DEVICE) {
-<<<<<<< HEAD
-			if (cmd->se_cmd_flags & SCF_SCSI_DATA_CDB) {
-				pr_err_ratelimited("Rejecting underflow/overflow"
-						   " for WRITE data CDB\n");
-				return TCM_INVALID_CDB_FIELD;
-			}
-=======
->>>>>>> linux-next/akpm-base
 			/*
 			 * Some fabric drivers like iscsi-target still expect to
 			 * always reject overflow writes.  Reject this case until
@@ -1185,20 +1177,6 @@ target_cmd_size_check(struct se_cmd *cmd, unsigned int size)
 						   " WRITE control CDB\n");
 				return TCM_INVALID_CDB_FIELD;
 			}
-<<<<<<< HEAD
-		}
-		/*
-		 * Reject READ_* or WRITE_* with overflow/underflow for
-		 * type SCF_SCSI_DATA_CDB.
-		 */
-		if (dev->dev_attrib.block_size != 512)  {
-			pr_err("Failing OVERFLOW/UNDERFLOW for LBA op"
-				" CDB on non 512-byte sector setup subsystem"
-				" plugin: %s\n", dev->transport->name);
-			/* Returns CHECK_CONDITION + INVALID_CDB_FIELD */
-			return TCM_INVALID_CDB_FIELD;
-=======
->>>>>>> linux-next/akpm-base
 		}
 		/*
 		 * For the overflow case keep the existing fabric provided

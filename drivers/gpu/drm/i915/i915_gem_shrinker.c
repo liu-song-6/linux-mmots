@@ -58,11 +58,7 @@ static void shrinker_unlock(struct drm_i915_private *dev_priv, bool unlock)
 	if (!unlock)
 		return;
 
-<<<<<<< HEAD
-	mutex_unlock(&dev->struct_mutex);
-=======
 	mutex_unlock(&dev_priv->drm.struct_mutex);
->>>>>>> linux-next/akpm-base
 }
 
 static bool any_vma_pinned(struct drm_i915_gem_object *obj)
