@@ -245,12 +245,23 @@ extern int force_personality32;
 #define CORE_DUMP_USE_REGSET
 #define ELF_EXEC_PAGESIZE	4096
 
+/*
+ * True on X86_32 or when emulating IA32 on X86_64
+ */
+static inline int mmap_is_ia32(void)
+{
+	return IS_ENABLED(CONFIG_X86_32) ||
+	       (IS_ENABLED(CONFIG_COMPAT) &&
+		test_thread_flag(TIF_ADDR32));
+}
+
 /* This is the location that an ET_DYN program is loaded if exec'ed.  Typical
    use of this is to invoke "./ld.so someprog" to test out a new version of
    the loader.  We need to make sure that it is out of the way of the program
    that it will "exec", and that there is sufficient room for the brk.  */
 
-#define ELF_ET_DYN_BASE		(TASK_SIZE / 3 * 2)
+#define ELF_ET_DYN_BASE		(mmap_is_ia32() ? 0x10000000UL : \
+				(TASK_SIZE / 3 * 2))
 
 /* This yields a mask that user programs can use to figure out what
    instruction set this CPU supports.  This could be done in user space,
@@ -292,16 +303,6 @@ do {									\
 		NEW_AUX_ENT(AT_SYSINFO_EHDR, VDSO_CURRENT_BASE);	\
 	}								\
 } while (0)
-
-/*
- * True on X86_32 or when emulating IA32 on X86_64
- */
-static inline int mmap_is_ia32(void)
-{
-	return IS_ENABLED(CONFIG_X86_32) ||
-	       (IS_ENABLED(CONFIG_COMPAT) &&
-		test_thread_flag(TIF_ADDR32));
-}
 
 extern unsigned long tasksize_32bit(void);
 extern unsigned long tasksize_64bit(void);
