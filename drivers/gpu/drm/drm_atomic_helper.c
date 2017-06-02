@@ -508,6 +508,8 @@ drm_atomic_helper_check_modeset(struct drm_device *dev,
 		bool has_connectors =
 			!!new_crtc_state->connector_mask;
 
+		WARN_ON(!drm_modeset_is_locked(&crtc->mutex));
+
 		if (!drm_mode_equal(&old_crtc_state->mode, &new_crtc_state->mode)) {
 			DRM_DEBUG_ATOMIC("[CRTC:%d:%s] mode changed\n",
 					 crtc->base.id, crtc->name);
@@ -550,6 +552,8 @@ drm_atomic_helper_check_modeset(struct drm_device *dev,
 
 	for_each_oldnew_connector_in_state(state, connector, old_connector_state, new_connector_state, i) {
 		const struct drm_connector_helper_funcs *funcs = connector->helper_private;
+
+		WARN_ON(!drm_modeset_is_locked(&dev->mode_config.connection_mutex));
 
 		/*
 		 * This only sets crtc->connectors_changed for routing changes,
@@ -649,6 +653,8 @@ drm_atomic_helper_check_planes(struct drm_device *dev,
 
 	for_each_oldnew_plane_in_state(state, plane, old_plane_state, new_plane_state, i) {
 		const struct drm_plane_helper_funcs *funcs;
+
+		WARN_ON(!drm_modeset_is_locked(&plane->mutex));
 
 		funcs = plane->helper_private;
 
@@ -1070,8 +1076,8 @@ EXPORT_SYMBOL(drm_atomic_helper_commit_modeset_enables);
  *
  * Note that @pre_swap is needed since the point where we block for fences moves
  * around depending upon whether an atomic commit is blocking or
- * non-blocking. For async commit all waiting needs to happen after
- * drm_atomic_helper_swap_state() is called, but for synchronous commits we want
+ * non-blocking. For non-blocking commit all waiting needs to happen after
+ * drm_atomic_helper_swap_state() is called, but for blocking commits we want
  * to wait **before** we do anything that can't be easily rolled back. That is
  * before we call drm_atomic_helper_swap_state().
  *
@@ -2032,6 +2038,8 @@ void drm_atomic_helper_swap_state(struct drm_atomic_state *state,
 	struct drm_plane *plane;
 	struct drm_plane_state *old_plane_state, *new_plane_state;
 	struct drm_crtc_commit *commit;
+	void *obj, *obj_state;
+	const struct drm_private_state_funcs *funcs;
 
 	if (stall) {
 		for_each_new_crtc_in_state(state, crtc, new_crtc_state, i) {
@@ -2092,6 +2100,9 @@ void drm_atomic_helper_swap_state(struct drm_atomic_state *state,
 		state->planes[i].state = old_plane_state;
 		plane->state = new_plane_state;
 	}
+
+	__for_each_private_obj(state, obj, obj_state, i, funcs)
+		funcs->swap_state(obj, &state->private_objs[i].obj_state);
 }
 EXPORT_SYMBOL(drm_atomic_helper_swap_state);
 
@@ -2663,7 +2674,12 @@ int drm_atomic_helper_resume(struct drm_device *dev,
 
 	drm_modeset_acquire_init(&ctx, 0);
 	while (1) {
+		err = drm_modeset_lock_all_ctx(dev, &ctx);
+		if (err)
+			goto out;
+
 		err = drm_atomic_helper_commit_duplicated_state(state, &ctx);
+out:
 		if (err != -EDEADLK)
 			break;
 
@@ -3220,7 +3236,7 @@ void drm_atomic_helper_plane_reset(struct drm_plane *plane)
 
 	if (plane->state) {
 		plane->state->plane = plane;
-		plane->state->rotation = DRM_ROTATE_0;
+		plane->state->rotation = DRM_MODE_ROTATE_0;
 	}
 }
 EXPORT_SYMBOL(drm_atomic_helper_plane_reset);
@@ -3517,7 +3533,8 @@ EXPORT_SYMBOL(drm_atomic_helper_connector_destroy_state);
  *
  * Implements support for legacy gamma correction table for drivers
  * that support color management through the DEGAMMA_LUT/GAMMA_LUT
- * properties.
+ * properties. See drm_crtc_enable_color_mgmt() and the containing chapter for
+ * how the atomic color management and gamma tables work.
  */
 int drm_atomic_helper_legacy_gamma_set(struct drm_crtc *crtc,
 				       u16 *red, u16 *green, u16 *blue,
