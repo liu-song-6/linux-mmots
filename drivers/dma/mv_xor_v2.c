@@ -257,8 +257,6 @@ static int mv_xor_v2_set_desc_size(struct mv_xor_v2_device *xor_dev)
 	return MV_XOR_V2_EXT_DESC_SIZE;
 }
 
-<<<<<<< HEAD
-=======
 /*
  * Set the IMSG threshold
  */
@@ -282,7 +280,6 @@ void mv_xor_v2_enable_imsg_thrd(struct mv_xor_v2_device *xor_dev)
 	writel(reg, xor_dev->dma_base + MV_XOR_V2_DMA_IMSG_TMOT);
 }
 
->>>>>>> linux-next/akpm-base
 static irqreturn_t mv_xor_v2_interrupt_handler(int irq, void *data)
 {
 	struct mv_xor_v2_device *xor_dev = data;
@@ -696,8 +693,6 @@ static int mv_xor_v2_descq_init(struct mv_xor_v2_device *xor_dev)
 	/* enable the DMA engine */
 	writel(0, xor_dev->dma_base + MV_XOR_V2_DMA_DESQ_STOP_OFF);
 
-<<<<<<< HEAD
-=======
 	return 0;
 }
 
@@ -719,7 +714,6 @@ static int mv_xor_v2_resume(struct platform_device *dev)
 	mv_xor_v2_enable_imsg_thrd(xor_dev);
 	mv_xor_v2_descq_init(xor_dev);
 
->>>>>>> linux-next/akpm-base
 	return 0;
 }
 

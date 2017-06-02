@@ -1593,7 +1593,6 @@ static int wacom_tpc_irq(struct wacom_wac *wacom, size_t len)
 		switch (len) {
 		case WACOM_PKGLEN_TPC1FG:
 			return wacom_tpc_single_touch(wacom, len);
-<<<<<<< HEAD
 
 		case WACOM_PKGLEN_TPC2FG:
 			return wacom_tpc_mt_touch(wacom);
@@ -1606,20 +1605,6 @@ static int wacom_tpc_irq(struct wacom_wac *wacom, size_t len)
 			case WACOM_REPORT_TPC1FGE:
 				return wacom_tpc_single_touch(wacom, len);
 
-=======
-
-		case WACOM_PKGLEN_TPC2FG:
-			return wacom_tpc_mt_touch(wacom);
-
-		default:
-			switch (data[0]) {
-			case WACOM_REPORT_TPC1FG:
-			case WACOM_REPORT_TPCHID:
-			case WACOM_REPORT_TPCST:
-			case WACOM_REPORT_TPC1FGE:
-				return wacom_tpc_single_touch(wacom, len);
-
->>>>>>> linux-next/akpm-base
 			case WACOM_REPORT_TPCMT:
 			case WACOM_REPORT_TPCMT2:
 				return wacom_mt_touch(wacom);
