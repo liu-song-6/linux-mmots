@@ -129,6 +129,12 @@
 		#size-cells = <1>;
 		ranges;
 
+		syscon: syscon@1c00000 {
+			compatible = "allwinner,sun50i-a64-system-controller",
+				"syscon";
+			reg = <0x01c00000 0x1000>;
+		};
+
 		mmc0: mmc@1c0f000 {
 			compatible = "allwinner,sun50i-a64-mmc";
 			reg = <0x01c0f000 0x1000>;
@@ -202,6 +208,28 @@
 				      "usb1_reset";
 			status = "disabled";
 			#phy-cells = <1>;
+		};
+
+		ehci0: usb@01c1a000 {
+			compatible = "allwinner,sun50i-a64-ehci", "generic-ehci";
+			reg = <0x01c1a000 0x100>;
+			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ccu CLK_BUS_OHCI0>,
+				 <&ccu CLK_BUS_EHCI0>,
+				 <&ccu CLK_USB_OHCI0>;
+			resets = <&ccu RST_BUS_OHCI0>,
+				 <&ccu RST_BUS_EHCI0>;
+			status = "disabled";
+		};
+
+		ohci0: usb@01c1a400 {
+			compatible = "allwinner,sun50i-a64-ohci", "generic-ohci";
+			reg = <0x01c1a400 0x100>;
+			interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ccu CLK_BUS_OHCI0>,
+				 <&ccu CLK_USB_OHCI0>;
+			resets = <&ccu RST_BUS_OHCI0>;
+			status = "disabled";
 		};
 
 		ehci1: usb@01c1b000 {
@@ -281,6 +309,21 @@
 				bias-pull-up;
 			};
 
+			rmii_pins: rmii_pins {
+				pins = "PD10", "PD11", "PD13", "PD14", "PD17",
+				       "PD18", "PD19", "PD20", "PD22", "PD23";
+				function = "emac";
+				drive-strength = <40>;
+			};
+
+			rgmii_pins: rgmii_pins {
+				pins = "PD8", "PD9", "PD10", "PD11", "PD12",
+				       "PD13", "PD15", "PD16", "PD17", "PD18",
+				       "PD19", "PD20", "PD21", "PD22", "PD23";
+				function = "emac";
+				drive-strength = <40>;
+			};
+
 			uart0_pins_a: uart0@0 {
 				pins = "PB8", "PB9";
 				function = "uart0";
@@ -294,6 +337,26 @@
 			uart1_rts_cts_pins: uart1_rts_cts_pins {
 				pins = "PG8", "PG9";
 				function = "uart1";
+			};
+
+			uart2_pins: uart2-pins {
+				pins = "PB0", "PB1";
+				function = "uart2";
+			};
+
+			uart3_pins: uart3-pins {
+				pins = "PD0", "PD1";
+				function = "uart3";
+			};
+
+			uart4_pins: uart4-pins {
+				pins = "PD2", "PD3";
+				function = "uart4";
+			};
+
+			uart4_rts_cts_pins: uart4-rts-cts-pins {
+				pins = "PD4", "PD5";
+				function = "uart4";
 			};
 		};
 
@@ -385,6 +448,26 @@
 			#size-cells = <0>;
 		};
 
+		emac: ethernet@1c30000 {
+			compatible = "allwinner,sun50i-a64-emac";
+			syscon = <&syscon>;
+			reg = <0x01c30000 0x100>;
+			interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			resets = <&ccu RST_BUS_EMAC>;
+			reset-names = "stmmaceth";
+			clocks = <&ccu CLK_BUS_EMAC>;
+			clock-names = "stmmaceth";
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			mdio: mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+
 		gic: interrupt-controller@1c81000 {
 			compatible = "arm,gic-400";
 			reg = <0x01c81000 0x1000>,
@@ -406,8 +489,9 @@
 		r_ccu: clock@1f01400 {
 			compatible = "allwinner,sun50i-a64-r-ccu";
 			reg = <0x01f01400 0x100>;
-			clocks = <&osc24M>, <&osc32k>, <&iosc>;
-			clock-names = "hosc", "losc", "iosc";
+			clocks = <&osc24M>, <&osc32k>, <&iosc>,
+				 <&ccu 11>;
+			clock-names = "hosc", "losc", "iosc", "pll-periph";
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 		};
@@ -422,6 +506,25 @@
 			#gpio-cells = <3>;
 			interrupt-controller;
 			#interrupt-cells = <3>;
+
+			r_rsb_pins: rsb@0 {
+				pins = "PL0", "PL1";
+				function = "s_rsb";
+			};
+		};
+
+		r_rsb: rsb@1f03400 {
+			compatible = "allwinner,sun8i-a23-rsb";
+			reg = <0x01f03400 0x400>;
+			interrupts = <GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&r_ccu 6>;
+			clock-frequency = <3000000>;
+			resets = <&r_ccu 2>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&r_rsb_pins>;
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
 		};
 	};
 };

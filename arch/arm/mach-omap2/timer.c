@@ -68,6 +68,9 @@
 static struct omap_dm_timer clkev;
 static struct clock_event_device clockevent_gpt;
 
+/* Clockevent hwmod for am335x and am437x suspend */
+static struct omap_hwmod *clockevent_gpt_hwmod;
+
 #ifdef CONFIG_SOC_HAS_REALTIME_COUNTER
 static unsigned long arch_timer_freq;
 
@@ -123,6 +126,23 @@ static int omap2_gp_timer_set_periodic(struct clock_event_device *evt)
 				   OMAP_TIMER_CTRL_AR | OMAP_TIMER_CTRL_ST,
 				   0xffffffff - period, OMAP_TIMER_POSTED);
 	return 0;
+}
+
+static void omap_clkevt_idle(struct clock_event_device *unused)
+{
+	if (!clockevent_gpt_hwmod)
+		return;
+
+	omap_hwmod_idle(clockevent_gpt_hwmod);
+}
+
+static void omap_clkevt_unidle(struct clock_event_device *unused)
+{
+	if (!clockevent_gpt_hwmod)
+		return;
+
+	omap_hwmod_enable(clockevent_gpt_hwmod);
+	__omap_dm_timer_int_enable(&clkev, OMAP_TIMER_INT_OVERFLOW);
 }
 
 static struct clock_event_device clockevent_gpt = {
@@ -358,6 +378,14 @@ static void __init omap2_gp_clockevent_init(int gptimer_id,
 					3, /* Timer internal resynch latency */
 					0xffffffff);
 
+	if (soc_is_am33xx() || soc_is_am43xx()) {
+		clockevent_gpt.suspend = omap_clkevt_idle;
+		clockevent_gpt.resume = omap_clkevt_unidle;
+
+		clockevent_gpt_hwmod =
+			omap_hwmod_lookup(clockevent_gpt.name);
+	}
+
 	pr_info("OMAP clockevent source: %s at %lu Hz\n", clockevent_gpt.name,
 		clkev.rate);
 }
@@ -497,7 +525,7 @@ void __init omap_init_time(void)
 	__omap_sync32k_timer_init(1, "timer_32k_ck", "ti,timer-alwon",
 			2, "timer_sys_ck", NULL, false);
 
-	clocksource_probe();
+	timer_probe();
 }
 
 #if defined(CONFIG_ARCH_OMAP3) || defined(CONFIG_SOC_AM43XX)
@@ -506,7 +534,7 @@ void __init omap3_secure_sync32k_timer_init(void)
 	__omap_sync32k_timer_init(12, "secure_32k_fck", "ti,timer-secure",
 			2, "timer_sys_ck", NULL, false);
 
-	clocksource_probe();
+	timer_probe();
 }
 #endif /* CONFIG_ARCH_OMAP3 */
 
@@ -517,7 +545,7 @@ void __init omap3_gptimer_timer_init(void)
 	__omap_sync32k_timer_init(2, "timer_sys_ck", NULL,
 			1, "timer_sys_ck", "ti,timer-alwon", true);
 	if (of_have_populated_dt())
-		clocksource_probe();
+		timer_probe();
 }
 #endif
 
@@ -532,7 +560,7 @@ static void __init omap4_sync32k_timer_init(void)
 void __init omap4_local_timer_init(void)
 {
 	omap4_sync32k_timer_init();
-	clocksource_probe();
+	timer_probe();
 }
 #endif
 
@@ -656,7 +684,7 @@ void __init omap5_realtime_timer_init(void)
 	omap4_sync32k_timer_init();
 	realtime_counter_init();
 
-	clocksource_probe();
+	timer_probe();
 }
 #endif /* CONFIG_SOC_OMAP5 || CONFIG_SOC_DRA7XX */
 

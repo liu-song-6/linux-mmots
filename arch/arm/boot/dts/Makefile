@@ -72,6 +72,7 @@ dtb-$(CONFIG_ARCH_BCM2835) += \
 	bcm2835-rpi-b-plus.dtb \
 	bcm2835-rpi-a-plus.dtb \
 	bcm2836-rpi-2-b.dtb \
+	bcm2837-rpi-3-b.dtb \
 	bcm2835-rpi-zero.dtb
 dtb-$(CONFIG_ARCH_BCM_5301X) += \
 	bcm4708-asus-rt-ac56u.dtb \
@@ -204,7 +205,8 @@ dtb-$(CONFIG_ARCH_KEYSTONE) += \
 	keystone-k2hk-evm.dtb \
 	keystone-k2l-evm.dtb \
 	keystone-k2e-evm.dtb \
-	keystone-k2g-evm.dtb
+	keystone-k2g-evm.dtb \
+	keystone-k2g-ice.dtb
 dtb-$(CONFIG_MACH_KIRKWOOD) += \
 	kirkwood-b3.dtb \
 	kirkwood-blackarmor-nas220.dtb \
@@ -363,6 +365,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-gw551x.dtb \
 	imx6dl-gw552x.dtb \
 	imx6dl-gw553x.dtb \
+	imx6dl-gw560x.dtb \
 	imx6dl-gw5903.dtb \
 	imx6dl-gw5904.dtb \
 	imx6dl-hummingboard.dtb \
@@ -408,6 +411,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-gw551x.dtb \
 	imx6q-gw552x.dtb \
 	imx6q-gw553x.dtb \
+	imx6q-gw560x.dtb \
 	imx6q-gw5903.dtb \
 	imx6q-gw5904.dtb \
 	imx6q-h100.dtb \
@@ -476,6 +480,7 @@ dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-cl-som-imx7.dtb \
 	imx7d-colibri-eval-v3.dtb \
 	imx7d-nitrogen7.dtb \
+	imx7d-pico.dtb \
 	imx7d-sbc-imx7.dtb \
 	imx7d-sdb.dtb \
 	imx7d-sdb-sht11.dtb \
@@ -701,6 +706,7 @@ dtb-$(CONFIG_ARCH_REALVIEW) += \
 dtb-$(CONFIG_ARCH_RENESAS) += \
 	emev2-kzm9d.dtb \
 	r7s72100-genmai.dtb \
+	r7s72100-gr-peach.dtb \
 	r7s72100-rskrza1.dtb \
 	r8a73a4-ape6evm.dtb \
 	r8a7740-armadillo800eva.dtb \
@@ -718,7 +724,7 @@ dtb-$(CONFIG_ARCH_RENESAS) += \
 	r8a7794-silk.dtb \
 	sh73a0-kzm9g.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += \
-	rk1108-evb.dtb \
+	rv1108-evb.dtb \
 	rk3036-evb.dtb \
 	rk3036-kylin.dtb \
 	rk3066a-bqcurie2.dtb \
@@ -895,6 +901,7 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-h3-bananapi-m2-plus.dtb \
 	sun8i-h3-beelink-x2.dtb \
 	sun8i-h3-nanopi-m1.dtb	\
+	sun8i-h3-nanopi-m1-plus.dtb \
 	sun8i-h3-nanopi-neo.dtb \
 	sun8i-h3-nanopi-neo-air.dtb \
 	sun8i-h3-orangepi-2.dtb \
@@ -905,7 +912,8 @@ dtb-$(CONFIG_MACH_SUN8I) += \
 	sun8i-h3-orangepi-plus.dtb \
 	sun8i-h3-orangepi-plus2e.dtb \
 	sun8i-r16-parrot.dtb \
-	sun8i-v3s-licheepi-zero.dtb
+	sun8i-v3s-licheepi-zero.dtb \
+	sun8i-v3s-licheepi-zero-dock.dtb
 dtb-$(CONFIG_MACH_SUN9I) += \
 	sun9i-a80-optimus.dtb \
 	sun9i-a80-cubieboard4.dtb
@@ -999,6 +1007,7 @@ dtb-$(CONFIG_MACH_ARMADA_38X) += \
 	armada-385-db-ap.dtb \
 	armada-385-linksys-caiman.dtb \
 	armada-385-linksys-cobra.dtb \
+	armada-385-linksys-rango.dtb \
 	armada-385-linksys-shelby.dtb \
 	armada-385-synology-ds116.dtb \
 	armada-385-turris-omnia.dtb \
