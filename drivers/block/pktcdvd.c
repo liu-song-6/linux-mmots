@@ -348,9 +348,9 @@ static void class_pktcdvd_release(struct class *cls)
 {
 	kfree(cls);
 }
-static ssize_t class_pktcdvd_show_map(struct class *c,
-					struct class_attribute *attr,
-					char *data)
+
+static ssize_t device_map_show(struct class *c, struct class_attribute *attr,
+			       char *data)
 {
 	int n = 0;
 	int idx;
@@ -368,11 +368,10 @@ static ssize_t class_pktcdvd_show_map(struct class *c,
 	mutex_unlock(&ctl_mutex);
 	return n;
 }
+static CLASS_ATTR_RO(device_map);
 
-static ssize_t class_pktcdvd_store_add(struct class *c,
-					struct class_attribute *attr,
-					const char *buf,
-					size_t count)
+static ssize_t add_store(struct class *c, struct class_attribute *attr,
+			 const char *buf, size_t count)
 {
 	unsigned int major, minor;
 
@@ -390,11 +389,10 @@ static ssize_t class_pktcdvd_store_add(struct class *c,
 
 	return -EINVAL;
 }
+static CLASS_ATTR_WO(add);
 
-static ssize_t class_pktcdvd_store_remove(struct class *c,
-					  struct class_attribute *attr,
-					  const char *buf,
-					size_t count)
+static ssize_t remove_store(struct class *c, struct class_attribute *attr,
+			    const char *buf, size_t count)
 {
 	unsigned int major, minor;
 	if (sscanf(buf, "%u:%u", &major, &minor) == 2) {
@@ -403,14 +401,15 @@ static ssize_t class_pktcdvd_store_remove(struct class *c,
 	}
 	return -EINVAL;
 }
+static CLASS_ATTR_WO(remove);
 
-static struct class_attribute class_pktcdvd_attrs[] = {
- __ATTR(add,            0200, NULL, class_pktcdvd_store_add),
- __ATTR(remove,         0200, NULL, class_pktcdvd_store_remove),
- __ATTR(device_map,     0444, class_pktcdvd_show_map, NULL),
- __ATTR_NULL
+static struct attribute *class_pktcdvd_attrs[] = {
+	&class_attr_add.attr,
+	&class_attr_remove.attr,
+	&class_attr_device_map.attr,
+	NULL,
 };
-
+ATTRIBUTE_GROUPS(class_pktcdvd);
 
 static int pkt_sysfs_init(void)
 {
@@ -426,7 +425,7 @@ static int pkt_sysfs_init(void)
 	class_pktcdvd->name = DRIVER_NAME;
 	class_pktcdvd->owner = THIS_MODULE;
 	class_pktcdvd->class_release = class_pktcdvd_release;
-	class_pktcdvd->class_attrs = class_pktcdvd_attrs;
+	class_pktcdvd->class_groups = class_pktcdvd_groups;
 	ret = class_register(class_pktcdvd);
 	if (ret) {
 		kfree(class_pktcdvd);
@@ -952,9 +951,9 @@ static void pkt_end_io_read(struct bio *bio)
 
 	pkt_dbg(2, pd, "bio=%p sec0=%llx sec=%llx err=%d\n",
 		bio, (unsigned long long)pkt->sector,
-		(unsigned long long)bio->bi_iter.bi_sector, bio->bi_error);
+		(unsigned long long)bio->bi_iter.bi_sector, bio->bi_status);
 
-	if (bio->bi_error)
+	if (bio->bi_status)
 		atomic_inc(&pkt->io_errors);
 	if (atomic_dec_and_test(&pkt->io_wait)) {
 		atomic_inc(&pkt->run_sm);
@@ -969,7 +968,7 @@ static void pkt_end_io_packet_write(struct bio *bio)
 	struct pktcdvd_device *pd = pkt->pd;
 	BUG_ON(!pd);
 
-	pkt_dbg(2, pd, "id=%d, err=%d\n", pkt->id, bio->bi_error);
+	pkt_dbg(2, pd, "id=%d, err=%d\n", pkt->id, bio->bi_status);
 
 	pd->stats.pkt_ended++;
 
@@ -1305,16 +1304,16 @@ static void pkt_start_write(struct pktcdvd_device *pd, struct packet_data *pkt)
 	pkt_queue_bio(pd, pkt->w_bio);
 }
 
-static void pkt_finish_packet(struct packet_data *pkt, int error)
+static void pkt_finish_packet(struct packet_data *pkt, blk_status_t status)
 {
 	struct bio *bio;
 
-	if (error)
+	if (status)
 		pkt->cache_valid = 0;
 
 	/* Finish all bios corresponding to this packet */
 	while ((bio = bio_list_pop(&pkt->orig_bios))) {
-		bio->bi_error = error;
+		bio->bi_status = status;
 		bio_endio(bio);
 	}
 }
@@ -1349,7 +1348,7 @@ static void pkt_run_state_machine(struct pktcdvd_device *pd, struct packet_data 
 			if (atomic_read(&pkt->io_wait) > 0)
 				return;
 
-			if (!pkt->w_bio->bi_error) {
+			if (!pkt->w_bio->bi_status) {
 				pkt_set_state(pkt, PACKET_FINISHED_STATE);
 			} else {
 				pkt_set_state(pkt, PACKET_RECOVERY_STATE);
@@ -1366,7 +1365,7 @@ static void pkt_run_state_machine(struct pktcdvd_device *pd, struct packet_data 
 			break;
 
 		case PACKET_FINISHED_STATE:
-			pkt_finish_packet(pkt, pkt->w_bio->bi_error);
+			pkt_finish_packet(pkt, pkt->w_bio->bi_status);
 			return;
 
 		default:
@@ -2301,7 +2300,7 @@ static void pkt_end_io_read_cloned(struct bio *bio)
 	struct packet_stacked_data *psd = bio->bi_private;
 	struct pktcdvd_device *pd = psd->pd;
 
-	psd->bio->bi_error = bio->bi_error;
+	psd->bio->bi_status = bio->bi_status;
 	bio_put(bio);
 	bio_endio(psd->bio);
 	mempool_free(psd, psd_pool);
@@ -2583,6 +2582,11 @@ static int pkt_new_dev(struct pktcdvd_device *pd, dev_t dev)
 	bdev = bdget(dev);
 	if (!bdev)
 		return -ENOMEM;
+	if (!blk_queue_scsi_passthrough(bdev_get_queue(bdev))) {
+		WARN_ONCE(true, "Attempt to register a non-SCSI queue\n");
+		bdput(bdev);
+		return -EINVAL;
+	}
 	ret = blkdev_get(bdev, FMODE_READ | FMODE_NDELAY, NULL);
 	if (ret)
 		return ret;

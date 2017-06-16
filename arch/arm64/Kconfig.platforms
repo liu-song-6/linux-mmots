@@ -1,5 +1,11 @@
 menu "Platform selection"
 
+config ARCH_ACTIONS
+	bool "Actions Semi Platforms"
+	select OWL_TIMER
+	help
+	  This enables support for the Actions Semiconductor S900 SoC family.
+
 config ARCH_SUNXI
 	bool "Allwinner sunxi 64-bit SoC Family"
 	select ARCH_HAS_RESET_CONTROLLER
@@ -18,7 +24,7 @@ config ARCH_ALPINE
 
 config ARCH_BCM2835
 	bool "Broadcom BCM2835 family"
-	select CLKSRC_OF
+	select TIMER_OF
 	select GPIOLIB
 	select PINCTRL
 	select PINCTRL_BCM2835
@@ -126,6 +132,12 @@ config ARCH_QCOM
 	help
 	  This enables support for the ARMv8 based Qualcomm chipsets.
 
+config ARCH_REALTEK
+	bool "Realtek Platforms"
+	help
+	  This enables support for the ARMv8 based Realtek chipsets,
+	  like the RTD1295.
+
 config ARCH_ROCKCHIP
 	bool "Rockchip Platforms"
 	select ARCH_HAS_RESET_CONTROLLER
@@ -178,7 +190,7 @@ config ARCH_TEGRA
 	select ARCH_HAS_RESET_CONTROLLER
 	select CLKDEV_LOOKUP
 	select CLKSRC_MMIO
-	select CLKSRC_OF
+	select TIMER_OF
 	select GENERIC_CLOCKEVENTS
 	select GPIOLIB
 	select PINCTRL
@@ -225,10 +237,7 @@ config ARCH_VEXPRESS
 	  Express).
 
 config ARCH_VULCAN
-	bool "Broadcom Vulcan SOC Family"
-	select GPIOLIB
-	help
-	  This enables support for Broadcom Vulcan SoC Family
+	def_bool n
 
 config ARCH_XGENE
 	bool "AppliedMicro X-Gene SOC Family"
