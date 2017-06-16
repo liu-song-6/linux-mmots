@@ -3845,13 +3845,8 @@ skl_plane_downscale_amount(const struct intel_crtc_state *cstate,
 		 * Cursors only support 0/180 degree rotation,
 		 * hence no need to account for rotation here.
 		 */
-<<<<<<< HEAD
-		src_w = pstate->base.src_w;
-		src_h = pstate->base.src_h;
-=======
 		src_w = pstate->base.src_w >> 16;
 		src_h = pstate->base.src_h >> 16;
->>>>>>> linux-next/akpm-base
 		dst_w = pstate->base.crtc_w;
 		dst_h = pstate->base.crtc_h;
 	} else {
@@ -3860,21 +3855,12 @@ skl_plane_downscale_amount(const struct intel_crtc_state *cstate,
 		 * the 90/270 degree plane rotation cases (to match the
 		 * GTT mapping), hence no need to account for rotation here.
 		 */
-<<<<<<< HEAD
-		src_w = drm_rect_width(&pstate->base.src);
-		src_h = drm_rect_height(&pstate->base.src);
-=======
 		src_w = drm_rect_width(&pstate->base.src) >> 16;
 		src_h = drm_rect_height(&pstate->base.src) >> 16;
->>>>>>> linux-next/akpm-base
 		dst_w = drm_rect_width(&pstate->base.dst);
 		dst_h = drm_rect_height(&pstate->base.dst);
 	}
 
-<<<<<<< HEAD
-	downscale_h = max(src_h / dst_h, (uint32_t)DRM_PLANE_HELPER_NO_SCALING);
-	downscale_w = max(src_w / dst_w, (uint32_t)DRM_PLANE_HELPER_NO_SCALING);
-=======
 	fp_w_ratio = fixed_16_16_div(src_w, dst_w);
 	fp_h_ratio = fixed_16_16_div(src_h, dst_h);
 	downscale_w = max_fixed_16_16(fp_w_ratio, u32_to_fixed_16_16(1));
@@ -3970,7 +3956,6 @@ int skl_check_pipe_max_pixel_rate(struct intel_crtc *intel_crtc,
 		DRM_DEBUG_KMS("Max supported pixel clock with scaling exceeded\n");
 		return -EINVAL;
 	}
->>>>>>> linux-next/akpm-base
 
 	return 0;
 }
