@@ -97,8 +97,8 @@ void trim_init_extable(struct module *m)
 
 static int cmp_ex_search(const void *key, const void *elt)
 {
-	const struct exception_table_entry * _elt = elt;
-	unsigned long k = *(unsigned long*) key;
+	const struct exception_table_entry *_elt = elt;
+	unsigned long k = *(unsigned long *)key;
 
 	/* avoid overflow */
 	if (k > ex_to_insn(_elt))
@@ -120,6 +120,7 @@ search_extable(const struct exception_table_entry *first,
 	       const size_t num,
 	       unsigned long value)
 {
-	return bsearch(&value, first, num, sizeof(struct exception_table_entry), cmp_ex_search);
+	return bsearch(&value, first, num,
+		       sizeof(struct exception_table_entry), cmp_ex_search);
 }
 #endif
