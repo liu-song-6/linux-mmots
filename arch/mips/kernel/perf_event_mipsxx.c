@@ -1597,11 +1597,8 @@ static const struct mips_perf_event *mipsxx_pmu_map_raw_event(u64 config)
 		break;
 	case CPU_P5600:
 	case CPU_P6600:
-<<<<<<< HEAD
-=======
 	case CPU_I6400:
 	case CPU_I6500:
->>>>>>> linux-next/akpm-base
 		/* 8-bit event numbers */
 		raw_id = config & 0x1ff;
 		base_id = raw_id & 0xff;
