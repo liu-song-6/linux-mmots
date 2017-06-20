@@ -31,6 +31,7 @@
 #include <linux/percpu-rwsem.h>
 #include <linux/workqueue.h>
 #include <linux/delayed_call.h>
+#include <linux/uuid.h>
 
 #include <asm/byteorder.h>
 #include <uapi/linux/fs.h>
@@ -276,7 +277,7 @@ struct kiocb {
 	void (*ki_complete)(struct kiocb *iocb, long ret, long ret2);
 	void			*private;
 	int			ki_flags;
-};
+} __randomize_layout;
 
 static inline bool is_sync_kiocb(struct kiocb *kiocb)
 {
@@ -393,7 +394,7 @@ struct address_space {
 	gfp_t			gfp_mask;	/* implicit gfp mask for allocations */
 	struct list_head	private_list;	/* ditto */
 	void			*private_data;	/* ditto */
-} __attribute__((aligned(sizeof(long))));
+} __attribute__((aligned(sizeof(long)))) __randomize_layout;
 	/*
 	 * On most architectures that alignment is already the case; but
 	 * must be enforced here for CRIS, to let the least significant bit
@@ -436,7 +437,7 @@ struct block_device {
 	int			bd_fsfreeze_count;
 	/* Mutex for freeze */
 	struct mutex		bd_fsfreeze_mutex;
-};
+} __randomize_layout;
 
 /*
  * Radix-tree tags, for tagging dirty and writeback pages within the pagecache
@@ -654,7 +655,7 @@ struct inode {
 #endif
 
 	void			*i_private; /* fs or device private pointer */
-};
+} __randomize_layout;
 
 static inline unsigned int i_blocksize(const struct inode *node)
 {
@@ -869,7 +870,8 @@ struct file {
 	struct list_head	f_tfile_llink;
 #endif /* #ifdef CONFIG_EPOLL */
 	struct address_space	*f_mapping;
-} __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
+} __randomize_layout
+  __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
 
 struct file_handle {
 	__u32 handle_bytes;
@@ -1006,7 +1008,7 @@ struct file_lock {
 			int state;		/* state of grant or error if -ve */
 		} afs;
 	} fl_u;
-};
+} __randomize_layout;
 
 struct file_lock_context {
 	spinlock_t		flc_lock;
@@ -1039,14 +1041,14 @@ static inline struct inode *locks_inode(const struct file *f)
 }
 
 #ifdef CONFIG_FILE_LOCKING
-extern int fcntl_getlk(struct file *, unsigned int, struct flock __user *);
+extern int fcntl_getlk(struct file *, unsigned int, struct flock *);
 extern int fcntl_setlk(unsigned int, struct file *, unsigned int,
-			struct flock __user *);
+			struct flock *);
 
 #if BITS_PER_LONG == 32
-extern int fcntl_getlk64(struct file *, unsigned int, struct flock64 __user *);
+extern int fcntl_getlk64(struct file *, unsigned int, struct flock64 *);
 extern int fcntl_setlk64(unsigned int, struct file *, unsigned int,
-			struct flock64 __user *);
+			struct flock64 *);
 #endif
 
 extern int fcntl_setlease(unsigned int fd, struct file *filp, long arg);
@@ -1250,7 +1252,7 @@ extern void fasync_free(struct fasync_struct *);
 extern void kill_fasync(struct fasync_struct **, int, int);
 
 extern void __f_setown(struct file *filp, struct pid *, enum pid_type, int force);
-extern void f_setown(struct file *filp, unsigned long arg, int force);
+extern int f_setown(struct file *filp, unsigned long arg, int force);
 extern void f_delown(struct file *filp);
 extern pid_t f_getown(struct file *filp);
 extern int send_sigurg(struct fown_struct *fown);
@@ -1329,8 +1331,8 @@ struct super_block {
 
 	struct sb_writers	s_writers;
 
-	char s_id[32];				/* Informational name */
-	u8 s_uuid[16];				/* UUID */
+	char			s_id[32];	/* Informational name */
+	uuid_t			s_uuid;		/* UUID */
 
 	void 			*s_fs_info;	/* Filesystem private info */
 	unsigned int		s_max_links;
@@ -1405,7 +1407,7 @@ struct super_block {
 
 	spinlock_t		s_inode_wblist_lock;
 	struct list_head	s_inodes_wb;	/* writeback inodes */
-};
+} __randomize_layout;
 
 /* Helper functions so that in most cases filesystems will
  * not need to deal directly with kuid_t and kgid_t and can
@@ -1691,7 +1693,7 @@ struct file_operations {
 			u64);
 	ssize_t (*dedupe_file_range)(struct file *, u64, u64, struct file *,
 			u64);
-};
+} __randomize_layout;
 
 struct inode_operations {
 	struct dentry * (*lookup) (struct inode *,struct dentry *, unsigned int);
@@ -2844,7 +2846,7 @@ enum {
 	DIO_SKIP_DIO_COUNT = 0x08,
 };
 
-void dio_end_io(struct bio *bio, int error);
+void dio_end_io(struct bio *bio);
 
 ssize_t __blockdev_direct_IO(struct kiocb *iocb, struct inode *inode,
 			     struct block_device *bdev, struct iov_iter *iter,
