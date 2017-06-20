@@ -25,11 +25,7 @@ Required properties :
 - #clock-cells : must contain 1
 - #reset-cells : must contain 1
 
-<<<<<<< HEAD
-For the PRCM CCUs on H3/A64, two more clocks are needed:
-=======
 For the PRCM CCUs on A83T/H3/A64, two more clocks are needed:
->>>>>>> linux-next/akpm-base
 - "pll-periph": the SoC's peripheral PLL from the main CCU
 - "iosc": the SoC's internal frequency oscillator
 
