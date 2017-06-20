@@ -2417,9 +2417,7 @@ int btrfs_init_new_device(struct btrfs_fs_info *fs_info, const char *device_path
 	fs_info->fs_devices->total_devices++;
 	fs_info->fs_devices->total_rw_bytes += device->total_bytes;
 
-	spin_lock(&fs_info->free_chunk_lock);
-	fs_info->free_chunk_space += device->total_bytes;
-	spin_unlock(&fs_info->free_chunk_lock);
+	atomic64_add(device->total_bytes, &fs_info->free_chunk_space);
 
 	if (!blk_queue_nonrot(q))
 		fs_info->fs_devices->rotating = 1;
@@ -2874,9 +2872,7 @@ int btrfs_remove_chunk(struct btrfs_trans_handle *trans,
 			mutex_lock(&fs_info->chunk_mutex);
 			btrfs_device_set_bytes_used(device,
 					device->bytes_used - dev_extent_len);
-			spin_lock(&fs_info->free_chunk_lock);
-			fs_info->free_chunk_space += dev_extent_len;
-			spin_unlock(&fs_info->free_chunk_lock);
+			atomic64_add(dev_extent_len, &fs_info->free_chunk_space);
 			btrfs_clear_space_info_full(fs_info);
 			mutex_unlock(&fs_info->chunk_mutex);
 		}
@@ -4409,9 +4405,7 @@ int btrfs_shrink_device(struct btrfs_device *device, u64 new_size)
 	btrfs_device_set_total_bytes(device, new_size);
 	if (device->writeable) {
 		device->fs_devices->total_rw_bytes -= diff;
-		spin_lock(&fs_info->free_chunk_lock);
-		fs_info->free_chunk_space -= diff;
-		spin_unlock(&fs_info->free_chunk_lock);
+		atomic64_sub(diff, &fs_info->free_chunk_space);
 	}
 	mutex_unlock(&fs_info->chunk_mutex);
 
@@ -4535,9 +4529,7 @@ done:
 		btrfs_device_set_total_bytes(device, old_size);
 		if (device->writeable)
 			device->fs_devices->total_rw_bytes += diff;
-		spin_lock(&fs_info->free_chunk_lock);
-		fs_info->free_chunk_space += diff;
-		spin_unlock(&fs_info->free_chunk_lock);
+		atomic64_add(diff, &fs_info->free_chunk_space);
 		mutex_unlock(&fs_info->chunk_mutex);
 	}
 	return ret;
@@ -4882,9 +4874,7 @@ static int __btrfs_alloc_chunk(struct btrfs_trans_handle *trans,
 		btrfs_device_set_bytes_used(map->stripes[i].dev, num_bytes);
 	}
 
-	spin_lock(&info->free_chunk_lock);
-	info->free_chunk_space -= (stripe_size * map->num_stripes);
-	spin_unlock(&info->free_chunk_lock);
+	atomic64_sub(stripe_size * map->num_stripes, &info->free_chunk_space);
 
 	free_extent_map(em);
 	check_raid56_incompat_flag(info, type);
@@ -5029,20 +5019,19 @@ int btrfs_alloc_chunk(struct btrfs_trans_handle *trans,
 static noinline int init_first_rw_device(struct btrfs_trans_handle *trans,
 					 struct btrfs_fs_info *fs_info)
 {
-	struct btrfs_root *extent_root = fs_info->extent_root;
 	u64 chunk_offset;
 	u64 sys_chunk_offset;
 	u64 alloc_profile;
 	int ret;
 
 	chunk_offset = find_next_chunk(fs_info);
-	alloc_profile = btrfs_get_alloc_profile(extent_root, 0);
+	alloc_profile = btrfs_metadata_alloc_profile(fs_info);
 	ret = __btrfs_alloc_chunk(trans, chunk_offset, alloc_profile);
 	if (ret)
 		return ret;
 
 	sys_chunk_offset = find_next_chunk(fs_info);
-	alloc_profile = btrfs_get_alloc_profile(fs_info->chunk_root, 0);
+	alloc_profile = btrfs_system_alloc_profile(fs_info);
 	ret = __btrfs_alloc_chunk(trans, sys_chunk_offset, alloc_profile);
 	return ret;
 }
@@ -6042,9 +6031,10 @@ static void btrfs_end_bio(struct bio *bio)
 	struct btrfs_bio *bbio = bio->bi_private;
 	int is_orig_bio = 0;
 
-	if (bio->bi_error) {
+	if (bio->bi_status) {
 		atomic_inc(&bbio->error);
-		if (bio->bi_error == -EIO || bio->bi_error == -EREMOTEIO) {
+		if (bio->bi_status == BLK_STS_IOERR ||
+		    bio->bi_status == BLK_STS_TARGET) {
 			unsigned int stripe_index =
 				btrfs_io_bio(bio)->stripe_index;
 			struct btrfs_device *dev;
@@ -6082,13 +6072,13 @@ static void btrfs_end_bio(struct bio *bio)
 		 * beyond the tolerance of the btrfs bio
 		 */
 		if (atomic_read(&bbio->error) > bbio->max_errors) {
-			bio->bi_error = -EIO;
+			bio->bi_status = BLK_STS_IOERR;
 		} else {
 			/*
 			 * this bio is actually up to date, we didn't
 			 * go over the max number of errors
 			 */
-			bio->bi_error = 0;
+			bio->bi_status = 0;
 		}
 
 		btrfs_end_bbio(bbio, bio);
@@ -6199,7 +6189,7 @@ static void bbio_error(struct btrfs_bio *bbio, struct bio *bio, u64 logical)
 
 		btrfs_io_bio(bio)->mirror_num = bbio->mirror_num;
 		bio->bi_iter.bi_sector = logical >> 9;
-		bio->bi_error = -EIO;
+		bio->bi_status = BLK_STS_IOERR;
 		btrfs_end_bbio(bbio, bio);
 	}
 }
@@ -6267,8 +6257,7 @@ int btrfs_map_bio(struct btrfs_fs_info *fs_info, struct bio *bio,
 		}
 
 		if (dev_nr < total_devs - 1) {
-			bio = btrfs_bio_clone(first_bio, GFP_NOFS);
-			BUG_ON(!bio); /* -ENOMEM */
+			bio = btrfs_bio_clone(first_bio);
 		} else
 			bio = first_bio;
 
@@ -6684,10 +6673,8 @@ static int read_one_dev(struct btrfs_fs_info *fs_info,
 	device->in_fs_metadata = 1;
 	if (device->writeable && !device->is_tgtdev_for_dev_replace) {
 		device->fs_devices->total_rw_bytes += device->total_bytes;
-		spin_lock(&fs_info->free_chunk_lock);
-		fs_info->free_chunk_space += device->total_bytes -
-			device->bytes_used;
-		spin_unlock(&fs_info->free_chunk_lock);
+		atomic64_add(device->total_bytes - device->bytes_used,
+				&fs_info->free_chunk_space);
 	}
 	ret = 0;
 	return ret;
