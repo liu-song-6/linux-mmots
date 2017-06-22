@@ -183,14 +183,6 @@ static __inline__ unsigned int dn_hash(__le16 src, __le16 dst)
 	return dn_rt_hash_mask & (unsigned int)tmp;
 }
 
-<<<<<<< HEAD
-static inline void dnrt_free(struct dn_route *rt)
-{
-	call_rcu_bh(&rt->dst.rcu_head, dst_rcu_free);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static void dn_dst_check_expire(unsigned long dummy)
 {
 	int i;
@@ -246,12 +238,8 @@ static int dn_dst_gc(struct dst_ops *ops)
 			}
 			*rtp = rt->dst.dn_next;
 			rt->dst.dn_next = NULL;
-<<<<<<< HEAD
-			dnrt_free(rt);
-=======
 			dst_dev_put(&rt->dst);
 			dst_release(&rt->dst);
->>>>>>> linux-next/akpm-base
 			break;
 		}
 		spin_unlock_bh(&dn_rt_hash_table[i].lock);
@@ -353,11 +341,7 @@ static int dn_insert_route(struct dn_route *rt, unsigned int hash, struct dn_rou
 			dst_use(&rth->dst, now);
 			spin_unlock_bh(&dn_rt_hash_table[hash].lock);
 
-<<<<<<< HEAD
-			dst_free(&rt->dst);
-=======
 			dst_release_immediate(&rt->dst);
->>>>>>> linux-next/akpm-base
 			*rp = rth;
 			return 0;
 		}
@@ -387,12 +371,8 @@ static void dn_run_flush(unsigned long dummy)
 		for(; rt; rt = next) {
 			next = rcu_dereference_raw(rt->dst.dn_next);
 			RCU_INIT_POINTER(rt->dst.dn_next, NULL);
-<<<<<<< HEAD
-			dnrt_free(rt);
-=======
 			dst_dev_put(&rt->dst);
 			dst_release(&rt->dst);
->>>>>>> linux-next/akpm-base
 		}
 
 nothing_to_declare:

@@ -1521,10 +1521,7 @@ static const struct nla_policy ifla_policy[IFLA_MAX+1] = {
 	[IFLA_PROTO_DOWN]	= { .type = NLA_U8 },
 	[IFLA_XDP]		= { .type = NLA_NESTED },
 	[IFLA_GROUP]		= { .type = NLA_U32 },
-<<<<<<< HEAD
-=======
 	[IFLA_EVENT]		= { .type = NLA_U32 },
->>>>>>> linux-next/akpm-base
 };
 
 static const struct nla_policy ifla_info_policy[IFLA_INFO_MAX+1] = {
