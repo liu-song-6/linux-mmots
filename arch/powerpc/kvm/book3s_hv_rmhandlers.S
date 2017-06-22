@@ -45,11 +45,7 @@ END_FTR_SECTION_IFCLR(CPU_FTR_ARCH_300)
 #define NAPPING_NOVCPU	2
 
 /* Stack frame offsets for kvmppc_hv_entry */
-<<<<<<< HEAD
-#define SFS			144
-=======
 #define SFS			160
->>>>>>> linux-next/akpm-base
 #define STACK_SLOT_TRAP		(SFS-4)
 #define STACK_SLOT_TID		(SFS-16)
 #define STACK_SLOT_PSSCR	(SFS-24)
@@ -58,10 +54,7 @@ END_FTR_SECTION_IFCLR(CPU_FTR_ARCH_300)
 #define STACK_SLOT_CIABR	(SFS-48)
 #define STACK_SLOT_DAWR		(SFS-56)
 #define STACK_SLOT_DAWRX	(SFS-64)
-<<<<<<< HEAD
-=======
 #define STACK_SLOT_HFSCR	(SFS-72)
->>>>>>> linux-next/akpm-base
 
 /*
  * Call kvmppc_hv_entry in real mode.
@@ -785,11 +778,8 @@ BEGIN_FTR_SECTION
 	std	r6, STACK_SLOT_PSSCR(r1)
 	std	r7, STACK_SLOT_PID(r1)
 	std	r8, STACK_SLOT_IAMR(r1)
-<<<<<<< HEAD
-=======
 	mfspr	r5, SPRN_HFSCR
 	std	r5, STACK_SLOT_HFSCR(r1)
->>>>>>> linux-next/akpm-base
 END_FTR_SECTION_IFSET(CPU_FTR_ARCH_300)
 BEGIN_FTR_SECTION
 	mfspr	r5, SPRN_CIABR
@@ -2464,10 +2454,6 @@ END_FTR_SECTION_IFSET(CPU_FTR_TM)
 	mfspr	r3, SPRN_DEC
 	mfspr	r4, SPRN_HDEC
 	mftb	r5
-<<<<<<< HEAD
-	extsw	r3, r3
-	EXTEND_HDEC(r4)
-=======
 BEGIN_FTR_SECTION
 	/* On P9 check whether the guest has large decrementer mode enabled */
 	ld	r6, HSTATE_KVM_VCORE(r13)
@@ -2477,7 +2463,6 @@ BEGIN_FTR_SECTION
 END_FTR_SECTION_IFSET(CPU_FTR_ARCH_300)
 	extsw	r3, r3
 68:	EXTEND_HDEC(r4)
->>>>>>> linux-next/akpm-base
 	cmpd	r3, r4
 	ble	67f
 	mtspr	SPRN_DEC, r4
