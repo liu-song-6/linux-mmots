@@ -36,7 +36,7 @@ struct unix_skb_parms {
 	u32			secid;		/* Security ID		*/
 #endif
 	u32			consumed;
-};
+} __randomize_layout;
 
 #define UNIXCB(skb) 	(*(struct unix_skb_parms *)&((skb)->cb))
 
@@ -62,7 +62,7 @@ struct unix_sock {
 #define UNIX_GC_CANDIDATE	0
 #define UNIX_GC_MAYBE_CYCLE	1
 	struct socket_wq	peer_wq;
-	wait_queue_t		peer_wake;
+	wait_queue_entry_t		peer_wake;
 };
 
 static inline struct unix_sock *unix_sk(const struct sock *sk)
