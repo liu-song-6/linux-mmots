@@ -84,7 +84,7 @@ struct exceptional_entry_key {
 };
 
 struct wait_exceptional_entry_queue {
-	wait_queue_t wait;
+	wait_queue_entry_t wait;
 	struct exceptional_entry_key key;
 };
 
@@ -108,7 +108,7 @@ static wait_queue_head_t *dax_entry_waitqueue(struct address_space *mapping,
 	return wait_table + hash;
 }
 
-static int wake_exceptional_entry_func(wait_queue_t *wait, unsigned int mode,
+static int wake_exceptional_entry_func(wait_queue_entry_t *wait, unsigned int mode,
 				       int sync, void *keyp)
 {
 	struct exceptional_entry_key *key = keyp;
@@ -856,8 +856,10 @@ int dax_writeback_mapping_range(struct address_space *mapping,
 
 			ret = dax_writeback_one(bdev, dax_dev, mapping,
 					indices[i], pvec.pages[i]);
-			if (ret < 0)
+			if (ret < 0) {
+				mapping_set_error(mapping, ret);
 				goto out;
+			}
 		}
 		start_index = indices[pvec.nr - 1] + 1;
 	}

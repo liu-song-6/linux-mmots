@@ -276,7 +276,7 @@ xfs_end_io(
 	struct xfs_inode	*ip = XFS_I(ioend->io_inode);
 	xfs_off_t		offset = ioend->io_offset;
 	size_t			size = ioend->io_size;
-	int			error = ioend->io_bio->bi_error;
+	int			error;
 
 	/*
 	 * Just clean up the in-memory strutures if the fs has been shut down.
@@ -289,6 +289,7 @@ xfs_end_io(
 	/*
 	 * Clean up any COW blocks on an I/O error.
 	 */
+	error = blk_status_to_errno(ioend->io_bio->bi_status);
 	if (unlikely(error)) {
 		switch (ioend->io_type) {
 		case XFS_IO_COW:
@@ -332,7 +333,7 @@ xfs_end_bio(
 	else if (ioend->io_append_trans)
 		queue_work(mp->m_data_workqueue, &ioend->io_work);
 	else
-		xfs_destroy_ioend(ioend, bio->bi_error);
+		xfs_destroy_ioend(ioend, blk_status_to_errno(bio->bi_status));
 }
 
 STATIC int
@@ -500,7 +501,7 @@ xfs_submit_ioend(
 	 * time.
 	 */
 	if (status) {
-		ioend->io_bio->bi_error = status;
+		ioend->io_bio->bi_status = errno_to_blk_status(status);
 		bio_endio(ioend->io_bio);
 		return status;
 	}
@@ -836,7 +837,7 @@ xfs_writepage_map(
 	struct inode		*inode,
 	struct page		*page,
 	loff_t			offset,
-	__uint64_t              end_offset)
+	uint64_t              end_offset)
 {
 	LIST_HEAD(submit_list);
 	struct xfs_ioend	*ioend, *next;
@@ -991,7 +992,7 @@ xfs_do_writepage(
 	struct xfs_writepage_ctx *wpc = data;
 	struct inode		*inode = page->mapping->host;
 	loff_t			offset;
-	__uint64_t              end_offset;
+	uint64_t              end_offset;
 	pgoff_t                 end_index;
 
 	trace_xfs_writepage(inode, page, 0, 0);
