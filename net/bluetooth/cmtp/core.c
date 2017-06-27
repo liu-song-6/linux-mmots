@@ -122,7 +122,7 @@ static inline void cmtp_add_msgpart(struct cmtp_session *session, int id, const 
 	if (skb && (skb->len > 0))
 		skb_copy_from_linear_data(skb, skb_put(nskb, skb->len), skb->len);
 
-	memcpy(skb_put(nskb, count), buf, count);
+	skb_put_data(nskb, buf, count);
 
 	session->reassembly[id] = nskb;
 
@@ -280,7 +280,7 @@ static int cmtp_session(void *arg)
 	struct cmtp_session *session = arg;
 	struct sock *sk = session->sock->sk;
 	struct sk_buff *skb;
-	wait_queue_t wait;
+	wait_queue_entry_t wait;
 
 	BT_DBG("session %p", session);
 

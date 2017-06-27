@@ -22,11 +22,11 @@
 
 #define READ_PUBEK_RESULT_SIZE 314
 #define READ_PUBEK_RESULT_MIN_BODY_SIZE (28 + 256)
-#define TPM_ORD_READPUBEK cpu_to_be32(124)
+#define TPM_ORD_READPUBEK 124
 static const struct tpm_input_header tpm_readpubek_header = {
-	.tag = TPM_TAG_RQU_COMMAND,
+	.tag = cpu_to_be16(TPM_TAG_RQU_COMMAND),
 	.length = cpu_to_be32(30),
-	.ordinal = TPM_ORD_READPUBEK
+	.ordinal = cpu_to_be32(TPM_ORD_READPUBEK)
 };
 static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
 			  char *buf)
@@ -36,8 +36,9 @@ static ssize_t pubek_show(struct device *dev, struct device_attribute *attr,
 	ssize_t err;
 	int i, rc;
 	char *str = buf;
-
 	struct tpm_chip *chip = to_tpm_chip(dev);
+
+	memset(&tpm_cmd, 0, sizeof(tpm_cmd));
 
 	tpm_cmd.header.in = tpm_readpubek_header;
 	err = tpm_transmit_cmd(chip, NULL, &tpm_cmd, READ_PUBEK_RESULT_SIZE,

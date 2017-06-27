@@ -392,7 +392,8 @@
 };
 
 &usb1 {
-	dr_mode = "peripheral";
+	dr_mode = "otg";
+	extcon = <&extcon_usb1>;
 };
 
 &usb2 {
@@ -418,8 +419,6 @@
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc2_pins_default>;
-
-	vmmc-supply = <&evm_3v3_sw>;
 	bus-width = <8>;
 	ti,non-removable;
 	max-frequency = <192000000>;
