@@ -1339,21 +1339,6 @@ out:
 	return target->node.start | UPDATE;
 }
 
-<<<<<<< HEAD
-static int
-i915_gem_execbuffer_relocate_entry(struct i915_vma *vma,
-				   struct eb_vmas *eb,
-				   struct drm_i915_gem_relocation_entry *reloc,
-				   struct reloc_cache *cache)
-{
-	struct drm_i915_gem_object *obj = vma->obj;
-	struct drm_i915_private *dev_priv = to_i915(obj->base.dev);
-	struct drm_gem_object *target_obj;
-	struct drm_i915_gem_object *target_i915_obj;
-	struct i915_vma *target_vma;
-	uint64_t target_offset;
-	int ret;
-=======
 static u64
 eb_relocate_entry(struct i915_execbuffer *eb,
 		  struct i915_vma *vma,
@@ -1361,7 +1346,6 @@ eb_relocate_entry(struct i915_execbuffer *eb,
 {
 	struct i915_vma *target;
 	int err;
->>>>>>> linux-next/akpm-base
 
 	/* we've already hold a reference to all valid objects */
 	target = eb_get_vma(eb, reloc->target_handle);
@@ -1445,13 +1429,6 @@ eb_relocate_entry(struct i915_execbuffer *eb,
 	 * of our synchronisation.
 	 */
 	vma->exec_entry->flags &= ~EXEC_OBJECT_ASYNC;
-<<<<<<< HEAD
-
-	ret = relocate_entry(obj, reloc, cache, target_offset);
-	if (ret)
-		return ret;
-=======
->>>>>>> linux-next/akpm-base
 
 	/* and update the user's relocation entry */
 	return relocate_entry(vma, reloc, eb, target);
@@ -1504,14 +1481,9 @@ static int eb_relocate_vma(struct i915_execbuffer *eb, struct i915_vma *vma)
 		do {
 			u64 offset = eb_relocate_entry(eb, vma, r);
 
-<<<<<<< HEAD
-			ret = i915_gem_execbuffer_relocate_entry(vma, eb, r, &cache);
-			if (ret)
-=======
 			if (likely(offset == 0)) {
 			} else if ((s64)offset < 0) {
 				remain = (int)offset;
->>>>>>> linux-next/akpm-base
 				goto out;
 			} else {
 				/*
@@ -1557,24 +1529,7 @@ eb_relocate_vma_slow(struct i915_execbuffer *eb, struct i915_vma *vma)
 	int err;
 
 	for (i = 0; i < entry->relocation_count; i++) {
-<<<<<<< HEAD
-		ret = i915_gem_execbuffer_relocate_entry(vma, eb, &relocs[i], &cache);
-		if (ret)
-			break;
-	}
-	reloc_cache_fini(&cache);
-
-	return ret;
-}
-
-static int
-i915_gem_execbuffer_relocate(struct eb_vmas *eb)
-{
-	struct i915_vma *vma;
-	int ret = 0;
-=======
 		u64 offset = eb_relocate_entry(eb, vma, &relocs[i]);
->>>>>>> linux-next/akpm-base
 
 		if ((s64)offset < 0) {
 			err = (int)offset;
