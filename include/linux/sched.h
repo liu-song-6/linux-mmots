@@ -408,7 +408,7 @@ struct sched_rt_entity {
 	/* rq "owned" by this entity/group: */
 	struct rt_rq			*my_q;
 #endif
-};
+} __randomize_layout;
 
 struct sched_dl_entity {
 	struct rb_node			rb_node;
@@ -421,7 +421,8 @@ struct sched_dl_entity {
 	u64				dl_runtime;	/* Maximum runtime for each instance	*/
 	u64				dl_deadline;	/* Relative deadline of each instance	*/
 	u64				dl_period;	/* Separation of two instances (period) */
-	u64				dl_bw;		/* dl_runtime / dl_deadline		*/
+	u64				dl_bw;		/* dl_runtime / dl_period		*/
+	u64				dl_density;	/* dl_runtime / dl_deadline		*/
 
 	/*
 	 * Actual scheduling parameters. Initialized with the values above,
@@ -445,16 +446,33 @@ struct sched_dl_entity {
 	 *
 	 * @dl_yielded tells if task gave up the CPU before consuming
 	 * all its available runtime during the last job.
+	 *
+	 * @dl_non_contending tells if the task is inactive while still
+	 * contributing to the active utilization. In other words, it
+	 * indicates if the inactive timer has been armed and its handler
+	 * has not been executed yet. This flag is useful to avoid race
+	 * conditions between the inactive timer handler and the wakeup
+	 * code.
 	 */
 	int				dl_throttled;
 	int				dl_boosted;
 	int				dl_yielded;
+	int				dl_non_contending;
 
 	/*
 	 * Bandwidth enforcement timer. Each -deadline task has its
 	 * own bandwidth to be enforced, thus we need one timer per task.
 	 */
 	struct hrtimer			dl_timer;
+
+	/*
+	 * Inactive timer, responsible for decreasing the active utilization
+	 * at the "0-lag time". When a -deadline task blocks, it contributes
+	 * to GRUB's active utilization until the "0-lag time", hence a
+	 * timer is needed to decrease the active utilization at the correct
+	 * time.
+	 */
+	struct hrtimer inactive_timer;
 };
 
 union rcu_special {
@@ -490,6 +508,13 @@ struct task_struct {
 #endif
 	/* -1 unrunnable, 0 runnable, >0 stopped: */
 	volatile long			state;
+
+	/*
+	 * This begins the randomizable portion of task_struct. Only
+	 * scheduling-critical items should be added above here.
+	 */
+	randomized_struct_fields_start
+
 	void				*stack;
 	atomic_t			usage;
 	/* Per task flags (PF_*), defined further below: */
@@ -546,9 +571,10 @@ struct task_struct {
 
 #ifdef CONFIG_TASKS_RCU
 	unsigned long			rcu_tasks_nvcsw;
-	bool				rcu_tasks_holdout;
-	struct list_head		rcu_tasks_holdout_list;
+	u8				rcu_tasks_holdout;
+	u8				rcu_tasks_idx;
 	int				rcu_tasks_idle_cpu;
+	struct list_head		rcu_tasks_holdout_list;
 #endif /* #ifdef CONFIG_TASKS_RCU */
 
 	struct sched_info		sched_info;
@@ -1052,6 +1078,13 @@ struct task_struct {
 	/* Used by LSM modules for access restriction: */
 	void				*security;
 #endif
+
+	/*
+	 * New fields for task_struct should be added above here, so that
+	 * they are included in the randomized portion of task_struct.
+	 */
+	randomized_struct_fields_end
+
 	/* CPU-specific state of this task: */
 	struct thread_struct		thread;
 
@@ -1096,8 +1129,6 @@ static inline struct pid *task_session(struct task_struct *task)
  * task_xid_vnr()    : virtual id, i.e. the id seen from the pid namespace of
  *                     current.
  * task_xid_nr_ns()  : id seen from the ns specified;
- *
- * set_task_vxid()   : assigns a virtual id to a task;
  *
  * see also pid_nr() etc in include/linux/pid.h
  */
@@ -1265,6 +1296,16 @@ extern struct pid *cad_pid;
 /* NOTE: this will return 0 or PF_USED_MATH, it will never return 1 */
 #define tsk_used_math(p)			((p)->flags & PF_USED_MATH)
 #define used_math()				tsk_used_math(current)
+
+static inline bool is_percpu_thread(void)
+{
+#ifdef CONFIG_SMP
+	return (current->flags & PF_NO_SETAFFINITY) &&
+		(current->nr_cpus_allowed  == 1);
+#else
+	return true;
+#endif
+}
 
 /* Per-process atomic flags. */
 #define PFA_NO_NEW_PRIVS		0	/* May not gain new privileges. */
@@ -1473,10 +1514,11 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
  * cond_resched_lock() will drop the spinlock before scheduling,
  * cond_resched_softirq() will enable bhs before scheduling.
  */
+void rcu_all_qs(void);
 #ifndef CONFIG_PREEMPT
 extern int _cond_resched(void);
 #else
-static inline int _cond_resched(void) { return 0; }
+static inline int _cond_resched(void) { rcu_all_qs(); return 0; }
 #endif
 
 #define cond_resched() ({			\

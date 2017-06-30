@@ -48,6 +48,7 @@
 #include <asm/kexec.h>
 #include <asm/apic.h>
 #include <asm/irq_remapping.h>
+#include <asm/mmu_context.h>
 
 #include "trace.h"
 #include "pmu.h"
@@ -596,6 +597,7 @@ struct vcpu_vmx {
 		int           gs_ldt_reload_needed;
 		int           fs_reload_needed;
 		u64           msr_host_bndcfgs;
+		unsigned long vmcs_host_cr3;	/* May not match real cr3 */
 		unsigned long vmcs_host_cr4;	/* May not match real cr4 */
 	} host_state;
 	struct {
@@ -2769,7 +2771,7 @@ static void nested_vmx_setup_ctls_msrs(struct vcpu_vmx *vmx)
 		if (enable_ept_ad_bits) {
 			vmx->nested.nested_vmx_secondary_ctls_high |=
 				SECONDARY_EXEC_ENABLE_PML;
-		       vmx->nested.nested_vmx_ept_caps |= VMX_EPT_AD_BIT;
+			vmx->nested.nested_vmx_ept_caps |= VMX_EPT_AD_BIT;
 		}
 	} else
 		vmx->nested.nested_vmx_ept_caps = 0;
@@ -3195,7 +3197,7 @@ static int vmx_get_msr(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		msr_info->data = vmcs_readl(GUEST_SYSENTER_ESP);
 		break;
 	case MSR_IA32_BNDCFGS:
-		if (!kvm_mpx_supported())
+		if (!kvm_mpx_supported() || !guest_cpuid_has_mpx(vcpu))
 			return 1;
 		msr_info->data = vmcs_read64(GUEST_BNDCFGS);
 		break;
@@ -3277,7 +3279,10 @@ static int vmx_set_msr(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		vmcs_writel(GUEST_SYSENTER_ESP, data);
 		break;
 	case MSR_IA32_BNDCFGS:
-		if (!kvm_mpx_supported())
+		if (!kvm_mpx_supported() || !guest_cpuid_has_mpx(vcpu))
+			return 1;
+		if (is_noncanonical_address(data & PAGE_MASK) ||
+		    (data & MSR_IA32_BNDCFGS_RSVD))
 			return 1;
 		vmcs_write64(GUEST_BNDCFGS, data);
 		break;
@@ -5012,12 +5017,19 @@ static void vmx_set_constant_host_state(struct vcpu_vmx *vmx)
 	u32 low32, high32;
 	unsigned long tmpl;
 	struct desc_ptr dt;
-	unsigned long cr0, cr4;
+	unsigned long cr0, cr3, cr4;
 
 	cr0 = read_cr0();
 	WARN_ON(cr0 & X86_CR0_TS);
 	vmcs_writel(HOST_CR0, cr0);  /* 22.2.3 */
-	vmcs_writel(HOST_CR3, read_cr3());  /* 22.2.3  FIXME: shadow tables */
+
+	/*
+	 * Save the most likely value for this task's CR3 in the VMCS.
+	 * We can't use __get_current_cr3_fast() because we're not atomic.
+	 */
+	cr3 = __read_cr3();
+	vmcs_writel(HOST_CR3, cr3);		/* 22.2.3  FIXME: shadow tables */
+	vmx->host_state.vmcs_host_cr3 = cr3;
 
 	/* Save the most likely value for this task's CR4 in the VMCS. */
 	cr4 = cr4_read_shadow();
@@ -6547,7 +6559,6 @@ static __init int hardware_setup(void)
 	vmx_disable_intercept_for_msr(MSR_IA32_SYSENTER_CS, false);
 	vmx_disable_intercept_for_msr(MSR_IA32_SYSENTER_ESP, false);
 	vmx_disable_intercept_for_msr(MSR_IA32_SYSENTER_EIP, false);
-	vmx_disable_intercept_for_msr(MSR_IA32_BNDCFGS, true);
 
 	memcpy(vmx_msr_bitmap_legacy_x2apic_apicv,
 			vmx_msr_bitmap_legacy, PAGE_SIZE);
@@ -8820,7 +8831,7 @@ static void vmx_arm_hv_timer(struct kvm_vcpu *vcpu)
 static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
-	unsigned long debugctlmsr, cr4;
+	unsigned long debugctlmsr, cr3, cr4;
 
 	/* Don't enter VMX if guest state is invalid, let the exit handler
 	   start emulation until we arrive back to a valid state */
@@ -8841,6 +8852,12 @@ static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 		vmcs_writel(GUEST_RSP, vcpu->arch.regs[VCPU_REGS_RSP]);
 	if (test_bit(VCPU_REGS_RIP, (unsigned long *)&vcpu->arch.regs_dirty))
 		vmcs_writel(GUEST_RIP, vcpu->arch.regs[VCPU_REGS_RIP]);
+
+	cr3 = __get_current_cr3_fast();
+	if (unlikely(cr3 != vmx->host_state.vmcs_host_cr3)) {
+		vmcs_writel(HOST_CR3, cr3);
+		vmx->host_state.vmcs_host_cr3 = cr3;
+	}
 
 	cr4 = cr4_read_shadow();
 	if (unlikely(cr4 != vmx->host_state.vmcs_host_cr4)) {
@@ -10710,8 +10727,7 @@ static void sync_vmcs12(struct kvm_vcpu *vcpu, struct vmcs12 *vmcs12)
 		vmcs12->guest_pdptr3 = vmcs_read64(GUEST_PDPTR3);
 	}
 
-	if (nested_cpu_has_ept(vmcs12))
-		vmcs12->guest_linear_address = vmcs_readl(GUEST_LINEAR_ADDRESS);
+	vmcs12->guest_linear_address = vmcs_readl(GUEST_LINEAR_ADDRESS);
 
 	if (nested_cpu_has_vid(vmcs12))
 		vmcs12->guest_intr_status = vmcs_read16(GUEST_INTR_STATUS);
@@ -10736,8 +10752,6 @@ static void sync_vmcs12(struct kvm_vcpu *vcpu, struct vmcs12 *vmcs12)
 	vmcs12->guest_sysenter_eip = vmcs_readl(GUEST_SYSENTER_EIP);
 	if (kvm_mpx_supported())
 		vmcs12->guest_bndcfgs = vmcs_read64(GUEST_BNDCFGS);
-	if (nested_cpu_has_xsaves(vmcs12))
-		vmcs12->xss_exit_bitmap = vmcs_read64(XSS_EXIT_BITMAP);
 }
 
 /*

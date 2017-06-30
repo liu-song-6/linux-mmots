@@ -155,7 +155,7 @@ struct neighbour {
 	struct rcu_head		rcu;
 	struct net_device	*dev;
 	u8			primary_key[0];
-};
+} __randomize_layout;
 
 struct neigh_ops {
 	int			family;
@@ -317,6 +317,7 @@ int __neigh_event_send(struct neighbour *neigh, struct sk_buff *skb);
 int neigh_update(struct neighbour *neigh, const u8 *lladdr, u8 new, u32 flags,
 		 u32 nlmsg_pid);
 void __neigh_set_probe_once(struct neighbour *neigh);
+bool neigh_remove_one(struct neighbour *ndel, struct neigh_table *tbl);
 void neigh_changeaddr(struct neigh_table *tbl, struct net_device *dev);
 int neigh_ifdown(struct neigh_table *tbl, struct net_device *dev);
 int neigh_resolve_output(struct neighbour *neigh, struct sk_buff *skb);
