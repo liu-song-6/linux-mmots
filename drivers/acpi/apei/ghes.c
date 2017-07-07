@@ -1098,6 +1098,14 @@ static int ghes_probe(struct platform_device *ghes_dev)
 	case ACPI_HEST_NOTIFY_GSIV:
 	case ACPI_HEST_NOTIFY_GPIO:
 		break;
+	case ACPI_HEST_NOTIFY_SEA:
+		if (!IS_ENABLED(CONFIG_ACPI_APEI_SEA)) {
+			pr_warn(GHES_PFX "Generic hardware error source: %d notified via SEA is not supported\n",
+				generic->header.source_id);
+			rc = -ENOTSUPP;
+			goto err;
+		}
+		break;
 
 	case ACPI_HEST_NOTIFY_SEA:
 		if (!IS_ENABLED(CONFIG_ACPI_APEI_SEA)) {
@@ -1174,6 +1182,9 @@ static int ghes_probe(struct platform_device *ghes_dev)
 		list_add_rcu(&ghes->list, &ghes_hed);
 		mutex_unlock(&ghes_list_mutex);
 		break;
+	case ACPI_HEST_NOTIFY_SEA:
+		ghes_sea_add(ghes);
+		break;
 
 	case ACPI_HEST_NOTIFY_SEA:
 		ghes_sea_add(ghes);
@@ -1226,6 +1237,9 @@ static int ghes_remove(struct platform_device *ghes_dev)
 			unregister_acpi_hed_notifier(&ghes_notifier_hed);
 		mutex_unlock(&ghes_list_mutex);
 		synchronize_rcu();
+		break;
+	case ACPI_HEST_NOTIFY_SEA:
+		ghes_sea_remove(ghes);
 		break;
 
 	case ACPI_HEST_NOTIFY_SEA:

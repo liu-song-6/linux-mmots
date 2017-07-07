@@ -408,7 +408,7 @@ struct sched_rt_entity {
 	/* rq "owned" by this entity/group: */
 	struct rt_rq			*my_q;
 #endif
-};
+} __randomize_layout;
 
 struct sched_dl_entity {
 	struct rb_node			rb_node;
@@ -508,6 +508,13 @@ struct task_struct {
 #endif
 	/* -1 unrunnable, 0 runnable, >0 stopped: */
 	volatile long			state;
+
+	/*
+	 * This begins the randomizable portion of task_struct. Only
+	 * scheduling-critical items should be added above here.
+	 */
+	randomized_struct_fields_start
+
 	void				*stack;
 	atomic_t			usage;
 	/* Per task flags (PF_*), defined further below: */
@@ -564,9 +571,10 @@ struct task_struct {
 
 #ifdef CONFIG_TASKS_RCU
 	unsigned long			rcu_tasks_nvcsw;
-	bool				rcu_tasks_holdout;
-	struct list_head		rcu_tasks_holdout_list;
+	u8				rcu_tasks_holdout;
+	u8				rcu_tasks_idx;
 	int				rcu_tasks_idle_cpu;
+	struct list_head		rcu_tasks_holdout_list;
 #endif /* #ifdef CONFIG_TASKS_RCU */
 
 	struct sched_info		sched_info;
@@ -1070,6 +1078,13 @@ struct task_struct {
 	/* Used by LSM modules for access restriction: */
 	void				*security;
 #endif
+
+	/*
+	 * New fields for task_struct should be added above here, so that
+	 * they are included in the randomized portion of task_struct.
+	 */
+	randomized_struct_fields_end
+
 	/* CPU-specific state of this task: */
 	struct thread_struct		thread;
 
@@ -1499,10 +1514,11 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
  * cond_resched_lock() will drop the spinlock before scheduling,
  * cond_resched_softirq() will enable bhs before scheduling.
  */
+void rcu_all_qs(void);
 #ifndef CONFIG_PREEMPT
 extern int _cond_resched(void);
 #else
-static inline int _cond_resched(void) { return 0; }
+static inline int _cond_resched(void) { rcu_all_qs(); return 0; }
 #endif
 
 #define cond_resched() ({			\
