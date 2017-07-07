@@ -663,11 +663,7 @@ size_t copy_from_iter_flushcache(void *addr, size_t bytes, struct iov_iter *i)
 EXPORT_SYMBOL_GPL(copy_from_iter_flushcache);
 #endif
 
-<<<<<<< HEAD
-bool copy_from_iter_full_nocache(void *addr, size_t bytes, struct iov_iter *i)
-=======
 bool _copy_from_iter_full_nocache(void *addr, size_t bytes, struct iov_iter *i)
->>>>>>> linux-next/akpm-base
 {
 	char *to = addr;
 	if (unlikely(i->type & ITER_PIPE)) {

@@ -148,8 +148,6 @@ static inline int drm_debugfs_crtc_crc_add(struct drm_crtc *crtc)
 drm_ioctl_t drm_version;
 drm_ioctl_t drm_getunique;
 drm_ioctl_t drm_getclient;
-<<<<<<< HEAD
-=======
 
 /* drm_syncobj.c */
 void drm_syncobj_open(struct drm_file *file_private);
@@ -162,4 +160,3 @@ int drm_syncobj_handle_to_fd_ioctl(struct drm_device *dev, void *data,
 				   struct drm_file *file_private);
 int drm_syncobj_fd_to_handle_ioctl(struct drm_device *dev, void *data,
 				   struct drm_file *file_private);
->>>>>>> linux-next/akpm-base

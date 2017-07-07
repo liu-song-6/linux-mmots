@@ -92,12 +92,6 @@ size_t copy_page_to_iter(struct page *page, size_t offset, size_t bytes,
 			 struct iov_iter *i);
 size_t copy_page_from_iter(struct page *page, size_t offset, size_t bytes,
 			 struct iov_iter *i);
-<<<<<<< HEAD
-size_t copy_to_iter(const void *addr, size_t bytes, struct iov_iter *i);
-size_t copy_from_iter(void *addr, size_t bytes, struct iov_iter *i);
-bool copy_from_iter_full(void *addr, size_t bytes, struct iov_iter *i);
-size_t copy_from_iter_nocache(void *addr, size_t bytes, struct iov_iter *i);
-=======
 
 size_t _copy_to_iter(const void *addr, size_t bytes, struct iov_iter *i);
 size_t _copy_from_iter(void *addr, size_t bytes, struct iov_iter *i);
@@ -150,7 +144,6 @@ bool copy_from_iter_full_nocache(void *addr, size_t bytes, struct iov_iter *i)
 		return _copy_from_iter_full_nocache(addr, bytes, i);
 }
 
->>>>>>> linux-next/akpm-base
 #ifdef CONFIG_ARCH_HAS_UACCESS_FLUSHCACHE
 /*
  * Note, users like pmem that depend on the stricter semantics of
@@ -166,11 +159,7 @@ static inline size_t copy_from_iter_flushcache(void *addr, size_t bytes,
 	return copy_from_iter_nocache(addr, bytes, i);
 }
 #endif
-<<<<<<< HEAD
-bool copy_from_iter_full_nocache(void *addr, size_t bytes, struct iov_iter *i);
-=======
 
->>>>>>> linux-next/akpm-base
 size_t iov_iter_zero(size_t bytes, struct iov_iter *);
 unsigned long iov_iter_alignment(const struct iov_iter *i);
 unsigned long iov_iter_gap_alignment(const struct iov_iter *i);
