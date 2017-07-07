@@ -2104,27 +2104,17 @@ static void posix_lock_to_flock64(struct flock64 *flock, struct file_lock *fl)
  */
 int fcntl_getlk(struct file *filp, unsigned int cmd, struct flock *flock)
 {
-<<<<<<< HEAD
-	struct file_lock file_lock;
-	int error;
-
-=======
 	struct file_lock *fl;
 	int error;
 
 	fl = locks_alloc_lock();
 	if (fl == NULL)
 		return -ENOMEM;
->>>>>>> linux-next/akpm-base
 	error = -EINVAL;
 	if (flock->l_type != F_RDLCK && flock->l_type != F_WRLCK)
 		goto out;
 
-<<<<<<< HEAD
-	error = flock_to_posix_lock(filp, &file_lock, flock);
-=======
 	error = flock_to_posix_lock(filp, fl, flock);
->>>>>>> linux-next/akpm-base
 	if (error)
 		goto out;
 
@@ -2142,23 +2132,12 @@ int fcntl_getlk(struct file *filp, unsigned int cmd, struct flock *flock)
 	if (error)
 		goto out;
  
-<<<<<<< HEAD
-	flock->l_type = file_lock.fl_type;
-	if (file_lock.fl_type != F_UNLCK) {
-		error = posix_lock_to_flock(flock, &file_lock);
-=======
 	flock->l_type = fl->fl_type;
 	if (fl->fl_type != F_UNLCK) {
 		error = posix_lock_to_flock(flock, fl);
->>>>>>> linux-next/akpm-base
 		if (error)
 			goto out;
 	}
-<<<<<<< HEAD
-rel_priv:
-	locks_release_private(&file_lock);
-=======
->>>>>>> linux-next/akpm-base
 out:
 	locks_free_lock(fl);
 	return error;
@@ -2339,11 +2318,6 @@ out:
  */
 int fcntl_getlk64(struct file *filp, unsigned int cmd, struct flock64 *flock)
 {
-<<<<<<< HEAD
-	struct file_lock file_lock;
-	int error;
-
-=======
 	struct file_lock *fl;
 	int error;
 
@@ -2351,16 +2325,11 @@ int fcntl_getlk64(struct file *filp, unsigned int cmd, struct flock64 *flock)
 	if (fl == NULL)
 		return -ENOMEM;
 
->>>>>>> linux-next/akpm-base
 	error = -EINVAL;
 	if (flock->l_type != F_RDLCK && flock->l_type != F_WRLCK)
 		goto out;
 
-<<<<<<< HEAD
-	error = flock64_to_posix_lock(filp, &file_lock, flock);
-=======
 	error = flock64_to_posix_lock(filp, fl, flock);
->>>>>>> linux-next/akpm-base
 	if (error)
 		goto out;
 
@@ -2378,15 +2347,9 @@ int fcntl_getlk64(struct file *filp, unsigned int cmd, struct flock64 *flock)
 	if (error)
 		goto out;
 
-<<<<<<< HEAD
-	flock->l_type = file_lock.fl_type;
-	if (file_lock.fl_type != F_UNLCK)
-		posix_lock_to_flock64(flock, &file_lock);
-=======
 	flock->l_type = fl->fl_type;
 	if (fl->fl_type != F_UNLCK)
 		posix_lock_to_flock64(flock, fl);
->>>>>>> linux-next/akpm-base
 
 out:
 	locks_free_lock(fl);
