@@ -343,7 +343,11 @@ static int compat_drm_markbufs(struct file *file, unsigned int cmd,
 {
 	drm_buf_desc32_t b32;
 	drm_buf_desc32_t __user *argp = (void __user *)arg;
+<<<<<<< HEAD
 	struct drm_buf_desc buf;
+=======
+	struct drm_buf_desc __user buf;
+>>>>>>> linux-next/akpm-base
 
 	if (copy_from_user(&b32, argp, sizeof(b32)))
 		return -EFAULT;
@@ -870,7 +874,11 @@ static int compat_drm_mode_addfb2(struct file *file, unsigned int cmd,
 				  unsigned long arg)
 {
 	struct drm_mode_fb_cmd232 __user *argp = (void __user *)arg;
+<<<<<<< HEAD
 	struct drm_mode_fb_cmd2 req64;
+=======
+	struct drm_mode_fb_cmd2 __user req64;
+>>>>>>> linux-next/akpm-base
 	int err;
 
 	if (copy_from_user(&req64, argp,

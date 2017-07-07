@@ -33,7 +33,7 @@
 #include <linux/workqueue.h>
 #include <linux/delayed_call.h>
 #include <linux/uuid.h>
-
+#include <linux/errseq.h>
 #include <asm/byteorder.h>
 #include <uapi/linux/fs.h>
 
@@ -295,7 +295,7 @@ struct kiocb {
 	void			*private;
 	int			ki_flags;
 	enum rw_hint		ki_hint;
-};
+} __randomize_layout;
 
 static inline bool is_sync_kiocb(struct kiocb *kiocb)
 {
@@ -402,7 +402,8 @@ struct address_space {
 	gfp_t			gfp_mask;	/* implicit gfp mask for allocations */
 	struct list_head	private_list;	/* ditto */
 	void			*private_data;	/* ditto */
-} __attribute__((aligned(sizeof(long))));
+	errseq_t		wb_err;
+} __attribute__((aligned(sizeof(long)))) __randomize_layout;
 	/*
 	 * On most architectures that alignment is already the case; but
 	 * must be enforced here for CRIS, to let the least significant bit
@@ -445,7 +446,7 @@ struct block_device {
 	int			bd_fsfreeze_count;
 	/* Mutex for freeze */
 	struct mutex		bd_fsfreeze_mutex;
-};
+} __randomize_layout;
 
 /*
  * Radix-tree tags, for tagging dirty and writeback pages within the pagecache
@@ -664,7 +665,7 @@ struct inode {
 #endif
 
 	void			*i_private; /* fs or device private pointer */
-};
+} __randomize_layout;
 
 static inline unsigned int i_blocksize(const struct inode *node)
 {
@@ -880,7 +881,9 @@ struct file {
 	struct list_head	f_tfile_llink;
 #endif /* #ifdef CONFIG_EPOLL */
 	struct address_space	*f_mapping;
-} __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
+	errseq_t		f_wb_err;
+} __randomize_layout
+  __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
 
 struct file_handle {
 	__u32 handle_bytes;
@@ -920,6 +923,7 @@ static inline struct file *get_file(struct file *f)
 #define FL_UNLOCK_PENDING	512 /* Lease is being broken */
 #define FL_OFDLCK	1024	/* lock is "owned" by struct file */
 #define FL_LAYOUT	2048	/* outstanding pNFS layout */
+#define FL_PID_PRIV	4096	/* F_GETLK should report fl_pid */
 
 #define FL_CLOSE_POSIX (FL_POSIX | FL_CLOSE)
 
@@ -996,7 +1000,6 @@ struct file_lock {
 	unsigned char fl_type;
 	unsigned int fl_pid;
 	int fl_link_cpu;		/* what cpu's list is this on? */
-	struct pid *fl_nspid;
 	wait_queue_head_t fl_wait;
 	struct file *fl_file;
 	loff_t fl_start;
@@ -1017,7 +1020,7 @@ struct file_lock {
 			int state;		/* state of grant or error if -ve */
 		} afs;
 	} fl_u;
-};
+} __randomize_layout;
 
 struct file_lock_context {
 	spinlock_t		flc_lock;
@@ -1414,7 +1417,7 @@ struct super_block {
 
 	spinlock_t		s_inode_wblist_lock;
 	struct list_head	s_inodes_wb;	/* writeback inodes */
-};
+} __randomize_layout;
 
 /* Helper functions so that in most cases filesystems will
  * not need to deal directly with kuid_t and kgid_t and can
@@ -1700,7 +1703,7 @@ struct file_operations {
 			u64);
 	ssize_t (*dedupe_file_range)(struct file *, u64, u64, struct file *,
 			u64);
-};
+} __randomize_layout;
 
 struct inode_operations {
 	struct dentry * (*lookup) (struct inode *,struct dentry *, unsigned int);
@@ -1747,12 +1750,6 @@ static inline ssize_t call_write_iter(struct file *file, struct kiocb *kio,
 static inline int call_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	return file->f_op->mmap(file, vma);
-}
-
-static inline int call_fsync(struct file *file, loff_t start, loff_t end,
-			     int datasync)
-{
-	return file->f_op->fsync(file, start, end, datasync);
 }
 
 ssize_t rw_copy_check_uvector(int type, const struct iovec __user * uvector,
@@ -1958,6 +1955,9 @@ static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
  *			wb stat updates to grab mapping->tree_lock.  See
  *			inode_switch_wb_work_fn() for details.
  *
+ * I_OVL_INUSE		Used by overlayfs to get exclusive ownership on upper
+ *			and work dirs among overlayfs mounts.
+ *
  * Q: What is the difference between I_WILL_FREE and I_FREEING?
  */
 #define I_DIRTY_SYNC		(1 << 0)
@@ -1978,6 +1978,7 @@ static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
 #define __I_DIRTY_TIME_EXPIRED	12
 #define I_DIRTY_TIME_EXPIRED	(1 << __I_DIRTY_TIME_EXPIRED)
 #define I_WB_SWITCH		(1 << 13)
+#define I_OVL_INUSE			(1 << 14)
 
 #define I_DIRTY (I_DIRTY_SYNC | I_DIRTY_DATASYNC | I_DIRTY_PAGES)
 #define I_DIRTY_ALL (I_DIRTY | I_DIRTY_TIME)
@@ -2543,7 +2544,7 @@ extern int write_inode_now(struct inode *, int);
 extern int filemap_fdatawrite(struct address_space *);
 extern int filemap_flush(struct address_space *);
 extern int filemap_fdatawait(struct address_space *);
-extern void filemap_fdatawait_keep_errors(struct address_space *);
+extern int filemap_fdatawait_keep_errors(struct address_space *mapping);
 extern int filemap_fdatawait_range(struct address_space *, loff_t lstart,
 				   loff_t lend);
 extern bool filemap_range_has_page(struct address_space *, loff_t lstart,
@@ -2556,6 +2557,62 @@ extern int __filemap_fdatawrite_range(struct address_space *mapping,
 extern int filemap_fdatawrite_range(struct address_space *mapping,
 				loff_t start, loff_t end);
 extern int filemap_check_errors(struct address_space *mapping);
+
+extern void __filemap_set_wb_err(struct address_space *mapping, int err);
+extern int __must_check file_check_and_advance_wb_err(struct file *file);
+extern int __must_check file_write_and_wait_range(struct file *file,
+						loff_t start, loff_t end);
+
+/**
+ * filemap_set_wb_err - set a writeback error on an address_space
+ * @mapping: mapping in which to set writeback error
+ * @err: error to be set in mapping
+ *
+ * When writeback fails in some way, we must record that error so that
+ * userspace can be informed when fsync and the like are called.  We endeavor
+ * to report errors on any file that was open at the time of the error.  Some
+ * internal callers also need to know when writeback errors have occurred.
+ *
+ * When a writeback error occurs, most filesystems will want to call
+ * filemap_set_wb_err to record the error in the mapping so that it will be
+ * automatically reported whenever fsync is called on the file.
+ *
+ * FIXME: mention FS_* flag here?
+ */
+static inline void filemap_set_wb_err(struct address_space *mapping, int err)
+{
+	/* Fastpath for common case of no error */
+	if (unlikely(err))
+		__filemap_set_wb_err(mapping, err);
+}
+
+/**
+ * filemap_check_wb_error - has an error occurred since the mark was sampled?
+ * @mapping: mapping to check for writeback errors
+ * @since: previously-sampled errseq_t
+ *
+ * Grab the errseq_t value from the mapping, and see if it has changed "since"
+ * the given value was sampled.
+ *
+ * If it has then report the latest error set, otherwise return 0.
+ */
+static inline int filemap_check_wb_err(struct address_space *mapping,
+					errseq_t since)
+{
+	return errseq_check(&mapping->wb_err, since);
+}
+
+/**
+ * filemap_sample_wb_err - sample the current errseq_t to test for later errors
+ * @mapping: mapping to be sampled
+ *
+ * Writeback errors are always reported relative to a particular sample point
+ * in the past. This function provides those sample points.
+ */
+static inline errseq_t filemap_sample_wb_err(struct address_space *mapping)
+{
+	return errseq_sample(&mapping->wb_err);
+}
 
 extern int vfs_fsync_range(struct file *file, loff_t start, loff_t end,
 			   int datasync);
