@@ -125,9 +125,9 @@
 			VMLINUX_SYMBOL(__start_ftrace_events) = .;	\
 			KEEP(*(_ftrace_events))				\
 			VMLINUX_SYMBOL(__stop_ftrace_events) = .;	\
-			VMLINUX_SYMBOL(__start_ftrace_enum_maps) = .;	\
-			KEEP(*(_ftrace_enum_map))			\
-			VMLINUX_SYMBOL(__stop_ftrace_enum_maps) = .;
+			VMLINUX_SYMBOL(__start_ftrace_eval_maps) = .;	\
+			KEEP(*(_ftrace_eval_map))			\
+			VMLINUX_SYMBOL(__stop_ftrace_eval_maps) = .;
 #else
 #define FTRACE_EVENTS()
 #endif
@@ -172,8 +172,7 @@
 	KEEP(*(__##name##_of_table))					\
 	KEEP(*(__##name##_of_table_end))
 
-#define CLKSRC_OF_TABLES()	OF_TABLE(CONFIG_CLKSRC_OF, clksrc)
-#define CLKEVT_OF_TABLES()	OF_TABLE(CONFIG_CLKEVT_OF, clkevt)
+#define TIMER_OF_TABLES()	OF_TABLE(CONFIG_TIMER_OF, timer)
 #define IRQCHIP_OF_MATCH_TABLE() OF_TABLE(CONFIG_IRQCHIP, irqchip)
 #define CLK_OF_TABLES()		OF_TABLE(CONFIG_COMMON_CLK, clk)
 #define IOMMU_OF_TABLES()	OF_TABLE(CONFIG_OF_IOMMU, iommu)
@@ -557,15 +556,15 @@
 	MEM_DISCARD(init.rodata)					\
 	CLK_OF_TABLES()							\
 	RESERVEDMEM_OF_TABLES()						\
-	CLKSRC_OF_TABLES()						\
-	CLKEVT_OF_TABLES()						\
+	TIMER_OF_TABLES()						\
 	IOMMU_OF_TABLES()						\
 	CPU_METHOD_OF_TABLES()						\
 	CPUIDLE_METHOD_OF_TABLES()					\
 	KERNEL_DTB()							\
 	IRQCHIP_OF_MATCH_TABLE()					\
 	ACPI_PROBE_TABLE(irqchip)					\
-	ACPI_PROBE_TABLE(clksrc)					\
+	ACPI_PROBE_TABLE(timer)						\
+	ACPI_PROBE_TABLE(iort)						\
 	EARLYCON_TABLE()
 
 #define INIT_TEXT							\
