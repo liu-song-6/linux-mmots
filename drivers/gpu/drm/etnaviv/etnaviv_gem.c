@@ -412,25 +412,9 @@ int etnaviv_gem_cpu_prep(struct drm_gem_object *obj, u32 op,
 	struct drm_device *dev = obj->dev;
 	bool write = !!(op & ETNA_PREP_WRITE);
 	int ret;
-<<<<<<< HEAD
-
-	if (op & ETNA_PREP_NOSYNC) {
-		if (!reservation_object_test_signaled_rcu(etnaviv_obj->resv,
-							  write))
-			return -EBUSY;
-	} else {
-		unsigned long remain = etnaviv_timeout_to_jiffies(timeout);
-
-		ret = reservation_object_wait_timeout_rcu(etnaviv_obj->resv,
-							  write, true, remain);
-		if (ret <= 0)
-			return ret == 0 ? -ETIMEDOUT : ret;
-	}
-=======
 
 	if (!etnaviv_obj->sgt) {
 		void *ret;
->>>>>>> linux-next/akpm-base
 
 		mutex_lock(&etnaviv_obj->lock);
 		ret = etnaviv_gem_get_pages(etnaviv_obj);

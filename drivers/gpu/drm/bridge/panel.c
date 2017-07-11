@@ -161,11 +161,7 @@ struct drm_bridge *drm_panel_bridge_add(struct drm_panel *panel,
 	int ret;
 
 	if (!panel)
-<<<<<<< HEAD
-		return ERR_PTR(EINVAL);
-=======
 		return ERR_PTR(-EINVAL);
->>>>>>> linux-next/akpm-base
 
 	panel_bridge = devm_kzalloc(panel->dev, sizeof(*panel_bridge),
 				    GFP_KERNEL);
