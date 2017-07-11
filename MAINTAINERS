@@ -1139,6 +1139,18 @@ F:	arch/arm/mach-aspeed/
 F:	arch/arm/boot/dts/aspeed-*
 F:	drivers/*/*aspeed*
 
+ARM/ASPEED I2C DRIVER
+M:	Brendan Higgins <brendanhiggins@google.com>
+R:	Benjamin Herrenschmidt <benh@kernel.crashing.org>
+R:	Joel Stanley <joel@jms.id.au>
+L:	linux-i2c@vger.kernel.org
+L:	openbmc@lists.ozlabs.org
+S:	Maintained
+F:	drivers/irqchip/irq-aspeed-i2c-ic.c
+F:	drivers/i2c/busses/i2c-aspeed.c
+F:	Documentation/devicetree/bindings/interrupt-controller/aspeed,ast2400-i2c-ic.txt
+F:	Documentation/devicetree/bindings/i2c/i2c-aspeed.txt
+
 ARM/ATMEL AT91RM9200, AT91SAM9 AND SAMA5 SOC SUPPORT
 M:	Nicolas Ferre <nicolas.ferre@microchip.com>
 M:	Alexandre Belloni <alexandre.belloni@free-electrons.com>
@@ -1243,7 +1255,7 @@ L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 T:	git git://github.com/ulli-kroll/linux.git
 S:	Maintained
 F:	arch/arm/mach-gemini/
-F:	drivers/rtc/rtc-gemini.c
+F:	drivers/rtc/rtc-ftrtc010.c
 
 ARM/CSR SIRFPRIMA2 MACHINE SUPPORT
 M:	Barry Song <baohua@kernel.org>
@@ -3350,6 +3362,16 @@ L:	alsa-devel@alsa-project.org (moderated for non-subscribers)
 S:	Maintained
 F:	sound/soc/codecs/cs*
 
+CIRRUS LOGIC MADERA CODEC DRIVERS
+M:	Charles Keepax <ckeepax@opensource.wolfsonmicro.com>
+M:	Richard Fitzgerald <rf@opensource.wolfsonmicro.com>
+L:	alsa-devel@alsa-project.org (moderated for non-subscribers)
+L:	patches@opensource.wolfsonmicro.com
+T:	git https://github.com/CirrusLogic/linux-drivers.git
+W:	https://github.com/CirrusLogic/linux-drivers/wiki
+S:	Supported
+F:	include/linux/mfd/madera/*
+
 CLEANCACHE API
 M:	Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
 L:	linux-kernel@vger.kernel.org
@@ -3961,6 +3983,12 @@ M:	Pali Rohár <pali.rohar@gmail.com>
 S:	Maintained
 F:	drivers/platform/x86/dell-wmi.c
 
+DENALI NAND DRIVER
+M:	Masahiro Yamada <yamada.masahiro@socionext.com>
+L:	linux-mtd@lists.infradead.org
+S:	Supported
+F:	drivers/mtd/nand/denali*
+
 DESIGNWARE USB2 DRD IP DRIVER
 M:	John Youn <johnyoun@synopsys.com>
 L:	linux-usb@vger.kernel.org
@@ -4180,6 +4208,17 @@ F:	include/linux/sync_file.h
 F:	include/uapi/linux/sync_file.h
 F:	Documentation/sync_file.txt
 T:	git git://anongit.freedesktop.org/drm/drm-misc
+
+SYNC FILE FRAMEWORK
+M:	Sumit Semwal <sumit.semwal@linaro.org>
+R:	Gustavo Padovan <gustavo@padovan.org>
+S:	Maintained
+L:	linux-media@vger.kernel.org
+L:	dri-devel@lists.freedesktop.org
+F:	drivers/dma-buf/sync_file.c
+F:	include/linux/sync_file.h
+F:	Documentation/sync_file.txt
+T:	git git://git.linaro.org/people/sumitsemwal/linux-dma-buf.git
 
 DMA GENERIC OFFLOAD ENGINE SUBSYSTEM
 M:	Vinod Koul <vinod.koul@intel.com>
@@ -6381,6 +6420,7 @@ M:	Mika Westerberg <mika.westerberg@linux.intel.com>
 L:	linux-i2c@vger.kernel.org
 L:	linux-acpi@vger.kernel.org
 S:	Maintained
+F:	drivers/i2c/i2c-core-acpi.c
 
 I2C-TAOS-EVM DRIVER
 M:	Jean Delvare <jdelvare@suse.com>
@@ -8702,6 +8742,12 @@ S:	Supported
 F:	Documentation/devicetree/bindings/mips/
 F:	Documentation/mips/
 F:	arch/mips/
+
+MIPS GENERIC PLATFORM
+M:	Paul Burton <paul.burton@imgtec.com>
+L:	linux-mips@linux-mips.org
+S:	Supported
+F:	arch/mips/generic/
 
 MIPS/LOONGSON1 ARCHITECTURE
 M:	Keguang Zhang <keguang.zhang@gmail.com>
@@ -12450,7 +12496,8 @@ M:	Marek Vasut <marek.vasut@gmail.com>
 L:	linux-mtd@lists.infradead.org
 W:	http://www.linux-mtd.infradead.org/
 Q:	http://patchwork.ozlabs.org/project/linux-mtd/list/
-T:	git git://github.com/spi-nor/linux.git
+T:	git git://git.infradead.org/linux-mtd.git spi-nor/fixes
+T:	git git://git.infradead.org/l2-mtd.git spi-nor/next
 S:	Maintained
 F:	drivers/mtd/spi-nor/
 F:	include/linux/mtd/spi-nor.h

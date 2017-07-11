@@ -859,6 +859,7 @@ static int gen8_oa_read(struct i915_perf_stream *stream,
 		I915_WRITE(GEN8_OASTATUS,
 			   oastatus & ~GEN8_OASTATUS_REPORT_LOST);
 	}
+<<<<<<< HEAD
 
 	return gen8_append_oa_reports(stream, buf, count, offset);
 }
@@ -909,6 +910,58 @@ static int gen7_append_oa_reports(struct i915_perf_stream *stream,
 	aged_tail_idx = dev_priv->perf.oa.oa_buffer.aged_tail_idx;
 	tail = dev_priv->perf.oa.oa_buffer.tails[aged_tail_idx].offset;
 
+=======
+
+	return gen8_append_oa_reports(stream, buf, count, offset);
+}
+
+/**
+ * Copies all buffered OA reports into userspace read() buffer.
+ * @stream: An i915-perf stream opened for OA metrics
+ * @buf: destination buffer given by userspace
+ * @count: the number of bytes userspace wants to read
+ * @offset: (inout): the current position for writing into @buf
+ *
+ * Notably any error condition resulting in a short read (-%ENOSPC or
+ * -%EFAULT) will be returned even though one or more records may
+ * have been successfully copied. In this case it's up to the caller
+ * to decide if the error should be squashed before returning to
+ * userspace.
+ *
+ * Note: reports are consumed from the head, and appended to the
+ * tail, so the tail chases the head?... If you think that's mad
+ * and back-to-front you're not alone, but this follows the
+ * Gen PRM naming convention.
+ *
+ * Returns: 0 on success, negative error code on failure.
+ */
+static int gen7_append_oa_reports(struct i915_perf_stream *stream,
+				  char __user *buf,
+				  size_t count,
+				  size_t *offset)
+{
+	struct drm_i915_private *dev_priv = stream->dev_priv;
+	int report_size = dev_priv->perf.oa.oa_buffer.format_size;
+	u8 *oa_buf_base = dev_priv->perf.oa.oa_buffer.vaddr;
+	u32 gtt_offset = i915_ggtt_offset(dev_priv->perf.oa.oa_buffer.vma);
+	u32 mask = (OA_BUFFER_SIZE - 1);
+	size_t start_offset = *offset;
+	unsigned long flags;
+	unsigned int aged_tail_idx;
+	u32 head, tail;
+	u32 taken;
+	int ret = 0;
+
+	if (WARN_ON(!stream->enabled))
+		return -EIO;
+
+	spin_lock_irqsave(&dev_priv->perf.oa.oa_buffer.ptr_lock, flags);
+
+	head = dev_priv->perf.oa.oa_buffer.head;
+	aged_tail_idx = dev_priv->perf.oa.oa_buffer.aged_tail_idx;
+	tail = dev_priv->perf.oa.oa_buffer.tails[aged_tail_idx].offset;
+
+>>>>>>> linux-next/akpm-base
 	spin_unlock_irqrestore(&dev_priv->perf.oa.oa_buffer.ptr_lock, flags);
 
 	/* An invalid tail pointer here means we're still waiting for the poll
@@ -1775,6 +1828,7 @@ static int gen8_configure_all_contexts(struct drm_i915_private *dev_priv,
 }
 
 static int gen8_enable_metric_set(struct drm_i915_private *dev_priv)
+<<<<<<< HEAD
 {
 	int ret = dev_priv->perf.oa.ops.select_metric_set(dev_priv);
 	int i;
@@ -1842,6 +1896,75 @@ static void gen8_disable_metric_set(struct drm_i915_private *dev_priv)
 
 static void gen7_oa_enable(struct drm_i915_private *dev_priv)
 {
+=======
+{
+	int ret = dev_priv->perf.oa.ops.select_metric_set(dev_priv);
+	int i;
+
+	if (ret)
+		return ret;
+
+	/*
+	 * We disable slice/unslice clock ratio change reports on SKL since
+	 * they are too noisy. The HW generates a lot of redundant reports
+	 * where the ratio hasn't really changed causing a lot of redundant
+	 * work to processes and increasing the chances we'll hit buffer
+	 * overruns.
+	 *
+	 * Although we don't currently use the 'disable overrun' OABUFFER
+	 * feature it's worth noting that clock ratio reports have to be
+	 * disabled before considering to use that feature since the HW doesn't
+	 * correctly block these reports.
+	 *
+	 * Currently none of the high-level metrics we have depend on knowing
+	 * this ratio to normalize.
+	 *
+	 * Note: This register is not power context saved and restored, but
+	 * that's OK considering that we disable RC6 while the OA unit is
+	 * enabled.
+	 *
+	 * The _INCLUDE_CLK_RATIO bit allows the slice/unslice frequency to
+	 * be read back from automatically triggered reports, as part of the
+	 * RPT_ID field.
+	 */
+	if (IS_SKYLAKE(dev_priv) || IS_BROXTON(dev_priv) ||
+	    IS_KABYLAKE(dev_priv) || IS_GEMINILAKE(dev_priv)) {
+		I915_WRITE(GEN8_OA_DEBUG,
+			   _MASKED_BIT_ENABLE(GEN9_OA_DEBUG_DISABLE_CLK_RATIO_REPORTS |
+					      GEN9_OA_DEBUG_INCLUDE_CLK_RATIO));
+	}
+
+	/*
+	 * Update all contexts prior writing the mux configurations as we need
+	 * to make sure all slices/subslices are ON before writing to NOA
+	 * registers.
+	 */
+	ret = gen8_configure_all_contexts(dev_priv, true);
+	if (ret)
+		return ret;
+
+	I915_WRITE(GDT_CHICKEN_BITS, 0xA0);
+	for (i = 0; i < dev_priv->perf.oa.n_mux_configs; i++) {
+		config_oa_regs(dev_priv, dev_priv->perf.oa.mux_regs[i],
+			       dev_priv->perf.oa.mux_regs_lens[i]);
+	}
+	I915_WRITE(GDT_CHICKEN_BITS, 0x80);
+
+	config_oa_regs(dev_priv, dev_priv->perf.oa.b_counter_regs,
+		       dev_priv->perf.oa.b_counter_regs_len);
+
+	return 0;
+}
+
+static void gen8_disable_metric_set(struct drm_i915_private *dev_priv)
+{
+	/* Reset all contexts' slices/subslices configurations. */
+	gen8_configure_all_contexts(dev_priv, false);
+}
+
+static void gen7_oa_enable(struct drm_i915_private *dev_priv)
+{
+>>>>>>> linux-next/akpm-base
 	/*
 	 * Reset buf pointers so we don't forward reports from before now.
 	 *
@@ -2067,10 +2190,6 @@ static int i915_oa_stream_init(struct i915_perf_stream *stream,
 			return ret;
 	}
 
-	ret = alloc_oa_buffer(dev_priv);
-	if (ret)
-		goto err_oa_buf_alloc;
-
 	/* PRM - observability performance counters:
 	 *
 	 *   OACONTROL, performance counter enable, note:
@@ -2086,6 +2205,10 @@ static int i915_oa_stream_init(struct i915_perf_stream *stream,
 	intel_runtime_pm_get(dev_priv);
 	intel_uncore_forcewake_get(dev_priv, FORCEWAKE_ALL);
 
+	ret = alloc_oa_buffer(dev_priv);
+	if (ret)
+		goto err_oa_buf_alloc;
+
 	ret = dev_priv->perf.oa.ops.enable_metric_set(dev_priv);
 	if (ret)
 		goto err_enable;
@@ -2097,11 +2220,11 @@ static int i915_oa_stream_init(struct i915_perf_stream *stream,
 	return 0;
 
 err_enable:
-	intel_uncore_forcewake_put(dev_priv, FORCEWAKE_ALL);
-	intel_runtime_pm_put(dev_priv);
 	free_oa_buffer(dev_priv);
 
 err_oa_buf_alloc:
+	intel_uncore_forcewake_put(dev_priv, FORCEWAKE_ALL);
+	intel_runtime_pm_put(dev_priv);
 	if (stream->ctx)
 		oa_put_render_ctx_id(stream);
 
@@ -3035,6 +3158,7 @@ void i915_perf_init(struct drm_i915_private *dev_priv)
 		 * worth the complexity to maintain now that BDW+ enable
 		 * execlist mode by default.
 		 */
+<<<<<<< HEAD
 
 		if (IS_GEN8(dev_priv)) {
 			dev_priv->perf.oa.ctx_oactxctrl_offset = 0x120;
@@ -3135,6 +3259,108 @@ void i915_perf_init(struct drm_i915_private *dev_priv)
 			dev_priv->perf.oa.timestamp_frequency / 2;
 		dev_priv->perf.sysctl_header = register_sysctl_table(dev_root);
 
+=======
+
+		if (IS_GEN8(dev_priv)) {
+			dev_priv->perf.oa.ctx_oactxctrl_offset = 0x120;
+			dev_priv->perf.oa.ctx_flexeu0_offset = 0x2ce;
+
+			dev_priv->perf.oa.timestamp_frequency = 12500000;
+
+			dev_priv->perf.oa.gen8_valid_ctx_bit = (1<<25);
+
+			if (IS_BROADWELL(dev_priv)) {
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_bdw;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_bdw;
+			} else if (IS_CHERRYVIEW(dev_priv)) {
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_chv;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_chv;
+			}
+		} else if (IS_GEN9(dev_priv)) {
+			dev_priv->perf.oa.ctx_oactxctrl_offset = 0x128;
+			dev_priv->perf.oa.ctx_flexeu0_offset = 0x3de;
+
+			dev_priv->perf.oa.timestamp_frequency = 12000000;
+
+			dev_priv->perf.oa.gen8_valid_ctx_bit = (1<<16);
+
+			if (IS_SKL_GT2(dev_priv)) {
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_sklgt2;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_sklgt2;
+			} else if (IS_SKL_GT3(dev_priv)) {
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_sklgt3;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_sklgt3;
+			} else if (IS_SKL_GT4(dev_priv)) {
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_sklgt4;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_sklgt4;
+			} else if (IS_BROXTON(dev_priv)) {
+				dev_priv->perf.oa.timestamp_frequency = 19200000;
+
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_bxt;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_bxt;
+			} else if (IS_KBL_GT2(dev_priv)) {
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_kblgt2;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_kblgt2;
+			} else if (IS_KBL_GT3(dev_priv)) {
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_kblgt3;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_kblgt3;
+			} else if (IS_GEMINILAKE(dev_priv)) {
+				dev_priv->perf.oa.timestamp_frequency = 19200000;
+
+				dev_priv->perf.oa.n_builtin_sets =
+					i915_oa_n_builtin_metric_sets_glk;
+				dev_priv->perf.oa.ops.select_metric_set =
+					i915_oa_select_metric_set_glk;
+			}
+		}
+
+		if (dev_priv->perf.oa.n_builtin_sets) {
+			dev_priv->perf.oa.ops.init_oa_buffer = gen8_init_oa_buffer;
+			dev_priv->perf.oa.ops.enable_metric_set =
+				gen8_enable_metric_set;
+			dev_priv->perf.oa.ops.disable_metric_set =
+				gen8_disable_metric_set;
+			dev_priv->perf.oa.ops.oa_enable = gen8_oa_enable;
+			dev_priv->perf.oa.ops.oa_disable = gen8_oa_disable;
+			dev_priv->perf.oa.ops.read = gen8_oa_read;
+			dev_priv->perf.oa.ops.oa_hw_tail_read =
+				gen8_oa_hw_tail_read;
+
+			dev_priv->perf.oa.oa_formats = gen8_plus_oa_formats;
+		}
+	}
+
+	if (dev_priv->perf.oa.n_builtin_sets) {
+		hrtimer_init(&dev_priv->perf.oa.poll_check_timer,
+				CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		dev_priv->perf.oa.poll_check_timer.function = oa_poll_check_timer_cb;
+		init_waitqueue_head(&dev_priv->perf.oa.poll_wq);
+
+		INIT_LIST_HEAD(&dev_priv->perf.streams);
+		mutex_init(&dev_priv->perf.lock);
+		spin_lock_init(&dev_priv->perf.oa.oa_buffer.ptr_lock);
+
+		oa_sample_rate_hard_limit =
+			dev_priv->perf.oa.timestamp_frequency / 2;
+		dev_priv->perf.sysctl_header = register_sysctl_table(dev_root);
+
+>>>>>>> linux-next/akpm-base
 		dev_priv->perf.initialized = true;
 	}
 }

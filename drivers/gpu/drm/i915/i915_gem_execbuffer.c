@@ -288,20 +288,42 @@ static int eb_create(struct i915_execbuffer *eb)
 		 * direct lookup.
 		 */
 		do {
+<<<<<<< HEAD
 			eb->buckets = kzalloc(sizeof(struct hlist_head) << size,
 					      GFP_TEMPORARY |
 					      __GFP_NORETRY |
 					      __GFP_NOWARN);
+=======
+			unsigned int flags;
+
+			/* While we can still reduce the allocation size, don't
+			 * raise a warning and allow the allocation to fail.
+			 * On the last pass though, we want to try as hard
+			 * as possible to perform the allocation and warn
+			 * if it fails.
+			 */
+			flags = GFP_TEMPORARY;
+			if (size > 1)
+				flags |= __GFP_NORETRY | __GFP_NOWARN;
+
+			eb->buckets = kzalloc(sizeof(struct hlist_head) << size,
+					      flags);
+>>>>>>> linux-next/akpm-base
 			if (eb->buckets)
 				break;
 		} while (--size);
 
+<<<<<<< HEAD
 		if (unlikely(!eb->buckets)) {
 			eb->buckets = kzalloc(sizeof(struct hlist_head),
 					      GFP_TEMPORARY);
 			if (unlikely(!eb->buckets))
 				return -ENOMEM;
 		}
+=======
+		if (unlikely(!size))
+			return -ENOMEM;
+>>>>>>> linux-next/akpm-base
 
 		eb->lut_size = size;
 	} else {
@@ -314,6 +336,7 @@ static int eb_create(struct i915_execbuffer *eb)
 static bool
 eb_vma_misplaced(const struct drm_i915_gem_exec_object2 *entry,
 		 const struct i915_vma *vma)
+<<<<<<< HEAD
 {
 	if (!(entry->flags & __EXEC_OBJECT_HAS_PIN))
 		return true;
@@ -344,6 +367,38 @@ eb_pin_vma(struct i915_execbuffer *eb,
 	   struct drm_i915_gem_exec_object2 *entry,
 	   struct i915_vma *vma)
 {
+=======
+{
+	if (!(entry->flags & __EXEC_OBJECT_HAS_PIN))
+		return true;
+
+	if (vma->node.size < entry->pad_to_size)
+		return true;
+
+	if (entry->alignment && !IS_ALIGNED(vma->node.start, entry->alignment))
+		return true;
+
+	if (entry->flags & EXEC_OBJECT_PINNED &&
+	    vma->node.start != entry->offset)
+		return true;
+
+	if (entry->flags & __EXEC_OBJECT_NEEDS_BIAS &&
+	    vma->node.start < BATCH_OFFSET_BIAS)
+		return true;
+
+	if (!(entry->flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS) &&
+	    (vma->node.start + vma->node.size - 1) >> 32)
+		return true;
+
+	return false;
+}
+
+static inline void
+eb_pin_vma(struct i915_execbuffer *eb,
+	   struct drm_i915_gem_exec_object2 *entry,
+	   struct i915_vma *vma)
+{
+>>>>>>> linux-next/akpm-base
 	u64 flags;
 
 	if (vma->node.size)
@@ -408,6 +463,7 @@ eb_validate_vma(struct i915_execbuffer *eb,
 	/*
 	 * Offset can be used as input (EXEC_OBJECT_PINNED), reject
 	 * any non-page-aligned or non-canonical addresses.
+<<<<<<< HEAD
 	 */
 	if (unlikely(entry->flags & EXEC_OBJECT_PINNED &&
 		     entry->offset != gen8_canonical_addr(entry->offset & PAGE_MASK)))
@@ -434,6 +490,34 @@ eb_validate_vma(struct i915_execbuffer *eb,
 	 */
 	entry->offset = gen8_noncanonical_addr(entry->offset);
 
+=======
+	 */
+	if (unlikely(entry->flags & EXEC_OBJECT_PINNED &&
+		     entry->offset != gen8_canonical_addr(entry->offset & PAGE_MASK)))
+		return -EINVAL;
+
+	/* pad_to_size was once a reserved field, so sanitize it */
+	if (entry->flags & EXEC_OBJECT_PAD_TO_SIZE) {
+		if (unlikely(offset_in_page(entry->pad_to_size)))
+			return -EINVAL;
+	} else {
+		entry->pad_to_size = 0;
+	}
+
+	if (unlikely(vma->exec_entry)) {
+		DRM_DEBUG("Object [handle %d, index %d] appears more than once in object list\n",
+			  entry->handle, (int)(entry - eb->exec));
+		return -EINVAL;
+	}
+
+	/*
+	 * From drm_mm perspective address space is continuous,
+	 * so from this point we're always using non-canonical
+	 * form internally.
+	 */
+	entry->offset = gen8_noncanonical_addr(entry->offset);
+
+>>>>>>> linux-next/akpm-base
 	return 0;
 }
 
@@ -452,7 +536,11 @@ eb_add_vma(struct i915_execbuffer *eb,
 			return err;
 	}
 
+<<<<<<< HEAD
 	if (eb->lut_size >= 0) {
+=======
+	if (eb->lut_size > 0) {
+>>>>>>> linux-next/akpm-base
 		vma->exec_handle = entry->handle;
 		hlist_add_head(&vma->exec_node,
 			       &eb->buckets[hash_32(entry->handle,
@@ -495,6 +583,7 @@ eb_add_vma(struct i915_execbuffer *eb,
 		if (entry->offset != vma->node.start) {
 			entry->offset = vma->node.start | UPDATE;
 			eb->args->flags |= __EXEC_HAS_RELOC;
+<<<<<<< HEAD
 		}
 	}
 	return err;
@@ -720,8 +809,238 @@ static int eb_lookup_vmas(struct i915_execbuffer *eb)
 				return err;
 
 			goto next_vma;
+=======
+>>>>>>> linux-next/akpm-base
+		}
+	}
+	return err;
+}
+
+<<<<<<< HEAD
+=======
+static inline int use_cpu_reloc(const struct reloc_cache *cache,
+				const struct drm_i915_gem_object *obj)
+{
+	if (!i915_gem_object_has_struct_page(obj))
+		return false;
+
+	if (DBG_FORCE_RELOC == FORCE_CPU_RELOC)
+		return true;
+
+	if (DBG_FORCE_RELOC == FORCE_GTT_RELOC)
+		return false;
+
+	return (cache->has_llc ||
+		obj->cache_dirty ||
+		obj->cache_level != I915_CACHE_NONE);
+}
+
+static int eb_reserve_vma(const struct i915_execbuffer *eb,
+			  struct i915_vma *vma)
+{
+	struct drm_i915_gem_exec_object2 *entry = vma->exec_entry;
+	u64 flags;
+	int err;
+
+	flags = PIN_USER | PIN_NONBLOCK;
+	if (entry->flags & EXEC_OBJECT_NEEDS_GTT)
+		flags |= PIN_GLOBAL;
+
+	/*
+	 * Wa32bitGeneralStateOffset & Wa32bitInstructionBaseOffset,
+	 * limit address to the first 4GBs for unflagged objects.
+	 */
+	if (!(entry->flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS))
+		flags |= PIN_ZONE_4G;
+
+	if (entry->flags & __EXEC_OBJECT_NEEDS_MAP)
+		flags |= PIN_MAPPABLE;
+
+	if (entry->flags & EXEC_OBJECT_PINNED) {
+		flags |= entry->offset | PIN_OFFSET_FIXED;
+		flags &= ~PIN_NONBLOCK; /* force overlapping PINNED checks */
+	} else if (entry->flags & __EXEC_OBJECT_NEEDS_BIAS) {
+		flags |= BATCH_OFFSET_BIAS | PIN_OFFSET_BIAS;
+	}
+
+	err = i915_vma_pin(vma, entry->pad_to_size, entry->alignment, flags);
+	if (err)
+		return err;
+
+	if (entry->offset != vma->node.start) {
+		entry->offset = vma->node.start | UPDATE;
+		eb->args->flags |= __EXEC_HAS_RELOC;
+	}
+
+	entry->flags |= __EXEC_OBJECT_HAS_PIN;
+	GEM_BUG_ON(eb_vma_misplaced(entry, vma));
+
+	if (unlikely(entry->flags & EXEC_OBJECT_NEEDS_FENCE)) {
+		err = i915_vma_get_fence(vma);
+		if (unlikely(err)) {
+			i915_vma_unpin(vma);
+			return err;
 		}
 
+		if (i915_vma_pin_fence(vma))
+			entry->flags |= __EXEC_OBJECT_HAS_FENCE;
+	}
+
+	return 0;
+}
+
+static int eb_reserve(struct i915_execbuffer *eb)
+{
+	const unsigned int count = eb->buffer_count;
+	struct list_head last;
+	struct i915_vma *vma;
+	unsigned int i, pass;
+	int err;
+
+	/*
+	 * Attempt to pin all of the buffers into the GTT.
+	 * This is done in 3 phases:
+	 *
+	 * 1a. Unbind all objects that do not match the GTT constraints for
+	 *     the execbuffer (fenceable, mappable, alignment etc).
+	 * 1b. Increment pin count for already bound objects.
+	 * 2.  Bind new objects.
+	 * 3.  Decrement pin count.
+	 *
+	 * This avoid unnecessary unbinding of later objects in order to make
+	 * room for the earlier objects *unless* we need to defragment.
+	 */
+
+	pass = 0;
+	err = 0;
+	do {
+		list_for_each_entry(vma, &eb->unbound, exec_link) {
+			err = eb_reserve_vma(eb, vma);
+			if (err)
+				break;
+		}
+		if (err != -ENOSPC)
+			return err;
+
+		/* Resort *all* the objects into priority order */
+		INIT_LIST_HEAD(&eb->unbound);
+		INIT_LIST_HEAD(&last);
+		for (i = 0; i < count; i++) {
+			struct drm_i915_gem_exec_object2 *entry = &eb->exec[i];
+
+			if (entry->flags & EXEC_OBJECT_PINNED &&
+			    entry->flags & __EXEC_OBJECT_HAS_PIN)
+				continue;
+
+			vma = exec_to_vma(entry);
+			eb_unreserve_vma(vma, entry);
+
+			if (entry->flags & EXEC_OBJECT_PINNED)
+				list_add(&vma->exec_link, &eb->unbound);
+			else if (entry->flags & __EXEC_OBJECT_NEEDS_MAP)
+				list_add_tail(&vma->exec_link, &eb->unbound);
+			else
+				list_add_tail(&vma->exec_link, &last);
+		}
+		list_splice_tail(&last, &eb->unbound);
+
+		switch (pass++) {
+		case 0:
+			break;
+
+		case 1:
+			/* Too fragmented, unbind everything and retry */
+			err = i915_gem_evict_vm(eb->vm);
+			if (err)
+				return err;
+			break;
+
+		default:
+			return -ENOSPC;
+		}
+	} while (1);
+}
+
+static inline struct hlist_head *
+ht_head(const  struct i915_gem_context_vma_lut *lut, u32 handle)
+{
+	return &lut->ht[hash_32(handle, lut->ht_bits)];
+}
+
+static inline bool
+ht_needs_resize(const struct i915_gem_context_vma_lut *lut)
+{
+	return (4*lut->ht_count > 3*lut->ht_size ||
+		4*lut->ht_count + 1 < lut->ht_size);
+}
+
+static unsigned int eb_batch_index(const struct i915_execbuffer *eb)
+{
+	if (eb->args->flags & I915_EXEC_BATCH_FIRST)
+		return 0;
+	else
+		return eb->buffer_count - 1;
+}
+
+static int eb_select_context(struct i915_execbuffer *eb)
+{
+	struct i915_gem_context *ctx;
+
+	ctx = i915_gem_context_lookup(eb->file->driver_priv, eb->args->rsvd1);
+	if (unlikely(IS_ERR(ctx)))
+		return PTR_ERR(ctx);
+
+	if (unlikely(i915_gem_context_is_banned(ctx))) {
+		DRM_DEBUG("Context %u tried to submit while banned\n",
+			  ctx->user_handle);
+		return -EIO;
+	}
+
+	eb->ctx = i915_gem_context_get(ctx);
+	eb->vm = ctx->ppgtt ? &ctx->ppgtt->base : &eb->i915->ggtt.base;
+
+	eb->context_flags = 0;
+	if (ctx->flags & CONTEXT_NO_ZEROMAP)
+		eb->context_flags |= __EXEC_OBJECT_NEEDS_BIAS;
+
+	return 0;
+}
+
+static int eb_lookup_vmas(struct i915_execbuffer *eb)
+{
+#define INTERMEDIATE BIT(0)
+	const unsigned int count = eb->buffer_count;
+	struct i915_gem_context_vma_lut *lut = &eb->ctx->vma_lut;
+	struct i915_vma *vma;
+	struct idr *idr;
+	unsigned int i;
+	int slow_pass = -1;
+	int err;
+
+	INIT_LIST_HEAD(&eb->relocs);
+	INIT_LIST_HEAD(&eb->unbound);
+
+	if (unlikely(lut->ht_size & I915_CTX_RESIZE_IN_PROGRESS))
+		flush_work(&lut->resize);
+	GEM_BUG_ON(lut->ht_size & I915_CTX_RESIZE_IN_PROGRESS);
+
+	for (i = 0; i < count; i++) {
+		__exec_to_vma(&eb->exec[i]) = 0;
+
+		hlist_for_each_entry(vma,
+				     ht_head(lut, eb->exec[i].handle),
+				     ctx_node) {
+			if (vma->ctx_handle != eb->exec[i].handle)
+				continue;
+
+			err = eb_add_vma(eb, &eb->exec[i], vma);
+			if (unlikely(err))
+				return err;
+
+			goto next_vma;
+		}
+
+>>>>>>> linux-next/akpm-base
 		if (slow_pass < 0)
 			slow_pass = i;
 next_vma: ;
@@ -894,7 +1213,11 @@ static void eb_release_vmas(const struct i915_execbuffer *eb)
 static void eb_reset_vmas(const struct i915_execbuffer *eb)
 {
 	eb_release_vmas(eb);
+<<<<<<< HEAD
 	if (eb->lut_size >= 0)
+=======
+	if (eb->lut_size > 0)
+>>>>>>> linux-next/akpm-base
 		memset(eb->buckets, 0,
 		       sizeof(struct hlist_head) << eb->lut_size);
 }
@@ -903,7 +1226,11 @@ static void eb_destroy(const struct i915_execbuffer *eb)
 {
 	GEM_BUG_ON(eb->reloc_cache.rq);
 
+<<<<<<< HEAD
 	if (eb->lut_size >= 0)
+=======
+	if (eb->lut_size > 0)
+>>>>>>> linux-next/akpm-base
 		kfree(eb->buckets);
 }
 
@@ -2180,8 +2507,16 @@ i915_gem_do_execbuffer(struct drm_device *dev,
 		}
 	}
 
+<<<<<<< HEAD
 	if (eb_create(&eb))
 		return -ENOMEM;
+=======
+	err = eb_create(&eb);
+	if (err)
+		goto err_out_fence;
+
+	GEM_BUG_ON(!eb.lut_size);
+>>>>>>> linux-next/akpm-base
 
 	/*
 	 * Take a local wakeref for preparing to dispatch the execbuf as
@@ -2340,6 +2675,10 @@ err_unlock:
 err_rpm:
 	intel_runtime_pm_put(eb.i915);
 	eb_destroy(&eb);
+<<<<<<< HEAD
+=======
+err_out_fence:
+>>>>>>> linux-next/akpm-base
 	if (out_fence_fd != -1)
 		put_unused_fd(out_fence_fd);
 err_in_fence:
