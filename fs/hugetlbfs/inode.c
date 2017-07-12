@@ -851,15 +851,6 @@ static int hugetlbfs_migrate_page(struct address_space *mapping,
 	return MIGRATEPAGE_SUCCESS;
 }
 
-<<<<<<< HEAD
-static int hugetlbfs_error_remove_page(struct address_space *mapping,
-				struct page *page)
-{
-	struct inode *inode = mapping->host;
-
-	remove_huge_page(page);
-	hugetlb_fix_reserve_counts(inode);
-=======
 /*
  * Display the mount options in /proc/mounts.
  */
@@ -897,7 +888,6 @@ static int hugetlbfs_show_options(struct seq_file *m, struct dentry *root)
 			seq_printf(m, ",min_size=%llu",
 				   (unsigned long long)spool->min_hpages << hpage_shift);
 	}
->>>>>>> linux-next/akpm-base
 	return 0;
 }
 
