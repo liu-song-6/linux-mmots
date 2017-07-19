@@ -72,6 +72,8 @@ extern int leases_enable, lease_break_time;
 extern int sysctl_protected_symlinks;
 extern int sysctl_protected_hardlinks;
 
+typedef __kernel_rwf_t rwf_t;
+
 struct buffer_head;
 typedef int (get_block_t)(struct inode *inode, sector_t iblock,
 			struct buffer_head *bh_result, int create);
@@ -296,7 +298,7 @@ struct kiocb {
 	void			*private;
 	int			ki_flags;
 	enum rw_hint		ki_hint;
-};
+} __randomize_layout;
 
 static inline bool is_sync_kiocb(struct kiocb *kiocb)
 {
@@ -404,7 +406,7 @@ struct address_space {
 	struct list_head	private_list;	/* ditto */
 	void			*private_data;	/* ditto */
 	errseq_t		wb_err;
-} __attribute__((aligned(sizeof(long))));
+} __attribute__((aligned(sizeof(long)))) __randomize_layout;
 	/*
 	 * On most architectures that alignment is already the case; but
 	 * must be enforced here for CRIS, to let the least significant bit
@@ -447,7 +449,7 @@ struct block_device {
 	int			bd_fsfreeze_count;
 	/* Mutex for freeze */
 	struct mutex		bd_fsfreeze_mutex;
-};
+} __randomize_layout;
 
 /*
  * Radix-tree tags, for tagging dirty and writeback pages within the pagecache
@@ -666,7 +668,7 @@ struct inode {
 #endif
 
 	void			*i_private; /* fs or device private pointer */
-};
+} __randomize_layout;
 
 static inline unsigned int i_blocksize(const struct inode *node)
 {
@@ -883,7 +885,8 @@ struct file {
 #endif /* #ifdef CONFIG_EPOLL */
 	struct address_space	*f_mapping;
 	errseq_t		f_wb_err;
-} __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
+} __randomize_layout
+  __attribute__((aligned(4)));	/* lest something weird decides that 2 is OK */
 
 struct file_handle {
 	__u32 handle_bytes;
@@ -999,7 +1002,6 @@ struct file_lock {
 	unsigned char fl_type;
 	unsigned int fl_pid;
 	int fl_link_cpu;		/* what cpu's list is this on? */
-	struct pid *fl_nspid;
 	wait_queue_head_t fl_wait;
 	struct file *fl_file;
 	loff_t fl_start;
@@ -1020,7 +1022,7 @@ struct file_lock {
 			int state;		/* state of grant or error if -ve */
 		} afs;
 	} fl_u;
-};
+} __randomize_layout;
 
 struct file_lock_context {
 	spinlock_t		flc_lock;
@@ -1412,7 +1414,7 @@ struct super_block {
 
 	spinlock_t		s_inode_wblist_lock;
 	struct list_head	s_inodes_wb;	/* writeback inodes */
-};
+} __randomize_layout;
 
 /* Helper functions so that in most cases filesystems will
  * not need to deal directly with kuid_t and kgid_t and can
@@ -1698,7 +1700,7 @@ struct file_operations {
 			u64);
 	ssize_t (*dedupe_file_range)(struct file *, u64, u64, struct file *,
 			u64);
-};
+} __randomize_layout;
 
 struct inode_operations {
 	struct dentry * (*lookup) (struct inode *,struct dentry *, unsigned int);
@@ -1757,9 +1759,9 @@ extern ssize_t __vfs_write(struct file *, const char __user *, size_t, loff_t *)
 extern ssize_t vfs_read(struct file *, char __user *, size_t, loff_t *);
 extern ssize_t vfs_write(struct file *, const char __user *, size_t, loff_t *);
 extern ssize_t vfs_readv(struct file *, const struct iovec __user *,
-		unsigned long, loff_t *, int);
+		unsigned long, loff_t *, rwf_t);
 extern ssize_t vfs_writev(struct file *, const struct iovec __user *,
-		unsigned long, loff_t *, int);
+		unsigned long, loff_t *, rwf_t);
 extern ssize_t vfs_copy_file_range(struct file *, loff_t , struct file *,
 				   loff_t, size_t, unsigned int);
 extern int vfs_clone_file_prep_inodes(struct inode *inode_in, loff_t pos_in,
@@ -2873,9 +2875,9 @@ extern ssize_t generic_file_direct_write(struct kiocb *, struct iov_iter *);
 extern ssize_t generic_perform_write(struct file *, struct iov_iter *, loff_t);
 
 ssize_t vfs_iter_read(struct file *file, struct iov_iter *iter, loff_t *ppos,
-		int flags);
+		rwf_t flags);
 ssize_t vfs_iter_write(struct file *file, struct iov_iter *iter, loff_t *ppos,
-		int flags);
+		rwf_t flags);
 
 /* fs/block_dev.c */
 extern ssize_t blkdev_read_iter(struct kiocb *iocb, struct iov_iter *to);
@@ -3142,7 +3144,7 @@ static inline int iocb_flags(struct file *file)
 	return res;
 }
 
-static inline int kiocb_set_rw_flags(struct kiocb *ki, int flags)
+static inline int kiocb_set_rw_flags(struct kiocb *ki, rwf_t flags)
 {
 	if (unlikely(flags & ~RWF_SUPPORTED))
 		return -EOPNOTSUPP;

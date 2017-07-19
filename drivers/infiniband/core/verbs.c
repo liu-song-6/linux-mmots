@@ -1298,7 +1298,11 @@ int ib_modify_qp_with_udata(struct ib_qp *qp, struct ib_qp_attr *attr,
 		if (ret)
 			return ret;
 	}
+<<<<<<< HEAD
 	return ib_security_modify_qp(qp, attr, attr_mask, udata);
+=======
+	return ib_security_modify_qp(qp->real_qp, attr, attr_mask, udata);
+>>>>>>> linux-next/akpm-base
 }
 EXPORT_SYMBOL(ib_modify_qp_with_udata);
 

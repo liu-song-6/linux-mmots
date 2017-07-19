@@ -4208,6 +4208,17 @@ F:	include/uapi/linux/sync_file.h
 F:	Documentation/sync_file.txt
 T:	git git://anongit.freedesktop.org/drm/drm-misc
 
+SYNC FILE FRAMEWORK
+M:	Sumit Semwal <sumit.semwal@linaro.org>
+R:	Gustavo Padovan <gustavo@padovan.org>
+S:	Maintained
+L:	linux-media@vger.kernel.org
+L:	dri-devel@lists.freedesktop.org
+F:	drivers/dma-buf/sync_file.c
+F:	include/linux/sync_file.h
+F:	Documentation/sync_file.txt
+T:	git git://git.linaro.org/people/sumitsemwal/linux-dma-buf.git
+
 DMA GENERIC OFFLOAD ENGINE SUBSYSTEM
 M:	Vinod Koul <vinod.koul@intel.com>
 L:	dmaengine@vger.kernel.org
@@ -4548,6 +4559,12 @@ DRM DRIVER FOR MGA G200 SERVER GRAPHICS CHIPS
 M:	Dave Airlie <airlied@redhat.com>
 S:	Odd Fixes
 F:	drivers/gpu/drm/mgag200/
+
+DRM DRIVER FOR PERVASIVE DISPLAYS REPAPER PANELS
+M:	Noralf Trønnes <noralf@tronnes.org>
+S:	Maintained
+F:	drivers/gpu/drm/tinydrm/repaper.c
+F:	Documentation/devicetree/bindings/display/repaper.txt
 
 DRM DRIVER FOR RAGE 128 VIDEO CARDS
 S:	Orphan / Obsolete
@@ -10692,7 +10709,6 @@ F:	drivers/ptp/*
 F:	include/linux/ptp_cl*
 
 PTRACE SUPPORT
-M:	Roland McGrath <roland@hack.frob.com>
 M:	Oleg Nesterov <oleg@redhat.com>
 S:	Maintained
 F:	include/asm-generic/syscall.h
@@ -10700,7 +10716,12 @@ F:	include/linux/ptrace.h
 F:	include/linux/regset.h
 F:	include/linux/tracehook.h
 F:	include/uapi/linux/ptrace.h
+F:	include/uapi/linux/ptrace.h
+F:	include/asm-generic/ptrace.h
 F:	kernel/ptrace.c
+F:	arch/*/ptrace*.c
+F:	arch/*/*/ptrace*.c
+F:	arch/*/include/asm/ptrace*.h
 
 PULSE8-CEC DRIVER
 M:	Hans Verkuil <hverkuil@xs4all.nl>
@@ -12534,6 +12555,15 @@ L:	netdev@vger.kernel.org
 S:	Supported
 F:	Documentation/networking/spider_net.txt
 F:	drivers/net/ethernet/toshiba/spider_net*
+
+SPMI SUBSYSTEM
+R:	Stephen Boyd <sboyd@codeaurora.org>
+L:	linux-arm-msm@vger.kernel.org
+F:	Documentation/devicetree/bindings/spmi/
+F:	drivers/spmi/
+F:	include/dt-bindings/spmi/spmi.h
+F:	include/linux/spmi.h
+F:	include/trace/events/spmi.h
 
 SPU FILE SYSTEM
 M:	Jeremy Kerr <jk@ozlabs.org>
