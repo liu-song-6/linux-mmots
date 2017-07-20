@@ -421,7 +421,7 @@ static DEVICE_ATTR(lighting_control_state, 0644, show_control_state,
 static int alienware_zone_init(struct platform_device *dev)
 {
 	int i;
-	char buffer[10];
+	char buffer[13];
 	char *name;
 
 	if (interface == WMAX) {
