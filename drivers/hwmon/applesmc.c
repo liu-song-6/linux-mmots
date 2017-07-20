@@ -903,7 +903,7 @@ static ssize_t applesmc_show_fan_position(struct device *dev,
 	char newkey[5];
 	u8 buffer[17];
 
-	sprintf(newkey, FAN_ID_FMT, to_index(attr));
+	snprintf(newkey, sizeof(newkey), FAN_ID_FMT, to_index(attr));
 
 	ret = applesmc_read_key(newkey, buffer, 16);
 	buffer[16] = 0;
