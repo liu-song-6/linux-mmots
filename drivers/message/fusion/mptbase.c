@@ -2079,7 +2079,7 @@ void
 mpt_detach(struct pci_dev *pdev)
 {
 	MPT_ADAPTER 	*ioc = pci_get_drvdata(pdev);
-	char pname[32];
+	char pname[64];
 	u8 cb_idx;
 	unsigned long flags;
 	struct workqueue_struct *wq;
