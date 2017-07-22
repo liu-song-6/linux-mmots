@@ -111,6 +111,9 @@ static const char *get_wild_bug_type(struct kasan_access_info *info)
 {
 	const char *bug_type = "unknown-crash";
 
+	/* shut up spurious -Wmaybe-uninitialized warning */
+	info->first_bad_addr = (void *)(-1ul);
+
 	if ((unsigned long)info->access_addr < PAGE_SIZE)
 		bug_type = "null-ptr-deref";
 	else if ((unsigned long)info->access_addr < TASK_SIZE)
