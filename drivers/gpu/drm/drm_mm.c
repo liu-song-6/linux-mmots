@@ -212,7 +212,7 @@ static void drm_mm_interval_tree_add_node(struct drm_mm_node *hole_node,
 			link = &parent->rb.rb_left;
 		else {
 			link = &parent->rb.rb_right;
-			leftmost = true;
+			leftmost = false;
 		}
 	}
 
