@@ -22,6 +22,7 @@
 #include <linux/if_vlan.h>
 #include <linux/reset.h>
 #include <linux/tcp.h>
+#include <linux/interrupt.h>
 
 #include "mtk_eth_soc.h"
 
@@ -947,6 +948,10 @@ static int mtk_poll_rx(struct napi_struct *napi, int budget,
 		      RX_DMA_FPORT_MASK;
 		mac--;
 
+		if (unlikely(mac < 0 || mac >= MTK_MAC_COUNT ||
+			     !eth->netdev[mac]))
+			goto release_desc;
+
 		netdev = eth->netdev[mac];
 
 		if (unlikely(test_bit(MTK_RESETTING, &eth->state)))
@@ -1027,7 +1032,6 @@ static int mtk_poll_tx(struct mtk_eth *eth, int budget)
 	unsigned int done[MTK_MAX_DEVS];
 	unsigned int bytes[MTK_MAX_DEVS];
 	u32 cpu, dma;
-	static int condition;
 	int total = 0, i;
 
 	memset(done, 0, sizeof(done));
@@ -1051,10 +1055,8 @@ static int mtk_poll_tx(struct mtk_eth *eth, int budget)
 			mac = 1;
 
 		skb = tx_buf->skb;
-		if (!skb) {
-			condition = 1;
+		if (!skb)
 			break;
-		}
 
 		if (skb != (struct sk_buff *)MTK_DMA_DUMMY_DESC) {
 			bytes[mac] += skb->len;
