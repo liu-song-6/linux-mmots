@@ -54,6 +54,9 @@ static struct facility_def facility_defs[] = {
 #ifdef CONFIG_HAVE_MARCH_Z13_FEATURES
 			53, /* load-and-zero-rightmost-byte, etc. */
 #endif
+#ifdef CONFIG_HAVE_MARCH_Z14_FEATURES
+			58, /* miscellaneous-instruction-extension 2 */
+#endif
 			-1 /* END */
 		}
 	},
@@ -80,6 +83,8 @@ static struct facility_def facility_defs[] = {
 			78, /* enhanced-DAT 2 */
 			130, /* instruction-execution-protection */
 			131, /* enhanced-SOP 2 and side-effect */
+			138, /* configuration z/architecture mode (czam) */
+			139, /* multiple epoch facility */
 			146, /* msa extension 8 */
 			-1  /* END */
 		}
