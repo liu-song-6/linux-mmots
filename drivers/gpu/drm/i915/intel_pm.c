@@ -4460,13 +4460,8 @@ static int skl_compute_plane_wm(const struct drm_i915_private *dev_priv,
 		    (plane_bytes_per_line / 512 < 1))
 			selected_result = method2;
 		else if (ddb_allocation >=
-<<<<<<< HEAD
-			 fixed_16_16_to_u32_round_up(plane_blocks_per_line))
-			selected_result = min_fixed_16_16(method1, method2);
-=======
 			 fixed16_to_u32_round_up(plane_blocks_per_line))
 			selected_result = min_fixed16(method1, method2);
->>>>>>> linux-next/akpm-base
 		else if (latency >= linetime_us)
 			selected_result = min_fixed16(method1, method2);
 		else

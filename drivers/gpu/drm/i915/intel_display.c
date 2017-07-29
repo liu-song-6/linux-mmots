@@ -3400,17 +3400,6 @@ static void skylake_disable_primary_plane(struct intel_plane *primary,
 	spin_unlock_irqrestore(&dev_priv->uncore.lock, irqflags);
 }
 
-<<<<<<< HEAD
-static void intel_complete_page_flips(struct drm_i915_private *dev_priv)
-{
-	struct intel_crtc *crtc;
-
-	for_each_intel_crtc(&dev_priv->drm, crtc)
-		intel_finish_page_flip_cs(dev_priv, crtc->pipe);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static int
 __intel_display_resume(struct drm_device *dev,
 		       struct drm_atomic_state *state,
@@ -3518,16 +3507,6 @@ void intel_finish_reset(struct drm_i915_private *dev_priv)
 
 	if (!state)
 		goto unlock;
-<<<<<<< HEAD
-
-	/*
-	 * Flips in the rings will be nuked by the reset,
-	 * so complete all pending flips so that user space
-	 * will get its events and not get stuck.
-	 */
-	intel_complete_page_flips(dev_priv);
-=======
->>>>>>> linux-next/akpm-base
 
 	dev_priv->modeset_restore_state = NULL;
 
@@ -9030,16 +9009,7 @@ static bool haswell_get_pipe_config(struct intel_crtc *crtc,
 	u64 power_domain_mask;
 	bool active;
 
-<<<<<<< HEAD
-	if (INTEL_GEN(dev_priv) >= 9) {
-		intel_crtc_init_scalers(crtc, pipe_config);
-
-		pipe_config->scaler_state.scaler_id = -1;
-		pipe_config->scaler_state.scaler_users &= ~(1 << SKL_CRTC_INDEX);
-	}
-=======
 	intel_crtc_init_scalers(crtc, pipe_config);
->>>>>>> linux-next/akpm-base
 
 	power_domain = POWER_DOMAIN_PIPE(crtc->pipe);
 	if (!intel_display_power_get_if_enabled(dev_priv, power_domain))
@@ -9069,8 +9039,6 @@ static bool haswell_get_pipe_config(struct intel_crtc *crtc,
 	pipe_config->gamma_mode =
 		I915_READ(GAMMA_MODE(crtc->pipe)) & GAMMA_MODE_MODE_MASK;
 
-<<<<<<< HEAD
-=======
 	if (IS_BROADWELL(dev_priv) || dev_priv->info.gen >= 9) {
 		u32 tmp = I915_READ(PIPEMISC(crtc->pipe));
 		bool clrspace_yuv = tmp & PIPEMISC_OUTPUT_COLORSPACE_YUV;
@@ -9088,7 +9056,6 @@ static bool haswell_get_pipe_config(struct intel_crtc *crtc,
 		}
 	}
 
->>>>>>> linux-next/akpm-base
 	power_domain = POWER_DOMAIN_PIPE_PANEL_FITTER(crtc->pipe);
 	if (intel_display_power_get_if_enabled(dev_priv, power_domain)) {
 		power_domain_mask |= BIT_ULL(power_domain);
