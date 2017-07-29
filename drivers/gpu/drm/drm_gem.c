@@ -36,6 +36,7 @@
 #include <linux/pagemap.h>
 #include <linux/shmem_fs.h>
 #include <linux/dma-buf.h>
+#include <linux/mem_encrypt.h>
 #include <drm/drmP.h>
 #include <drm/drm_vma_manager.h>
 #include <drm/drm_gem.h>
@@ -826,13 +827,15 @@ drm_gem_object_put_unlocked(struct drm_gem_object *obj)
 		return;
 
 	dev = obj->dev;
-	might_lock(&dev->struct_mutex);
 
-	if (dev->driver->gem_free_object_unlocked)
+	if (dev->driver->gem_free_object_unlocked) {
 		kref_put(&obj->refcount, drm_gem_object_free);
-	else if (kref_put_mutex(&obj->refcount, drm_gem_object_free,
+	} else {
+		might_lock(&dev->struct_mutex);
+		if (kref_put_mutex(&obj->refcount, drm_gem_object_free,
 				&dev->struct_mutex))
-		mutex_unlock(&dev->struct_mutex);
+			mutex_unlock(&dev->struct_mutex);
+	}
 }
 EXPORT_SYMBOL(drm_gem_object_put_unlocked);
 
@@ -928,6 +931,7 @@ int drm_gem_mmap_obj(struct drm_gem_object *obj, unsigned long obj_size,
 	vma->vm_ops = dev->driver->gem_vm_ops;
 	vma->vm_private_data = obj;
 	vma->vm_page_prot = pgprot_writecombine(vm_get_page_prot(vma->vm_flags));
+	vma->vm_page_prot = pgprot_decrypted(vma->vm_page_prot);
 
 	/* Take a ref for this mapping of the object, so that the fault
 	 * handler can dereference the mmap offset's pointer to the object.
