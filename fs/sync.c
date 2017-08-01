@@ -337,7 +337,7 @@ SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
 	mapping = f.file->f_mapping;
 	ret = 0;
 	if (flags & SYNC_FILE_RANGE_WAIT_BEFORE) {
-		ret = filemap_fdatawait_range(mapping, offset, endbyte);
+		ret = file_fdatawait_range(f.file, offset, endbyte);
 		if (ret < 0)
 			goto out_put;
 	}
@@ -350,7 +350,7 @@ SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
 	}
 
 	if (flags & SYNC_FILE_RANGE_WAIT_AFTER)
-		ret = filemap_fdatawait_range(mapping, offset, endbyte);
+		ret = file_fdatawait_range(f.file, offset, endbyte);
 
 out_put:
 	fdput(f);

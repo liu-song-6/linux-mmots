@@ -1255,7 +1255,7 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	/* port@2 is the output port */
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 2, 0, &tc->panel, NULL);
-	if (ret)
+	if (ret && ret != -ENODEV)
 		return ret;
 
 	/* Shut down GPIO is optional */
@@ -1325,11 +1325,7 @@ static int tc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	tc->bridge.funcs = &tc_bridge_funcs;
 	tc->bridge.of_node = dev->of_node;
-	ret = drm_bridge_add(&tc->bridge);
-	if (ret) {
-		dev_err(dev, "Failed to add drm_bridge: %d\n", ret);
-		goto err_unregister_aux;
-	}
+	drm_bridge_add(&tc->bridge);
 
 	i2c_set_clientdata(client, tc);
 
