@@ -317,7 +317,6 @@ static u32 init_page_array(void *hdr, u32 len, struct sk_buff *skb,
 }
 
 static int count_skb_frag_slots(struct sk_buff *skb)
-<<<<<<< HEAD
 {
 	int i, frags = skb_shinfo(skb)->nr_frags;
 	int pages = 0;
@@ -336,26 +335,6 @@ static int count_skb_frag_slots(struct sk_buff *skb)
 
 static int netvsc_get_slots(struct sk_buff *skb)
 {
-=======
-{
-	int i, frags = skb_shinfo(skb)->nr_frags;
-	int pages = 0;
-
-	for (i = 0; i < frags; i++) {
-		skb_frag_t *frag = skb_shinfo(skb)->frags + i;
-		unsigned long size = skb_frag_size(frag);
-		unsigned long offset = frag->page_offset;
-
-		/* Skip unused frames from start of page */
-		offset &= ~PAGE_MASK;
-		pages += PFN_UP(offset + size);
-	}
-	return pages;
-}
-
-static int netvsc_get_slots(struct sk_buff *skb)
-{
->>>>>>> linux-next/akpm-base
 	char *data = skb->data;
 	unsigned int offset = offset_in_page(data);
 	unsigned int len = skb_headlen(skb);

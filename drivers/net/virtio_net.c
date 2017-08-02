@@ -952,10 +952,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
 
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
 	buf += headroom; /* advance address leaving hole at front of pkt */
-<<<<<<< HEAD
-=======
 	ctx = mergeable_len_to_ctx(len, headroom);
->>>>>>> linux-next/akpm-base
 	get_page(alloc_frag->page);
 	alloc_frag->offset += len + headroom;
 	hole = alloc_frag->size - alloc_frag->offset;
