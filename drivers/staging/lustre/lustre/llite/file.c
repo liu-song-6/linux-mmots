@@ -2364,7 +2364,7 @@ int ll_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 	       PFID(ll_inode2fid(inode)), inode);
 	ll_stats_ops_tally(ll_i2sbi(inode), LPROC_LL_FSYNC, 1);
 
-	rc = filemap_write_and_wait_range(inode->i_mapping, start, end);
+	rc = file_write_and_wait_range(file, start, end);
 	inode_lock(inode);
 
 	/* catch async errors that were recorded back when async writeback
@@ -3035,9 +3035,6 @@ struct posix_acl *ll_get_acl(struct inode *inode, int type)
 	spin_lock(&lli->lli_lock);
 	/* VFS' acl_permission_check->check_acl will release the refcount */
 	acl = posix_acl_dup(lli->lli_posix_acl);
-#ifdef CONFIG_FS_POSIX_ACL
-	forget_cached_acl(inode, type);
-#endif
 	spin_unlock(&lli->lli_lock);
 
 	return acl;

@@ -82,8 +82,11 @@ int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
 		if (ns == cred->user_ns)
 			return cap_raised(cred->cap_effective, cap) ? 0 : -EPERM;
 
-		/* Have we tried all of the parent namespaces? */
-		if (ns == &init_user_ns)
+		/*
+		 * If we're already at a lower level than we're looking for,
+		 * we're done searching.
+		 */
+		if (ns->level <= cred->user_ns->level)
 			return -EPERM;
 
 		/* 
@@ -300,10 +303,10 @@ static inline void bprm_clear_caps(struct linux_binprm *bprm)
  *
  * Determine if an inode having a change applied that's marked ATTR_KILL_PRIV
  * affects the security markings on that inode, and if it is, should
- * inode_killpriv() be invoked or the change rejected?
+ * inode_killpriv() be invoked or the change rejected.
  *
- * Returns 0 if granted; +ve if granted, but inode_killpriv() is required; and
- * -ve to deny the change.
+ * Returns 1 if security.capability has a value, meaning inode_killpriv()
+ * is required, 0 otherwise, meaning inode_killpriv() is not required.
  */
 int cap_inode_need_killpriv(struct dentry *dentry)
 {

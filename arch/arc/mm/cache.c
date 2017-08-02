@@ -697,6 +697,9 @@ noinline void slc_op(phys_addr_t paddr, unsigned long sz, const int op)
 	write_aux_reg(ARC_REG_SLC_RGN_END, (paddr + sz + l2_line_sz - 1));
 	write_aux_reg(ARC_REG_SLC_RGN_START, paddr);
 
+	/* Make sure "busy" bit reports correct stataus, see STAR 9001165532 */
+	read_aux_reg(ARC_REG_SLC_CTRL);
+
 	while (read_aux_reg(ARC_REG_SLC_CTRL) & SLC_CTRL_BUSY);
 
 	spin_unlock_irqrestore(&lock, flags);
@@ -1188,7 +1191,7 @@ void __ref arc_cache_init(void)
 	unsigned int __maybe_unused cpu = smp_processor_id();
 	char str[256];
 
-	printk(arc_cache_mumbojumbo(0, str, sizeof(str)));
+	pr_info("%s", arc_cache_mumbojumbo(0, str, sizeof(str)));
 
 	/*
 	 * Only master CPU needs to execute rest of function:
