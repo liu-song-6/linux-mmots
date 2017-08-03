@@ -780,11 +780,19 @@ static bool task_will_free_mem(struct task_struct *task)
 		return false;
 
 	/*
-	 * This task has already been drained by the oom reaper so there are
-	 * only small chances it will free some more
+	 * It is possible that current thread fails to try allocation from
+	 * memory reserves if the OOM reaper set MMF_OOM_SKIP on this mm before
+	 * current thread calls out_of_memory() in order to get TIF_MEMDIE.
+	 * In that case, allow current thread to try TIF_MEMDIE allocation
+	 * before start selecting next OOM victims.
 	 */
-	if (test_bit(MMF_OOM_SKIP, &mm->flags))
+	if (test_bit(MMF_OOM_SKIP, &mm->flags)) {
+		if (task == current && !task->oom_kill_free_check_raced) {
+			task->oom_kill_free_check_raced = true;
+			return true;
+		}
 		return false;
+	}
 
 	if (atomic_read(&mm->mm_users) <= 1)
 		return true;

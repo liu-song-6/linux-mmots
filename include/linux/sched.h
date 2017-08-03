@@ -651,6 +651,7 @@ struct task_struct {
 	/* disallow userland-initiated cgroup migration */
 	unsigned			no_cgroup_migration:1;
 #endif
+	unsigned			oom_kill_free_check_raced:1;
 
 	unsigned long			atomic_flags; /* Flags requiring atomic access. */
 
