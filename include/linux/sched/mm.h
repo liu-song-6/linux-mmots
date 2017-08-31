@@ -38,6 +38,10 @@ static inline void mmgrab(struct mm_struct *mm)
 extern void __mmdrop(struct mm_struct *);
 static inline void mmdrop(struct mm_struct *mm)
 {
+	/*
+	 * The implicit full barrier implied by atomic_dec_and_test is
+	 * required by the membarrier system call.
+	 */
 	if (unlikely(atomic_dec_and_test(&mm->mm_count)))
 		__mmdrop(mm);
 }
@@ -160,6 +164,14 @@ static inline gfp_t current_gfp_context(gfp_t flags)
 		flags &= ~__GFP_FS;
 	return flags;
 }
+
+#ifdef CONFIG_LOCKDEP
+extern void fs_reclaim_acquire(gfp_t gfp_mask);
+extern void fs_reclaim_release(gfp_t gfp_mask);
+#else
+static inline void fs_reclaim_acquire(gfp_t gfp_mask) { }
+static inline void fs_reclaim_release(gfp_t gfp_mask) { }
+#endif
 
 static inline unsigned int memalloc_noio_save(void)
 {

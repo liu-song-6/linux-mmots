@@ -381,7 +381,7 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
 		           (unsigned char *)esph - skb->data,
 		           assoclen + ivlen + esp->clen + alen);
 	if (unlikely(err < 0))
-		goto error;
+		goto error_free;
 
 	if (!esp->inplace) {
 		int allocsize;
@@ -392,7 +392,7 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
 		spin_lock_bh(&x->lock);
 		if (unlikely(!skb_page_frag_refill(allocsize, pfrag, GFP_ATOMIC))) {
 			spin_unlock_bh(&x->lock);
-			goto error;
+			goto error_free;
 		}
 
 		skb_shinfo(skb)->nr_frags = 1;
@@ -409,7 +409,7 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
 			           (unsigned char *)esph - skb->data,
 			           assoclen + ivlen + esp->clen + alen);
 		if (unlikely(err < 0))
-			goto error;
+			goto error_free;
 	}
 
 	if ((x->props.flags & XFRM_STATE_ESN))
@@ -442,8 +442,9 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
 
 	if (sg != dsg)
 		esp_ssg_unref(x, tmp);
-	kfree(tmp);
 
+error_free:
+	kfree(tmp);
 error:
 	return err;
 }
@@ -510,7 +511,8 @@ int esp_input_done2(struct sk_buff *skb, int err)
 	int elen = skb->len - hlen;
 	int ihl;
 	u8 nexthdr[2];
-	int padlen;
+	int padlen, trimlen;
+	__wsum csumdiff;
 
 	if (!xo || (xo && !(xo->flags & CRYPTO_DONE)))
 		kfree(ESP_SKB_CB(skb)->tmp);
@@ -568,8 +570,15 @@ int esp_input_done2(struct sk_buff *skb, int err)
 			skb->ip_summed = CHECKSUM_UNNECESSARY;
 	}
 
-	pskb_trim(skb, skb->len - alen - padlen - 2);
-	__skb_pull(skb, hlen);
+	trimlen = alen + padlen + 2;
+	if (skb->ip_summed == CHECKSUM_COMPLETE) {
+		csumdiff = skb_checksum(skb, skb->len - trimlen, trimlen, 0);
+		skb->csum = csum_block_sub(skb->csum, csumdiff,
+					   skb->len - trimlen);
+	}
+	pskb_trim(skb, skb->len - trimlen);
+
+	skb_pull_rcsum(skb, hlen);
 	if (x->props.mode == XFRM_MODE_TUNNEL)
 		skb_reset_transport_header(skb);
 	else
@@ -695,8 +704,10 @@ skip_cow:
 
 	sg_init_table(sg, nfrags);
 	err = skb_to_sgvec(skb, sg, 0, skb->len);
-	if (unlikely(err < 0))
+	if (unlikely(err < 0)) {
+		kfree(tmp);
 		goto out;
+	}
 
 	skb->ip_summed = CHECKSUM_NONE;
 

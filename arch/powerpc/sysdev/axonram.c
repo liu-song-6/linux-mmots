@@ -110,7 +110,7 @@ axon_ram_irq_handler(int irq, void *dev)
 static blk_qc_t
 axon_ram_make_request(struct request_queue *queue, struct bio *bio)
 {
-	struct axon_ram_bank *bank = bio->bi_bdev->bd_disk->private_data;
+	struct axon_ram_bank *bank = bio->bi_disk->private_data;
 	unsigned long phys_mem, phys_end;
 	void *user_mem;
 	struct bio_vec vec;
@@ -188,8 +188,8 @@ static int axon_ram_probe(struct platform_device *device)
 
 	axon_ram_bank_id++;
 
-	dev_info(&device->dev, "Found memory controller on %s\n",
-			device->dev.of_node->full_name);
+	dev_info(&device->dev, "Found memory controller on %pOF\n",
+			device->dev.of_node);
 
 	bank = kzalloc(sizeof(struct axon_ram_bank), GFP_KERNEL);
 	if (bank == NULL) {

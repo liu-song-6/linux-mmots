@@ -46,7 +46,8 @@ static enum drm_mode_status malidp_crtc_mode_valid(struct drm_crtc *crtc,
 	return MODE_OK;
 }
 
-static void malidp_crtc_enable(struct drm_crtc *crtc)
+static void malidp_crtc_atomic_enable(struct drm_crtc *crtc,
+				      struct drm_crtc_state *old_state)
 {
 	struct malidp_drm *malidp = crtc_to_malidp_device(crtc);
 	struct malidp_hw_device *hwdev = malidp->dev;
@@ -69,13 +70,18 @@ static void malidp_crtc_enable(struct drm_crtc *crtc)
 	drm_crtc_vblank_on(crtc);
 }
 
-static void malidp_crtc_disable(struct drm_crtc *crtc)
+static void malidp_crtc_atomic_disable(struct drm_crtc *crtc,
+				       struct drm_crtc_state *old_state)
 {
 	struct malidp_drm *malidp = crtc_to_malidp_device(crtc);
 	struct malidp_hw_device *hwdev = malidp->dev;
 	int err;
 
+	/* always disable planes on the CRTC that is being turned off */
+	drm_atomic_helper_disable_planes_on_crtc(old_state, false);
+
 	drm_crtc_vblank_off(crtc);
+
 	hwdev->enter_config_mode(hwdev);
 	clk_disable_unprepare(hwdev->pxlclk);
 
@@ -408,9 +414,9 @@ static int malidp_crtc_atomic_check(struct drm_crtc *crtc,
 
 static const struct drm_crtc_helper_funcs malidp_crtc_helper_funcs = {
 	.mode_valid = malidp_crtc_mode_valid,
-	.enable = malidp_crtc_enable,
-	.disable = malidp_crtc_disable,
 	.atomic_check = malidp_crtc_atomic_check,
+	.atomic_enable = malidp_crtc_atomic_enable,
+	.atomic_disable = malidp_crtc_atomic_disable,
 };
 
 static struct drm_crtc_state *malidp_crtc_duplicate_state(struct drm_crtc *crtc)

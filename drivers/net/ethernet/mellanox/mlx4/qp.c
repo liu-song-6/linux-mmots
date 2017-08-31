@@ -174,7 +174,7 @@ static int __mlx4_qp_modify(struct mlx4_dev *dev, struct mlx4_mtt *mtt,
 			cpu_to_be16(mlx4_qp_roce_entropy(dev, qp->qpn));
 
 	*(__be32 *) mailbox->buf = cpu_to_be32(optpar);
-	memcpy(mailbox->buf + 8, context, sizeof *context);
+	memcpy(mailbox->buf + 8, context, sizeof(*context));
 
 	((struct mlx4_qp_context *) (mailbox->buf + 8))->local_qpn =
 		cpu_to_be32(qp->qpn);
@@ -245,8 +245,9 @@ int __mlx4_qp_reserve_range(struct mlx4_dev *dev, int cnt, int align,
 }
 
 int mlx4_qp_reserve_range(struct mlx4_dev *dev, int cnt, int align,
-			  int *base, u8 flags)
+			  int *base, u8 flags, u8 usage)
 {
+	u32 in_modifier = RES_QP | (((u32)usage & 3) << 30);
 	u64 in_param = 0;
 	u64 out_param;
 	int err;
@@ -258,7 +259,7 @@ int mlx4_qp_reserve_range(struct mlx4_dev *dev, int cnt, int align,
 		set_param_l(&in_param, (((u32)flags) << 24) | (u32)cnt);
 		set_param_h(&in_param, align);
 		err = mlx4_cmd_imm(dev, in_param, &out_param,
-				   RES_QP, RES_OP_RESERVE,
+				   in_modifier, RES_OP_RESERVE,
 				   MLX4_CMD_ALLOC_RES,
 				   MLX4_CMD_TIME_CLASS_A, MLX4_CMD_WRAPPED);
 		if (err)
@@ -844,10 +845,10 @@ int mlx4_init_qp_table(struct mlx4_dev *dev)
 
 		/* In mfunc, calculate proxy and tunnel qp offsets for the PF here,
 		 * since the PF does not call mlx4_slave_caps */
-		dev->caps.qp0_tunnel = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
-		dev->caps.qp0_proxy = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
-		dev->caps.qp1_tunnel = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
-		dev->caps.qp1_proxy = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
+		dev->caps.qp0_tunnel = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
+		dev->caps.qp0_proxy = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
+		dev->caps.qp1_tunnel = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
+		dev->caps.qp1_proxy = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
 
 		if (!dev->caps.qp0_tunnel || !dev->caps.qp0_proxy ||
 		    !dev->caps.qp1_tunnel || !dev->caps.qp1_proxy) {
@@ -907,7 +908,7 @@ int mlx4_qp_query(struct mlx4_dev *dev, struct mlx4_qp *qp,
 			   MLX4_CMD_QUERY_QP, MLX4_CMD_TIME_CLASS_A,
 			   MLX4_CMD_WRAPPED);
 	if (!err)
-		memcpy(context, mailbox->buf + 8, sizeof *context);
+		memcpy(context, mailbox->buf + 8, sizeof(*context));
 
 	mlx4_free_cmd_mailbox(dev, mailbox);
 	return err;

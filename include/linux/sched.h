@@ -589,9 +589,10 @@ struct task_struct {
 
 #ifdef CONFIG_TASKS_RCU
 	unsigned long			rcu_tasks_nvcsw;
-	bool				rcu_tasks_holdout;
-	struct list_head		rcu_tasks_holdout_list;
+	u8				rcu_tasks_holdout;
+	u8				rcu_tasks_idx;
 	int				rcu_tasks_idle_cpu;
+	struct list_head		rcu_tasks_holdout_list;
 #endif /* #ifdef CONFIG_TASKS_RCU */
 
 	struct sched_info		sched_info;
@@ -845,7 +846,17 @@ struct task_struct {
 	int				lockdep_depth;
 	unsigned int			lockdep_recursion;
 	struct held_lock		held_locks[MAX_LOCK_DEPTH];
-	gfp_t				lockdep_reclaim_gfp;
+#endif
+
+#ifdef CONFIG_LOCKDEP_CROSSRELEASE
+#define MAX_XHLOCKS_NR 64UL
+	struct hist_lock *xhlocks; /* Crossrelease history locks */
+	unsigned int xhlock_idx;
+	/* For restoring at history boundaries */
+	unsigned int xhlock_idx_hist[XHLOCK_CTX_NR];
+	unsigned int hist_id;
+	/* For overwrite check at each context exit */
+	unsigned int hist_id_save[XHLOCK_CTX_NR];
 #endif
 
 #ifdef CONFIG_UBSAN
@@ -897,8 +908,9 @@ struct task_struct {
 	/* cg_list protected by css_set_lock and tsk->alloc_lock: */
 	struct list_head		cg_list;
 #endif
-#ifdef CONFIG_INTEL_RDT_A
-	int				closid;
+#ifdef CONFIG_INTEL_RDT
+	u32				closid;
+	u32				rmid;
 #endif
 #ifdef CONFIG_FUTEX
 	struct robust_list_head __user	*robust_list;
@@ -1231,6 +1243,19 @@ static inline pid_t task_pgrp_nr(struct task_struct *tsk)
 	return task_pgrp_nr_ns(tsk, &init_pid_ns);
 }
 
+static inline char task_state_to_char(struct task_struct *task)
+{
+	const char stat_nam[] = TASK_STATE_TO_CHAR_STR;
+	unsigned long state = task->state;
+
+	state = state ? __ffs(state) + 1 : 0;
+
+	/* Make sure the string lines up properly with the number of task states: */
+	BUILD_BUG_ON(sizeof(TASK_STATE_TO_CHAR_STR)-1 != ilog2(TASK_STATE_MAX)+1);
+
+	return state < sizeof(stat_nam) - 1 ? stat_nam[state] : '?';
+}
+
 /**
  * is_global_init - check if a task structure is init. Since init
  * is free to have sub-threads we need to check tgid.
@@ -1524,10 +1549,11 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
  * cond_resched_lock() will drop the spinlock before scheduling,
  * cond_resched_softirq() will enable bhs before scheduling.
  */
+void rcu_all_qs(void);
 #ifndef CONFIG_PREEMPT
 extern int _cond_resched(void);
 #else
-static inline int _cond_resched(void) { return 0; }
+static inline int _cond_resched(void) { rcu_all_qs(); return 0; }
 #endif
 
 #define cond_resched() ({			\

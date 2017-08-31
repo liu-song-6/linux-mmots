@@ -2275,8 +2275,9 @@ static void spmi_find_bmc(void)
 #endif
 
 #if defined(CONFIG_DMI) || defined(CONFIG_ACPI)
-struct resource *ipmi_get_info_from_resources(struct platform_device *pdev,
-					      struct smi_info *info)
+static struct resource *
+ipmi_get_info_from_resources(struct platform_device *pdev,
+			     struct smi_info *info)
 {
 	struct resource *res, *res_second;
 
@@ -2784,7 +2785,7 @@ static int acpi_ipmi_probe(struct platform_device *dev)
 
 static int ipmi_probe(struct platform_device *dev)
 {
-	if (of_ipmi_probe(dev) == 0)
+	if (dev->dev.of_node && of_ipmi_probe(dev) == 0)
 		return 0;
 
 	if (acpi_ipmi_probe(dev) == 0)
@@ -2812,7 +2813,7 @@ static struct platform_driver ipmi_driver = {
 };
 
 #ifdef CONFIG_PARISC
-static int ipmi_parisc_probe(struct parisc_device *dev)
+static int __init ipmi_parisc_probe(struct parisc_device *dev)
 {
 	struct smi_info *info;
 	int rv;
@@ -2850,22 +2851,24 @@ static int ipmi_parisc_probe(struct parisc_device *dev)
 	return 0;
 }
 
-static int ipmi_parisc_remove(struct parisc_device *dev)
+static int __exit ipmi_parisc_remove(struct parisc_device *dev)
 {
 	cleanup_one_si(dev_get_drvdata(&dev->dev));
 	return 0;
 }
 
-static const struct parisc_device_id ipmi_parisc_tbl[] = {
+static const struct parisc_device_id ipmi_parisc_tbl[] __initconst = {
 	{ HPHW_MC, HVERSION_REV_ANY_ID, 0x004, 0xC0 },
 	{ 0, }
 };
 
-static struct parisc_driver ipmi_parisc_driver = {
+MODULE_DEVICE_TABLE(parisc, ipmi_parisc_tbl);
+
+static struct parisc_driver ipmi_parisc_driver __refdata = {
 	.name =		"ipmi",
 	.id_table =	ipmi_parisc_tbl,
 	.probe =	ipmi_parisc_probe,
-	.remove =	ipmi_parisc_remove,
+	.remove =	__exit_p(ipmi_parisc_remove),
 };
 #endif /* CONFIG_PARISC */
 
@@ -2923,7 +2926,8 @@ static int try_get_dev_id(struct smi_info *smi_info)
 						  resp, IPMI_MAX_MSG_LENGTH);
 
 	/* Check and record info from the get device id, in case we need it. */
-	rv = ipmi_demangle_device_id(resp, resp_len, &smi_info->device_id);
+	rv = ipmi_demangle_device_id(resp[0] >> 2, resp[1],
+			resp + 2, resp_len - 2, &smi_info->device_id);
 
 out:
 	kfree(resp);

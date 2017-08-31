@@ -74,6 +74,25 @@ static ssize_t ext4_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 	return generic_file_read_iter(iocb, to);
 }
 
+static ssize_t ext4_file_integrity_read_iter(struct kiocb *iocb,
+					     struct iov_iter *to)
+{
+	struct inode *inode = file_inode(iocb->ki_filp);
+
+	lockdep_assert_held(&inode->i_rwsem);
+	if (unlikely(ext4_forced_shutdown(EXT4_SB(inode->i_sb))))
+		return -EIO;
+
+	if (!iov_iter_count(to))
+		return 0; /* skip atime */
+
+#ifdef CONFIG_FS_DAX
+	if (IS_DAX(inode))
+		return dax_iomap_rw(iocb, to, &ext4_iomap_ops);
+#endif
+	return generic_file_read_iter(iocb, to);
+}
+
 /*
  * Called when an inode is released. Note that this is different
  * from ext4_file_open: open gets called at every open, but release
@@ -279,7 +298,20 @@ static int ext4_dax_huge_fault(struct vm_fault *vmf,
 	handle_t *handle = NULL;
 	struct inode *inode = file_inode(vmf->vma->vm_file);
 	struct super_block *sb = inode->i_sb;
-	bool write = vmf->flags & FAULT_FLAG_WRITE;
+
+	/*
+	 * We have to distinguish real writes from writes which will result in a
+	 * COW page; COW writes should *not* poke the journal (the file will not
+	 * be changed). Doing so would cause unintended failures when mounted
+	 * read-only.
+	 *
+	 * We check for VM_SHARED rather than vmf->cow_page since the latter is
+	 * unset for pe_size != PE_SIZE_PTE (i.e. only in do_cow_fault); for
+	 * other sizes, dax_iomap_fault will handle splitting / fallback so that
+	 * we eventually come back with a COW page.
+	 */
+	bool write = (vmf->flags & FAULT_FLAG_WRITE) &&
+		(vmf->vma->vm_flags & VM_SHARED);
 
 	if (write) {
 		sb_start_pagefault(sb);
@@ -620,7 +652,7 @@ static loff_t ext4_seek_hole(struct file *file, loff_t offset, loff_t maxsize)
 	inode_lock(inode);
 
 	isize = i_size_read(inode);
-	if (offset >= isize) {
+	if (offset < 0 || offset >= isize) {
 		inode_unlock(inode);
 		return -ENXIO;
 	}
@@ -712,6 +744,7 @@ const struct file_operations ext4_file_operations = {
 	.splice_read	= generic_file_splice_read,
 	.splice_write	= iter_file_splice_write,
 	.fallocate	= ext4_fallocate,
+	.integrity_read	= ext4_file_integrity_read_iter,
 };
 
 const struct inode_operations ext4_file_inode_operations = {

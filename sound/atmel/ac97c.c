@@ -66,7 +66,7 @@ struct atmel_ac97c {
 #define ac97c_readl(chip, reg)				\
 	__raw_readl((chip)->regs + AC97C_##reg)
 
-static struct snd_pcm_hardware atmel_ac97c_hw = {
+static const struct snd_pcm_hardware atmel_ac97c_hw = {
 	.info			= (SNDRV_PCM_INFO_MMAP
 				  | SNDRV_PCM_INFO_MMAP_VALID
 				  | SNDRV_PCM_INFO_INTERLEAVED
@@ -461,7 +461,7 @@ atmel_ac97c_capture_pointer(struct snd_pcm_substream *substream)
 	return frames;
 }
 
-static struct snd_pcm_ops atmel_ac97_playback_ops = {
+static const struct snd_pcm_ops atmel_ac97_playback_ops = {
 	.open		= atmel_ac97c_playback_open,
 	.close		= atmel_ac97c_playback_close,
 	.ioctl		= snd_pcm_lib_ioctl,
@@ -472,7 +472,7 @@ static struct snd_pcm_ops atmel_ac97_playback_ops = {
 	.pointer	= atmel_ac97c_playback_pointer,
 };
 
-static struct snd_pcm_ops atmel_ac97_capture_ops = {
+static const struct snd_pcm_ops atmel_ac97_capture_ops = {
 	.open		= atmel_ac97c_capture_open,
 	.close		= atmel_ac97c_capture_close,
 	.ioctl		= snd_pcm_lib_ioctl,
@@ -558,7 +558,7 @@ static irqreturn_t atmel_ac97c_interrupt(int irq, void *dev)
 	return retval;
 }
 
-static struct ac97_pcm at91_ac97_pcm_defs[] = {
+static const struct ac97_pcm at91_ac97_pcm_defs[] = {
 	/* Playback */
 	{
 		.exclusive = 1,
@@ -783,7 +783,9 @@ static int atmel_ac97c_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "no peripheral clock\n");
 		return PTR_ERR(pclk);
 	}
-	clk_prepare_enable(pclk);
+	retval = clk_prepare_enable(pclk);
+	if (retval)
+		return retval;
 
 	retval = snd_card_new(&pdev->dev, SNDRV_DEFAULT_IDX1,
 			      SNDRV_DEFAULT_STR1, THIS_MODULE,
@@ -897,9 +899,9 @@ static int atmel_ac97c_resume(struct device *pdev)
 {
 	struct snd_card *card = dev_get_drvdata(pdev);
 	struct atmel_ac97c *chip = card->private_data;
+	int ret = clk_prepare_enable(chip->pclk);
 
-	clk_prepare_enable(chip->pclk);
-	return 0;
+	return ret;
 }
 
 static SIMPLE_DEV_PM_OPS(atmel_ac97c_pm, atmel_ac97c_suspend, atmel_ac97c_resume);

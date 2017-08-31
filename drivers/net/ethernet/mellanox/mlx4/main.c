@@ -121,7 +121,7 @@ static char mlx4_version[] =
 	DRV_NAME ": Mellanox ConnectX core driver v"
 	DRV_VERSION "\n";
 
-static struct mlx4_profile default_profile = {
+static const struct mlx4_profile default_profile = {
 	.num_qp		= 1 << 18,
 	.num_srq	= 1 << 16,
 	.rdmarc_per_qp	= 1 << 4,
@@ -131,7 +131,7 @@ static struct mlx4_profile default_profile = {
 	.num_mtt	= 1 << 20, /* It is really num mtt segements */
 };
 
-static struct mlx4_profile low_mem_profile = {
+static const struct mlx4_profile low_mem_profile = {
 	.num_qp		= 1 << 17,
 	.num_srq	= 1 << 6,
 	.rdmarc_per_qp	= 1 << 4,
@@ -925,10 +925,10 @@ static int mlx4_slave_cap(struct mlx4_dev *dev)
 	mlx4_replace_zero_macs(dev);
 
 	dev->caps.qp0_qkey = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
-	dev->caps.qp0_tunnel = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
-	dev->caps.qp0_proxy = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
-	dev->caps.qp1_tunnel = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
-	dev->caps.qp1_proxy = kcalloc(dev->caps.num_ports, sizeof (u32), GFP_KERNEL);
+	dev->caps.qp0_tunnel = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
+	dev->caps.qp0_proxy = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
+	dev->caps.qp1_tunnel = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
+	dev->caps.qp1_proxy = kcalloc(dev->caps.num_ports, sizeof(u32), GFP_KERNEL);
 
 	if (!dev->caps.qp0_tunnel || !dev->caps.qp0_proxy ||
 	    !dev->caps.qp1_tunnel || !dev->caps.qp1_proxy ||
@@ -2399,7 +2399,7 @@ static int mlx4_init_hca(struct mlx4_dev *dev)
 		dev->caps.rx_checksum_flags_port[2] = params.rx_csum_flags_port_2;
 	}
 	priv->eq_table.inta_pin = adapter.inta_pin;
-	memcpy(dev->board_id, adapter.board_id, sizeof dev->board_id);
+	memcpy(dev->board_id, adapter.board_id, sizeof(dev->board_id));
 
 	return 0;
 
@@ -2477,7 +2477,7 @@ static int mlx4_allocate_default_counters(struct mlx4_dev *dev)
 		priv->def_counter[port] = -1;
 
 	for (port = 0; port < dev->caps.num_ports; port++) {
-		err = mlx4_counter_alloc(dev, &idx);
+		err = mlx4_counter_alloc(dev, &idx, MLX4_RES_USAGE_DRIVER);
 
 		if (!err || err == -ENOSPC) {
 			priv->def_counter[port] = idx;
@@ -2519,13 +2519,14 @@ int __mlx4_counter_alloc(struct mlx4_dev *dev, u32 *idx)
 	return 0;
 }
 
-int mlx4_counter_alloc(struct mlx4_dev *dev, u32 *idx)
+int mlx4_counter_alloc(struct mlx4_dev *dev, u32 *idx, u8 usage)
 {
+	u32 in_modifier = RES_COUNTER | (((u32)usage & 3) << 30);
 	u64 out_param;
 	int err;
 
 	if (mlx4_is_mfunc(dev)) {
-		err = mlx4_cmd_imm(dev, 0, &out_param, RES_COUNTER,
+		err = mlx4_cmd_imm(dev, 0, &out_param, in_modifier,
 				   RES_OP_RESERVE, MLX4_CMD_ALLOC_RES,
 				   MLX4_CMD_TIME_CLASS_A, MLX4_CMD_WRAPPED);
 		if (!err)
@@ -2869,7 +2870,7 @@ static void mlx4_enable_msi_x(struct mlx4_dev *dev)
 				dev->caps.num_eqs - dev->caps.reserved_eqs,
 				MAX_MSIX);
 
-		entries = kcalloc(nreq, sizeof *entries, GFP_KERNEL);
+		entries = kcalloc(nreq, sizeof(*entries), GFP_KERNEL);
 		if (!entries)
 			goto no_msi;
 
@@ -3782,7 +3783,6 @@ err_release_regions:
 
 err_disable_pdev:
 	mlx4_pci_disable_device(&priv->dev);
-	pci_set_drvdata(pdev, NULL);
 	return err;
 }
 
@@ -3997,7 +3997,6 @@ static void mlx4_remove_one(struct pci_dev *pdev)
 	devlink_unregister(devlink);
 	kfree(dev->persist);
 	devlink_free(devlink);
-	pci_set_drvdata(pdev, NULL);
 }
 
 static int restore_current_port_types(struct mlx4_dev *dev,
