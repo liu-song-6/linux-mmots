@@ -527,7 +527,7 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 		__compiletime_error_fallback(__cond);			\
 	} while (0)
 #else
-# define __compiletime_assert(condition, msg, prefix, suffix)
+# define __compiletime_assert(condition, msg, prefix, suffix) do { } while (0)
 #endif
 
 #define _compiletime_assert(condition, msg, prefix, suffix) \
