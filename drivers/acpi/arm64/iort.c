@@ -673,26 +673,6 @@ static int iort_iommu_xlate(struct device *dev, struct acpi_iort_node *node,
 	if (!ops)
 		return iort_iommu_driver_enabled(node->type) ?
 		       -EPROBE_DEFER : -ENODEV;
-<<<<<<< HEAD
-
-	return arm_smmu_iort_xlate(dev, streamid, iort_fwnode, ops);
-}
-
-struct iort_pci_alias_info {
-	struct device *dev;
-	struct acpi_iort_node *node;
-};
-
-static int iort_pci_iommu_init(struct pci_dev *pdev, u16 alias, void *data)
-{
-	struct iort_pci_alias_info *info = data;
-	struct acpi_iort_node *parent;
-	u32 streamid;
-
-	parent = iort_node_map_id(info->node, alias, &streamid,
-				  IORT_IOMMU_TYPE);
-	return iort_iommu_xlate(info->dev, parent, streamid);
-=======
 
 	return arm_smmu_iort_xlate(dev, streamid, iort_fwnode, ops);
 }
@@ -729,7 +709,6 @@ static int nc_dma_get_range(struct device *dev, u64 *size)
 			1ULL<<ncomp->memory_address_limit;
 
 	return 0;
->>>>>>> linux-next/akpm-base
 }
 
 /**

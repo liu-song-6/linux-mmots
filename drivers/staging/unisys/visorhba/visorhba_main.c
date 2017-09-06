@@ -49,11 +49,6 @@ MODULE_ALIAS("visorbus:" VISOR_VHBA_CHANNEL_GUID_STR);
 struct visordisk_info {
 	struct scsi_device *sdev;
 	u32 valid;
-<<<<<<< HEAD
-	/* Disk Path */
-	u32 channel, id, lun;
-=======
->>>>>>> linux-next/akpm-base
 	atomic_t ios_threshold;
 	atomic_t error_count;
 	struct visordisk_info *next;
@@ -483,7 +478,6 @@ static const char *visorhba_get_info(struct Scsi_Host *shp)
  * dma_data_dir_linux_to_spar - convert dma_data_direction value to
  *				Unisys-specific equivalent
  * @d: dma direction value to convert
-<<<<<<< HEAD
  *
  * Returns the Unisys-specific dma direction value corresponding to @d
  */
@@ -511,35 +505,6 @@ static u32 dma_data_dir_linux_to_spar(enum dma_data_direction d)
  * Queues to scsicmd to the ServicePartition after converting it to a
  * uiscmdrsp structure.
  *
-=======
- *
- * Returns the Unisys-specific dma direction value corresponding to @d
- */
-static u32 dma_data_dir_linux_to_spar(enum dma_data_direction d)
-{
-	switch (d) {
-	case DMA_BIDIRECTIONAL:
-		return UIS_DMA_BIDIRECTIONAL;
-	case DMA_TO_DEVICE:
-		return UIS_DMA_TO_DEVICE;
-	case DMA_FROM_DEVICE:
-		return UIS_DMA_FROM_DEVICE;
-	case DMA_NONE:
-		return UIS_DMA_NONE;
-	default:
-		return UIS_DMA_NONE;
-	}
-}
-
-/*
- * visorhba_queue_command_lck - Queues command to the Service Partition
- * @scsicmd:		Command to be queued
- * @vsiorhba_cmnd_done: Done command to call when scsicmd is returned
- *
- * Queues to scsicmd to the ServicePartition after converting it to a
- * uiscmdrsp structure.
- *
->>>>>>> linux-next/akpm-base
  * Return: 0 if successfully queued to the Service Partition, otherwise
  *	   error code
  */
@@ -639,24 +604,14 @@ static int visorhba_slave_alloc(struct scsi_device *scsidev)
 	struct visorhba_devdata *devdata;
 	struct Scsi_Host *scsihost = (struct Scsi_Host *)scsidev->host;
 
-<<<<<<< HEAD
-=======
 	/* already allocated return success */
 	if (scsidev->hostdata)
 		return 0;
 
->>>>>>> linux-next/akpm-base
 	/* even though we errored, treat as success */
 	devdata = (struct visorhba_devdata *)scsihost->hostdata;
 	if (!devdata)
 		return 0;
-<<<<<<< HEAD
-
-	/* already allocated return success */
-	for_each_vdisk_match(vdisk, devdata, scsidev)
-		return 0;
-=======
->>>>>>> linux-next/akpm-base
 
 	vdisk = kzalloc(sizeof(*vdisk), GFP_ATOMIC);
 	if (!vdisk)
@@ -829,17 +784,10 @@ static void visorhba_serverdown_complete(struct visorhba_devdata *devdata)
 /*
  * visorhba_serverdown - Got notified that the IOVM is down
  * @devdata: Visorhba that is being serviced by downed IOVM
-<<<<<<< HEAD
  *
  * Something happened to the IOVM, return immediately and
  * schedule cleanup work.
  *
-=======
- *
- * Something happened to the IOVM, return immediately and
- * schedule cleanup work.
- *
->>>>>>> linux-next/akpm-base
  * Return: 0 on success, -EINVAL on failure
  */
 static int visorhba_serverdown(struct visorhba_devdata *devdata)

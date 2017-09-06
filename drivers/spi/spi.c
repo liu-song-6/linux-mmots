@@ -40,10 +40,7 @@
 #include <linux/ioport.h>
 #include <linux/acpi.h>
 #include <linux/highmem.h>
-<<<<<<< HEAD
-=======
 #include <linux/platform_data/x86/apple.h>
->>>>>>> linux-next/akpm-base
 #include <linux/idr.h>
 
 #define CREATE_TRACE_POINTS

@@ -438,8 +438,6 @@ out:
 }
 
 static const struct amba_id tmc_ids[] = {
-<<<<<<< HEAD
-=======
 	{
 		.id     = 0x000bb961,
 		.mask   = 0x000fffff,
@@ -455,7 +453,6 @@ static const struct amba_id tmc_ids[] = {
 		.id	= 0x000bb9e9,
 		.mask	= 0x000fffff,
 	},
->>>>>>> linux-next/akpm-base
 	{
 		/* Coresight SoC 600 TMC-ETF */
 		.id	= 0x000bb9ea,

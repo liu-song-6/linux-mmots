@@ -354,15 +354,6 @@ static int axp20x_pek_probe(struct platform_device *pdev)
 			return error;
 	}
 
-<<<<<<< HEAD
-	error = devm_device_add_group(&pdev->dev, &axp20x_attribute_group);
-	if (error) {
-		dev_err(&pdev->dev, "Failed to create sysfs attributes: %d\n",
-			error);
-		return error;
-	}
-
-=======
 	axp20x_pek->info = (struct axp20x_info *)match->driver_data;
 
 	error = devm_device_add_group(&pdev->dev, &axp20x_attribute_group);
@@ -372,7 +363,6 @@ static int axp20x_pek_probe(struct platform_device *pdev)
 		return error;
 	}
 
->>>>>>> linux-next/akpm-base
 	platform_set_drvdata(pdev, axp20x_pek);
 
 	return 0;

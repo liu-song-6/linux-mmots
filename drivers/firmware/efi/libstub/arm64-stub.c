@@ -21,10 +21,7 @@
 #include <linux/efi.h>
 #include <asm/efi.h>
 #include <asm/memory.h>
-<<<<<<< HEAD
 #include <asm/sections.h>
-=======
->>>>>>> linux-next/akpm-base
 #include <asm/sysreg.h>
 
 #include "efistub.h"
