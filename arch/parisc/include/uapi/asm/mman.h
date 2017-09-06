@@ -60,6 +60,9 @@
 #define MADV_HWPOISON     100		/* poison a page for testing */
 #define MADV_SOFT_OFFLINE 101		/* soft offline page for testing */
 
+#define MADV_WIPEONFORK 71		/* Zero memory on fork, child only */
+#define MADV_KEEPONFORK 72		/* Undo MADV_WIPEONFORK */
+
 /* compatibility flags */
 #define MAP_FILE	0
 #define MAP_VARIABLE	0
