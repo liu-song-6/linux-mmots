@@ -673,6 +673,26 @@ static int iort_iommu_xlate(struct device *dev, struct acpi_iort_node *node,
 	if (!ops)
 		return iort_iommu_driver_enabled(node->type) ?
 		       -EPROBE_DEFER : -ENODEV;
+<<<<<<< HEAD
+
+	return arm_smmu_iort_xlate(dev, streamid, iort_fwnode, ops);
+}
+
+struct iort_pci_alias_info {
+	struct device *dev;
+	struct acpi_iort_node *node;
+};
+
+static int iort_pci_iommu_init(struct pci_dev *pdev, u16 alias, void *data)
+{
+	struct iort_pci_alias_info *info = data;
+	struct acpi_iort_node *parent;
+	u32 streamid;
+
+	parent = iort_node_map_id(info->node, alias, &streamid,
+				  IORT_IOMMU_TYPE);
+	return iort_iommu_xlate(info->dev, parent, streamid);
+=======
 
 	return arm_smmu_iort_xlate(dev, streamid, iort_fwnode, ops);
 }
@@ -693,13 +713,37 @@ static int iort_pci_iommu_init(struct pci_dev *pdev, u16 alias, void *data)
 	return iort_iommu_xlate(info->dev, parent, streamid);
 }
 
+static int nc_dma_get_range(struct device *dev, u64 *size)
+{
+	struct acpi_iort_node *node;
+	struct acpi_iort_named_component *ncomp;
+
+	node = iort_scan_node(ACPI_IORT_NODE_NAMED_COMPONENT,
+			      iort_match_node_callback, dev);
+	if (!node)
+		return -ENODEV;
+
+	ncomp = (struct acpi_iort_named_component *)node->node_data;
+
+	*size = ncomp->memory_address_limit >= 64 ? U64_MAX :
+			1ULL<<ncomp->memory_address_limit;
+
+	return 0;
+>>>>>>> linux-next/akpm-base
+}
+
 /**
- * iort_set_dma_mask - Set-up dma mask for a device.
+ * iort_dma_setup() - Set-up device DMA parameters.
  *
  * @dev: device to configure
+ * @dma_addr: device DMA address result pointer
+ * @size: DMA range size result pointer
  */
-void iort_set_dma_mask(struct device *dev)
+void iort_dma_setup(struct device *dev, u64 *dma_addr, u64 *dma_size)
 {
+	u64 mask, dmaaddr = 0, size = 0, offset = 0;
+	int ret, msb;
+
 	/*
 	 * Set default coherent_dma_mask to 32 bit.  Drivers are expected to
 	 * setup the correct supported mask.
@@ -713,6 +757,36 @@ void iort_set_dma_mask(struct device *dev)
 	 */
 	if (!dev->dma_mask)
 		dev->dma_mask = &dev->coherent_dma_mask;
+
+	size = max(dev->coherent_dma_mask, dev->coherent_dma_mask + 1);
+
+	if (dev_is_pci(dev))
+		ret = acpi_dma_get_range(dev, &dmaaddr, &offset, &size);
+	else
+		ret = nc_dma_get_range(dev, &size);
+
+	if (!ret) {
+		msb = fls64(dmaaddr + size - 1);
+		/*
+		 * Round-up to the power-of-two mask or set
+		 * the mask to the whole 64-bit address space
+		 * in case the DMA region covers the full
+		 * memory window.
+		 */
+		mask = msb == 64 ? U64_MAX : (1ULL << msb) - 1;
+		/*
+		 * Limit coherent and dma mask based on size
+		 * retrieved from firmware.
+		 */
+		dev->coherent_dma_mask = mask;
+		*dev->dma_mask = mask;
+	}
+
+	*dma_addr = dmaaddr;
+	*dma_size = size;
+
+	dev->dma_pfn_offset = PFN_DOWN(offset);
+	dev_dbg(dev, "dma_pfn_offset(%#08llx)\n", offset);
 }
 
 /**

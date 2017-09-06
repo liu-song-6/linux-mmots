@@ -573,7 +573,7 @@ static int acpi_pci_propagate_wakeup(struct pci_bus *bus, bool enable)
 {
 	while (bus->parent) {
 		if (acpi_pm_device_can_wakeup(&bus->self->dev))
-			return acpi_pm_set_device_wakeup(&bus->self->dev, enable);
+			return acpi_pm_set_bridge_wakeup(&bus->self->dev, enable);
 
 		bus = bus->parent;
 	}
@@ -581,7 +581,7 @@ static int acpi_pci_propagate_wakeup(struct pci_bus *bus, bool enable)
 	/* We have reached the root bus. */
 	if (bus->bridge) {
 		if (acpi_pm_device_can_wakeup(bus->bridge))
-			return acpi_pm_set_device_wakeup(bus->bridge, enable);
+			return acpi_pm_set_bridge_wakeup(bus->bridge, enable);
 	}
 	return 0;
 }
@@ -598,15 +598,19 @@ static bool acpi_pci_need_resume(struct pci_dev *dev)
 {
 	struct acpi_device *adev = ACPI_COMPANION(&dev->dev);
 
+	dev_err(&dev->dev, "acpi_need_resume 1\n");
 	if (!adev || !acpi_device_power_manageable(adev))
 		return false;
 
+	dev_err(&dev->dev, "acpi_need_resume 2\n");
 	if (device_may_wakeup(&dev->dev) != !!adev->wakeup.prepare_count)
 		return true;
 
+	dev_err(&dev->dev, "acpi_need_resume 3\n");
 	if (acpi_target_system_state() == ACPI_STATE_S0)
 		return false;
 
+	dev_err(&dev->dev, "acpi_need_resume4, return %d\n", !!adev->power.flags.dsw_present);
 	return !!adev->power.flags.dsw_present;
 }
 

@@ -637,6 +637,7 @@ again:
 
 	dispose_list(&dispose);
 }
+EXPORT_SYMBOL_GPL(evict_inodes);
 
 /**
  * invalidate_inodes	- attempt to free all inodes on a superblock
@@ -1570,7 +1571,8 @@ static void update_ovl_inode_times(struct dentry *dentry, struct inode *inode,
 			       bool rcu)
 {
 	if (!rcu) {
-		struct inode *realinode = d_real_inode(dentry);
+		struct inode *realinode =
+			d_inode(d_real(dentry, NULL, 0, D_REAL_ALL));
 
 		if (unlikely(inode != realinode) &&
 		    (!timespec_equal(&inode->i_mtime, &realinode->i_mtime) ||
