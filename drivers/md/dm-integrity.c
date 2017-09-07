@@ -225,6 +225,8 @@ struct dm_integrity_c {
 	struct alg_spec internal_hash_alg;
 	struct alg_spec journal_crypt_alg;
 	struct alg_spec journal_mac_alg;
+
+	atomic64_t number_of_mismatches;
 };
 
 struct dm_integrity_range {
@@ -250,7 +252,8 @@ struct dm_integrity_io {
 
 	struct completion *completion;
 
-	struct block_device *orig_bi_bdev;
+	struct gendisk *orig_bi_disk;
+	u8 orig_bi_partno;
 	bio_end_io_t *orig_bi_end_io;
 	struct bio_integrity_payload *orig_bi_integrity;
 	struct bvec_iter orig_bi_iter;
@@ -309,6 +312,8 @@ static void dm_integrity_dtr(struct dm_target *ti);
 
 static void dm_integrity_io_error(struct dm_integrity_c *ic, const char *msg, int err)
 {
+	if (err == -EILSEQ)
+		atomic64_inc(&ic->number_of_mismatches);
 	if (!cmpxchg(&ic->failed, 0, err))
 		DMERR("Error on %s: %d", msg, err);
 }
@@ -1040,7 +1045,7 @@ static int dm_integrity_rw_tag(struct dm_integrity_c *ic, unsigned char *tag, se
 			memcpy(tag, dp, to_copy);
 		} else if (op == TAG_WRITE) {
 			memcpy(dp, tag, to_copy);
-			dm_bufio_mark_buffer_dirty(b);
+			dm_bufio_mark_partial_buffer_dirty(b, *metadata_offset, *metadata_offset + to_copy);
 		} else  {
 			/* e.g.: op == TAG_CMP */
 			if (unlikely(memcmp(dp, tag, to_copy))) {
@@ -1164,7 +1169,8 @@ static void integrity_end_io(struct bio *bio)
 	struct dm_integrity_io *dio = dm_per_bio_data(bio, sizeof(struct dm_integrity_io));
 
 	bio->bi_iter = dio->orig_bi_iter;
-	bio->bi_bdev = dio->orig_bi_bdev;
+	bio->bi_disk = dio->orig_bi_disk;
+	bio->bi_partno = dio->orig_bi_partno;
 	if (dio->orig_bi_integrity) {
 		bio->bi_integrity = dio->orig_bi_integrity;
 		bio->bi_opf |= REQ_INTEGRITY;
@@ -1273,6 +1279,7 @@ again:
 					DMERR("Checksum failed at sector 0x%llx",
 					      (unsigned long long)(sector - ((r + ic->tag_size - 1) / ic->tag_size)));
 					r = -EILSEQ;
+					atomic64_inc(&ic->number_of_mismatches);
 				}
 				if (likely(checksums != checksums_onstack))
 					kfree(checksums);
@@ -1681,8 +1688,9 @@ sleep:
 
 	dio->orig_bi_iter = bio->bi_iter;
 
-	dio->orig_bi_bdev = bio->bi_bdev;
-	bio->bi_bdev = ic->dev->bdev;
+	dio->orig_bi_disk = bio->bi_disk;
+	dio->orig_bi_partno = bio->bi_partno;
+	bio_set_dev(bio, ic->dev->bdev);
 
 	dio->orig_bi_integrity = bio_integrity(bio);
 	bio->bi_integrity = NULL;
@@ -2230,7 +2238,7 @@ static void dm_integrity_status(struct dm_target *ti, status_type_t type,
 
 	switch (type) {
 	case STATUSTYPE_INFO:
-		result[0] = '\0';
+		DMEMIT("%llu", (unsigned long long)atomic64_read(&ic->number_of_mismatches));
 		break;
 
 	case STATUSTYPE_TABLE: {
@@ -2775,7 +2783,7 @@ static int dm_integrity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	int r;
 	unsigned extra_args;
 	struct dm_arg_set as;
-	static struct dm_arg _args[] = {
+	static const struct dm_arg _args[] = {
 		{0, 9, "Invalid number of feature args"},
 	};
 	unsigned journal_sectors, interleave_sectors, buffer_sectors, journal_watermark, sync_msec;
@@ -2803,6 +2811,7 @@ static int dm_integrity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	bio_list_init(&ic->flush_bio_list);
 	init_waitqueue_head(&ic->copy_to_journal_wait);
 	init_completion(&ic->crypto_backoff);
+	atomic64_set(&ic->number_of_mismatches, 0);
 
 	r = dm_get_device(ti, argv[0], dm_table_get_mode(ti->table), &ic->dev);
 	if (r) {
@@ -3199,7 +3208,7 @@ static void dm_integrity_dtr(struct dm_target *ti)
 
 static struct target_type integrity_target = {
 	.name			= "integrity",
-	.version		= {1, 0, 0},
+	.version		= {1, 1, 0},
 	.module			= THIS_MODULE,
 	.features		= DM_TARGET_SINGLETON | DM_TARGET_INTEGRITY,
 	.ctr			= dm_integrity_ctr,
