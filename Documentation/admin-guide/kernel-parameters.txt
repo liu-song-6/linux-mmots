@@ -1502,7 +1502,7 @@
 
 	ima_policy=	[IMA]
 			The builtin policies to load during IMA setup.
-			Format: "tcb | appraise_tcb | secure_boot"
+			Format: "tcb | appraise_tcb | secure_boot | fs_unsafe"
 
 			The "tcb" policy measures all programs exec'd, files
 			mmap'd for exec, and all files opened with the read
@@ -1516,6 +1516,12 @@
 			The "secure_boot" policy appraises the integrity
 			of files (eg. kexec kernel image, kernel modules,
 			firmware, policy, etc) based on file signatures.
+
+			The "fs_unsafe" policy permits normally denied
+			access/execute permission for files in policy on IMA
+			unsupported filesystems.  Note this option, as the
+			name implies, is not safe and not recommended for
+			any environments other than testing.
 
 	ima_tcb		[IMA] Deprecated.  Use ima_policy= instead.
 			Load a policy which meets the needs of the Trusted
@@ -2763,6 +2769,15 @@
 			after CPU0 is offline on a few tested machines.
 			If the dependencies are under your control, you can
 			turn on cpu0_hotplug.
+
+	nps_mtm_hs_ctr= [KNL,ARC]
+			This parameter sets the maximum duration, in
+			cycles, each HW thread of the CTOP can run
+			without interruptions, before HW switches it.
+			The actual maximum duration is 16 times this
+			parameter's value.
+			Format: integer between 1 and 255
+			Default: 255
 
 	nptcg=		[IA-64] Override max number of concurrent global TLB
 			purges which is reported from either PAL_VM_SUMMARY or
