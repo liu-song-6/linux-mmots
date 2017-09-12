@@ -60,16 +60,6 @@
 		regulator-max-microvolt = <12000000>;
 	};
 
-<<<<<<< HEAD
-	vcc_sys: vcc-sys {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_sys";
-		regulator-always-on;
-		regulator-boot-on;
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		vin-supply = <&dc_12v>;
-=======
 	sdio_pwrseq: sdio-pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		pinctrl-names = "default";
@@ -82,7 +72,6 @@
 		 * - PDN (power down when low)
 		 */
 		reset-gpios = <&gpio1 18 GPIO_ACTIVE_LOW>;
->>>>>>> linux-next/akpm-base
 	};
 
 	vcc_phy: vcc-phy-regulator {
@@ -252,8 +241,6 @@
 			rockchip,pins = <2 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
-<<<<<<< HEAD
-=======
 
 	sdio-pwrseq {
 		wifi_enable_h: wifi-enable-h {
@@ -286,7 +273,6 @@
 	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_dectn &sdmmc0_bus4>;
 	vmmc-supply = <&vcc_sd>;
 	status = "okay";
->>>>>>> linux-next/akpm-base
 };
 
 &tsadc {

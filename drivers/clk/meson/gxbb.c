@@ -1340,8 +1340,6 @@ static struct clk_hw_onecell_data gxbb_hw_onecell_data = {
 		[CLKID_32K_CLK]		    = &gxbb_32k_clk.hw,
 		[CLKID_32K_CLK_SEL]	    = &gxbb_32k_clk_sel.hw,
 		[CLKID_32K_CLK_DIV]	    = &gxbb_32k_clk_div.hw,
-<<<<<<< HEAD
-=======
 		[CLKID_SD_EMMC_A_CLK0_SEL]  = &gxbb_sd_emmc_a_clk0_sel.hw,
 		[CLKID_SD_EMMC_A_CLK0_DIV]  = &gxbb_sd_emmc_a_clk0_div.hw,
 		[CLKID_SD_EMMC_A_CLK0]	    = &gxbb_sd_emmc_a_clk0.hw,
@@ -1351,7 +1349,6 @@ static struct clk_hw_onecell_data gxbb_hw_onecell_data = {
 		[CLKID_SD_EMMC_C_CLK0_SEL]  = &gxbb_sd_emmc_c_clk0_sel.hw,
 		[CLKID_SD_EMMC_C_CLK0_DIV]  = &gxbb_sd_emmc_c_clk0_div.hw,
 		[CLKID_SD_EMMC_C_CLK0]	    = &gxbb_sd_emmc_c_clk0.hw,
->>>>>>> linux-next/akpm-base
 		[NR_CLKS]		    = NULL,
 	},
 	.num = NR_CLKS,
@@ -1475,8 +1472,6 @@ static struct clk_hw_onecell_data gxl_hw_onecell_data = {
 		[CLKID_32K_CLK]		    = &gxbb_32k_clk.hw,
 		[CLKID_32K_CLK_SEL]	    = &gxbb_32k_clk_sel.hw,
 		[CLKID_32K_CLK_DIV]	    = &gxbb_32k_clk_div.hw,
-<<<<<<< HEAD
-=======
 		[CLKID_SD_EMMC_A_CLK0_SEL]  = &gxbb_sd_emmc_a_clk0_sel.hw,
 		[CLKID_SD_EMMC_A_CLK0_DIV]  = &gxbb_sd_emmc_a_clk0_div.hw,
 		[CLKID_SD_EMMC_A_CLK0]	    = &gxbb_sd_emmc_a_clk0.hw,
@@ -1486,7 +1481,6 @@ static struct clk_hw_onecell_data gxl_hw_onecell_data = {
 		[CLKID_SD_EMMC_C_CLK0_SEL]  = &gxbb_sd_emmc_c_clk0_sel.hw,
 		[CLKID_SD_EMMC_C_CLK0_DIV]  = &gxbb_sd_emmc_c_clk0_div.hw,
 		[CLKID_SD_EMMC_C_CLK0]	    = &gxbb_sd_emmc_c_clk0.hw,
->>>>>>> linux-next/akpm-base
 		[NR_CLKS]		    = NULL,
 	},
 	.num = NR_CLKS,
