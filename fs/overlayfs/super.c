@@ -70,19 +70,19 @@ static int ovl_check_append_only(struct inode *inode, int flag)
 
 static struct dentry *ovl_d_real(struct dentry *dentry,
 				 const struct inode *inode,
-				 unsigned int open_flags)
+				 unsigned int open_flags, unsigned int flags)
 {
 	struct dentry *real;
 	int err;
+
+	if (flags & D_REAL_UPPER)
+		return ovl_dentry_upper(dentry);
 
 	if (!d_is_reg(dentry)) {
 		if (!inode || inode == d_inode(dentry))
 			return dentry;
 		goto bug;
 	}
-
-	if (d_is_negative(dentry))
-		return dentry;
 
 	if (open_flags) {
 		err = ovl_open_maybe_copy_up(dentry, open_flags);
@@ -105,7 +105,7 @@ static struct dentry *ovl_d_real(struct dentry *dentry,
 		goto bug;
 
 	/* Handle recursion */
-	real = d_real(real, inode, open_flags);
+	real = d_real(real, inode, open_flags, 0);
 
 	if (!inode || inode == d_inode(real))
 		return real;
@@ -198,6 +198,7 @@ static void ovl_destroy_inode(struct inode *inode)
 
 	dput(oi->__upperdentry);
 	kfree(oi->redirect);
+	ovl_dir_cache_free(inode);
 	mutex_destroy(&oi->lock);
 
 	call_rcu(&inode->i_rcu, ovl_i_callback);
@@ -308,7 +309,7 @@ static int ovl_remount(struct super_block *sb, int *flags, char *data)
 {
 	struct ovl_fs *ufs = sb->s_fs_info;
 
-	if (!(*flags & MS_RDONLY) && ovl_force_readonly(ufs))
+	if (!(*flags & SB_RDONLY) && ovl_force_readonly(ufs))
 		return -EROFS;
 
 	return 0;
@@ -537,7 +538,7 @@ out_dput:
 out_err:
 	pr_warn("overlayfs: failed to create directory %s/%s (errno: %i); mounting read-only\n",
 		ufs->config.workdir, name, -err);
-	sb->s_flags |= MS_RDONLY;
+	sb->s_flags |= SB_RDONLY;
 	work = NULL;
 	goto out_unlock;
 }
@@ -869,7 +870,7 @@ static int ovl_fill_super(struct super_block *sb, void *data, int silent)
 			goto out_free_config;
 
 		/* Upper fs should not be r/o */
-		if (upperpath.mnt->mnt_sb->s_flags & MS_RDONLY) {
+		if (sb_rdonly(upperpath.mnt->mnt_sb)) {
 			pr_err("overlayfs: upper fs is r/o, try multi-lower layers mount\n");
 			err = -EINVAL;
 			goto out_put_upperpath;
@@ -1043,7 +1044,7 @@ static int ovl_fill_super(struct super_block *sb, void *data, int silent)
 
 	/* If the upper fs is nonexistent, we mark overlayfs r/o too */
 	if (!ufs->upper_mnt)
-		sb->s_flags |= MS_RDONLY;
+		sb->s_flags |= SB_RDONLY;
 	else if (ufs->upper_mnt->mnt_sb != ufs->same_sb)
 		ufs->same_sb = NULL;
 
@@ -1103,7 +1104,7 @@ static int ovl_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_op = &ovl_super_operations;
 	sb->s_xattr = ovl_xattr_handlers;
 	sb->s_fs_info = ufs;
-	sb->s_flags |= MS_POSIXACL | MS_NOREMOTELOCK;
+	sb->s_flags |= SB_POSIXACL | SB_NOREMOTELOCK;
 
 	root_dentry = d_make_root(ovl_new_inode(sb, S_IFDIR, 0));
 	if (!root_dentry)

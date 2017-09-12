@@ -270,6 +270,7 @@ struct btrfs_super_block {
 	 BTRFS_FEATURE_INCOMPAT_MIXED_GROUPS |		\
 	 BTRFS_FEATURE_INCOMPAT_BIG_METADATA |		\
 	 BTRFS_FEATURE_INCOMPAT_COMPRESS_LZO |		\
+	 BTRFS_FEATURE_INCOMPAT_COMPRESS_ZSTD |		\
 	 BTRFS_FEATURE_INCOMPAT_RAID56 |		\
 	 BTRFS_FEATURE_INCOMPAT_EXTENDED_IREF |		\
 	 BTRFS_FEATURE_INCOMPAT_SKINNY_METADATA |	\
@@ -2951,7 +2952,7 @@ static inline int btrfs_fs_closing(struct btrfs_fs_info *fs_info)
  */
 static inline int btrfs_need_cleaner_sleep(struct btrfs_fs_info *fs_info)
 {
-	return fs_info->sb->s_flags & MS_RDONLY || btrfs_fs_closing(fs_info);
+	return fs_info->sb->s_flags & SB_RDONLY || btrfs_fs_closing(fs_info);
 }
 
 static inline void free_fs_info(struct btrfs_fs_info *fs_info)

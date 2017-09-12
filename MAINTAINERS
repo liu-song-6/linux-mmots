@@ -855,6 +855,12 @@ S:	Supported
 F:	drivers/android/
 F:	drivers/staging/android/
 
+ANDROID GOLDFISH RTC DRIVER
+M:	Miodrag Dinic <miodrag.dinic@imgtec.com>
+S:	Supported
+F:	Documentation/devicetree/bindings/rtc/google,goldfish-rtc.txt
+F:	drivers/rtc/rtc-goldfish.c
+
 ANDROID ION DRIVER
 M:	Laura Abbott <labbott@redhat.com>
 M:	Sumit Semwal <sumit.semwal@linaro.org>
@@ -2944,6 +2950,14 @@ S:	Maintained
 F:	Documentation/devicetree/bindings/cpufreq/brcm,stb-avs-cpu-freq.txt
 F:	drivers/cpufreq/brcmstb*
 
+BROADCOM STB AVS TMON DRIVER
+M:	Markus Mayer <mmayer@broadcom.com>
+M:	bcm-kernel-feedback-list@broadcom.com
+L:	linux-pm@vger.kernel.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/thermal/brcm,avs-tmon.txt
+F:	drivers/thermal/broadcom/brcmstb*
+
 BROADCOM STB NAND FLASH DRIVER
 M:	Brian Norris <computersforpeace@gmail.com>
 M:	Kamal Dasu <kdasu.kdev@gmail.com>
@@ -2951,6 +2965,14 @@ L:	linux-mtd@lists.infradead.org
 L:	bcm-kernel-feedback-list@broadcom.com
 S:	Maintained
 F:	drivers/mtd/nand/brcmnand/
+
+BROADCOM STB DPFE DRIVER
+M:	Markus Mayer <mmayer@broadcom.com>
+M:	bcm-kernel-feedback-list@broadcom.com
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	Documentation/devicetree/bindings/memory-controllers/brcm,dpfe-cpu.txt
+F:	drivers/memory/brcmstb_dpfe.c
 
 BROADCOM SYSTEMPORT ETHERNET DRIVER
 M:	Florian Fainelli <f.fainelli@gmail.com>
@@ -4204,6 +4226,17 @@ F:	include/linux/*fence.h
 F:	Documentation/driver-api/dma-buf.rst
 T:	git git://anongit.freedesktop.org/drm/drm-misc
 
+SYNC FILE FRAMEWORK
+M:	Sumit Semwal <sumit.semwal@linaro.org>
+R:	Gustavo Padovan <gustavo@padovan.org>
+S:	Maintained
+L:	linux-media@vger.kernel.org
+L:	dri-devel@lists.freedesktop.org
+F:	drivers/dma-buf/sync_file.c
+F:	include/linux/sync_file.h
+F:	Documentation/sync_file.txt
+T:	git git://git.linaro.org/people/sumitsemwal/linux-dma-buf.git
+
 DMA GENERIC OFFLOAD ENGINE SUBSYSTEM
 M:	Vinod Koul <vinod.koul@intel.com>
 L:	dmaengine@vger.kernel.org
@@ -4219,7 +4252,7 @@ DMA MAPPING HELPERS
 M:	Christoph Hellwig <hch@lst.de>
 M:	Marek Szyprowski <m.szyprowski@samsung.com>
 R:	Robin Murphy <robin.murphy@arm.com>
-L:	linux-kernel@vger.kernel.org
+L:	iommu@lists.linux-foundation.org
 T:	git git://git.infradead.org/users/hch/dma-mapping.git
 W:	http://git.infradead.org/users/hch/dma-mapping.git
 S:	Supported
@@ -7699,6 +7732,7 @@ M:	John Crispin <john@phrozen.org>
 L:	linux-mips@linux-mips.org
 S:	Maintained
 F:	arch/mips/lantiq
+F:	drivers/soc/lantiq
 
 LAPB module
 L:	linux-x25@vger.kernel.org
@@ -8971,6 +9005,7 @@ M:	Paul Burton <paul.burton@imgtec.com>
 L:	linux-mips@linux-mips.org
 S:	Supported
 F:	arch/mips/generic/
+F:	arch/mips/tools/generic-board-config.sh
 
 MIPS/LOONGSON1 ARCHITECTURE
 M:	Keguang Zhang <keguang.zhang@gmail.com>
@@ -8980,6 +9015,13 @@ F:	arch/mips/loongson32/
 F:	arch/mips/include/asm/mach-loongson32/
 F:	drivers/*/*loongson1*
 F:	drivers/*/*/*loongson1*
+
+MIPS RINT INSTRUCTION EMULATION
+M:	Aleksandar Markovic <aleksandar.markovic@imgtec.com>
+L:	linux-mips@linux-mips.org
+S:	Supported
+F:	arch/mips/math-emu/sp_rint.c
+F:	arch/mips/math-emu/dp_rint.c
 
 MIROSOUND PCM20 FM RADIO RECEIVER DRIVER
 M:	Hans Verkuil <hverkuil@xs4all.nl>
@@ -9298,15 +9340,6 @@ F:	net/*/netfilter/
 F:	net/netfilter/
 F:	net/bridge/br_netfilter*.c
 
-NETLABEL
-M:	Paul Moore <paul@paul-moore.com>
-W:	http://netlabel.sf.net
-L:	netdev@vger.kernel.org
-S:	Maintained
-F:	Documentation/netlabel/
-F:	include/net/netlabel.h
-F:	net/netlabel/
-
 NETROM NETWORK LAYER
 M:	Ralf Baechle <ralf@linux-mips.org>
 L:	linux-hams@vger.kernel.org
@@ -9434,10 +9467,23 @@ F:	net/ipv6/
 F:	include/net/ip*
 F:	arch/x86/net/*
 
-NETWORKING [LABELED] (NetLabel, CIPSO, Labeled IPsec, SECMARK)
+NETWORKING [LABELED] (NetLabel, Labeled IPsec, SECMARK)
 M:	Paul Moore <paul@paul-moore.com>
+W:	https://github.com/netlabel
 L:	netdev@vger.kernel.org
+L:	linux-security-module@vger.kernel.org
 S:	Maintained
+F:	Documentation/netlabel/
+F:	include/net/calipso.h
+F:	include/net/cipso_ipv4.h
+F:	include/net/netlabel.h
+F:	include/uapi/linux/netfilter/xt_SECMARK.h
+F:	include/uapi/linux/netfilter/xt_CONNSECMARK.h
+F:	net/netlabel/
+F:	net/ipv4/cipso_ipv4.c
+F:	net/ipv6/calipso.c
+F:	net/netfilter/xt_CONNSECMARK.c
+F:	net/netfilter/xt_SECMARK.c
 
 NETWORKING [TLS]
 M:	Ilya Lesokhin <ilyal@mellanox.com>
@@ -9853,6 +9899,12 @@ F:	drivers/regulator/tps65910-regulator.c
 F:	drivers/regulator/twl-regulator.c
 F:	drivers/regulator/twl6030-regulator.c
 F:	include/linux/i2c-omap.h
+
+ONION OMEGA2+ BOARD
+M:	Harvey Hunt <harveyhuntnexus@gmail.com>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/boot/dts/ralink/omega2p.dts
 
 OMFS FILESYSTEM
 M:	Bob Copeland <me@bobcopeland.com>
@@ -11028,6 +11080,7 @@ F:	drivers/net/ethernet/qlogic/qede/
 
 QLOGIC QL4xxx RDMA DRIVER
 M:	Ram Amrani <Ram.Amrani@cavium.com>
+M:	Michal Kalderon <Michal.Kalderon@cavium.com>
 M:	Ariel Elior <Ariel.Elior@cavium.com>
 L:	linux-rdma@vger.kernel.org
 S:	Supported
@@ -12023,8 +12076,9 @@ M:	Paul Moore <paul@paul-moore.com>
 M:	Stephen Smalley <sds@tycho.nsa.gov>
 M:	Eric Paris <eparis@parisplace.org>
 L:	selinux@tycho.nsa.gov (moderated for non-subscribers)
-W:	http://selinuxproject.org
-T:	git git://git.infradead.org/users/pcmoore/selinux
+W:	https://selinuxproject.org
+W:	https://github.com/SELinuxProject
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/pcmoore/selinux.git
 S:	Supported
 F:	include/linux/selinux*
 F:	security/selinux/
@@ -12830,6 +12884,18 @@ F:	Documentation/devicetree/bindings/interrupt-controller/snps,arc*
 F:	drivers/clocksource/arc_timer.c
 F:	drivers/tty/serial/arc_uart.c
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/vgupta/arc.git
+
+SYNOPSYS ARC HSDK SDP pll clock driver
+M:	Eugeniy Paltsev <Eugeniy.Paltsev@synopsys.com>
+S:	Supported
+F:	drivers/clk/clk-hsdk-pll.c
+F:	Documentation/devicetree/bindings/clock/snps,hsdk-pll-clock.txt
+
+SYNOPSYS ARC SDP clock driver
+M:	Eugeniy Paltsev <Eugeniy.Paltsev@synopsys.com>
+S:	Supported
+F:	drivers/clk/axs10x/*
+F:	Documentation/devicetree/bindings/clock/snps,pll-clock.txt
 
 SYNOPSYS ARC SDP platform support
 M:	Alexey Brodkin <abrodkin@synopsys.com>
@@ -14361,6 +14427,12 @@ M:	"VMware, Inc." <pv-drivers@vmware.com>
 L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/net/vmxnet3/
+
+VOCORE VOCORE2 BOARD
+M:	Harvey Hunt <harveyhuntnexus@gmail.com>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/boot/dts/ralink/vocore2.dts
 
 VOLTAGE AND CURRENT REGULATOR FRAMEWORK
 M:	Liam Girdwood <lgirdwood@gmail.com>

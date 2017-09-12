@@ -2751,7 +2751,7 @@ static int ext4_writepages(struct address_space *mapping,
 	 * If the filesystem has aborted, it is read-only, so return
 	 * right away instead of dumping stack traces later on that
 	 * will obscure the real source of the problem.  We test
-	 * EXT4_MF_FS_ABORTED instead of sb->s_flag's MS_RDONLY because
+	 * EXT4_MF_FS_ABORTED instead of sb->s_flag's SB_RDONLY because
 	 * the latter could be true if the filesystem is mounted
 	 * read-only, and in that case, ext4_writepages should
 	 * *never* be called, so if that ever happens, we would want
@@ -3397,7 +3397,7 @@ static int ext4_releasepage(struct page *page, gfp_t wait)
 static int ext4_iomap_begin(struct inode *inode, loff_t offset, loff_t length,
 			    unsigned flags, struct iomap *iomap)
 {
-	struct block_device *bdev;
+	struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
 	unsigned int blkbits = inode->i_blkbits;
 	unsigned long first_block = offset >> blkbits;
 	unsigned long last_block = (offset + length - 1) >> blkbits;
@@ -3466,12 +3466,8 @@ retry:
 	}
 
 	iomap->flags = 0;
-	bdev = inode->i_sb->s_bdev;
-	iomap->bdev = bdev;
-	if (blk_queue_dax(bdev->bd_queue))
-		iomap->dax_dev = fs_dax_get_by_host(bdev->bd_disk->disk_name);
-	else
-		iomap->dax_dev = NULL;
+	iomap->bdev = inode->i_sb->s_bdev;
+	iomap->dax_dev = sbi->s_daxdev;
 	iomap->offset = first_block << blkbits;
 
 	if (ret == 0) {
@@ -3504,7 +3500,6 @@ static int ext4_iomap_end(struct inode *inode, loff_t offset, loff_t length,
 	int blkbits = inode->i_blkbits;
 	bool truncate = false;
 
-	fs_put_dax(iomap->dax_dev);
 	if (!(flags & IOMAP_WRITE) || (flags & IOMAP_FAULT))
 		return 0;
 
@@ -5128,7 +5123,7 @@ static int ext4_do_update_inode(handle_t *handle,
 
 	ext4_inode_csum_set(inode, raw_inode, ei);
 	spin_unlock(&ei->i_raw_lock);
-	if (inode->i_sb->s_flags & MS_LAZYTIME)
+	if (inode->i_sb->s_flags & SB_LAZYTIME)
 		ext4_update_other_inodes_time(inode->i_sb, inode->i_ino,
 					      bh->b_data);
 
