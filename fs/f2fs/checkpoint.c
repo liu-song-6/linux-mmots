@@ -594,24 +594,14 @@ int recover_orphan_inodes(struct f2fs_sb_info *sbi)
 	if (!is_set_ckpt_flags(sbi, CP_ORPHAN_PRESENT_FLAG))
 		return 0;
 
-<<<<<<< HEAD
-	if (s_flags & MS_RDONLY) {
-		f2fs_msg(sbi->sb, KERN_INFO, "orphan cleanup on readonly fs");
-		sbi->sb->s_flags &= ~MS_RDONLY;
-=======
 	if (s_flags & SB_RDONLY) {
 		f2fs_msg(sbi->sb, KERN_INFO, "orphan cleanup on readonly fs");
 		sbi->sb->s_flags &= ~SB_RDONLY;
->>>>>>> linux-next/akpm-base
 	}
 
 #ifdef CONFIG_QUOTA
 	/* Needed for iput() to work correctly and not trash data */
-<<<<<<< HEAD
-	sbi->sb->s_flags |= MS_ACTIVE;
-=======
 	sbi->sb->s_flags |= SB_ACTIVE;
->>>>>>> linux-next/akpm-base
 	/* Turn on quotas so that they are updated correctly */
 	f2fs_enable_quota_files(sbi);
 #endif
