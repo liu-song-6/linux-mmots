@@ -447,7 +447,7 @@ static void speak_char(u16 ch)
 
 	cp = spk_characters[ch];
 	if (!cp) {
-		pr_info("speak_char: cp == NULL!\n");
+		pr_info("%s: cp == NULL!\n", __func__);
 		return;
 	}
 	if (IS_CHAR(ch, B_CAP)) {
@@ -1376,6 +1376,8 @@ static void reset_highlight_buffers(struct vc_data *);
 
 static int read_all_key;
 
+static int in_keyboard_notifier;
+
 static void start_read_all_timer(struct vc_data *vc, int command);
 
 enum {
@@ -1408,7 +1410,10 @@ static void read_all_doc(struct vc_data *vc)
 	cursor_track = read_all_mode;
 	spk_reset_index_count(0);
 	if (get_sentence_buf(vc, 0) == -1) {
-		kbd_fakekey2(vc, RA_DOWN_ARROW);
+		del_timer(&cursor_timer);
+		if (!in_keyboard_notifier)
+			speakup_fake_down_arrow();
+		start_read_all_timer(vc, RA_DOWN_ARROW);
 	} else {
 		say_sentence_num(0, 0);
 		synth_insert_next_index(0);
@@ -2096,7 +2101,7 @@ speakup_key(struct vc_data *vc, int shift_state, int keycode, u_short keysym,
 	u_char shift_info, offset;
 	int ret = 0;
 
-	if (synth == NULL)
+	if (!synth)
 		return 0;
 
 	spin_lock_irqsave(&speakup_info.spinlock, flags);
@@ -2212,8 +2217,10 @@ static int keyboard_notifier_call(struct notifier_block *nb,
 	int ret = NOTIFY_OK;
 	static int keycode;	/* to hold the current keycode */
 
+	in_keyboard_notifier = 1;
+
 	if (vc->vc_mode == KD_GRAPHICS)
-		return ret;
+		goto out;
 
 	/*
 	 * First, determine whether we are handling a fake keypress on
@@ -2225,7 +2232,7 @@ static int keyboard_notifier_call(struct notifier_block *nb,
 	 */
 
 	if (speakup_fake_key_pressed())
-		return ret;
+		goto out;
 
 	switch (code) {
 	case KBD_KEYCODE:
@@ -2266,6 +2273,8 @@ static int keyboard_notifier_call(struct notifier_block *nb,
 			break;
 		}
 	}
+out:
+	in_keyboard_notifier = 0;
 	return ret;
 }
 
