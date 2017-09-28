@@ -1768,6 +1768,7 @@ Q:	http://patchwork.kernel.org/project/linux-renesas-soc/list/
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git next
 S:	Supported
 F:	arch/arm64/boot/dts/renesas/
+F:	Documentation/devicetree/bindings/arm/shmobile.txt
 F:	drivers/soc/renesas/
 F:	include/linux/soc/renesas/
 
@@ -1887,6 +1888,7 @@ F:	arch/arm/boot/dts/sh*
 F:	arch/arm/configs/shmobile_defconfig
 F:	arch/arm/include/debug/renesas-scif.S
 F:	arch/arm/mach-shmobile/
+F:	Documentation/devicetree/bindings/arm/shmobile.txt
 F:	drivers/soc/renesas/
 F:	include/linux/soc/renesas/
 
@@ -2974,6 +2976,14 @@ L:	bcm-kernel-feedback-list@broadcom.com
 S:	Maintained
 F:	drivers/mtd/nand/brcmnand/
 
+BROADCOM STB DPFE DRIVER
+M:	Markus Mayer <mmayer@broadcom.com>
+M:	bcm-kernel-feedback-list@broadcom.com
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	Documentation/devicetree/bindings/memory-controllers/brcm,dpfe-cpu.txt
+F:	drivers/memory/brcmstb_dpfe.c
+
 BROADCOM SYSTEMPORT ETHERNET DRIVER
 M:	Florian Fainelli <f.fainelli@gmail.com>
 L:	netdev@vger.kernel.org
@@ -3257,6 +3267,15 @@ F:	include/uapi/linux/cec.h
 F:	include/uapi/linux/cec-funcs.h
 F:	Documentation/devicetree/bindings/media/cec.txt
 
+CEC GPIO DRIVER
+M:	Hans Verkuil <hans.verkuil@cisco.com>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+W:	http://linuxtv.org
+S:	Supported
+F:	drivers/media/platform/cec-gpio/
+F:	Documentation/devicetree/bindings/media/cec-gpio.txt
+
 CELL BROADBAND ENGINE ARCHITECTURE
 M:	Arnd Bergmann <arnd@arndb.de>
 L:	linuxppc-dev@lists.ozlabs.org
@@ -3444,7 +3463,8 @@ M:	Thomas Gleixner <tglx@linutronix.de>
 L:	linux-kernel@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git timers/core
 S:	Supported
-F:	drivers/clocksource
+F:	drivers/clocksource/
+F:	Documentation/devicetree/bindings/timer/
 
 CMPC ACPI DRIVER
 M:	Thadeu Lima de Souza Cascardo <cascardo@holoscopio.com>
@@ -4226,6 +4246,17 @@ F:	include/linux/*fence.h
 F:	Documentation/driver-api/dma-buf.rst
 T:	git git://anongit.freedesktop.org/drm/drm-misc
 
+SYNC FILE FRAMEWORK
+M:	Sumit Semwal <sumit.semwal@linaro.org>
+R:	Gustavo Padovan <gustavo@padovan.org>
+S:	Maintained
+L:	linux-media@vger.kernel.org
+L:	dri-devel@lists.freedesktop.org
+F:	drivers/dma-buf/sync_file.c
+F:	include/linux/sync_file.h
+F:	Documentation/sync_file.txt
+T:	git git://git.linaro.org/people/sumitsemwal/linux-dma-buf.git
+
 DMA GENERIC OFFLOAD ENGINE SUBSYSTEM
 M:	Vinod Koul <vinod.koul@intel.com>
 L:	dmaengine@vger.kernel.org
@@ -4365,6 +4396,12 @@ L:	virtualization@lists.linux-foundation.org
 T:	git git://anongit.freedesktop.org/drm/drm-misc
 S:	Maintained
 F:	drivers/gpu/drm/bochs/
+
+DRM DRIVER FOR FARADAY TVE200 TV ENCODER
+M:	Linus Walleij <linus.walleij@linaro.org>
+T:	git git://anongit.freedesktop.org/drm/drm-misc
+S:	Maintained
+F:	drivers/gpu/drm/tve200/
 
 DRM DRIVER FOR INTEL I810 VIDEO CARDS
 S:	Orphan / Obsolete
@@ -4509,7 +4546,7 @@ L:	dri-devel@lists.freedesktop.org
 S:	Supported
 F:	drivers/gpu/drm/sun4i/
 F:	Documentation/devicetree/bindings/display/sunxi/sun4i-drm.txt
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux.git
+T:	git git://anongit.freedesktop.org/drm/drm-misc
 
 DRM DRIVERS FOR AMLOGIC SOCS
 M:	Neil Armstrong <narmstrong@baylibre.com>
@@ -4693,7 +4730,7 @@ T:	git git://anongit.freedesktop.org/drm/drm-misc
 DRM PANEL DRIVERS
 M:	Thierry Reding <thierry.reding@gmail.com>
 L:	dri-devel@lists.freedesktop.org
-T:	git git://anongit.freedesktop.org/tegra/linux.git
+T:	git git://anongit.freedesktop.org/drm/drm-misc
 S:	Maintained
 F:	drivers/gpu/drm/drm_panel.c
 F:	drivers/gpu/drm/panel/
@@ -5259,7 +5296,8 @@ S:	Maintained
 F:	drivers/iommu/exynos-iommu.c
 
 EZchip NPS platform support
-M:	Noam Camus <noamc@ezchip.com>
+M:	Elad Kanfi <eladkan@mellanox.com>
+M:	Vineet Gupta <vgupta@synopsys.com>
 S:	Supported
 F:	arch/arc/plat-eznps
 F:	arch/arc/boot/dts/eznps.dts
@@ -5345,9 +5383,7 @@ M:	"J. Bruce Fields" <bfields@fieldses.org>
 L:	linux-fsdevel@vger.kernel.org
 S:	Maintained
 F:	include/linux/fcntl.h
-F:	include/linux/fs.h
 F:	include/uapi/linux/fcntl.h
-F:	include/uapi/linux/fs.h
 F:	fs/fcntl.c
 F:	fs/locks.c
 
@@ -5356,6 +5392,8 @@ M:	Alexander Viro <viro@zeniv.linux.org.uk>
 L:	linux-fsdevel@vger.kernel.org
 S:	Maintained
 F:	fs/*
+F:	include/linux/fs.h
+F:	include/uapi/linux/fs.h
 
 FINTEK F75375S HARDWARE MONITOR AND FAN CONTROLLER DRIVER
 M:	Riku Voipio <riku.voipio@iki.fi>
@@ -8264,6 +8302,12 @@ L:	libertas-dev@lists.infradead.org
 S:	Orphan
 F:	drivers/net/wireless/marvell/libertas/
 
+MARVELL MACCHIATOBIN SUPPORT
+M:	Russell King <rmk@armlinux.org.uk>
+L:	linux-arm-kernel@lists.infradead.org
+S:	Maintained
+F:	arch/arm64/boot/dts/marvell/armada-8040-mcbin.dts
+
 MARVELL MV643XX ETHERNET DRIVER
 M:	Sebastian Hesselbarth <sebastian.hesselbarth@gmail.com>
 L:	netdev@vger.kernel.org
@@ -11068,6 +11112,7 @@ F:	drivers/net/ethernet/qlogic/qede/
 
 QLOGIC QL4xxx RDMA DRIVER
 M:	Ram Amrani <Ram.Amrani@cavium.com>
+M:	Michal Kalderon <Michal.Kalderon@cavium.com>
 M:	Ariel Elior <Ariel.Elior@cavium.com>
 L:	linux-rdma@vger.kernel.org
 S:	Supported
@@ -11753,7 +11798,7 @@ L:	linux-crypto@vger.kernel.org
 L:	linux-samsung-soc@vger.kernel.org
 S:	Maintained
 F:	drivers/crypto/exynos-rng.c
-F:	Documentation/devicetree/bindings/rng/samsung,exynos-rng4.txt
+F:	Documentation/devicetree/bindings/crypto/samsung,exynos-rng4.txt
 
 SAMSUNG FRAMEBUFFER DRIVER
 M:	Jingoo Han <jingoohan1@gmail.com>
@@ -12035,6 +12080,12 @@ M:	Viresh Kumar <vireshk@kernel.org>
 L:	linux-mmc@vger.kernel.org
 S:	Maintained
 F:	drivers/mmc/host/sdhci-spear.c
+
+SECURE DIGITAL HOST CONTROLLER INTERFACE (SDHCI) TI OMAP DRIVER
+M:	Kishon Vijay Abraham I <kishon@ti.com>
+L:	linux-mmc@vger.kernel.org
+S:	Maintained
+F:	drivers/mmc/host/sdhci-omap.c
 
 SECURE ENCRYPTING DEVICE (SED) OPAL DRIVER
 M:	Scott Bauer <scott.bauer@intel.com>
@@ -12925,9 +12976,9 @@ F:	drivers/mmc/host/dw_mmc*
 SYNOPSYS HSDK RESET CONTROLLER DRIVER
 M:	Eugeniy Paltsev <Eugeniy.Paltsev@synopsys.com>
 S:	Supported
-F:	drivers/reset/reset-hsdk-v1.c
-F:	include/dt-bindings/reset/snps,hsdk-v1-reset.h
-F:	Documentation/devicetree/bindings/reset/snps,hsdk-v1-reset.txt
+F:	drivers/reset/reset-hsdk.c
+F:	include/dt-bindings/reset/snps,hsdk-reset.h
+F:	Documentation/devicetree/bindings/reset/snps,hsdk-reset.txt
 
 SYSTEM CONFIGURATION (SYSCON)
 M:	Lee Jones <lee.jones@linaro.org>
@@ -14585,6 +14636,7 @@ F:	Documentation/devicetree/bindings/extcon/extcon-arizona.txt
 F:	Documentation/devicetree/bindings/regulator/arizona-regulator.txt
 F:	Documentation/devicetree/bindings/mfd/arizona.txt
 F:	Documentation/devicetree/bindings/mfd/wm831x.txt
+F:	Documentation/devicetree/bindings/sound/wlf,arizona.txt
 F:	arch/arm/mach-s3c64xx/mach-crag6410*
 F:	drivers/clk/clk-wm83*.c
 F:	drivers/extcon/extcon-arizona.c
