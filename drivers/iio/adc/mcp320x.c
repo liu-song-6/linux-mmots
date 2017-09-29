@@ -17,6 +17,8 @@
  * MCP3204
  * MCP3208
  * ------------
+ * 13 bit converter
+ * MCP3301
  *
  * Datasheet can be found here:
  * http://ww1.microchip.com/downloads/en/DeviceDoc/21293C.pdf  mcp3001
@@ -57,6 +59,17 @@ struct mcp320x_chip_info {
 	unsigned int resolution;
 };
 
+/**
+ * struct mcp320x - Microchip SPI ADC instance
+ * @spi: SPI slave (parent of the IIO device)
+ * @msg: SPI message to select a channel and receive a value from the ADC
+ * @transfer: SPI transfers used by @msg
+ * @reg: regulator generating Vref
+ * @lock: protects read sequences
+ * @chip_info: ADC properties
+ * @tx_buf: buffer for @transfer[0] (not used on single-channel converters)
+ * @rx_buf: buffer for @transfer[1]
+ */
 struct mcp320x {
 	struct spi_device *spi;
 	struct spi_message msg;
@@ -76,10 +89,6 @@ static int mcp320x_channel_to_tx_data(int device_index,
 	int start_bit = 1;
 
 	switch (device_index) {
-	case mcp3001:
-	case mcp3201:
-	case mcp3301:
-		return 0;
 	case mcp3002:
 	case mcp3202:
 		return ((start_bit << 4) | (!differential << 3) |
@@ -96,40 +105,40 @@ static int mcp320x_channel_to_tx_data(int device_index,
 }
 
 static int mcp320x_adc_conversion(struct mcp320x *adc, u8 channel,
-				  bool differential, int device_index)
+				  bool differential, int device_index, int *val)
 {
 	int ret;
 
-	adc->rx_buf[0] = 0;
-	adc->rx_buf[1] = 0;
-	adc->tx_buf = mcp320x_channel_to_tx_data(device_index,
-						channel, differential);
+	memset(&adc->rx_buf, 0, sizeof(adc->rx_buf));
+	if (adc->chip_info->num_channels > 1)
+		adc->tx_buf = mcp320x_channel_to_tx_data(device_index, channel,
+							 differential);
 
-	if (device_index != mcp3001 && device_index != mcp3201 && device_index != mcp3301) {
-		ret = spi_sync(adc->spi, &adc->msg);
-		if (ret < 0)
-			return ret;
-	} else {
-		ret = spi_read(adc->spi, &adc->rx_buf, sizeof(adc->rx_buf));
-		if (ret < 0)
-			return ret;
-	}
+	ret = spi_sync(adc->spi, &adc->msg);
+	if (ret < 0)
+		return ret;
 
 	switch (device_index) {
 	case mcp3001:
-		return (adc->rx_buf[0] << 5 | adc->rx_buf[1] >> 3);
+		*val = (adc->rx_buf[0] << 5 | adc->rx_buf[1] >> 3);
+		return 0;
 	case mcp3002:
 	case mcp3004:
 	case mcp3008:
-		return (adc->rx_buf[0] << 2 | adc->rx_buf[1] >> 6);
+		*val = (adc->rx_buf[0] << 2 | adc->rx_buf[1] >> 6);
+		return 0;
 	case mcp3201:
-		return (adc->rx_buf[0] << 7 | adc->rx_buf[1] >> 1);
+		*val = (adc->rx_buf[0] << 7 | adc->rx_buf[1] >> 1);
+		return 0;
 	case mcp3202:
 	case mcp3204:
 	case mcp3208:
-		return (adc->rx_buf[0] << 4 | adc->rx_buf[1] >> 4);
+		*val = (adc->rx_buf[0] << 4 | adc->rx_buf[1] >> 4);
+		return 0;
 	case mcp3301:
-		return sign_extend32((adc->rx_buf[0] & 0x1f) << 8 | adc->rx_buf[1], 12);
+		*val = sign_extend32((adc->rx_buf[0] & 0x1f) << 8
+				    | adc->rx_buf[1], 12);
+		return 0;
 	default:
 		return -EINVAL;
 	}
@@ -150,12 +159,10 @@ static int mcp320x_read_raw(struct iio_dev *indio_dev,
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
 		ret = mcp320x_adc_conversion(adc, channel->address,
-			channel->differential, device_index);
-
+			channel->differential, device_index, val);
 		if (ret < 0)
 			goto out;
 
-		*val = ret;
 		ret = IIO_VAL_INT;
 		break;
 
@@ -242,7 +249,6 @@ static const struct iio_chan_spec mcp3208_channels[] = {
 
 static const struct iio_info mcp320x_info = {
 	.read_raw = mcp320x_read_raw,
-	.driver_module = THIS_MODULE,
 };
 
 static const struct mcp320x_chip_info mcp320x_chip_infos[] = {
@@ -312,6 +318,7 @@ static int mcp320x_probe(struct spi_device *spi)
 	indio_dev->name = spi_get_device_id(spi)->name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &mcp320x_info;
+	spi_set_drvdata(spi, indio_dev);
 
 	chip_info = &mcp320x_chip_infos[spi_get_device_id(spi)->driver_data];
 	indio_dev->channels = chip_info->channels;
@@ -323,9 +330,13 @@ static int mcp320x_probe(struct spi_device *spi)
 	adc->transfer[0].len = sizeof(adc->tx_buf);
 	adc->transfer[1].rx_buf = adc->rx_buf;
 	adc->transfer[1].len = sizeof(adc->rx_buf);
-
-	spi_message_init_with_transfers(&adc->msg, adc->transfer,
-					ARRAY_SIZE(adc->transfer));
+	if (chip_info->num_channels == 1)
+		/* single-channel converters are rx only (no MOSI pin) */
+		spi_message_init_with_transfers(&adc->msg,
+						&adc->transfer[1], 1);
+	else
+		spi_message_init_with_transfers(&adc->msg, adc->transfer,
+						ARRAY_SIZE(adc->transfer));
 
 	adc->reg = devm_regulator_get(&spi->dev, "vref");
 	if (IS_ERR(adc->reg))
@@ -363,62 +374,25 @@ static int mcp320x_remove(struct spi_device *spi)
 #if defined(CONFIG_OF)
 static const struct of_device_id mcp320x_dt_ids[] = {
 	/* NOTE: The use of compatibles with no vendor prefix is deprecated. */
-	{
-		.compatible = "mcp3001",
-		.data = &mcp320x_chip_infos[mcp3001],
-	}, {
-		.compatible = "mcp3002",
-		.data = &mcp320x_chip_infos[mcp3002],
-	}, {
-		.compatible = "mcp3004",
-		.data = &mcp320x_chip_infos[mcp3004],
-	}, {
-		.compatible = "mcp3008",
-		.data = &mcp320x_chip_infos[mcp3008],
-	}, {
-		.compatible = "mcp3201",
-		.data = &mcp320x_chip_infos[mcp3201],
-	}, {
-		.compatible = "mcp3202",
-		.data = &mcp320x_chip_infos[mcp3202],
-	}, {
-		.compatible = "mcp3204",
-		.data = &mcp320x_chip_infos[mcp3204],
-	}, {
-		.compatible = "mcp3208",
-		.data = &mcp320x_chip_infos[mcp3208],
-	}, {
-		.compatible = "mcp3301",
-		.data = &mcp320x_chip_infos[mcp3301],
-	}, {
-		.compatible = "microchip,mcp3001",
-		.data = &mcp320x_chip_infos[mcp3001],
-	}, {
-		.compatible = "microchip,mcp3002",
-		.data = &mcp320x_chip_infos[mcp3002],
-	}, {
-		.compatible = "microchip,mcp3004",
-		.data = &mcp320x_chip_infos[mcp3004],
-	}, {
-		.compatible = "microchip,mcp3008",
-		.data = &mcp320x_chip_infos[mcp3008],
-	}, {
-		.compatible = "microchip,mcp3201",
-		.data = &mcp320x_chip_infos[mcp3201],
-	}, {
-		.compatible = "microchip,mcp3202",
-		.data = &mcp320x_chip_infos[mcp3202],
-	}, {
-		.compatible = "microchip,mcp3204",
-		.data = &mcp320x_chip_infos[mcp3204],
-	}, {
-		.compatible = "microchip,mcp3208",
-		.data = &mcp320x_chip_infos[mcp3208],
-	}, {
-		.compatible = "microchip,mcp3301",
-		.data = &mcp320x_chip_infos[mcp3301],
-	}, {
-	}
+	{ .compatible = "mcp3001" },
+	{ .compatible = "mcp3002" },
+	{ .compatible = "mcp3004" },
+	{ .compatible = "mcp3008" },
+	{ .compatible = "mcp3201" },
+	{ .compatible = "mcp3202" },
+	{ .compatible = "mcp3204" },
+	{ .compatible = "mcp3208" },
+	{ .compatible = "mcp3301" },
+	{ .compatible = "microchip,mcp3001" },
+	{ .compatible = "microchip,mcp3002" },
+	{ .compatible = "microchip,mcp3004" },
+	{ .compatible = "microchip,mcp3008" },
+	{ .compatible = "microchip,mcp3201" },
+	{ .compatible = "microchip,mcp3202" },
+	{ .compatible = "microchip,mcp3204" },
+	{ .compatible = "microchip,mcp3208" },
+	{ .compatible = "microchip,mcp3301" },
+	{ }
 };
 MODULE_DEVICE_TABLE(of, mcp320x_dt_ids);
 #endif
