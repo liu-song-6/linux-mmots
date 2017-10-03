@@ -644,10 +644,7 @@ union bpf_attr {
 	FN(redirect_map),		\
 	FN(sk_redirect_map),		\
 	FN(sock_map_update),		\
-<<<<<<< HEAD
-=======
 	FN(xdp_adjust_meta),
->>>>>>> linux-next/akpm-base
 
 /* integer value in 'imm' field of BPF_CALL instruction selects which helper
  * function eBPF program intends to call
