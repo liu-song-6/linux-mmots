@@ -551,7 +551,6 @@ static void cpuhp_thread_fun(unsigned int cpu)
 	}
 
 	WARN_ON_ONCE(!cpuhp_is_ap_state(state));
-<<<<<<< HEAD
 
 	if (st->rollback) {
 		struct cpuhp_step *step = cpuhp_get_step(state);
@@ -564,20 +563,6 @@ static void cpuhp_thread_fun(unsigned int cpu)
 		st->result = cpuhp_invoke_callback(cpu, state, bringup, st->node, &st->last);
 		local_irq_enable();
 
-=======
-
-	if (st->rollback) {
-		struct cpuhp_step *step = cpuhp_get_step(state);
-		if (step->skip_onerr)
-			goto next;
-	}
-
-	if (cpuhp_is_atomic_state(state)) {
-		local_irq_disable();
-		st->result = cpuhp_invoke_callback(cpu, state, bringup, st->node, &st->last);
-		local_irq_enable();
-
->>>>>>> linux-next/akpm-base
 		/*
 		 * STARTING/DYING must not fail!
 		 */
@@ -626,17 +611,10 @@ cpuhp_invoke_ap_callback(int cpu, enum cpuhp_state state, bool bringup,
 	 */
 	if (!st->thread)
 		return cpuhp_invoke_callback(cpu, state, bringup, node, NULL);
-<<<<<<< HEAD
 
 	st->rollback = false;
 	st->last = NULL;
 
-=======
-
-	st->rollback = false;
-	st->last = NULL;
-
->>>>>>> linux-next/akpm-base
 	st->node = node;
 	st->bringup = bringup;
 	st->cb_state = state;
@@ -665,7 +643,6 @@ static int cpuhp_kick_ap_work(unsigned int cpu)
 
 	cpuhp_lock_acquire(false);
 	cpuhp_lock_release(false);
-<<<<<<< HEAD
 
 	cpuhp_lock_acquire(true);
 	cpuhp_lock_release(true);
@@ -674,16 +651,6 @@ static int cpuhp_kick_ap_work(unsigned int cpu)
 	ret = cpuhp_kick_ap(st, st->target);
 	trace_cpuhp_exit(cpu, st->state, prev_state, ret);
 
-=======
-
-	cpuhp_lock_acquire(true);
-	cpuhp_lock_release(true);
-
-	trace_cpuhp_enter(cpu, st->target, prev_state, cpuhp_kick_ap_work);
-	ret = cpuhp_kick_ap(st, st->target);
-	trace_cpuhp_exit(cpu, st->state, prev_state, ret);
-
->>>>>>> linux-next/akpm-base
 	return ret;
 }
 
