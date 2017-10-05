@@ -2210,8 +2210,6 @@ static int lpuart_probe(struct platform_device *pdev)
 	ret = uart_add_one_port(&lpuart_reg, &sport->port);
 	if (ret)
 		goto failed_attach_port;
-<<<<<<< HEAD
-=======
 
 	of_get_rs485_mode(np, &sport->port.rs485);
 
@@ -2230,7 +2228,6 @@ static int lpuart_probe(struct platform_device *pdev)
 		sport->port.rs485.flags |= SER_RS485_RTS_ON_SEND;
 		writeb(UARTMODEM_TXRTSE, sport->port.membase + UARTMODEM);
 	}
->>>>>>> linux-next/akpm-base
 
 	sport->dma_tx_chan = dma_request_slave_channel(sport->port.dev, "tx");
 	if (!sport->dma_tx_chan)

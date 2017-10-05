@@ -11730,13 +11730,8 @@ static void __pi_post_block(struct kvm_vcpu *vcpu)
 
 		/* set 'NV' to 'notification vector' */
 		new.nv = POSTED_INTR_VECTOR;
-<<<<<<< HEAD
-	} while (cmpxchg64(&pi_desc->control, old.control,
-			   new.control) != old.control);
-=======
 	} while (cmpxchg(&pi_desc->control, old.control,
 			new.control) != old.control);
->>>>>>> linux-next/akpm-base
 
 	if (!WARN_ON_ONCE(vcpu->pre_pcpu == -1)) {
 		spin_lock(&per_cpu(blocked_vcpu_on_cpu_lock, vcpu->pre_pcpu));

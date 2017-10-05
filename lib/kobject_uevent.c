@@ -314,8 +314,6 @@ static void zap_modalias_env(struct kobj_uevent_env *env)
 	}
 }
 
-<<<<<<< HEAD
-=======
 static int kobject_uevent_net_broadcast(struct kobject *kobj,
 					struct kobj_uevent_env *env,
 					const char *action_string,
@@ -365,7 +363,6 @@ static int kobject_uevent_net_broadcast(struct kobject *kobj,
 	return retval;
 }
 
->>>>>>> linux-next/akpm-base
 /**
  * kobject_uevent_env - send an uevent with environmental data
  *
