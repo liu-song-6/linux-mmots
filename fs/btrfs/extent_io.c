@@ -4056,11 +4056,7 @@ static void flush_epd_write_bio(struct extent_page_data *epd)
 	if (epd->bio) {
 		int ret;
 
-<<<<<<< HEAD
-		ret = submit_one_bio(epd->bio, 0, epd->bio_flags);
-=======
 		ret = submit_one_bio(epd->bio, 0, 0);
->>>>>>> linux-next/akpm-base
 		BUG_ON(ret < 0); /* -ENOMEM */
 		epd->bio = NULL;
 	}

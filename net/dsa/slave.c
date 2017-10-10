@@ -1188,11 +1188,7 @@ int dsa_slave_create(struct dsa_port *port, const char *name)
 	return 0;
 
 out_phy:
-<<<<<<< HEAD
-	phy_disconnect(p->phy);
-=======
 	phy_disconnect(slave_dev->phydev);
->>>>>>> linux-next/akpm-base
 	if (of_phy_is_fixed_link(p->dp->dn))
 		of_phy_deregister_fixed_link(p->dp->dn);
 out_free:

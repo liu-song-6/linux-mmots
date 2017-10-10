@@ -47,10 +47,7 @@ int __read_mostly watchdog_thresh = 10;
 int __read_mostly nmi_watchdog_available;
 
 struct cpumask watchdog_allowed_mask __read_mostly;
-<<<<<<< HEAD
-=======
 static bool softlockup_threads_initialized __read_mostly;
->>>>>>> linux-next/akpm-base
 
 struct cpumask watchdog_cpumask __read_mostly;
 unsigned long *watchdog_cpumask_bits = cpumask_bits(&watchdog_cpumask);
@@ -126,29 +123,6 @@ int __weak __init watchdog_nmi_probe(void)
 }
 
 /**
-<<<<<<< HEAD
- * watchdog_nmi_stop - Stop the watchdog for reconfiguration
- *
- * The reconfiguration steps are:
- * watchdog_nmi_stop();
- * update_variables();
- * watchdog_nmi_start();
- */
-void __weak watchdog_nmi_stop(void) { }
-
-/**
- * watchdog_nmi_start - Start the watchdog after reconfiguration
- *
- * Counterpart to watchdog_nmi_stop().
- *
- * The following variables have been updated in update_variables() and
- * contain the currently valid configuration:
- * - watchdog_enabled
- * - watchdog_thresh
- * - watchdog_cpumask
- */
-void __weak watchdog_nmi_start(void) { }
-=======
  * watchdog_nmi_reconfigure - Optional function to reconfigure NMI watchdogs
  * @run:	If false stop the watchdogs on all enabled CPUs
  *		If true start the watchdogs on all enabled CPUs
@@ -167,7 +141,6 @@ void __weak watchdog_nmi_start(void) { }
  * After the call the variables can be changed again.
  */
 void __weak watchdog_nmi_reconfigure(bool run) { }
->>>>>>> linux-next/akpm-base
 
 /**
  * lockup_detector_update_enable - Update the sysctl enable bit
@@ -554,14 +527,6 @@ static struct smp_hotplug_thread watchdog_threads = {
 static void softlockup_update_smpboot_threads(void)
 {
 	lockdep_assert_held(&watchdog_mutex);
-<<<<<<< HEAD
-
-	if (!softlockup_threads_initialized)
-		return;
-
-	smpboot_update_cpumask_percpu_thread(&watchdog_threads,
-					     &watchdog_allowed_mask);
-=======
 
 	if (!softlockup_threads_initialized)
 		return;
@@ -569,7 +534,6 @@ static void softlockup_update_smpboot_threads(void)
 	smpboot_update_cpumask_percpu_thread(&watchdog_threads,
 					     &watchdog_allowed_mask);
 	__lockup_detector_cleanup();
->>>>>>> linux-next/akpm-base
 }
 
 /* Temporarily park all watchdog threads */
@@ -586,82 +550,14 @@ static void softlockup_unpark_threads(void)
 	softlockup_update_smpboot_threads();
 }
 
-<<<<<<< HEAD
-static void lockup_detector_reconfigure(void)
-{
-	cpus_read_lock();
-	watchdog_nmi_stop();
-=======
 static void softlockup_reconfigure_threads(void)
 {
 	watchdog_nmi_reconfigure(false);
->>>>>>> linux-next/akpm-base
 	softlockup_park_all_threads();
 	set_sample_period();
 	lockup_detector_update_enable();
 	if (watchdog_enabled && watchdog_thresh)
 		softlockup_unpark_threads();
-<<<<<<< HEAD
-	watchdog_nmi_start();
-	cpus_read_unlock();
-	/*
-	 * Must be called outside the cpus locked section to prevent
-	 * recursive locking in the perf code.
-	 */
-	__lockup_detector_cleanup();
-}
-
-/*
- * Create the watchdog thread infrastructure and configure the detector(s).
- *
- * The threads are not unparked as watchdog_allowed_mask is empty.  When
- * the threads are sucessfully initialized, take the proper locks and
- * unpark the threads in the watchdog_cpumask if the watchdog is enabled.
- */
-static __init void lockup_detector_setup(void)
-{
-	int ret;
-
-	/*
-	 * If sysctl is off and watchdog got disabled on the command line,
-	 * nothing to do here.
-	 */
-	lockup_detector_update_enable();
-
-	if (!IS_ENABLED(CONFIG_SYSCTL) &&
-	    !(watchdog_enabled && watchdog_thresh))
-		return;
-
-	ret = smpboot_register_percpu_thread_cpumask(&watchdog_threads,
-						     &watchdog_allowed_mask);
-	if (ret) {
-		pr_err("Failed to initialize soft lockup detector threads\n");
-		return;
-	}
-
-	mutex_lock(&watchdog_mutex);
-	softlockup_threads_initialized = true;
-	lockup_detector_reconfigure();
-	mutex_unlock(&watchdog_mutex);
-}
-
-#else /* CONFIG_SOFTLOCKUP_DETECTOR */
-static inline int watchdog_park_threads(void) { return 0; }
-static inline void watchdog_unpark_threads(void) { }
-static inline int watchdog_enable_all_cpus(void) { return 0; }
-static inline void watchdog_disable_all_cpus(void) { }
-static void lockup_detector_reconfigure(void)
-{
-	cpus_read_lock();
-	watchdog_nmi_stop();
-	lockup_detector_update_enable();
-	watchdog_nmi_start();
-	cpus_read_unlock();
-}
-static inline void lockup_detector_setup(void)
-{
-	lockup_detector_reconfigure();
-=======
 	watchdog_nmi_reconfigure(true);
 }
 
@@ -710,7 +606,6 @@ static void softlockup_reconfigure_threads(void)
 	watchdog_nmi_reconfigure(false);
 	lockup_detector_update_enable();
 	watchdog_nmi_reconfigure(true);
->>>>>>> linux-next/akpm-base
 }
 #endif /* !CONFIG_SOFTLOCKUP_DETECTOR */
 
@@ -750,11 +645,7 @@ static void proc_watchdog_update(void)
 {
 	/* Remove impossible cpus to keep sysctl output clean. */
 	cpumask_and(&watchdog_cpumask, &watchdog_cpumask, cpu_possible_mask);
-<<<<<<< HEAD
-	lockup_detector_reconfigure();
-=======
 	softlockup_reconfigure_threads();
->>>>>>> linux-next/akpm-base
 }
 
 /*
@@ -773,15 +664,9 @@ static int proc_watchdog_common(int which, struct ctl_table *table, int write,
 				void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	int err, old, *param = table->data;
-<<<<<<< HEAD
 
 	mutex_lock(&watchdog_mutex);
 
-=======
-
-	mutex_lock(&watchdog_mutex);
-
->>>>>>> linux-next/akpm-base
 	if (!write) {
 		/*
 		 * On read synchronize the userspace interface. This is a
@@ -887,9 +772,5 @@ void __init lockup_detector_init(void)
 
 	if (!watchdog_nmi_probe())
 		nmi_watchdog_available = true;
-<<<<<<< HEAD
-	lockup_detector_setup();
-=======
 	softlockup_init_threads();
->>>>>>> linux-next/akpm-base
 }

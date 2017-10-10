@@ -355,23 +355,6 @@ static void watchdog_calc_timeouts(void)
 	wd_timer_period_ms = watchdog_thresh * 1000 * 2 / 5;
 }
 
-<<<<<<< HEAD
-void watchdog_nmi_stop(void)
-{
-	int cpu;
-
-	for_each_cpu(cpu, &wd_cpus_enabled)
-		stop_wd_on_cpu(cpu);
-}
-
-void watchdog_nmi_start(void)
-{
-	int cpu;
-
-	watchdog_calc_timeouts();
-	for_each_cpu_and(cpu, cpu_online_mask, &watchdog_cpumask)
-		start_wd_on_cpu(cpu);
-=======
 void watchdog_nmi_reconfigure(bool run)
 {
 	int cpu;
@@ -386,7 +369,6 @@ void watchdog_nmi_reconfigure(bool run)
 			start_wd_on_cpu(cpu);
 	}
 	cpus_read_unlock();
->>>>>>> linux-next/akpm-base
 }
 
 /*

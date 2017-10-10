@@ -1690,15 +1690,12 @@ static void mmc_blk_data_prep(struct mmc_queue *mq, struct mmc_queue_req *mqrq,
 	}
 
 	mqrq->areq.mrq = &brq->mrq;
-<<<<<<< HEAD
-=======
 
 	if (do_rel_wr_p)
 		*do_rel_wr_p = do_rel_wr;
 
 	if (do_data_tag_p)
 		*do_data_tag_p = do_data_tag;
->>>>>>> linux-next/akpm-base
 }
 
 static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,

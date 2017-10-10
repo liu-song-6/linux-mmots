@@ -82,10 +82,5 @@ extern void mmc_queue_suspend(struct mmc_queue *);
 extern void mmc_queue_resume(struct mmc_queue *);
 extern unsigned int mmc_queue_map_sg(struct mmc_queue *,
 				     struct mmc_queue_req *);
-<<<<<<< HEAD
-
-extern int mmc_access_rpmb(struct mmc_queue *);
-=======
->>>>>>> linux-next/akpm-base
 
 #endif
