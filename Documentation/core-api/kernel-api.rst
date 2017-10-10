@@ -2,11 +2,9 @@
 The Linux Kernel API
 ====================
 
-Data Types
-==========
 
-Doubly Linked Lists
--------------------
+List Management Functions
+=========================
 
 .. kernel-doc:: include/linux/list.h
    :internal:
@@ -61,6 +59,9 @@ Bitmap Operations
 .. kernel-doc:: lib/bitmap.c
    :internal:
 
+.. kernel-doc:: include/linux/bitmap.h
+   :internal:
+
 Command-line Parsing
 --------------------
 
@@ -70,18 +71,24 @@ Command-line Parsing
 CRC Functions
 -------------
 
+.. kernel-doc:: lib/crc4.c
+   :export:
+
 .. kernel-doc:: lib/crc7.c
+   :export:
+
+.. kernel-doc:: lib/crc8.c
    :export:
 
 .. kernel-doc:: lib/crc16.c
    :export:
 
-.. kernel-doc:: lib/crc-itu-t.c
-   :export:
-
 .. kernel-doc:: lib/crc32.c
 
 .. kernel-doc:: lib/crc-ccitt.c
+   :export:
+
+.. kernel-doc:: lib/crc-itu-t.c
    :export:
 
 idr/ida Functions
@@ -352,44 +359,30 @@ Read-Copy Update (RCU)
 ----------------------
 
 .. kernel-doc:: include/linux/rcupdate.h
-   :external:
 
 .. kernel-doc:: include/linux/rcupdate_wait.h
-   :external:
 
 .. kernel-doc:: include/linux/rcutree.h
-   :external:
 
 .. kernel-doc:: kernel/rcu/tree.c
-   :external:
 
 .. kernel-doc:: kernel/rcu/tree_plugin.h
-   :external:
 
 .. kernel-doc:: kernel/rcu/tree_exp.h
-   :external:
 
 .. kernel-doc:: kernel/rcu/update.c
-   :external:
 
 .. kernel-doc:: include/linux/srcu.h
-   :external:
 
 .. kernel-doc:: kernel/rcu/srcutree.c
-   :external:
 
 .. kernel-doc:: include/linux/rculist_bl.h
-   :external:
 
 .. kernel-doc:: include/linux/rculist.h
-   :external:
 
 .. kernel-doc:: include/linux/rculist_nulls.h
-   :external:
 
 .. kernel-doc:: include/linux/rcu_sync.h
-   :external:
 
 .. kernel-doc:: kernel/rcu/sync.c
-   :external:
 

@@ -351,7 +351,11 @@ void smpboot_update_cpumask_percpu_thread(struct smp_hotplug_thread *plug_thread
 	static struct cpumask tmp;
 	unsigned int cpu;
 
+<<<<<<< HEAD
 	lockdep_assert_cpus_held();
+=======
+	get_online_cpus();
+>>>>>>> linux-next/akpm-base
 	mutex_lock(&smpboot_threads_lock);
 
 	/* Park threads that were exclusively enabled on the old mask. */
@@ -367,6 +371,10 @@ void smpboot_update_cpumask_percpu_thread(struct smp_hotplug_thread *plug_thread
 	cpumask_copy(old, new);
 
 	mutex_unlock(&smpboot_threads_lock);
+<<<<<<< HEAD
+=======
+	put_online_cpus();
+>>>>>>> linux-next/akpm-base
 }
 
 static DEFINE_PER_CPU(atomic_t, cpu_hotplug_state) = ATOMIC_INIT(CPU_POST_DEAD);
