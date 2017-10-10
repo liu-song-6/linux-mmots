@@ -168,6 +168,7 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 
 	for (i = ns->level; i >= 0; i--) {
 		int pid_min = 1;
+
 		idr_preload(GFP_KERNEL);
 		spin_lock_irq(&pidmap_lock);
 
@@ -178,8 +179,9 @@ struct pid *alloc_pid(struct pid_namespace *ns)
 		if (idr_get_cursor(&tmp->idr) > RESERVED_PIDS)
 			pid_min = RESERVED_PIDS;
 
-		/* Store a null pointer so find_pid_ns does not find             *
-		 * a partially initialized PID (see below).
+		/*
+		 * Store a null pointer so find_pid_ns does not find a partially
+		 * initialized PID (see below).
 		 */
 		nr = idr_alloc_cyclic(&tmp->idr, NULL, pid_min,
 				      pid_max, GFP_ATOMIC);
