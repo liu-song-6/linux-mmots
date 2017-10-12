@@ -475,7 +475,7 @@ static void clean_buffers(struct page *page, unsigned first_unmapped)
  */
 void clean_page_buffers(struct page *page)
 {
-	clean_buffers(page, PAGE_SIZE);
+	clean_buffers(page, ~0U);
 }
 
 static int __mpage_writepage(struct page *page, struct writeback_control *wbc,
