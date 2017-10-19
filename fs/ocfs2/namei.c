@@ -260,6 +260,8 @@ static int ocfs2_mknod(struct inode *dir,
 	sigset_t oldset;
 	int did_block_signals = 0;
 	struct ocfs2_dentry_lock *dl = NULL;
+	int locked;
+	struct ocfs2_lock_holder oh;
 
 	trace_ocfs2_mknod(dir, dentry, dentry->d_name.len, dentry->d_name.name,
 			  (unsigned long long)OCFS2_I(dir)->ip_blkno,
@@ -274,11 +276,11 @@ static int ocfs2_mknod(struct inode *dir,
 	/* get our super block */
 	osb = OCFS2_SB(dir->i_sb);
 
-	status = ocfs2_inode_lock(dir, &parent_fe_bh, 1);
-	if (status < 0) {
-		if (status != -ENOENT)
-			mlog_errno(status);
-		return status;
+	locked = ocfs2_inode_lock_tracker(dir, &parent_fe_bh, 1, &oh);
+	if (locked < 0) {
+		if (locked != -ENOENT)
+			mlog_errno(locked);
+		return locked;
 	}
 
 	if (S_ISDIR(mode) && (dir->i_nlink >= ocfs2_link_max(osb))) {
@@ -462,7 +464,7 @@ leave:
 	if (handle)
 		ocfs2_commit_trans(osb, handle);
 
-	ocfs2_inode_unlock(dir, 1);
+	ocfs2_inode_unlock_tracker(dir, 1, &oh, locked);
 	if (did_block_signals)
 		ocfs2_unblock_signals(&oldset);
 
