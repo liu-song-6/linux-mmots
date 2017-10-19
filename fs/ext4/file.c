@@ -20,6 +20,7 @@
 
 #include <linux/time.h>
 #include <linux/fs.h>
+#include <linux/iomap.h>
 #include <linux/mount.h>
 #include <linux/path.h>
 #include <linux/dax.h>
@@ -695,18 +696,24 @@ loff_t ext4_llseek(struct file *file, loff_t offset, int whence)
 		maxbytes = inode->i_sb->s_maxbytes;
 
 	switch (whence) {
-	case SEEK_SET:
-	case SEEK_CUR:
-	case SEEK_END:
+	default:
 		return generic_file_llseek_size(file, offset, whence,
 						maxbytes, i_size_read(inode));
-	case SEEK_DATA:
-		return ext4_seek_data(file, offset, maxbytes);
 	case SEEK_HOLE:
-		return ext4_seek_hole(file, offset, maxbytes);
+		inode_lock_shared(inode);
+		offset = iomap_seek_hole(inode, offset, &ext4_iomap_ops);
+		inode_unlock_shared(inode);
+		break;
+	case SEEK_DATA:
+		inode_lock_shared(inode);
+		offset = iomap_seek_data(inode, offset, &ext4_iomap_ops);
+		inode_unlock_shared(inode);
+		break;
 	}
 
-	return -EINVAL;
+	if (offset < 0)
+		return offset;
+	return vfs_setpos(file, offset, maxbytes);
 }
 
 const struct file_operations ext4_file_operations = {
