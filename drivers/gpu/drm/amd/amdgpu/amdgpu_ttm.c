@@ -662,42 +662,45 @@ int amdgpu_ttm_tt_get_user_pages(struct ttm_tt *ttm, struct page **pages)
 
 	} while (pinned < ttm->num_pages);
 
+	up_read(&current->mm->mmap_sem);
 	return 0;
 
 release_pages:
 	release_pages(pages, pinned);
+	up_read(&current->mm->mmap_sem);
 	return r;
 }
 
-static void amdgpu_trace_dma_map(struct ttm_tt *ttm)
+void amdgpu_ttm_tt_set_user_pages(struct ttm_tt *ttm, struct page **pages)
 {
-	struct amdgpu_device *adev = amdgpu_ttm_adev(ttm->bdev);
 	struct amdgpu_ttm_tt *gtt = (void *)ttm;
 	unsigned i;
 
-	if (unlikely(trace_amdgpu_ttm_tt_populate_enabled())) {
-		for (i = 0; i < ttm->num_pages; i++) {
-			trace_amdgpu_ttm_tt_populate(
-				adev,
-				gtt->ttm.dma_address[i],
-				page_to_phys(ttm->pages[i]));
-		}
+	gtt->last_set_pages = atomic_read(&gtt->mmu_invalidations);
+	for (i = 0; i < ttm->num_pages; ++i) {
+		if (ttm->pages[i])
+			put_page(ttm->pages[i]);
+
+		ttm->pages[i] = pages ? pages[i] : NULL;
 	}
 }
 
-static void amdgpu_trace_dma_unmap(struct ttm_tt *ttm)
+void amdgpu_ttm_tt_mark_user_pages(struct ttm_tt *ttm)
 {
-	struct amdgpu_device *adev = amdgpu_ttm_adev(ttm->bdev);
 	struct amdgpu_ttm_tt *gtt = (void *)ttm;
 	unsigned i;
 
-	if (unlikely(trace_amdgpu_ttm_tt_unpopulate_enabled())) {
-		for (i = 0; i < ttm->num_pages; i++) {
-			trace_amdgpu_ttm_tt_unpopulate(
-				adev,
-				gtt->ttm.dma_address[i],
-				page_to_phys(ttm->pages[i]));
-		}
+	gtt->last_set_pages = atomic_read(&gtt->mmu_invalidations);
+	for (i = 0; i < ttm->num_pages; ++i) {
+		struct page *page = ttm->pages[i];
+
+		if (!page)
+			continue;
+
+		if (!(gtt->userflags & AMDGPU_GEM_USERPTR_READONLY))
+			set_page_dirty(page);
+
+		mark_page_accessed(page);
 	}
 }
 
