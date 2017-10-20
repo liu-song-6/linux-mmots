@@ -970,8 +970,8 @@ struct lock_manager {
 struct net;
 void locks_start_grace(struct net *, struct lock_manager *);
 void locks_end_grace(struct lock_manager *);
-int locks_in_grace(struct net *);
-int opens_in_grace(struct net *);
+bool locks_in_grace(struct net *);
+bool opens_in_grace(struct net *);
 
 /* that will die - we need it for nfs_lock_info */
 #include <linux/nfs_fs_i.h>
@@ -2792,6 +2792,7 @@ extern int do_pipe_flags(int *, int);
 	id(KEXEC_IMAGE, kexec-image)		\
 	id(KEXEC_INITRAMFS, kexec-initramfs)	\
 	id(POLICY, security-policy)		\
+	id(X509_CERTIFICATE, x509-certificate)	\
 	id(MAX_ID, )
 
 #define __fid_enumify(ENUM, dummy) READING_ ## ENUM,

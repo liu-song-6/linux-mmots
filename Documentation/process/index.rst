@@ -25,7 +25,11 @@ Below are the essential guides that every developer should read.
    submitting-patches
    coding-style
    email-clients
+<<<<<<< HEAD
    kernel-enforcement-statement
+=======
+   kernel-driver-statement
+>>>>>>> linux-next/akpm-base
 
 Other guides to the community that are of interest to most developers are: 
 
