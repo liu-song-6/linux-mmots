@@ -33,13 +33,10 @@
 #include "intel_drv.h"
 #include "i915_trace.h"
 
-<<<<<<< HEAD
-=======
 I915_SELFTEST_DECLARE(static struct igt_evict_ctl {
 	bool fail_if_busy:1;
 } igt_evict_ctl;)
 
->>>>>>> linux-next/akpm-base
 static bool ggtt_is_idle(struct drm_i915_private *i915)
 {
        struct intel_engine_cs *engine;
@@ -212,15 +209,6 @@ search_again:
 	 * the kernel's there is no more we can evict.
 	 */
 	if (!ggtt_is_idle(dev_priv)) {
-<<<<<<< HEAD
-		ret = ggtt_flush(dev_priv);
-		if (ret)
-			return ret;
-
-		goto search_again;
-	}
-
-=======
 		if (I915_SELFTEST_ONLY(igt_evict_ctl.fail_if_busy))
 			return -EBUSY;
 
@@ -231,7 +219,6 @@ search_again:
 		goto search_again;
 	}
 
->>>>>>> linux-next/akpm-base
 	/*
 	 * If we still have pending pageflip completions, drop
 	 * back to userspace to give our workqueues time to

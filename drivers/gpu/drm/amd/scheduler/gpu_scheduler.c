@@ -215,9 +215,6 @@ void amd_sched_entity_fini(struct amd_gpu_scheduler *sched,
 	*/
 	wait_event(sched->job_scheduled, amd_sched_entity_is_idle(entity));
 
-<<<<<<< HEAD
-	amd_sched_rq_remove_entity(rq, entity);
-=======
 		/* Park the kernel for a moment to make sure it isn't processing
 		 * our enity.
 		 */
@@ -233,7 +230,6 @@ void amd_sched_entity_fini(struct amd_gpu_scheduler *sched,
 		}
 
 	}
->>>>>>> linux-next/akpm-base
 	kfifo_free(&entity->job_queue);
 }
 
