@@ -491,8 +491,11 @@ static int ipc_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	pmc->irq_mode = IPC_TRIGGER_MODE_IRQ;
 
+<<<<<<< HEAD
 	spin_lock_init(&ipcdev.gcr_lock);
 
+=======
+>>>>>>> linux-next/akpm-base
 	ret = pcim_enable_device(pdev);
 	if (ret)
 		return ret;

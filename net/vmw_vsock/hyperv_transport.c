@@ -310,9 +310,13 @@ static void hvs_close_connection(struct vmbus_channel *chan)
 	struct sock *sk = get_per_channel_state(chan);
 	struct vsock_sock *vsk = vsock_sk(sk);
 
+<<<<<<< HEAD
 	lock_sock(sk);
 
 	sk->sk_state = SS_UNCONNECTED;
+=======
+	sk->sk_state = TCP_CLOSE;
+>>>>>>> linux-next/akpm-base
 	sock_set_flag(sk, SOCK_DONE);
 	vsk->peer_shutdown |= SEND_SHUTDOWN | RCV_SHUTDOWN;
 
@@ -348,10 +352,15 @@ static void hvs_open_connection(struct vmbus_channel *chan)
 	if (!sk)
 		return;
 
+<<<<<<< HEAD
 	lock_sock(sk);
 
 	if ((conn_from_host && sk->sk_state != VSOCK_SS_LISTEN) ||
 	    (!conn_from_host && sk->sk_state != SS_CONNECTING))
+=======
+	if ((conn_from_host && sk->sk_state != TCP_LISTEN) ||
+	    (!conn_from_host && sk->sk_state != TCP_SYN_SENT))
+>>>>>>> linux-next/akpm-base
 		goto out;
 
 	if (conn_from_host) {
@@ -363,7 +372,7 @@ static void hvs_open_connection(struct vmbus_channel *chan)
 		if (!new)
 			goto out;
 
-		new->sk_state = SS_CONNECTING;
+		new->sk_state = TCP_SYN_SENT;
 		vnew = vsock_sk(new);
 		hvs_new = vnew->trans;
 		hvs_new->chan = chan;
@@ -390,7 +399,7 @@ static void hvs_open_connection(struct vmbus_channel *chan)
 	vmbus_set_chn_rescind_callback(chan, hvs_close_connection);
 
 	if (conn_from_host) {
-		new->sk_state = SS_CONNECTED;
+		new->sk_state = TCP_ESTABLISHED;
 		sk->sk_ack_backlog++;
 
 		hvs_addr_init(&vnew->local_addr, if_type);
@@ -403,7 +412,7 @@ static void hvs_open_connection(struct vmbus_channel *chan)
 
 		vsock_enqueue_accept(sk, new);
 	} else {
-		sk->sk_state = SS_CONNECTED;
+		sk->sk_state = TCP_ESTABLISHED;
 		sk->sk_socket->state = SS_CONNECTED;
 
 		vsock_insert_connected(vsock_sk(sk));

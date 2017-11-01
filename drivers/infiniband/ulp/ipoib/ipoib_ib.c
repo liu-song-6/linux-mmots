@@ -192,8 +192,8 @@ static void ipoib_ib_handle_rx_wc(struct net_device *dev, struct ib_wc *wc)
 
 	if (unlikely(wc->status != IB_WC_SUCCESS)) {
 		if (wc->status != IB_WC_WR_FLUSH_ERR)
-			ipoib_warn(priv, "failed recv event "
-				   "(status=%d, wrid=%d vend_err %x)\n",
+			ipoib_warn(priv,
+				   "failed recv event (status=%d, wrid=%d vend_err %#x)\n",
 				   wc->status, wr_id, wc->vendor_err);
 		ipoib_ud_dma_unmap_rx(priv, priv->rx_ring[wr_id].mapping);
 		dev_kfree_skb_any(skb);
@@ -414,8 +414,8 @@ static void ipoib_ib_handle_tx_wc(struct net_device *dev, struct ib_wc *wc)
 	if (wc->status != IB_WC_SUCCESS &&
 	    wc->status != IB_WC_WR_FLUSH_ERR) {
 		struct ipoib_qp_state_validate *qp_work;
-		ipoib_warn(priv, "failed send event "
-			   "(status=%d, wrid=%d vend_err %x)\n",
+		ipoib_warn(priv,
+			   "failed send event (status=%d, wrid=%d vend_err %#x)\n",
 			   wc->status, wr_id, wc->vendor_err);
 		qp_work = kzalloc(sizeof(*qp_work), GFP_ATOMIC);
 		if (!qp_work)
@@ -821,9 +821,11 @@ int ipoib_ib_dev_stop(struct net_device *dev)
 	return 0;
 }
 
-void ipoib_ib_tx_timer_func(unsigned long ctx)
+void ipoib_ib_tx_timer_func(struct timer_list *t)
 {
-	drain_tx_cq((struct net_device *)ctx);
+	struct ipoib_dev_priv *priv = from_timer(priv, t, poll_timer);
+
+	drain_tx_cq(priv->dev);
 }
 
 int ipoib_ib_dev_open_default(struct net_device *dev)
@@ -893,13 +895,17 @@ dev_stop:
 void ipoib_pkey_dev_check_presence(struct net_device *dev)
 {
 	struct ipoib_dev_priv *priv = ipoib_priv(dev);
+	struct rdma_netdev *rn = netdev_priv(dev);
 
 	if (!(priv->pkey & 0x7fff) ||
 	    ib_find_pkey(priv->ca, priv->port, priv->pkey,
-			 &priv->pkey_index))
+			 &priv->pkey_index)) {
 		clear_bit(IPOIB_PKEY_ASSIGNED, &priv->flags);
-	else
+	} else {
+		if (rn->set_id)
+			rn->set_id(dev, priv->pkey_index);
 		set_bit(IPOIB_PKEY_ASSIGNED, &priv->flags);
+	}
 }
 
 void ipoib_ib_dev_up(struct net_device *dev)
@@ -1203,10 +1209,15 @@ static void __ipoib_ib_dev_flush(struct ipoib_dev_priv *priv,
 		ipoib_ib_dev_down(dev);
 
 	if (level == IPOIB_FLUSH_HEAVY) {
+		rtnl_lock();
 		if (test_bit(IPOIB_FLAG_INITIALIZED, &priv->flags))
 			ipoib_ib_dev_stop(dev);
-		if (ipoib_ib_dev_open(dev) != 0)
+
+		result = ipoib_ib_dev_open(dev);
+		rtnl_unlock();
+		if (result)
 			return;
+
 		if (netif_queue_stopped(dev))
 			netif_start_queue(dev);
 	}
