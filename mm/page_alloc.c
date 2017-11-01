@@ -1499,9 +1499,17 @@ static unsigned long __init deferred_init_range(int nid, int zid,
 			__init_single_page(page, pfn, zid, nid);
 			nr_free++;
 		} else {
-			nr_pages += __def_free(&nr_free, &free_base_pfn, &page);
 			page = pfn_to_page(pfn);
 			__init_single_page(page, pfn, zid, nid);
+			/*
+			 * We must free previous range after initializing the
+			 * first page of the next range. This is because first
+			 * page may be accessed in __free_one_page(), when buddy
+			 * page is computed:
+			 *   buddy_pfn = pfn + pageblock_nr_pages
+			 */
+			deferred_free_range(free_base_pfn, nr_free);
+			nr_pages += nr_free;
 			free_base_pfn = pfn;
 			nr_free = 1;
 			cond_resched();
