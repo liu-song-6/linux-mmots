@@ -913,14 +913,8 @@ static __cpuidle int intel_idle(struct cpuidle_device *dev,
 	struct cpuidle_state *state = &drv->states[index];
 	unsigned long eax = flg2MWAIT(state->flags);
 	unsigned int cstate;
-<<<<<<< HEAD
-	int cpu = smp_processor_id();
-
-	cstate = (((eax) >> MWAIT_SUBSTATE_SIZE) & MWAIT_CSTATE_MASK) + 1;
-=======
 	bool uninitialized_var(tick);
 	int cpu = smp_processor_id();
->>>>>>> linux-next/akpm-base
 
 	/*
 	 * leave_mm() to avoid costly and often unnecessary wakeups
@@ -929,10 +923,6 @@ static __cpuidle int intel_idle(struct cpuidle_device *dev,
 	if (state->flags & CPUIDLE_FLAG_TLB_FLUSHED)
 		leave_mm(cpu);
 
-<<<<<<< HEAD
-	if (!(lapic_timer_reliable_states & (1 << (cstate))))
-		tick_broadcast_enter();
-=======
 	if (!static_cpu_has(X86_FEATURE_ARAT)) {
 		cstate = (((eax) >> MWAIT_SUBSTATE_SIZE) &
 				MWAIT_CSTATE_MASK) + 1;
@@ -942,7 +932,6 @@ static __cpuidle int intel_idle(struct cpuidle_device *dev,
 			tick_broadcast_enter();
 		}
 	}
->>>>>>> linux-next/akpm-base
 
 	mwait_idle_with_hints(eax, ecx);
 
