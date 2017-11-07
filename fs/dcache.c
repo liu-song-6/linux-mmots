@@ -231,7 +231,7 @@ static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *c
 {
 	/*
 	 * Be careful about RCU walk racing with rename:
-	 * use 'lockless_dereference' to fetch the name pointer.
+	 * use 'READ_ONCE' to fetch the name pointer.
 	 *
 	 * NOTE! Even if a rename will mean that the length
 	 * was not loaded atomically, we don't care. The
@@ -245,7 +245,7 @@ static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *c
 	 * early because the data cannot match (there can
 	 * be no NUL in the ct/tcount data)
 	 */
-	const unsigned char *cs = lockless_dereference(dentry->d_name.name);
+	const unsigned char *cs = READ_ONCE(dentry->d_name.name);
 
 	return dentry_string_cmp(cs, ct, tcount);
 }
@@ -631,7 +631,7 @@ static inline struct dentry *lock_parent(struct dentry *dentry)
 	rcu_read_lock();
 	spin_unlock(&dentry->d_lock);
 again:
-	parent = ACCESS_ONCE(dentry->d_parent);
+	parent = READ_ONCE(dentry->d_parent);
 	spin_lock(&parent->d_lock);
 	/*
 	 * We can't blindly lock dentry until we are sure
@@ -722,7 +722,7 @@ static inline bool fast_dput(struct dentry *dentry)
 	 * around with a zero refcount.
 	 */
 	smp_rmb();
-	d_flags = ACCESS_ONCE(dentry->d_flags);
+	d_flags = READ_ONCE(dentry->d_flags);
 	d_flags &= DCACHE_REFERENCED | DCACHE_LRU_LIST | DCACHE_DISCONNECTED;
 
 	/* Nothing to do? Dropping the reference was all we needed? */
@@ -851,11 +851,11 @@ struct dentry *dget_parent(struct dentry *dentry)
 	 * locking.
 	 */
 	rcu_read_lock();
-	ret = ACCESS_ONCE(dentry->d_parent);
+	ret = READ_ONCE(dentry->d_parent);
 	gotref = lockref_get_not_zero(&ret->d_lockref);
 	rcu_read_unlock();
 	if (likely(gotref)) {
-		if (likely(ret == ACCESS_ONCE(dentry->d_parent)))
+		if (likely(ret == READ_ONCE(dentry->d_parent)))
 			return ret;
 		dput(ret);
 	}
@@ -3039,7 +3039,7 @@ static int prepend(char **buffer, int *buflen, const char *str, int namelen)
  * @buflen: allocated length of the buffer
  * @name:   name string and length qstr structure
  *
- * With RCU path tracing, it may race with d_move(). Use ACCESS_ONCE() to
+ * With RCU path tracing, it may race with d_move(). Use READ_ONCE() to
  * make sure that either the old or the new name pointer and length are
  * fetched. However, there may be mismatch between length and pointer.
  * The length cannot be trusted, we need to copy it byte-by-byte until
@@ -3053,8 +3053,8 @@ static int prepend(char **buffer, int *buflen, const char *str, int namelen)
  */
 static int prepend_name(char **buffer, int *buflen, const struct qstr *name)
 {
-	const char *dname = ACCESS_ONCE(name->name);
-	u32 dlen = ACCESS_ONCE(name->len);
+	const char *dname = READ_ONCE(name->name);
+	u32 dlen = READ_ONCE(name->len);
 	char *p;
 
 	smp_read_barrier_depends();
@@ -3119,7 +3119,7 @@ restart:
 		struct dentry * parent;
 
 		if (dentry == vfsmnt->mnt_root || IS_ROOT(dentry)) {
-			struct mount *parent = ACCESS_ONCE(mnt->mnt_parent);
+			struct mount *parent = READ_ONCE(mnt->mnt_parent);
 			/* Escaped? */
 			if (dentry != vfsmnt->mnt_root) {
 				bptr = *buffer;
@@ -3129,7 +3129,7 @@ restart:
 			}
 			/* Global root? */
 			if (mnt != parent) {
-				dentry = ACCESS_ONCE(mnt->mnt_mountpoint);
+				dentry = READ_ONCE(mnt->mnt_mountpoint);
 				mnt = parent;
 				vfsmnt = &mnt->mnt;
 				continue;
@@ -3602,8 +3602,9 @@ static void __init dcache_init(void)
 	 * but it is probably not worth it because of the cache nature
 	 * of the dcache.
 	 */
-	dentry_cache = KMEM_CACHE(dentry,
-		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
+	dentry_cache = KMEM_CACHE_USERCOPY(dentry,
+		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
+		d_iname);
 
 	/* Hash may have been set up in dcache_init_early */
 	if (!hashdist)
@@ -3640,8 +3641,8 @@ void __init vfs_caches_init_early(void)
 
 void __init vfs_caches_init(void)
 {
-	names_cachep = kmem_cache_create("names_cache", PATH_MAX, 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+	names_cachep = kmem_cache_create_usercopy("names_cache", PATH_MAX, 0,
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC, 0, PATH_MAX, NULL);
 
 	dcache_init();
 	inode_init();

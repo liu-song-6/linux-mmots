@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * f_sourcesink.c - USB peripheral source/sink configuration driver
  *
@@ -1230,7 +1231,7 @@ static struct configfs_attribute *ss_attrs[] = {
 	NULL,
 };
 
-static struct config_item_type ss_func_type = {
+static const struct config_item_type ss_func_type = {
 	.ct_item_ops    = &ss_item_ops,
 	.ct_attrs	= ss_attrs,
 	.ct_owner       = THIS_MODULE,

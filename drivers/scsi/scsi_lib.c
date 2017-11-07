@@ -79,14 +79,15 @@ int scsi_init_sense_cache(struct Scsi_Host *shost)
 	if (shost->unchecked_isa_dma) {
 		scsi_sense_isadma_cache =
 			kmem_cache_create("scsi_sense_cache(DMA)",
-			SCSI_SENSE_BUFFERSIZE, 0,
-			SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA, NULL);
+				SCSI_SENSE_BUFFERSIZE, 0,
+				SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA, NULL);
 		if (!scsi_sense_isadma_cache)
 			ret = -ENOMEM;
 	} else {
 		scsi_sense_cache =
-			kmem_cache_create("scsi_sense_cache",
-			SCSI_SENSE_BUFFERSIZE, 0, SLAB_HWCACHE_ALIGN, NULL);
+			kmem_cache_create_usercopy("scsi_sense_cache",
+				SCSI_SENSE_BUFFERSIZE, 0, SLAB_HWCACHE_ALIGN,
+				0, SCSI_SENSE_BUFFERSIZE, NULL);
 		if (!scsi_sense_cache)
 			ret = -ENOMEM;
 	}
@@ -1301,7 +1302,7 @@ scsi_prep_state_check(struct scsi_device *sdev, struct request *req)
 			/*
 			 * If the devices is blocked we defer normal commands.
 			 */
-			if (!(req->rq_flags & RQF_PREEMPT))
+			if (req && !(req->rq_flags & RQF_PREEMPT))
 				ret = BLKPREP_DEFER;
 			break;
 		default:
@@ -1310,7 +1311,7 @@ scsi_prep_state_check(struct scsi_device *sdev, struct request *req)
 			 * special commands.  In particular any user initiated
 			 * command is not allowed.
 			 */
-			if (!(req->rq_flags & RQF_PREEMPT))
+			if (req && !(req->rq_flags & RQF_PREEMPT))
 				ret = BLKPREP_KILL;
 			break;
 		}
@@ -1750,7 +1751,10 @@ static void scsi_done(struct scsi_cmnd *cmd)
  *
  * Returns:     Nothing
  *
- * Lock status: IO request lock assumed to be held when called.
+ * Lock status: request queue lock assumed to be held when called.
+ *
+ * Note: See sd_zbc.c sd_zbc_write_lock_zone() for write order
+ * protection for ZBC disks.
  */
 static void scsi_request_fn(struct request_queue *q)
 	__releases(q->queue_lock)
@@ -1940,6 +1944,38 @@ static void scsi_mq_done(struct scsi_cmnd *cmd)
 	blk_mq_complete_request(cmd->request);
 }
 
+static void scsi_mq_put_budget(struct blk_mq_hw_ctx *hctx)
+{
+	struct request_queue *q = hctx->queue;
+	struct scsi_device *sdev = q->queuedata;
+
+	atomic_dec(&sdev->device_busy);
+	put_device(&sdev->sdev_gendev);
+}
+
+static blk_status_t scsi_mq_get_budget(struct blk_mq_hw_ctx *hctx)
+{
+	struct request_queue *q = hctx->queue;
+	struct scsi_device *sdev = q->queuedata;
+	blk_status_t ret;
+
+	ret = prep_to_mq(scsi_prep_state_check(sdev, NULL));
+	if (ret == BLK_STS_RESOURCE || ret != BLK_STS_OK)
+		return ret;
+
+	if (!get_device(&sdev->sdev_gendev))
+		goto out;
+	if (!scsi_dev_queue_ready(q, sdev))
+		goto out_put_device;
+
+	return BLK_STS_OK;
+
+out_put_device:
+	put_device(&sdev->sdev_gendev);
+out:
+	return BLK_STS_RESOURCE;
+}
+
 static blk_status_t scsi_queue_rq(struct blk_mq_hw_ctx *hctx,
 			 const struct blk_mq_queue_data *bd)
 {
@@ -1953,16 +1989,11 @@ static blk_status_t scsi_queue_rq(struct blk_mq_hw_ctx *hctx,
 
 	ret = prep_to_mq(scsi_prep_state_check(sdev, req));
 	if (ret != BLK_STS_OK)
-		goto out;
+		goto out_put_budget;
 
 	ret = BLK_STS_RESOURCE;
-	if (!get_device(&sdev->sdev_gendev))
-		goto out;
-
-	if (!scsi_dev_queue_ready(q, sdev))
-		goto out_put_device;
 	if (!scsi_target_queue_ready(shost, sdev))
-		goto out_dec_device_busy;
+		goto out_put_budget;
 	if (!scsi_host_queue_ready(q, shost, sdev))
 		goto out_dec_target_busy;
 
@@ -1993,15 +2024,12 @@ static blk_status_t scsi_queue_rq(struct blk_mq_hw_ctx *hctx,
 	return BLK_STS_OK;
 
 out_dec_host_busy:
-	atomic_dec(&shost->host_busy);
+       atomic_dec(&shost->host_busy);
 out_dec_target_busy:
 	if (scsi_target(sdev)->can_queue > 0)
 		atomic_dec(&scsi_target(sdev)->target_busy);
-out_dec_device_busy:
-	atomic_dec(&sdev->device_busy);
-out_put_device:
-	put_device(&sdev->sdev_gendev);
-out:
+out_put_budget:
+	scsi_mq_put_budget(hctx);
 	switch (ret) {
 	case BLK_STS_OK:
 		break;
@@ -2205,6 +2233,8 @@ struct request_queue *scsi_old_alloc_queue(struct scsi_device *sdev)
 }
 
 static const struct blk_mq_ops scsi_mq_ops = {
+	.get_budget	= scsi_mq_get_budget,
+	.put_budget	= scsi_mq_put_budget,
 	.queue_rq	= scsi_queue_rq,
 	.complete	= scsi_softirq_done,
 	.timeout	= scsi_timeout,
@@ -2734,6 +2764,9 @@ static void scsi_evt_emit(struct scsi_device *sdev, struct scsi_event *evt)
 	case SDEV_EVT_ALUA_STATE_CHANGE_REPORTED:
 		envp[idx++] = "SDEV_UA=ASYMMETRIC_ACCESS_STATE_CHANGED";
 		break;
+	case SDEV_EVT_POWER_ON_RESET_OCCURRED:
+		envp[idx++] = "SDEV_UA=POWER_ON_RESET_OCCURRED";
+		break;
 	default:
 		/* do nothing */
 		break;
@@ -2838,6 +2871,7 @@ struct scsi_event *sdev_evt_alloc(enum scsi_device_event evt_type,
 	case SDEV_EVT_MODE_PARAMETER_CHANGE_REPORTED:
 	case SDEV_EVT_LUN_CHANGE_REPORTED:
 	case SDEV_EVT_ALUA_STATE_CHANGE_REPORTED:
+	case SDEV_EVT_POWER_ON_RESET_OCCURRED:
 	default:
 		/* do nothing */
 		break;

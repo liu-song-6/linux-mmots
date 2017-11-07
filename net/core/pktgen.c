@@ -2165,7 +2165,7 @@ static void pktgen_setup_inject(struct pktgen_dev *pkt_dev)
 						+ pkt_dev->pkt_overhead;
 		}
 
-		for (i = 0; i < IN6_ADDR_HSIZE; i++)
+		for (i = 0; i < sizeof(struct in6_addr); i++)
 			if (pkt_dev->cur_in6_saddr.s6_addr[i]) {
 				set = 1;
 				break;
@@ -3377,7 +3377,7 @@ static void pktgen_wait_for_skb(struct pktgen_dev *pkt_dev)
 
 static void pktgen_xmit(struct pktgen_dev *pkt_dev)
 {
-	unsigned int burst = ACCESS_ONCE(pkt_dev->burst);
+	unsigned int burst = READ_ONCE(pkt_dev->burst);
 	struct net_device *odev = pkt_dev->odev;
 	struct netdev_queue *txq;
 	struct sk_buff *skb;

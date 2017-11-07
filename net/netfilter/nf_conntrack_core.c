@@ -1044,7 +1044,7 @@ static void gc_worker(struct work_struct *work)
 		 * we will just continue with next hash slot.
 		 */
 		rcu_read_unlock();
-		cond_resched_rcu_qs();
+		cond_resched();
 	} while (++buckets < goal);
 
 	if (gc_work->exiting)
@@ -1419,7 +1419,7 @@ repeat:
 	/* Decide what timeout policy we want to apply to this flow. */
 	timeouts = nf_ct_timeout_lookup(net, ct, l4proto);
 
-	ret = l4proto->packet(ct, skb, dataoff, ctinfo, pf, timeouts);
+	ret = l4proto->packet(ct, skb, dataoff, ctinfo, timeouts);
 	if (ret <= 0) {
 		/* Invalid: inverse of the return code tells
 		 * the netfilter core what to do */
@@ -1940,7 +1940,7 @@ int nf_conntrack_hash_resize(unsigned int hashsize)
 	return 0;
 }
 
-int nf_conntrack_set_hashsize(const char *val, struct kernel_param *kp)
+int nf_conntrack_set_hashsize(const char *val, const struct kernel_param *kp)
 {
 	unsigned int hashsize;
 	int rc;

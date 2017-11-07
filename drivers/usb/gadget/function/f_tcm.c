@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /* Target based USB-Gadget
  *
  * UAS protocol handling, target callbacks, configfs handling,
@@ -1145,6 +1146,7 @@ static int usbg_submit_command(struct f_uas *fu,
 	default:
 		pr_debug_once("Unsupported prio_attr: %02x.\n",
 				cmd_iu->prio_attr);
+		/* fall through */
 	case UAS_SIMPLE_TAG:
 		cmd->prio_attr = TCM_SIMPLE_TAG;
 		break;
@@ -2166,7 +2168,7 @@ static struct configfs_item_operations tcm_item_ops = {
 	.release		= tcm_attr_release,
 };
 
-static struct config_item_type tcm_func_type = {
+static const struct config_item_type tcm_func_type = {
 	.ct_item_ops	= &tcm_item_ops,
 	.ct_owner	= THIS_MODULE,
 };

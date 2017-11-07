@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * f_fs.c -- user mode file system API for USB composite function controllers
  *
@@ -3385,7 +3386,7 @@ static struct configfs_item_operations ffs_item_ops = {
 	.release	= ffs_attr_release,
 };
 
-static struct config_item_type ffs_func_type = {
+static const struct config_item_type ffs_func_type = {
 	.ct_item_ops	= &ffs_item_ops,
 	.ct_owner	= THIS_MODULE,
 };

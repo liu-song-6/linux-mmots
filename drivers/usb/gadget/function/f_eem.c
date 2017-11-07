@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * f_eem.c -- USB CDC Ethernet (EEM) link function driver
  *
@@ -556,7 +557,7 @@ static struct configfs_attribute *eem_attrs[] = {
 	NULL,
 };
 
-static struct config_item_type eem_func_type = {
+static const struct config_item_type eem_func_type = {
 	.ct_item_ops	= &eem_item_ops,
 	.ct_attrs	= eem_attrs,
 	.ct_owner	= THIS_MODULE,
