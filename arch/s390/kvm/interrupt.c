@@ -1074,6 +1074,12 @@ void kvm_s390_vcpu_wakeup(struct kvm_vcpu *vcpu)
 	 * in kvm_vcpu_block without having the waitqueue set (polling)
 	 */
 	vcpu->valid_wakeup = true;
+	/*
+	 * This is mostly to document, that the read in swait_active could
+	 * be moved before other stores, leading to subtle races.
+	 * All current users do not store or use an atomic like update
+	 */
+	smp_mb__after_atomic();
 	if (swait_active(&vcpu->wq)) {
 		/*
 		 * The vcpu gave up the cpu voluntarily, mark it as a good
@@ -2483,11 +2489,11 @@ void kvm_s390_reinject_machine_check(struct kvm_vcpu *vcpu,
 
 	mci.val = mcck_info->mcic;
 	if (mci.sr)
-		cr14 |= MCCK_CR14_RECOVERY_SUB_MASK;
+		cr14 |= CR14_RECOVERY_SUBMASK;
 	if (mci.dg)
-		cr14 |= MCCK_CR14_DEGRAD_SUB_MASK;
+		cr14 |= CR14_DEGRADATION_SUBMASK;
 	if (mci.w)
-		cr14 |= MCCK_CR14_WARN_SUB_MASK;
+		cr14 |= CR14_WARNING_SUBMASK;
 
 	mchk = mci.ck ? &inti.mchk : &irq.u.mchk;
 	mchk->cr14 = cr14;

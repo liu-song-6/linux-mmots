@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * f_obex.c -- USB CDC OBEX function driver
  *
@@ -411,7 +412,7 @@ static struct configfs_attribute *acm_attrs[] = {
 	NULL,
 };
 
-static struct config_item_type obex_func_type = {
+static const struct config_item_type obex_func_type = {
 	.ct_item_ops	= &obex_item_ops,
 	.ct_attrs	= acm_attrs,
 	.ct_owner	= THIS_MODULE,
