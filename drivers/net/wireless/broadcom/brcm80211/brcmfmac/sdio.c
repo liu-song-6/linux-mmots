@@ -3628,7 +3628,7 @@ static void brcmf_sdio_dataworker(struct work_struct *work)
 
 	bus->dpc_running = true;
 	wmb();
-	while (ACCESS_ONCE(bus->dpc_triggered)) {
+	while (READ_ONCE(bus->dpc_triggered)) {
 		bus->dpc_triggered = false;
 		brcmf_sdio_dpc(bus);
 		bus->idlecount = 0;
@@ -4144,10 +4144,8 @@ struct brcmf_sdio *brcmf_sdio_probe(struct brcmf_sdio_dev *sdiodev)
 	init_waitqueue_head(&bus->dcmd_resp_wait);
 
 	/* Set up the watchdog timer */
-	init_timer(&bus->timer);
-	bus->timer.data = (unsigned long)bus;
-	bus->timer.function = brcmf_sdio_watchdog;
-
+	setup_timer(&bus->timer, brcmf_sdio_watchdog,
+		    (unsigned long)bus);
 	/* Initialize watchdog thread */
 	init_completion(&bus->watchdog_wait);
 	bus->watchdog_tsk = kthread_run(brcmf_sdio_watchdog_thread,
