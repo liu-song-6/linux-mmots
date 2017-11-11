@@ -655,17 +655,10 @@ int kvmppc_book3s_hv_page_fault(struct kvm_run *run, struct kvm_vcpu *vcpu,
 	/*
 	 * If the HPT is being resized, don't update the HPTE,
 	 * instead let the guest retry after the resize operation is complete.
-<<<<<<< HEAD
-	 * The synchronization for hpte_setup_done test vs. set is provided
-	 * by the HPTE lock.
-	 */
-	if (!kvm->arch.hpte_setup_done)
-=======
 	 * The synchronization for mmu_ready test vs. set is provided
 	 * by the HPTE lock.
 	 */
 	if (!kvm->arch.mmu_ready)
->>>>>>> linux-next/akpm-base
 		goto out_unlock;
 
 	if ((hnow_v & ~HPTE_V_HVLOCK) != hpte[0] || hnow_r != hpte[1] ||

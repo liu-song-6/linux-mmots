@@ -2722,22 +2722,13 @@ static noinline void kvmppc_run_core(struct kvmppc_vcore *vc)
 	 * Hard-disable interrupts, and check resched flag and signals.
 	 * If we need to reschedule or deliver a signal, clean up
 	 * and return without going into the guest(s).
-<<<<<<< HEAD
-	 * If the hpte_setup_done flag has been cleared, don't go into the
-=======
 	 * If the mmu_ready flag has been cleared, don't go into the
->>>>>>> linux-next/akpm-base
 	 * guest because that means a HPT resize operation is in progress.
 	 */
 	local_irq_disable();
 	hard_irq_disable();
 	if (lazy_irq_pending() || need_resched() ||
-<<<<<<< HEAD
-	    recheck_signals(&core_info) ||
-	    (!kvm_is_radix(vc->kvm) && !vc->kvm->arch.hpte_setup_done)) {
-=======
 	    recheck_signals(&core_info) || !vc->kvm->arch.mmu_ready) {
->>>>>>> linux-next/akpm-base
 		local_irq_enable();
 		vc->vcore_state = VCORE_INACTIVE;
 		/* Unlock all except the primary vcore */
@@ -3209,17 +3200,6 @@ static int kvmppc_run_vcpu(struct kvm_run *kvm_run, struct kvm_vcpu *vcpu)
 
 	while (vcpu->arch.state == KVMPPC_VCPU_RUNNABLE &&
 	       !signal_pending(current)) {
-<<<<<<< HEAD
-		/* See if the HPT and VRMA are ready to go */
-		if (!kvm_is_radix(vcpu->kvm) &&
-		    !vcpu->kvm->arch.hpte_setup_done) {
-			spin_unlock(&vc->lock);
-			r = kvmppc_hv_setup_htab_rma(vcpu);
-			spin_lock(&vc->lock);
-			if (r) {
-				kvm_run->exit_reason = KVM_EXIT_FAIL_ENTRY;
-				kvm_run->fail_entry.hardware_entry_failure_reason = 0;
-=======
 		/* See if the MMU is ready to go */
 		if (!vcpu->kvm->arch.mmu_ready) {
 			spin_unlock(&vc->lock);
@@ -3229,7 +3209,6 @@ static int kvmppc_run_vcpu(struct kvm_run *kvm_run, struct kvm_vcpu *vcpu)
 				kvm_run->exit_reason = KVM_EXIT_FAIL_ENTRY;
 				kvm_run->fail_entry.
 					hardware_entry_failure_reason = 0;
->>>>>>> linux-next/akpm-base
 				vcpu->arch.ret = r;
 				break;
 			}

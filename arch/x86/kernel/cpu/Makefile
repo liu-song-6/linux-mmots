@@ -22,12 +22,8 @@ obj-y			+= common.o
 obj-y			+= rdrand.o
 obj-y			+= match.o
 obj-y			+= bugs.o
-<<<<<<< HEAD
-obj-$(CONFIG_CPU_FREQ)	+= aperfmperf.o
-=======
 obj-y			+= aperfmperf.o
 obj-y			+= cpuid-deps.o
->>>>>>> linux-next/akpm-base
 
 obj-$(CONFIG_PROC_FS)	+= proc.o
 obj-$(CONFIG_X86_FEATURE_NAMES) += capflags.o powerflags.o
