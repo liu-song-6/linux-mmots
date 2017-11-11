@@ -145,6 +145,8 @@ static void __init kasan_populate_shadow(unsigned long addr, unsigned long end,
 	} while (pgd++, addr = next, addr != end);
 }
 
+static p4d_t tmp_p4d_table[PTRS_PER_P4D] __initdata __aligned(PAGE_SIZE);
+
 static void __init map_range(struct range *range)
 {
 	unsigned long start;
