@@ -62,7 +62,7 @@ MODULE_PARM_DESC(update_ms, "milliseconds before pstore updates its content "
 static int pstore_new_entry;
 
 static void pstore_timefunc(unsigned long);
-static DEFINE_TIMER(pstore_timer, pstore_timefunc, 0, 0);
+static DEFINE_TIMER(pstore_timer, pstore_timefunc);
 
 static void pstore_dowork(struct work_struct *);
 static DECLARE_WORK(pstore_work, pstore_dowork);
@@ -654,7 +654,7 @@ static int pstore_write_user_compat(struct pstore_record *record,
 		return -EINVAL;
 
 	record->buf = memdup_user(buf, record->size);
-	if (unlikely(IS_ERR(record->buf))) {
+	if (IS_ERR(record->buf)) {
 		ret = PTR_ERR(record->buf);
 		goto out;
 	}
