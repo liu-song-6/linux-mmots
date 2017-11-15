@@ -188,13 +188,8 @@ static const struct crashtype crashtypes[] = {
 
 /* Global kprobe entry and crashtype. */
 static struct kprobe *lkdtm_kprobe;
-<<<<<<< HEAD
-struct crashpoint *lkdtm_crashpoint;
-struct crashtype *lkdtm_crashtype;
-=======
 static struct crashpoint *lkdtm_crashpoint;
 static const struct crashtype *lkdtm_crashtype;
->>>>>>> linux-next/akpm-base
 
 /* Module parameters */
 static int recur_count = -1;

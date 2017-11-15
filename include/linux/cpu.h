@@ -61,20 +61,11 @@ extern ssize_t arch_cpu_release(const char *, size_t);
  * These states are not related to the core CPU hotplug mechanism. They are
  * used by various (sub)architectures to track internal state
  */
-<<<<<<< HEAD
-#define CPU_ONLINE		0x0002 /* CPU is up */
-#define CPU_UP_PREPARE		0x0003 /* CPU coming up */
-#define CPU_DEAD		0x0007 /* CPU dead */
-#define CPU_DEAD_FROZEN		0x0008 /* CPU timed out on unplug */
-#define CPU_POST_DEAD		0x0009 /* CPU successfully unplugged */
-#define CPU_BROKEN		0x000B /* CPU did not die properly */
-=======
 #define CPU_TASKS_FROZEN	0x0010
 
 #define CPU_ONLINE_FROZEN	(CPU_ONLINE | CPU_TASKS_FROZEN)
 #define CPU_UP_PREPARE_FROZEN	(CPU_UP_PREPARE | CPU_TASKS_FROZEN)
 #define CPU_DEAD_FROZEN		(CPU_DEAD | CPU_TASKS_FROZEN)
->>>>>>> linux-next/akpm-base
 
 #ifdef CONFIG_SMP
 extern bool cpuhp_tasks_frozen;

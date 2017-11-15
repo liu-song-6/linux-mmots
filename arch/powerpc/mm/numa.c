@@ -1505,11 +1505,7 @@ static struct timer_list topology_timer;
 
 static void reset_topology_timer(void)
 {
-<<<<<<< HEAD
-	mod_timer(&topology_timer, jiffies + 60 * HZ);
-=======
 	mod_timer(&topology_timer, jiffies + topology_timer_secs * HZ);
->>>>>>> linux-next/akpm-base
 }
 
 #ifdef CONFIG_SMP

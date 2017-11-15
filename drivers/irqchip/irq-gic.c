@@ -1286,8 +1286,6 @@ static bool gic_check_eoimode(struct device_node *node, void __iomem **base)
 		 */
 		if (!gic_check_gicv2(*base))
 			return false;
-<<<<<<< HEAD
-=======
 
 		if (!gicv2_force_probe) {
 			pr_warn("GIC: GICv2 detected, but range too small and irqchip.gicv2_force_probe not set\n");
@@ -1309,7 +1307,6 @@ static bool gic_check_eoimode(struct device_node *node, void __iomem **base)
 			*base = alt;
 			return true;
 		}
->>>>>>> linux-next/akpm-base
 
 		if (!gicv2_force_probe) {
 			pr_warn("GIC: GICv2 detected, but range too small and irqchip.gicv2_force_probe not set\n");
@@ -1350,8 +1347,6 @@ static bool gic_check_eoimode(struct device_node *node, void __iomem **base)
 	}
 	if (resource_size(&cpuif_res) == SZ_128K) {
 		/*
-<<<<<<< HEAD
-=======
 		 * We detected *two* initial GICv2 pages in a
 		 * row. Could be a GICv2 aliased over two 64kB
 		 * pages. Update the resource, map the iospace, and
@@ -1369,7 +1364,6 @@ static bool gic_check_eoimode(struct device_node *node, void __iomem **base)
 	}
 	if (resource_size(&cpuif_res) == SZ_128K) {
 		/*
->>>>>>> linux-next/akpm-base
 		 * Verify that we have the first 4kB of a GICv2
 		 * aliased over the first 64kB by checking the
 		 * GICC_IIDR register on both ends.

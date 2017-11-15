@@ -147,11 +147,7 @@ sh_css_load_blob_info(const char *fw, const struct ia_css_fw_info *bi, struct ia
 
 		char *parambuf = kmalloc(paramstruct_size + configstruct_size + statestruct_size,
 					 GFP_KERNEL);
-<<<<<<< HEAD
-		if (parambuf == NULL)
-=======
 		if (!parambuf)
->>>>>>> linux-next/akpm-base
 			return IA_CSS_ERR_CANNOT_ALLOCATE_MEMORY;
 
 		bd->mem_offsets.array[IA_CSS_PARAM_CLASS_PARAM].ptr = NULL;

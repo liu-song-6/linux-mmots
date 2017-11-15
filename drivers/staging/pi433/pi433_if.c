@@ -782,38 +782,6 @@ pi433_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case PI433_IOC_RD_TX_CFG:
-<<<<<<< HEAD
-		tmp = _IOC_SIZE(cmd);
-		if ((tmp == 0) || ((tmp % sizeof(struct pi433_tx_cfg)) != 0)) {
-			retval = -EINVAL;
-			break;
-		}
-
-		if (__copy_to_user((void __user *)arg,
-				    &instance->tx_cfg,
-				    tmp))
-		{
-			retval = -EFAULT;
-			break;
-		}
-
-		break;
-	case PI433_IOC_WR_TX_CFG:
-		tmp = _IOC_SIZE(cmd);
-		if ((tmp == 0) || ((tmp % sizeof(struct pi433_tx_cfg)) != 0)) {
-			retval = -EINVAL;
-			break;
-		}
-
-		if (__copy_from_user(&instance->tx_cfg,
-				     (void __user *)arg,
-				     tmp))
-		{
-			retval = -EFAULT;
-			break;
-		}
-
-=======
 		if (copy_to_user(argp, &instance->tx_cfg,
 					sizeof(struct pi433_tx_cfg)))
 			return -EFAULT;
@@ -822,7 +790,6 @@ pi433_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (copy_from_user(&instance->tx_cfg, argp,
 					sizeof(struct pi433_tx_cfg)))
 			return -EFAULT;
->>>>>>> linux-next/akpm-base
 		break;
 	case PI433_IOC_RD_RX_CFG:
 		if (copy_to_user(argp, &device->rx_cfg,

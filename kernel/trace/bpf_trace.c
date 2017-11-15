@@ -290,9 +290,6 @@ get_map_perf_counter(struct bpf_map *map, u64 flags,
 	if (!ee)
 		return -ENOENT;
 
-<<<<<<< HEAD
-	err = perf_event_read_local(ee->event, &value, NULL, NULL);
-=======
 	return perf_event_read_local(ee->event, value, enabled, running);
 }
 
@@ -302,7 +299,6 @@ BPF_CALL_2(bpf_perf_event_read, struct bpf_map *, map, u64, flags)
 	int err;
 
 	err = get_map_perf_counter(map, flags, &value, NULL, NULL);
->>>>>>> linux-next/akpm-base
 	/*
 	 * this api is ugly since we miss [-22..-2] range of valid
 	 * counter values, but that's uapi
