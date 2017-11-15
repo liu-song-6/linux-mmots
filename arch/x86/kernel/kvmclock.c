@@ -47,12 +47,15 @@ early_param("no-kvmclock", parse_no_kvmclock);
 /* The hypervisor will put information about time periodically here */
 static struct pvclock_vsyscall_time_info *hv_clock;
 static struct pvclock_wall_clock *wall_clock;
+<<<<<<< HEAD
 
 struct pvclock_vsyscall_time_info *pvclock_pvti_cpu0_va(void)
 {
 	return hv_clock;
 }
 EXPORT_SYMBOL_GPL(pvclock_pvti_cpu0_va);
+=======
+>>>>>>> linux-next/akpm-base
 
 /*
  * The wallclock is the time of day when we booted. Since then, some time may
@@ -377,6 +380,7 @@ int __init kvm_setup_vsyscall_timeinfo(void)
 		return 1;
 	}
 
+	pvclock_set_pvti_cpu0_va(hv_clock);
 	put_cpu();
 
 	kvm_clock.archdata.vclock_mode = VCLOCK_PVCLOCK;

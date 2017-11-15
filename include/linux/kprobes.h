@@ -468,6 +468,7 @@ static inline int enable_kprobe(struct kprobe *kp)
 	return -ENOSYS;
 }
 #endif /* CONFIG_KPROBES */
+<<<<<<< HEAD
 static inline int register_jprobe(struct jprobe *p)
 {
 	return -ENOSYS;
@@ -480,6 +481,20 @@ static inline void unregister_jprobe(struct jprobe *p)
 {
 }
 static inline void unregister_jprobes(struct jprobe **jps, int num)
+=======
+static inline int __deprecated register_jprobe(struct jprobe *p)
+{
+	return -ENOSYS;
+}
+static inline int __deprecated register_jprobes(struct jprobe **jps, int num)
+{
+	return -ENOSYS;
+}
+static inline void __deprecated unregister_jprobe(struct jprobe *p)
+{
+}
+static inline void __deprecated unregister_jprobes(struct jprobe **jps, int num)
+>>>>>>> linux-next/akpm-base
 {
 }
 static inline int disable_kretprobe(struct kretprobe *rp)
@@ -490,11 +505,11 @@ static inline int enable_kretprobe(struct kretprobe *rp)
 {
 	return enable_kprobe(&rp->kp);
 }
-static inline int disable_jprobe(struct jprobe *jp)
+static inline int __deprecated disable_jprobe(struct jprobe *jp)
 {
 	return -ENOSYS;
 }
-static inline int enable_jprobe(struct jprobe *jp)
+static inline int __deprecated enable_jprobe(struct jprobe *jp)
 {
 	return -ENOSYS;
 }

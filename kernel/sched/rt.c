@@ -969,7 +969,7 @@ static void update_curr_rt(struct rq *rq)
 	account_group_exec_runtime(curr, delta_exec);
 
 	curr->se.exec_start = rq_clock_task(rq);
-	cpuacct_charge(curr, delta_exec);
+	cgroup_account_cputime(curr, delta_exec);
 
 	sched_rt_avg_update(rq, delta_exec);
 
@@ -1977,6 +1977,7 @@ static void tell_cpu_to_push(struct rq *rq)
 		return;
 
 	raw_spin_lock(&rq->rd->rto_lock);
+<<<<<<< HEAD
 
 	/*
 	 * The rto_cpu is updated under the lock, if it has a valid cpu
@@ -1987,6 +1988,18 @@ static void tell_cpu_to_push(struct rq *rq)
 	if (rq->rd->rto_cpu < 0)
 		cpu = rto_next_cpu(rq);
 
+=======
+
+	/*
+	 * The rto_cpu is updated under the lock, if it has a valid cpu
+	 * then the IPI is still running and will continue due to the
+	 * update to loop_next, and nothing needs to be done here.
+	 * Otherwise it is finishing up and an ipi needs to be sent.
+	 */
+	if (rq->rd->rto_cpu < 0)
+		cpu = rto_next_cpu(rq);
+
+>>>>>>> linux-next/akpm-base
 	raw_spin_unlock(&rq->rd->rto_lock);
 
 	rto_start_unlock(&rq->rd->rto_loop_start);
@@ -2206,7 +2219,7 @@ static void switched_to_rt(struct rq *rq, struct task_struct *p)
 		if (p->nr_cpus_allowed > 1 && rq->rt.overloaded)
 			queue_push_tasks(rq);
 #endif /* CONFIG_SMP */
-		if (p->prio < rq->curr->prio)
+		if (p->prio < rq->curr->prio && cpu_online(cpu_of(rq)))
 			resched_curr(rq);
 	}
 }
