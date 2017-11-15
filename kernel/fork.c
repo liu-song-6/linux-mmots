@@ -606,6 +606,11 @@ static void __mmdrop(struct mm_struct *mm)
 
 void mmdrop(struct mm_struct *mm)
 {
+	/*
+	 * The implicit full barrier implied by atomic_dec_and_test is
+	 * required by the membarrier system call before returning to
+	 * user-space, after storing to rq->curr.
+	 */
 	if (unlikely(atomic_dec_and_test(&mm->mm_count)))
 		__mmdrop(mm);
 }
@@ -717,11 +722,14 @@ void __init fork_init(void)
 #define ARCH_MIN_TASKALIGN	0
 #endif
 	int align = max_t(int, L1_CACHE_BYTES, ARCH_MIN_TASKALIGN);
+	unsigned long useroffset, usersize;
 
 	/* create a slab on which task_structs can be allocated */
-	task_struct_cachep = kmem_cache_create("task_struct",
-			arch_task_struct_size, align,
-			SLAB_PANIC|SLAB_ACCOUNT, NULL);
+	task_struct_whitelist(&useroffset, &usersize);
+	task_struct_cachep = kmem_cache_create_usercopy("task_struct",
+			arch_task_struct_size, align, SLAB_PANIC|SLAB_ACCOUNT,
+			useroffset, usersize, NULL);
+
 #endif
 
 	/* do the arch specific task caches init */
@@ -2266,9 +2274,11 @@ void __init proc_caches_init(void)
 	 * maximum number of CPU's we can ever have.  The cpumask_allocation
 	 * is at the end of the structure, exactly for that reason.
 	 */
-	mm_cachep = kmem_cache_create("mm_struct",
+	mm_cachep = kmem_cache_create_usercopy("mm_struct",
 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_ACCOUNT,
+			offsetof(struct mm_struct, saved_auxv),
+			sizeof_field(struct mm_struct, saved_auxv),
 			NULL);
 	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
 	mmap_init();
