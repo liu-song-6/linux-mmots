@@ -1209,15 +1209,15 @@ static void *nfp_net_napi_alloc_one(struct nfp_net_dp *dp, dma_addr_t *dma_addr)
 
 	if (!dp->xdp_prog) {
 		frag = napi_alloc_frag(dp->fl_bufsz);
+		if (unlikely(!frag))
+			return NULL;
 	} else {
 		struct page *page;
 
-		page = alloc_page(GFP_ATOMIC);
-		frag = page ? page_address(page) : NULL;
-	}
-	if (!frag) {
-		nn_dp_warn(dp, "Failed to alloc receive page frag\n");
-		return NULL;
+		page = dev_alloc_page();
+		if (unlikely(!page))
+			return NULL;
+		frag = page_address(page);
 	}
 
 	*dma_addr = nfp_net_dma_map_rx(dp, frag);
