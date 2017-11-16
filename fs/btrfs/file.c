@@ -1756,11 +1756,7 @@ again:
 
 		if (copied > 0)
 			ret = btrfs_dirty_pages(inode, pages, dirty_pages,
-<<<<<<< HEAD
-						pos, copied, NULL);
-=======
 						pos, copied, &cached_state);
->>>>>>> linux-next/akpm-base
 		if (extents_locked)
 			unlock_extent_cached(&BTRFS_I(inode)->io_tree,
 					     lockstart, lockend, &cached_state,

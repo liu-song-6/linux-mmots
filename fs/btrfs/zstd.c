@@ -430,13 +430,10 @@ finish:
 
 static void zstd_set_level(struct list_head *ws, unsigned int type)
 {
-<<<<<<< HEAD
-=======
 	struct workspace *workspace = list_entry(ws, struct workspace, list);
 	unsigned level = (type & 0xF0) >> 4;
 
 	workspace->level = level > 0 ? level : ZSTD_BTRFS_DEFAULT_LEVEL;
->>>>>>> linux-next/akpm-base
 }
 
 const struct btrfs_compress_op btrfs_zstd_compress = {

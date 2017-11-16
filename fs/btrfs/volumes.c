@@ -2080,11 +2080,7 @@ void btrfs_rm_dev_replace_free_srcdev(struct btrfs_fs_info *fs_info,
 	}
 
 	btrfs_close_bdev(srcdev);
-<<<<<<< HEAD
-	call_rcu(&srcdev->rcu, free_device);
-=======
 	call_rcu(&srcdev->rcu, free_device_rcu);
->>>>>>> linux-next/akpm-base
 
 	/* if this is no devs we rather delete the fs_devices */
 	if (!fs_devices->num_devices) {
@@ -2565,13 +2561,8 @@ error_trans:
 		sb->s_flags |= MS_RDONLY;
 	if (trans)
 		btrfs_end_transaction(trans);
-<<<<<<< HEAD
-	rcu_string_free(device->name);
-	kfree(device);
-=======
 error_free_device:
 	free_device(device);
->>>>>>> linux-next/akpm-base
 error:
 	blkdev_put(bdev, FMODE_EXCL);
 	if (seeding_dev && !unlocked) {

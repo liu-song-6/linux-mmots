@@ -25,11 +25,8 @@
 
 #include <drm/amd_asic_type.h>
 
-<<<<<<< HEAD
-=======
 struct seq_file;
 
->>>>>>> linux-next/akpm-base
 #define AMD_MAX_USEC_TIMEOUT		200000  /* 200 ms */
 
 /*

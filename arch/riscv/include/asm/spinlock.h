@@ -24,10 +24,7 @@
 
 /* FIXME: Replace this with a ticket lock, like MIPS. */
 
-<<<<<<< HEAD
-=======
 #define arch_spin_lock_flags(lock, flags) arch_spin_lock(lock)
->>>>>>> linux-next/akpm-base
 #define arch_spin_is_locked(x)	((x)->lock != 0)
 
 static inline void arch_spin_unlock(arch_spinlock_t *lock)
@@ -73,8 +70,6 @@ static inline void arch_spin_unlock_wait(arch_spinlock_t *lock)
 
 /***********************************************************/
 
-<<<<<<< HEAD
-=======
 static inline int arch_read_can_lock(arch_rwlock_t *lock)
 {
 	return lock->lock >= 0;
@@ -85,7 +80,6 @@ static inline int arch_write_can_lock(arch_rwlock_t *lock)
 	return lock->lock == 0;
 }
 
->>>>>>> linux-next/akpm-base
 static inline void arch_read_lock(arch_rwlock_t *lock)
 {
 	int tmp;
@@ -165,10 +159,7 @@ static inline void arch_write_unlock(arch_rwlock_t *lock)
 		:: "memory");
 }
 
-<<<<<<< HEAD
-=======
 #define arch_read_lock_flags(lock, flags) arch_read_lock(lock)
 #define arch_write_lock_flags(lock, flags) arch_write_lock(lock)
 
->>>>>>> linux-next/akpm-base
 #endif /* _ASM_RISCV_SPINLOCK_H */

@@ -22,7 +22,4 @@ dtb-$(CONFIG_ARCH_MESON) += meson-gxm-nexbox-a1.dtb
 dtb-$(CONFIG_ARCH_MESON) += meson-gxm-q200.dtb
 dtb-$(CONFIG_ARCH_MESON) += meson-gxm-q201.dtb
 dtb-$(CONFIG_ARCH_MESON) += meson-gxm-rbox-pro.dtb
-<<<<<<< HEAD
-=======
 dtb-$(CONFIG_ARCH_MESON) += meson-gxm-vega-s96.dtb
->>>>>>> linux-next/akpm-base

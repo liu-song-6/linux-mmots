@@ -926,11 +926,7 @@ static int ext2_fill_super(struct super_block *sb, void *data, int silent)
 	sbi->s_resuid = opts.s_resuid;
 	sbi->s_resgid = opts.s_resgid;
 
-<<<<<<< HEAD
-	sb->s_flags = (sb->s_flags & ~MS_POSIXACL) |
-=======
 	sb->s_flags = (sb->s_flags & ~SB_POSIXACL) |
->>>>>>> linux-next/akpm-base
 		((EXT2_SB(sb)->s_mount_opt & EXT2_MOUNT_POSIX_ACL) ?
 		 SB_POSIXACL : 0);
 	sb->s_iflags |= SB_I_CGROUPWB;
@@ -1347,15 +1343,9 @@ static int ext2_remount (struct super_block * sb, int * flags, char * data)
 			 "dax flag with busy inodes while remounting");
 		new_opts.s_mount_opt ^= EXT2_MOUNT_DAX;
 	}
-<<<<<<< HEAD
-	if ((bool)(*flags & MS_RDONLY) == sb_rdonly(sb))
-		goto out_set;
-	if (*flags & MS_RDONLY) {
-=======
 	if ((bool)(*flags & SB_RDONLY) == sb_rdonly(sb))
 		goto out_set;
 	if (*flags & SB_RDONLY) {
->>>>>>> linux-next/akpm-base
 		if (le16_to_cpu(es->s_state) & EXT2_VALID_FS ||
 		    !(sbi->s_mount_state & EXT2_VALID_FS))
 			goto out_set;
@@ -1404,13 +1394,8 @@ out_set:
 	sbi->s_mount_opt = new_opts.s_mount_opt;
 	sbi->s_resuid = new_opts.s_resuid;
 	sbi->s_resgid = new_opts.s_resgid;
-<<<<<<< HEAD
-	sb->s_flags = (sb->s_flags & ~MS_POSIXACL) |
-		((sbi->s_mount_opt & EXT2_MOUNT_POSIX_ACL) ? MS_POSIXACL : 0);
-=======
 	sb->s_flags = (sb->s_flags & ~SB_POSIXACL) |
 		((sbi->s_mount_opt & EXT2_MOUNT_POSIX_ACL) ? SB_POSIXACL : 0);
->>>>>>> linux-next/akpm-base
 	spin_unlock(&sbi->s_lock);
 
 	return 0;

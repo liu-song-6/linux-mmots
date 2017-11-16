@@ -3384,8 +3384,6 @@ static int ext4_releasepage(struct page *page, gfp_t wait)
 		return try_to_free_buffers(page);
 }
 
-<<<<<<< HEAD
-=======
 static bool ext4_inode_datasync_dirty(struct inode *inode)
 {
 	journal_t *journal = EXT4_SB(inode->i_sb)->s_journal;
@@ -3399,7 +3397,6 @@ static bool ext4_inode_datasync_dirty(struct inode *inode)
 	return inode->i_state & I_DIRTY_DATASYNC;
 }
 
->>>>>>> linux-next/akpm-base
 static int ext4_iomap_begin(struct inode *inode, loff_t offset, loff_t length,
 			    unsigned flags, struct iomap *iomap)
 {
@@ -4621,11 +4618,8 @@ int ext4_get_inode_loc(struct inode *inode, struct ext4_iloc *iloc)
 
 static bool ext4_should_use_dax(struct inode *inode)
 {
-<<<<<<< HEAD
-=======
 	unsigned int flags = EXT4_I(inode)->i_flags;
 
->>>>>>> linux-next/akpm-base
 	if (!test_opt(inode->i_sb, DAX))
 		return false;
 	if (!S_ISREG(inode->i_mode))
@@ -4634,11 +4628,7 @@ static bool ext4_should_use_dax(struct inode *inode)
 		return false;
 	if (ext4_has_inline_data(inode))
 		return false;
-<<<<<<< HEAD
-	if (ext4_encrypted_inode(inode))
-=======
 	if (flags & EXT4_ENCRYPT_FL)
->>>>>>> linux-next/akpm-base
 		return false;
 	return true;
 }

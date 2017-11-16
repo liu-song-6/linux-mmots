@@ -946,14 +946,6 @@ int __dax_zero_page_range(struct block_device *bdev,
 }
 EXPORT_SYMBOL_GPL(__dax_zero_page_range);
 
-<<<<<<< HEAD
-static sector_t dax_iomap_sector(struct iomap *iomap, loff_t pos)
-{
-	return (iomap->addr + (pos & PAGE_MASK) - iomap->offset) >> 9;
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static loff_t
 dax_iomap_actor(struct inode *inode, loff_t pos, loff_t length, void *data,
 		struct iomap *iomap)
@@ -1162,7 +1154,7 @@ static int dax_iomap_pte_fault(struct vm_fault *vmf, pfn_t *pfnp,
 		switch (iomap.type) {
 		case IOMAP_HOLE:
 		case IOMAP_UNWRITTEN:
-			clear_user_highpage(vmf->cow_page, vaddr);
+			clear_user_highqpage(vmf->cow_page, vaddr);
 			break;
 		case IOMAP_MAPPED:
 			error = copy_user_dax(iomap.bdev, iomap.dax_dev,

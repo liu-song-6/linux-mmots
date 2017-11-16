@@ -20,9 +20,6 @@
 #include "ctree.h"
 #include "extent_io.h"
 
-<<<<<<< HEAD
-int btrfs_check_leaf(struct btrfs_root *root, struct extent_buffer *leaf);
-=======
 /*
  * Comprehensive leaf checker.
  * Will check not only the item pointers, but also every possible member
@@ -36,7 +33,6 @@ int btrfs_check_leaf_full(struct btrfs_root *root, struct extent_buffer *leaf);
  */
 int btrfs_check_leaf_relaxed(struct btrfs_root *root,
 			     struct extent_buffer *leaf);
->>>>>>> linux-next/akpm-base
 int btrfs_check_node(struct btrfs_root *root, struct extent_buffer *node);
 
 #endif

@@ -1467,7 +1467,6 @@ int btrfs_compress_heuristic(struct inode *inode, u64 start, u64 end)
 	for (i = 0; i < ws->sample_size; i++) {
 		byte = ws->sample[i];
 		ws->bucket[byte].count++;
-<<<<<<< HEAD
 	}
 
 	i = byte_set_size(ws);
@@ -1482,22 +1481,6 @@ int btrfs_compress_heuristic(struct inode *inode, u64 start, u64 end)
 		goto out;
 	}
 
-=======
-	}
-
-	i = byte_set_size(ws);
-	if (i < BYTE_SET_THRESHOLD) {
-		ret = 2;
-		goto out;
-	}
-
-	i = byte_core_set_size(ws);
-	if (i <= BYTE_CORE_SET_LOW) {
-		ret = 3;
-		goto out;
-	}
-
->>>>>>> linux-next/akpm-base
 	if (i >= BYTE_CORE_SET_HIGH) {
 		ret = 0;
 		goto out;
@@ -1539,16 +1522,6 @@ out:
 
 unsigned int btrfs_compress_str2level(const char *str)
 {
-<<<<<<< HEAD
-	if (strncmp(str, "zlib", 4) != 0)
-		return 0;
-
-	/* Accepted form: zlib:1 up to zlib:9 and nothing left after the number */
-	if (str[4] == ':' && '1' <= str[5] && str[5] <= '9' && str[6] == 0)
-		return str[5] - '0';
-
-	return 0;
-=======
 	long level;
 	int max;
 
@@ -1568,5 +1541,4 @@ unsigned int btrfs_compress_str2level(const char *str)
 		return 0;
 
 	return (level > max) ? 0 : level;
->>>>>>> linux-next/akpm-base
 }

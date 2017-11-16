@@ -110,11 +110,6 @@ struct tree_entry {
 struct extent_page_data {
 	struct bio *bio;
 	struct extent_io_tree *tree;
-<<<<<<< HEAD
-	get_extent_t *get_extent;
-
-=======
->>>>>>> linux-next/akpm-base
 	/* tells writepage not to lock the state bits for this range
 	 * it still does the unlocking
 	 */

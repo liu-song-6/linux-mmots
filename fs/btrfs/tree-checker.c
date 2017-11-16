@@ -30,10 +30,7 @@
 #include "tree-checker.h"
 #include "disk-io.h"
 #include "compression.h"
-<<<<<<< HEAD
-=======
 #include "hash.h"
->>>>>>> linux-next/akpm-base
 
 /*
  * Error message should follow the following format:
@@ -227,8 +224,6 @@ static int check_csum_item(struct btrfs_root *root, struct extent_buffer *leaf,
 }
 
 /*
-<<<<<<< HEAD
-=======
  * Customized reported for dir_item, only important new info is key->objectid,
  * which represents inode number
  */
@@ -364,7 +359,6 @@ static int check_dir_item(struct btrfs_root *root,
 }
 
 /*
->>>>>>> linux-next/akpm-base
  * Common point to switch the item-specific validation.
  */
 static int check_leaf_item(struct btrfs_root *root,
@@ -380,24 +374,17 @@ static int check_leaf_item(struct btrfs_root *root,
 	case BTRFS_EXTENT_CSUM_KEY:
 		ret = check_csum_item(root, leaf, key, slot);
 		break;
-<<<<<<< HEAD
-=======
 	case BTRFS_DIR_ITEM_KEY:
 	case BTRFS_DIR_INDEX_KEY:
 	case BTRFS_XATTR_ITEM_KEY:
 		ret = check_dir_item(root, leaf, key, slot);
 		break;
->>>>>>> linux-next/akpm-base
 	}
 	return ret;
 }
 
-<<<<<<< HEAD
-int btrfs_check_leaf(struct btrfs_root *root, struct extent_buffer *leaf)
-=======
 static int check_leaf(struct btrfs_root *root, struct extent_buffer *leaf,
 		      bool check_item_data)
->>>>>>> linux-next/akpm-base
 {
 	struct btrfs_fs_info *fs_info = root->fs_info;
 	/* No valid key type is 0, so all key should be larger than this key */
@@ -516,12 +503,6 @@ static int check_leaf(struct btrfs_root *root, struct extent_buffer *leaf,
 			return -EUCLEAN;
 		}
 
-<<<<<<< HEAD
-		/* Check if the item size and content meet other criteria */
-		ret = check_leaf_item(root, leaf, &key, slot);
-		if (ret < 0)
-			return ret;
-=======
 		if (check_item_data) {
 			/*
 			 * Check if the item size and content meet other
@@ -531,7 +512,6 @@ static int check_leaf(struct btrfs_root *root, struct extent_buffer *leaf,
 			if (ret < 0)
 				return ret;
 		}
->>>>>>> linux-next/akpm-base
 
 		prev_key.objectid = key.objectid;
 		prev_key.type = key.type;
@@ -541,8 +521,6 @@ static int check_leaf(struct btrfs_root *root, struct extent_buffer *leaf,
 	return 0;
 }
 
-<<<<<<< HEAD
-=======
 int btrfs_check_leaf_full(struct btrfs_root *root, struct extent_buffer *leaf)
 {
 	return check_leaf(root, leaf, true);
@@ -554,7 +532,6 @@ int btrfs_check_leaf_relaxed(struct btrfs_root *root,
 	return check_leaf(root, leaf, false);
 }
 
->>>>>>> linux-next/akpm-base
 int btrfs_check_node(struct btrfs_root *root, struct extent_buffer *node)
 {
 	unsigned long nr = btrfs_header_nritems(node);
