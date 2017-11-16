@@ -295,7 +295,8 @@ blk_status_t btrfs_submit_compressed_write(struct inode *inode, u64 start,
 				 unsigned long len, u64 disk_start,
 				 unsigned long compressed_len,
 				 struct page **compressed_pages,
-				 unsigned long nr_pages)
+				 unsigned long nr_pages,
+				 unsigned int write_flags)
 {
 	struct btrfs_fs_info *fs_info = btrfs_sb(inode->i_sb);
 	struct bio *bio = NULL;
@@ -327,7 +328,7 @@ blk_status_t btrfs_submit_compressed_write(struct inode *inode, u64 start,
 	bdev = fs_info->fs_devices->latest_bdev;
 
 	bio = btrfs_bio_alloc(bdev, first_byte);
-	bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
+	bio->bi_opf = REQ_OP_WRITE | write_flags;
 	bio->bi_private = cb;
 	bio->bi_end_io = end_compressed_bio_write;
 	refcount_set(&cb->pending_bios, 1);
@@ -374,7 +375,7 @@ blk_status_t btrfs_submit_compressed_write(struct inode *inode, u64 start,
 			bio_put(bio);
 
 			bio = btrfs_bio_alloc(bdev, first_byte);
-			bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
+			bio->bi_opf = REQ_OP_WRITE | write_flags;
 			bio->bi_private = cb;
 			bio->bi_end_io = end_compressed_bio_write;
 			bio_add_page(bio, page, PAGE_SIZE, 0);
@@ -1466,6 +1467,7 @@ int btrfs_compress_heuristic(struct inode *inode, u64 start, u64 end)
 	for (i = 0; i < ws->sample_size; i++) {
 		byte = ws->sample[i];
 		ws->bucket[byte].count++;
+<<<<<<< HEAD
 	}
 
 	i = byte_set_size(ws);
@@ -1480,6 +1482,22 @@ int btrfs_compress_heuristic(struct inode *inode, u64 start, u64 end)
 		goto out;
 	}
 
+=======
+	}
+
+	i = byte_set_size(ws);
+	if (i < BYTE_SET_THRESHOLD) {
+		ret = 2;
+		goto out;
+	}
+
+	i = byte_core_set_size(ws);
+	if (i <= BYTE_CORE_SET_LOW) {
+		ret = 3;
+		goto out;
+	}
+
+>>>>>>> linux-next/akpm-base
 	if (i >= BYTE_CORE_SET_HIGH) {
 		ret = 0;
 		goto out;
@@ -1521,6 +1539,7 @@ out:
 
 unsigned int btrfs_compress_str2level(const char *str)
 {
+<<<<<<< HEAD
 	if (strncmp(str, "zlib", 4) != 0)
 		return 0;
 
@@ -1529,4 +1548,25 @@ unsigned int btrfs_compress_str2level(const char *str)
 		return str[5] - '0';
 
 	return 0;
+=======
+	long level;
+	int max;
+
+	if (strncmp(str, "zlib", 4) == 0)
+		max = 9;
+	else if (strncmp(str, "zstd", 4) == 0)
+		max = 15; // encoded on 4 bits, real max is 22
+	else
+		return 0;
+
+	/* Accepted form: zxxx:1 up to zxxx:9 and nothing left after the number */
+	str += 4;
+	if (*str == ':')
+		str++;
+
+	if (kstrtoul(str, 10, &level))
+		return 0;
+
+	return (level > max) ? 0 : level;
+>>>>>>> linux-next/akpm-base
 }

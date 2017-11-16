@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 /* SPDX-License-Identifier: GPL-2.0 */
+=======
+>>>>>>> linux-next/akpm-base
 /*
  * fscrypt.h: declarations for per-file encryption
  *

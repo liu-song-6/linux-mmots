@@ -301,7 +301,12 @@ static int uniphier_gpio_irq_domain_alloc(struct irq_domain *domain,
 }
 
 static int uniphier_gpio_irq_domain_activate(struct irq_domain *domain,
+<<<<<<< HEAD
 					     struct irq_data *data, bool early)
+=======
+					      struct irq_data *data,
+					      bool early)
+>>>>>>> linux-next/akpm-base
 {
 	struct uniphier_gpio_priv *priv = domain->host_data;
 	struct gpio_chip *chip = &priv->chip;

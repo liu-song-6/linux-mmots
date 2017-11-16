@@ -8330,9 +8330,9 @@ bnx2_init_board(struct pci_dev *pdev, struct net_device *dev)
 		if (j < 32)
 			bp->fw_version[j++] = ' ';
 		for (i = 0; i < 3 && j < 28; i++) {
-			reg = bnx2_reg_rd_ind(bp, addr + i * 4);
-			reg = be32_to_cpu(reg);
-			memcpy(&bp->fw_version[j], &reg, 4);
+			__be32 v;
+			v = cpu_to_be32(bnx2_reg_rd_ind(bp, addr + i * 4));
+			memcpy(&bp->fw_version[j], &v, 4);
 			j += 4;
 		}
 	}
@@ -8462,10 +8462,8 @@ bnx2_init_board(struct pci_dev *pdev, struct net_device *dev)
 	bnx2_set_default_link(bp);
 	bp->req_flow_ctrl = FLOW_CTRL_RX | FLOW_CTRL_TX;
 
-	init_timer(&bp->timer);
+	setup_timer(&bp->timer, bnx2_timer, (unsigned long)bp);
 	bp->timer.expires = RUN_AT(BNX2_TIMER_INTERVAL);
-	bp->timer.data = (unsigned long) bp;
-	bp->timer.function = bnx2_timer;
 
 #ifdef BCM_CNIC
 	if (bnx2_shmem_rd(bp, BNX2_ISCSI_INITIATOR) & BNX2_ISCSI_INITIATOR_EN)

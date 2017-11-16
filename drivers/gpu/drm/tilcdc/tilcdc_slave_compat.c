@@ -162,8 +162,11 @@ static struct device_node * __init tilcdc_get_overlay(struct kfree_table *kft)
 		return NULL;
 	}
 
+<<<<<<< HEAD
 	of_node_set_flag(overlay, OF_DETACHED);
 
+=======
+>>>>>>> linux-next/akpm-base
 	return overlay;
 }
 
