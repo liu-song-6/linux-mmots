@@ -562,7 +562,12 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
 				 * invalidated it. Free it and try again
 				 */
 				release_pages(e->user_pages,
+<<<<<<< HEAD
 					      bo->tbo.ttm->num_pages);
+=======
+					      bo->tbo.ttm->num_pages,
+					      false);
+>>>>>>> linux-next/akpm-base
 				kvfree(e->user_pages);
 				e->user_pages = NULL;
 			}
