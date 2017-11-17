@@ -1111,13 +1111,9 @@ struct proto {
 
 	struct kmem_cache	*slab;
 	unsigned int		obj_size;
-<<<<<<< HEAD
 	slab_flags_t		slab_flags;
-=======
-	int			slab_flags;
 	size_t			useroffset;	/* Usercopy region offset */
 	size_t			usersize;	/* Usercopy region size */
->>>>>>> linux-next/akpm-base
 
 	struct percpu_counter	*orphan_count;
 

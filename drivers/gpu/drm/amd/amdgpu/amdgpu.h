@@ -66,10 +66,7 @@
 #include "amdgpu_vce.h"
 #include "amdgpu_vcn.h"
 #include "amdgpu_mn.h"
-<<<<<<< HEAD
-=======
 #include "amdgpu_dm.h"
->>>>>>> linux-next/akpm-base
 
 #include "gpu_scheduler.h"
 #include "amdgpu_virt.h"
@@ -1923,15 +1920,12 @@ static inline void amdgpu_acpi_fini(struct amdgpu_device *adev) { }
 int amdgpu_cs_find_mapping(struct amdgpu_cs_parser *parser,
 			   uint64_t addr, struct amdgpu_bo **bo,
 			   struct amdgpu_bo_va_mapping **mapping);
-<<<<<<< HEAD
-=======
 
 #if defined(CONFIG_DRM_AMD_DC)
 int amdgpu_dm_display_resume(struct amdgpu_device *adev );
 #else
 static inline int amdgpu_dm_display_resume(struct amdgpu_device *adev) { return 0; }
 #endif
->>>>>>> linux-next/akpm-base
 
 #include "amdgpu_object.h"
 #endif

@@ -746,11 +746,7 @@ int amdgpu_ttm_tt_get_user_pages(struct ttm_tt *ttm, struct page **pages)
 	return 0;
 
 release_pages:
-<<<<<<< HEAD
-	release_pages(pages, pinned);
-=======
 	release_pages(pages, pinned, 0);
->>>>>>> linux-next/akpm-base
 	up_read(&current->mm->mmap_sem);
 	return r;
 }

@@ -728,12 +728,8 @@ void __init fork_init(void)
 	task_struct_whitelist(&useroffset, &usersize);
 	task_struct_cachep = kmem_cache_create_usercopy("task_struct",
 			arch_task_struct_size, align,
-<<<<<<< HEAD
-			SLAB_PANIC|SLAB_ACCOUNT, NULL);
-=======
 			SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
 			useroffset, usersize, NULL);
->>>>>>> linux-next/akpm-base
 #endif
 
 	/* do the arch specific task caches init */
@@ -2280,13 +2276,9 @@ void __init proc_caches_init(void)
 	 */
 	mm_cachep = kmem_cache_create_usercopy("mm_struct",
 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
-<<<<<<< HEAD
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_ACCOUNT,
-=======
 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
 			offsetof(struct mm_struct, saved_auxv),
 			sizeof_field(struct mm_struct, saved_auxv),
->>>>>>> linux-next/akpm-base
 			NULL);
 	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
 	mmap_init();

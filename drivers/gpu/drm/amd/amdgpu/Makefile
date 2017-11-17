@@ -139,8 +139,6 @@ include $(FULL_AMD_PATH)/powerplay/Makefile
 
 amdgpu-y += $(AMD_POWERPLAY_FILES)
 
-<<<<<<< HEAD
-=======
 ifneq ($(CONFIG_DRM_AMD_DC),)
 
 RELATIVE_AMD_DISPLAY_PATH = ../$(DISPLAY_FOLDER_NAME)
@@ -150,5 +148,4 @@ amdgpu-y += $(AMD_DISPLAY_FILES)
 
 endif
 
->>>>>>> linux-next/akpm-base
 obj-$(CONFIG_DRM_AMDGPU)+= amdgpu.o

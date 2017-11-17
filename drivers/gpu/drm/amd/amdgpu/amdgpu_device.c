@@ -2044,8 +2044,6 @@ static void amdgpu_device_detect_sriov_bios(struct amdgpu_device *adev)
 
 		if (!(adev->virt.caps & AMDGPU_SRIOV_CAPS_SRIOV_VBIOS))
 			amdgpu_vf_error_put(adev, AMDGIM_ERROR_VF_NO_VBIOS, 0, 0);
-<<<<<<< HEAD
-=======
 	}
 }
 
@@ -2077,7 +2075,6 @@ bool amdgpu_device_asic_has_dc_support(enum amd_asic_type asic_type)
 #endif
 	default:
 		return false;
->>>>>>> linux-next/akpm-base
 	}
 }
 

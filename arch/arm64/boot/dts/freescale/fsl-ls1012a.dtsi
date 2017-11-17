@@ -515,8 +515,6 @@
 					<0000 0 0 3 &gic 0 112 IRQ_TYPE_LEVEL_HIGH>,
 					<0000 0 0 4 &gic 0 113 IRQ_TYPE_LEVEL_HIGH>;
 		};
-<<<<<<< HEAD
-=======
 	};
 
 	firmware {
@@ -524,6 +522,5 @@
 			compatible = "linaro,optee-tz";
 			method = "smc";
 		};
->>>>>>> linux-next/akpm-base
 	};
 };

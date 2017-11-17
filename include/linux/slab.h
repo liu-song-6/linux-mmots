@@ -135,11 +135,6 @@ struct mem_cgroup;
 void __init kmem_cache_init(void);
 bool slab_is_available(void);
 
-<<<<<<< HEAD
-struct kmem_cache *kmem_cache_create(const char *, size_t, size_t,
-			slab_flags_t,
-			void (*)(void *));
-=======
 struct kmem_cache *kmem_cache_create(const char *name, size_t size,
 			size_t align, unsigned long flags,
 			void (*ctor)(void *));
@@ -147,7 +142,6 @@ struct kmem_cache *kmem_cache_create_usercopy(const char *name,
 			size_t size, size_t align, unsigned long flags,
 			size_t useroffset, size_t usersize,
 			void (*ctor)(void *));
->>>>>>> linux-next/akpm-base
 void kmem_cache_destroy(struct kmem_cache *);
 int kmem_cache_shrink(struct kmem_cache *);
 

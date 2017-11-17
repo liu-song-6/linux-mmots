@@ -20,15 +20,6 @@
 #include <linux/radix-tree.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
-<<<<<<< HEAD
-#include <linux/backing-dev.h>
-#ifdef CONFIG_BLK_DEV_RAM_DAX
-#include <linux/pfn_t.h>
-#include <linux/dax.h>
-#include <linux/uio.h>
-#endif
-=======
->>>>>>> linux-next/akpm-base
 
 #include <linux/uaccess.h>
 

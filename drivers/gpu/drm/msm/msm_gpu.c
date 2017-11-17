@@ -294,11 +294,8 @@ static void recover_worker(struct work_struct *work)
 
 			msm_rd_dump_submit(priv->hangrd, submit,
 				"offending task: %s (%s)", task->comm, cmd);
-<<<<<<< HEAD
-=======
 
 			kfree(cmd);
->>>>>>> linux-next/akpm-base
 		} else {
 			msm_rd_dump_submit(priv->hangrd, submit, NULL);
 		}
