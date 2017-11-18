@@ -84,8 +84,8 @@
 /* Forward declarations for internal helper functions. */
 static int sctp_writeable(struct sock *sk);
 static void sctp_wfree(struct sk_buff *skb);
-static int sctp_wait_for_sndbuf(struct sctp_association *, long *timeo_p,
-				size_t msg_len);
+static int sctp_wait_for_sndbuf(struct sctp_association *asoc, long *timeo_p,
+				size_t msg_len, struct sock **orig_sk);
 static int sctp_wait_for_packet(struct sock *sk, int *err, long *timeo_p);
 static int sctp_wait_for_connect(struct sctp_association *, long *timeo_p);
 static int sctp_wait_for_accept(struct sock *sk, long timeo);
@@ -1970,9 +1970,16 @@ static int sctp_sendmsg(struct sock *sk, struct msghdr *msg, size_t msg_len)
 
 	timeo = sock_sndtimeo(sk, msg->msg_flags & MSG_DONTWAIT);
 	if (!sctp_wspace(asoc)) {
-		err = sctp_wait_for_sndbuf(asoc, &timeo, msg_len);
-		if (err)
+		/* sk can be changed by peel off when waiting for buf. */
+		err = sctp_wait_for_sndbuf(asoc, &timeo, msg_len, &sk);
+		if (err) {
+			if (err == -ESRCH) {
+				/* asoc is already dead. */
+				new_asoc = NULL;
+				err = -EPIPE;
+			}
 			goto out_free;
+		}
 	}
 
 	/* If an address is passed with the sendto/sendmsg call, it is used
@@ -4995,7 +5002,7 @@ static int sctp_getsockopt_autoclose(struct sock *sk, int len, char __user *optv
 	len = sizeof(int);
 	if (put_user(len, optlen))
 		return -EFAULT;
-	if (copy_to_user(optval, &sctp_sk(sk)->autoclose, sizeof(int)))
+	if (put_user(sctp_sk(sk)->autoclose, (int __user *)optval))
 		return -EFAULT;
 	return 0;
 }
@@ -5014,12 +5021,6 @@ int sctp_do_peeloff(struct sock *sk, sctp_assoc_t id, struct socket **sockp)
 
 	if (!asoc)
 		return -EINVAL;
-
-	/* If there is a thread waiting on more sndbuf space for
-	 * sending on this asoc, it cannot be peeled.
-	 */
-	if (waitqueue_active(&asoc->wait))
-		return -EBUSY;
 
 	/* An association cannot be branched off from an already peeled-off
 	 * socket, nor is this supported for tcp style sockets.
@@ -7989,7 +7990,7 @@ void sctp_sock_rfree(struct sk_buff *skb)
 
 /* Helper function to wait for space in the sndbuf.  */
 static int sctp_wait_for_sndbuf(struct sctp_association *asoc, long *timeo_p,
-				size_t msg_len)
+				size_t msg_len, struct sock **orig_sk)
 {
 	struct sock *sk = asoc->base.sk;
 	int err = 0;
@@ -8006,10 +8007,11 @@ static int sctp_wait_for_sndbuf(struct sctp_association *asoc, long *timeo_p,
 	for (;;) {
 		prepare_to_wait_exclusive(&asoc->wait, &wait,
 					  TASK_INTERRUPTIBLE);
+		if (asoc->base.dead)
+			goto do_dead;
 		if (!*timeo_p)
 			goto do_nonblock;
-		if (sk->sk_err || asoc->state >= SCTP_STATE_SHUTDOWN_PENDING ||
-		    asoc->base.dead)
+		if (sk->sk_err || asoc->state >= SCTP_STATE_SHUTDOWN_PENDING)
 			goto do_error;
 		if (signal_pending(current))
 			goto do_interrupted;
@@ -8022,17 +8024,27 @@ static int sctp_wait_for_sndbuf(struct sctp_association *asoc, long *timeo_p,
 		release_sock(sk);
 		current_timeo = schedule_timeout(current_timeo);
 		lock_sock(sk);
+		if (sk != asoc->base.sk) {
+			release_sock(sk);
+			sk = asoc->base.sk;
+			lock_sock(sk);
+		}
 
 		*timeo_p = current_timeo;
 	}
 
 out:
+	*orig_sk = sk;
 	finish_wait(&asoc->wait, &wait);
 
 	/* Release the association's refcnt.  */
 	sctp_association_put(asoc);
 
 	return err;
+
+do_dead:
+	err = -ESRCH;
+	goto out;
 
 do_error:
 	err = -EPIPE;
@@ -8449,6 +8461,10 @@ struct proto sctp_prot = {
 	.unhash      =	sctp_unhash,
 	.get_port    =	sctp_get_port,
 	.obj_size    =  sizeof(struct sctp_sock),
+	.useroffset  =  offsetof(struct sctp_sock, subscribe),
+	.usersize    =  offsetof(struct sctp_sock, initmsg) -
+				offsetof(struct sctp_sock, subscribe) +
+				sizeof_field(struct sctp_sock, initmsg),
 	.sysctl_mem  =  sysctl_sctp_mem,
 	.sysctl_rmem =  sysctl_sctp_rmem,
 	.sysctl_wmem =  sysctl_sctp_wmem,
@@ -8488,6 +8504,10 @@ struct proto sctpv6_prot = {
 	.unhash		= sctp_unhash,
 	.get_port	= sctp_get_port,
 	.obj_size	= sizeof(struct sctp6_sock),
+	.useroffset	= offsetof(struct sctp6_sock, sctp.subscribe),
+	.usersize	= offsetof(struct sctp6_sock, sctp.initmsg) -
+				offsetof(struct sctp6_sock, sctp.subscribe) +
+				sizeof_field(struct sctp6_sock, sctp.initmsg),
 	.sysctl_mem	= sysctl_sctp_mem,
 	.sysctl_rmem	= sysctl_sctp_rmem,
 	.sysctl_wmem	= sysctl_sctp_wmem,

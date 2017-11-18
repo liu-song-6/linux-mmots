@@ -14,6 +14,10 @@ Required properties:
                  at25df641
                  at26df081a
                  en25s64
+<<<<<<< HEAD
+=======
+                 mr25h128
+>>>>>>> linux-next/akpm-base
                  mr25h256
                  mr25h10
                  mr25h40

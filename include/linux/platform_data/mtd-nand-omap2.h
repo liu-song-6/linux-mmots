@@ -63,6 +63,7 @@ struct gpmc_nand_regs {
 	void __iomem	*gpmc_bch_result4[GPMC_BCH_NUM_REMAINDER];
 	void __iomem	*gpmc_bch_result5[GPMC_BCH_NUM_REMAINDER];
 	void __iomem	*gpmc_bch_result6[GPMC_BCH_NUM_REMAINDER];
+<<<<<<< HEAD
 };
 
 struct omap_nand_platform_data {
@@ -80,5 +81,7 @@ struct omap_nand_platform_data {
 	struct gpmc_nand_regs	reg;
 	struct device_node	*of_node;
 	bool			dev_ready;
+=======
+>>>>>>> linux-next/akpm-base
 };
 #endif
