@@ -13,11 +13,7 @@
 #define MAP_SHARED	0x01		/* Share changes */
 #define MAP_PRIVATE	0x02		/* Changes are private */
 #define MAP_SHARED_VALIDATE 0x03	/* share + validate extension flags */
-<<<<<<< HEAD
-#define MAP_TYPE	0x03		/* Mask for type of mapping */
-=======
 #define MAP_TYPE	(MAP_SHARED|MAP_PRIVATE|MAP_RESRVD1|MAP_RESRVD2) /* Mask for type of mapping */
->>>>>>> linux-next/akpm-base
 #define MAP_FIXED	0x04		/* Interpret addr exactly */
 #define MAP_RESRVD1	0x08		/* reserved for 3rd bit of MAP_TYPE */
 #define MAP_ANONYMOUS	0x10		/* don't use a file */

@@ -34,10 +34,7 @@ struct meson_gx_pwrc_vpu {
 	struct reset_control *rstc;
 	struct clk *vpu_clk;
 	struct clk *vapb_clk;
-<<<<<<< HEAD
-=======
 	bool powered;
->>>>>>> linux-next/akpm-base
 };
 
 static inline
@@ -81,11 +78,8 @@ static int meson_gx_pwrc_vpu_power_off(struct generic_pm_domain *genpd)
 	clk_disable_unprepare(pd->vpu_clk);
 	clk_disable_unprepare(pd->vapb_clk);
 
-<<<<<<< HEAD
-=======
 	pd->powered = false;
 
->>>>>>> linux-next/akpm-base
 	return 0;
 }
 
@@ -97,15 +91,7 @@ static int meson_gx_pwrc_vpu_setup_clk(struct meson_gx_pwrc_vpu *pd)
 	if (ret)
 		return ret;
 
-<<<<<<< HEAD
-	ret = clk_prepare_enable(pd->vapb_clk);
-	if (ret)
-		clk_disable_unprepare(pd->vpu_clk);
-
-	return ret;
-=======
 	return clk_prepare_enable(pd->vapb_clk);
->>>>>>> linux-next/akpm-base
 }
 
 static int meson_gx_pwrc_vpu_power_on(struct generic_pm_domain *genpd)
@@ -153,11 +139,8 @@ static int meson_gx_pwrc_vpu_power_on(struct generic_pm_domain *genpd)
 	if (ret)
 		return ret;
 
-<<<<<<< HEAD
-=======
 	pd->powered = true;
 
->>>>>>> linux-next/akpm-base
 	return 0;
 }
 
@@ -184,11 +167,6 @@ static int meson_gx_pwrc_vpu_probe(struct platform_device *pdev)
 	struct reset_control *rstc;
 	struct clk *vpu_clk;
 	struct clk *vapb_clk;
-<<<<<<< HEAD
-	bool powered_off;
-	int ret;
-=======
->>>>>>> linux-next/akpm-base
 
 	regmap_ao = syscon_node_to_regmap(of_get_parent(pdev->dev.of_node));
 	if (IS_ERR(regmap_ao)) {
@@ -227,22 +205,8 @@ static int meson_gx_pwrc_vpu_probe(struct platform_device *pdev)
 	vpu_hdmi_pd.vpu_clk = vpu_clk;
 	vpu_hdmi_pd.vapb_clk = vapb_clk;
 
-<<<<<<< HEAD
-	powered_off = meson_gx_pwrc_vpu_get_power(&vpu_hdmi_pd);
-
-	/* If already powered, sync the clock states */
-	if (!powered_off) {
-		ret = meson_gx_pwrc_vpu_setup_clk(&vpu_hdmi_pd);
-		if (ret)
-			return ret;
-	}
-
-	pm_genpd_init(&vpu_hdmi_pd.genpd, &pm_domain_always_on_gov,
-		      powered_off);
-=======
 	pm_genpd_init(&vpu_hdmi_pd.genpd, &simple_qos_governor,
 		      meson_gx_pwrc_vpu_get_power(&vpu_hdmi_pd));
->>>>>>> linux-next/akpm-base
 
 	return of_genpd_add_provider_simple(pdev->dev.of_node,
 					    &vpu_hdmi_pd.genpd);
@@ -250,12 +214,8 @@ static int meson_gx_pwrc_vpu_probe(struct platform_device *pdev)
 
 static void meson_gx_pwrc_vpu_shutdown(struct platform_device *pdev)
 {
-<<<<<<< HEAD
-	meson_gx_pwrc_vpu_power_off(&vpu_hdmi_pd.genpd);
-=======
 	if (vpu_hdmi_pd.powered)
 		meson_gx_pwrc_vpu_power_off(&vpu_hdmi_pd.genpd);
->>>>>>> linux-next/akpm-base
 }
 
 static const struct of_device_id meson_gx_pwrc_vpu_match_table[] = {

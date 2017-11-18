@@ -45,8 +45,6 @@ struct qcom_scm {
 	struct reset_controller_dev reset;
 
 	u64 dload_mode_addr;
-<<<<<<< HEAD
-=======
 };
 
 struct qcom_scm_current_perm_info {
@@ -60,7 +58,6 @@ struct qcom_scm_current_perm_info {
 struct qcom_scm_mem_map_info {
 	__le64 mem_addr;
 	__le64 mem_size;
->>>>>>> linux-next/akpm-base
 };
 
 static struct qcom_scm *__scm;
