@@ -153,6 +153,7 @@ EXPORT_SYMBOL(ieee80211_stop_rx_ba_session);
  */
 static void sta_rx_agg_session_timer_expired(struct timer_list *t)
 {
+<<<<<<< HEAD
 	struct tid_ampdu_rx *tid_rx_timer =
 		from_timer(tid_rx_timer, t, session_timer);
 	struct sta_info *sta = tid_rx_timer->sta;
@@ -167,13 +168,18 @@ static void sta_rx_agg_session_timer_expired(struct timer_list *t)
 		return;
 	}
 
+=======
+	struct tid_ampdu_rx *tid_rx = from_timer(tid_rx, t, session_timer);
+	struct sta_info *sta = tid_rx->sta;
+	u8 tid = tid_rx->tid;
+	unsigned long timeout;
+
+>>>>>>> linux-next/akpm-base
 	timeout = tid_rx->last_rx + TU_TO_JIFFIES(tid_rx->timeout);
 	if (time_is_after_jiffies(timeout)) {
 		mod_timer(&tid_rx->session_timer, timeout);
-		rcu_read_unlock();
 		return;
 	}
-	rcu_read_unlock();
 
 	ht_dbg(sta->sdata, "RX session timer expired on %pM tid %d\n",
 	       sta->sta.addr, tid);
@@ -415,10 +421,11 @@ end:
 					  timeout);
 }
 
-void __ieee80211_start_rx_ba_session(struct sta_info *sta,
-				     u8 dialog_token, u16 timeout,
-				     u16 start_seq_num, u16 ba_policy, u16 tid,
-				     u16 buf_size, bool tx, bool auto_seq)
+static void __ieee80211_start_rx_ba_session(struct sta_info *sta,
+					    u8 dialog_token, u16 timeout,
+					    u16 start_seq_num, u16 ba_policy,
+					    u16 tid, u16 buf_size, bool tx,
+					    bool auto_seq)
 {
 	mutex_lock(&sta->ampdu_mlme.mtx);
 	___ieee80211_start_rx_ba_session(sta, dialog_token, timeout,

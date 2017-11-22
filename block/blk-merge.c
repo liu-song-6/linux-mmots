@@ -186,6 +186,9 @@ void blk_queue_split(struct request_queue *q, struct bio **bio)
 	struct bio *split, *res;
 	unsigned nsegs;
 
+	if (!q->bio_split)
+		return;
+
 	switch (bio_op(*bio)) {
 	case REQ_OP_DISCARD:
 	case REQ_OP_SECURE_ERASE:
