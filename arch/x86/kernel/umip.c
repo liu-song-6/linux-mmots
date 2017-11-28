@@ -81,6 +81,7 @@
 #define	UMIP_INST_SMSW	2	/* 0F 01 /4 */
 #define	UMIP_INST_SLDT  3       /* 0F 00 /0 */
 #define	UMIP_INST_STR   4       /* 0F 00 /1 */
+<<<<<<< HEAD
 
 const char * const umip_insns[5] = {
 	[UMIP_INST_SGDT] = "SGDT",
@@ -132,6 +133,8 @@ void umip_printk(const struct pt_regs *regs, const char *log_level,
 	       task_pid_nr(tsk), regs->ip, regs->sp, &vaf);
 	va_end(args);
 }
+=======
+>>>>>>> linux-next/akpm-base
 
 /**
  * identify_insn() - Identify a UMIP-protected instruction
@@ -375,15 +378,21 @@ bool fixup_umip_exception(struct pt_regs *regs)
 	if (umip_inst < 0)
 		return false;
 
+<<<<<<< HEAD
 	umip_pr_warning(regs, "%s instruction cannot be used by applications.\n",
 			umip_insns[umip_inst]);
 
+=======
+>>>>>>> linux-next/akpm-base
 	/* Do not emulate SLDT, STR or user long mode processes. */
 	if (umip_inst == UMIP_INST_STR || umip_inst == UMIP_INST_SLDT || user_64bit_mode(regs))
 		return false;
 
+<<<<<<< HEAD
 	umip_pr_warning(regs, "For now, expensive software emulation returns the result.\n");
 
+=======
+>>>>>>> linux-next/akpm-base
 	if (emulate_umip_insn(&insn, umip_inst, dummy_data, &dummy_data_size))
 		return false;
 
