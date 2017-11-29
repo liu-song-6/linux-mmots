@@ -2391,7 +2391,7 @@ static int nfs_compare_mount_options(const struct super_block *s, const struct n
 	const struct rpc_clnt *clnt_a = a->client;
 	const struct rpc_clnt *clnt_b = b->client;
 
-	if ((s->s_flags & NFS_MS_MASK) != (flags & NFS_MS_MASK))
+	if ((s->s_flags & NFS_SB_MASK) != (flags & NFS_SB_MASK))
 		goto Ebusy;
 	if (a->nfs_client != b->nfs_client)
 		goto Ebusy;

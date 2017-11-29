@@ -559,8 +559,13 @@ struct smb_vol {
 			 CIFS_MOUNT_MULTIUSER | CIFS_MOUNT_STRICT_IO | \
 			 CIFS_MOUNT_CIFS_BACKUPUID | CIFS_MOUNT_CIFS_BACKUPGID)
 
+<<<<<<< HEAD
 #define CIFS_MS_MASK (SB_RDONLY | SB_MANDLOCK | SB_NOEXEC | SB_NOSUID | \
 		      SB_NODEV | SB_SYNCHRONOUS)
+=======
+#define CIFS_MS_MASK (SB_RDONLY | SB_MANDLOCK | SB_SYNCHRONOUS | \
+		      SB_NOEXEC | SB_NOSUID | SB_NODEV)
+>>>>>>> linux-next/akpm-base
 
 struct cifs_mnt_data {
 	struct cifs_sb_info *cifs_sb;
