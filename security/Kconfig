@@ -54,6 +54,16 @@ config SECURITY_NETWORK
 	  implement socket and networking access controls.
 	  If you are unsure how to answer this question, answer N.
 
+config KAISER
+	bool "Remove the kernel mapping in user mode"
+	depends on X86_64 && SMP && !PARAVIRT && JUMP_LABEL
+	help
+	  This feature reduces the number of hardware side channels by
+	  ensuring that the majority of kernel addresses are not mapped
+	  into userspace.
+
+	  See Documentation/x86/kaiser.txt for more details.
+
 config SECURITY_INFINIBAND
 	bool "Infiniband Security Hooks"
 	depends on SECURITY && INFINIBAND
@@ -151,6 +161,18 @@ config HARDENED_USERCOPY
 	  separately allocated pages, are not on the process stack,
 	  or are part of the kernel text. This kills entire classes
 	  of heap overflow exploits and similar kernel memory exposures.
+
+config HARDENED_USERCOPY_FALLBACK
+	bool "Allow missing usercopy whitelists to fallback to object size"
+	depends on HARDENED_USERCOPY
+	default HARDENED_USERCOPY
+	help
+	  This is a temporary option that allows missing usercopy whitelists
+	  to be discovered via a WARN() to the kernel log, instead of
+	  rejecting the copy, falling back to non-whitelisted hardened
+	  usercopy that checks the slab allocation size instead of the
+	  whitelist size. This option will be removed once it seems like
+	  all missing usercopy whitelists have been identified and fixed.
 
 config HARDENED_USERCOPY_PAGESPAN
 	bool "Refuse to copy allocations that span multiple pages"

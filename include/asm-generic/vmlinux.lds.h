@@ -136,6 +136,15 @@
 #define KPROBE_BLACKLIST()
 #endif
 
+#ifdef CONFIG_BPF_KPROBE_OVERRIDE
+#define ERROR_INJECT_LIST()	. = ALIGN(8);						\
+				VMLINUX_SYMBOL(__start_kprobe_error_inject_list) = .;	\
+				KEEP(*(_kprobe_error_inject_list))			\
+				VMLINUX_SYMBOL(__stop_kprobe_error_inject_list) = .;
+#else
+#define ERROR_INJECT_LIST()
+#endif
+
 #ifdef CONFIG_EVENT_TRACING
 #define FTRACE_EVENTS()	. = ALIGN(8);					\
 			VMLINUX_SYMBOL(__start_ftrace_events) = .;	\
@@ -564,6 +573,7 @@
 	FTRACE_EVENTS()							\
 	TRACE_SYSCALLS()						\
 	KPROBE_BLACKLIST()						\
+	ERROR_INJECT_LIST()						\
 	MEM_DISCARD(init.rodata)					\
 	CLK_OF_TABLES()							\
 	RESERVEDMEM_OF_TABLES()						\
@@ -829,7 +839,14 @@
  */
 #define PERCPU_INPUT(cacheline)						\
 	VMLINUX_SYMBOL(__per_cpu_start) = .;				\
+	VMLINUX_SYMBOL(__per_cpu_user_mapped_start) = .;		\
 	*(.data..percpu..first)						\
+	. = ALIGN(cacheline);						\
+	*(.data..percpu..user_mapped)					\
+	*(.data..percpu..user_mapped..shared_aligned)			\
+	. = ALIGN(PAGE_SIZE);						\
+	*(.data..percpu..user_mapped..page_aligned)			\
+	VMLINUX_SYMBOL(__per_cpu_user_mapped_end) = .;			\
 	. = ALIGN(PAGE_SIZE);						\
 	*(.data..percpu..page_aligned)					\
 	. = ALIGN(cacheline);						\
