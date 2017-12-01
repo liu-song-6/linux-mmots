@@ -53,11 +53,11 @@ typedef struct { char data[NFS4_VERIFIER_SIZE]; } nfs4_verifier;
 
 struct nfs4_stateid_struct {
 	union {
-		char data[NFS4_STATEID_SIZE];
 		struct {
 			__be32 seqid;
 			char other[NFS4_STATEID_OTHER_SIZE];
 		} __attribute__ ((packed));
+		char data[NFS4_STATEID_SIZE];
 	};
 
 	enum {
