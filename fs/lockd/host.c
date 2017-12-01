@@ -593,11 +593,7 @@ static void nlm_complain_hosts(struct net *net)
 		if (net && host->net != net)
 			continue;
 		dprintk("       %s (cnt %d use %d exp %ld net %x)\n",
-<<<<<<< HEAD
-			host->h_name, atomic_read(&host->h_count),
-=======
 			host->h_name, refcount_read(&host->h_count),
->>>>>>> linux-next/akpm-base
 			host->h_inuse, host->h_expires, host->net->ns.inum);
 	}
 }
@@ -670,11 +666,7 @@ nlm_gc_hosts(struct net *net)
 		 || time_before(jiffies, host->h_expires)) {
 			dprintk("nlm_gc_hosts skipping %s "
 				"(cnt %d use %d exp %ld net %x)\n",
-<<<<<<< HEAD
-				host->h_name, atomic_read(&host->h_count),
-=======
 				host->h_name, refcount_read(&host->h_count),
->>>>>>> linux-next/akpm-base
 				host->h_inuse, host->h_expires,
 				host->net->ns.inum);
 			continue;
