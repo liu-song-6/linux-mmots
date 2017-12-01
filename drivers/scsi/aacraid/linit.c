@@ -690,7 +690,6 @@ static int aac_eh_abort(struct scsi_cmnd* cmd)
 		struct aac_hba_tm_req *tmf;
 		int status;
 		u64 address;
-		__le32 managed_request_id;
 
 		pr_err("%s: Host adapter abort request (%d,%d,%d,%d)\n",
 		 AAC_DRIVERNAME,
@@ -703,8 +702,6 @@ static int aac_eh_abort(struct scsi_cmnd* cmd)
 				(fib->flags & FIB_CONTEXT_FLAG_NATIVE_HBA) &&
 				(fib->callback_data == cmd)) {
 				found = 1;
-				managed_request_id = ((struct aac_hba_cmd_req *)
-					fib->hw_fib_va)->request_id;
 				break;
 			}
 		}
@@ -1679,6 +1676,9 @@ static int aac_probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 	aac->id = shost->unique_id;
 	aac->cardtype = index;
 	INIT_LIST_HEAD(&aac->entry);
+
+	if (aac_reset_devices || reset_devices)
+		aac->init_reset = true;
 
 	aac->fibs = kzalloc(sizeof(struct fib) * (shost->can_queue + AAC_NUM_MGT_FIB), GFP_KERNEL);
 	if (!aac->fibs)
