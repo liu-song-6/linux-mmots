@@ -756,11 +756,6 @@ err_adc_clk:
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG3,
 			   MESON_SAR_ADC_REG3_ADC_EN, 0);
 	meson_sar_adc_set_bandgap(indio_dev, false);
-<<<<<<< HEAD
-	clk_disable_unprepare(priv->sana_clk);
-err_sana_clk:
-=======
->>>>>>> linux-next/akpm-base
 	clk_disable_unprepare(priv->core_clk);
 err_core_clk:
 	regulator_disable(priv->vref);
@@ -783,11 +778,6 @@ static int meson_sar_adc_hw_disable(struct iio_dev *indio_dev)
 
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG3,
 			   MESON_SAR_ADC_REG3_ADC_EN, 0);
-<<<<<<< HEAD
-
-	meson_sar_adc_set_bandgap(indio_dev, false);
-=======
->>>>>>> linux-next/akpm-base
 
 	meson_sar_adc_set_bandgap(indio_dev, false);
 
