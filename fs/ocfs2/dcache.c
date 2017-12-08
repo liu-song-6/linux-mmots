@@ -230,6 +230,7 @@ int ocfs2_dentry_attach_lock(struct dentry *dentry,
 	int ret;
 	struct dentry *alias;
 	struct ocfs2_dentry_lock *dl = dentry->d_fsdata;
+	unsigned long flags;
 
 	trace_ocfs2_dentry_attach_lock(dentry->d_name.len, dentry->d_name.name,
 				       (unsigned long long)parent_blkno, dl);
@@ -309,10 +310,10 @@ int ocfs2_dentry_attach_lock(struct dentry *dentry,
 	ocfs2_dentry_lock_res_init(dl, parent_blkno, inode);
 
 out_attach:
-	spin_lock(&dentry_attach_lock);
+	spin_lock_irqsave(&dentry_attach_lock, flags);
 	dentry->d_fsdata = dl;
 	dl->dl_count++;
-	spin_unlock(&dentry_attach_lock);
+	spin_unlock_irqrestore(&dentry_attach_lock, flags);
 
 	/*
 	 * This actually gets us our PRMODE level lock. From now on,
@@ -333,9 +334,9 @@ out_attach:
 	if (ret < 0 && !alias) {
 		ocfs2_lock_res_free(&dl->dl_lockres);
 		BUG_ON(dl->dl_count != 1);
-		spin_lock(&dentry_attach_lock);
+		spin_lock_irqsave(&dentry_attach_lock, flags);
 		dentry->d_fsdata = NULL;
-		spin_unlock(&dentry_attach_lock);
+		spin_unlock_irqrestore(&dentry_attach_lock, flags);
 		kfree(dl);
 		iput(inode);
 	}
@@ -379,13 +380,14 @@ void ocfs2_dentry_lock_put(struct ocfs2_super *osb,
 			   struct ocfs2_dentry_lock *dl)
 {
 	int unlock = 0;
+	unsigned long flags;
 
 	BUG_ON(dl->dl_count == 0);
 
-	spin_lock(&dentry_attach_lock);
+	spin_lock_irqsave(&dentry_attach_lock, flags);
 	dl->dl_count--;
 	unlock = !dl->dl_count;
-	spin_unlock(&dentry_attach_lock);
+	spin_unlock_irqrestore(&dentry_attach_lock, flags);
 
 	if (unlock)
 		ocfs2_drop_dentry_lock(osb, dl);

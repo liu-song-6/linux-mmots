@@ -223,13 +223,14 @@ static void ocfs2_cleanup_add_entry_failure(struct ocfs2_super *osb,
 		struct dentry *dentry, struct inode *inode)
 {
 	struct ocfs2_dentry_lock *dl = dentry->d_fsdata;
+	unsigned long flags;
 
 	ocfs2_simple_drop_lockres(osb, &dl->dl_lockres);
 	ocfs2_lock_res_free(&dl->dl_lockres);
 	BUG_ON(dl->dl_count != 1);
-	spin_lock(&dentry_attach_lock);
+	spin_lock_irqsave(&dentry_attach_lock, flags);
 	dentry->d_fsdata = NULL;
-	spin_unlock(&dentry_attach_lock);
+	spin_unlock_irqrestore(&dentry_attach_lock, flags);
 	kfree(dl);
 	iput(inode);
 }

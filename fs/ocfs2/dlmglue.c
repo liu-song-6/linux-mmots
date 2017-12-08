@@ -3801,7 +3801,7 @@ static int ocfs2_dentry_convert_worker(struct ocfs2_lock_res *lockres,
 	struct ocfs2_dentry_lock *dl = ocfs2_lock_res_dl(lockres);
 	struct ocfs2_inode_info *oi = OCFS2_I(dl->dl_inode);
 	struct dentry *dentry;
-	unsigned long flags;
+	unsigned long flags, d_flags;
 	int extra_ref = 0;
 
 	/*
@@ -3831,13 +3831,13 @@ static int ocfs2_dentry_convert_worker(struct ocfs2_lock_res *lockres,
 	 * flag.
 	 */
 	spin_lock_irqsave(&lockres->l_lock, flags);
-	spin_lock(&dentry_attach_lock);
+	spin_lock_irqsave(&dentry_attach_lock, d_flags);
 	if (!(lockres->l_flags & OCFS2_LOCK_FREEING)
 	    && dl->dl_count) {
 		dl->dl_count++;
 		extra_ref = 1;
 	}
-	spin_unlock(&dentry_attach_lock);
+	spin_unlock_irqrestore(&dentry_attach_lock, d_flags);
 	spin_unlock_irqrestore(&lockres->l_lock, flags);
 
 	mlog(0, "extra_ref = %d\n", extra_ref);
@@ -3850,13 +3850,13 @@ static int ocfs2_dentry_convert_worker(struct ocfs2_lock_res *lockres,
 	if (!extra_ref)
 		return UNBLOCK_CONTINUE;
 
-	spin_lock(&dentry_attach_lock);
+	spin_lock_irqsave(&dentry_attach_lock, d_flags);
 	while (1) {
 		dentry = ocfs2_find_local_alias(dl->dl_inode,
 						dl->dl_parent_blkno, 1);
 		if (!dentry)
 			break;
-		spin_unlock(&dentry_attach_lock);
+		spin_unlock_irqrestore(&dentry_attach_lock, d_flags);
 
 		if (S_ISDIR(dl->dl_inode->i_mode))
 			shrink_dcache_parent(dentry);
@@ -3874,9 +3874,9 @@ static int ocfs2_dentry_convert_worker(struct ocfs2_lock_res *lockres,
 		d_delete(dentry);
 		dput(dentry);
 
-		spin_lock(&dentry_attach_lock);
+		spin_lock_irqsave(&dentry_attach_lock, d_flags);
 	}
-	spin_unlock(&dentry_attach_lock);
+	spin_unlock_irqrestore(&dentry_attach_lock, d_flags);
 
 	/*
 	 * If we are the last holder of this dentry lock, there is no
