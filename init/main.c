@@ -75,6 +75,7 @@
 #include <linux/slab.h>
 #include <linux/perf_event.h>
 #include <linux/ptrace.h>
+#include <linux/pti.h>
 #include <linux/blkdev.h>
 #include <linux/elevator.h>
 #include <linux/sched_clock.h>
@@ -504,6 +505,7 @@ static void __init mm_init(void)
 	pgtable_init();
 	vmalloc_init();
 	ioremap_huge_init();
+	pti_init();
 }
 
 asmlinkage __visible void __init start_kernel(void)
@@ -589,6 +591,12 @@ asmlinkage __visible void __init start_kernel(void)
 	radix_tree_init();
 
 	/*
+	 * Set up housekeeping before setting up workqueues to allow the unbound
+	 * workqueue to take non-housekeeping into account.
+	 */
+	housekeeping_init();
+
+	/*
 	 * Allow workqueue creation and work item queueing/cancelling
 	 * early.  Work item execution depends on kthreads and starts after
 	 * workqueue_init().
@@ -605,7 +613,6 @@ asmlinkage __visible void __init start_kernel(void)
 	early_irq_init();
 	init_IRQ();
 	tick_init();
-	housekeeping_init();
 	rcu_init_nohz();
 	init_timers();
 	hrtimers_init();

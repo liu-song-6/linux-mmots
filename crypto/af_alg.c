@@ -672,14 +672,15 @@ void af_alg_free_areq_sgls(struct af_alg_async_req *areq)
 	}
 
 	tsgl = areq->tsgl;
-	for_each_sg(tsgl, sg, areq->tsgl_entries, i) {
-		if (!sg_page(sg))
-			continue;
-		put_page(sg_page(sg));
-	}
+	if (tsgl) {
+		for_each_sg(tsgl, sg, areq->tsgl_entries, i) {
+			if (!sg_page(sg))
+				continue;
+			put_page(sg_page(sg));
+		}
 
-	if (areq->tsgl && areq->tsgl_entries)
 		sock_kfree_s(sk, tsgl, areq->tsgl_entries * sizeof(*tsgl));
+	}
 }
 EXPORT_SYMBOL_GPL(af_alg_free_areq_sgls);
 
@@ -1061,13 +1062,13 @@ EXPORT_SYMBOL_GPL(af_alg_async_cb);
 /**
  * af_alg_poll - poll system call handler
  */
-unsigned int af_alg_poll(struct file *file, struct socket *sock,
+__poll_t af_alg_poll(struct file *file, struct socket *sock,
 			 poll_table *wait)
 {
 	struct sock *sk = sock->sk;
 	struct alg_sock *ask = alg_sk(sk);
 	struct af_alg_ctx *ctx = ask->private;
-	unsigned int mask;
+	__poll_t mask;
 
 	sock_poll_wait(file, sk_sleep(sk), wait);
 	mask = 0;

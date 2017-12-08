@@ -1637,8 +1637,7 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	dname[name->len] = 0;
 
 	/* Make sure we always see the terminating NUL character */
-	smp_wmb();
-	dentry->d_name.name = dname;
+	smp_store_release(&dentry->d_name.name, dname); /* ^^^ */
 
 	dentry->d_lockref.count = 1;
 	dentry->d_flags = 0;
@@ -3048,16 +3047,13 @@ static int prepend(char **buffer, int *buflen, const char *str, int namelen)
  * retry it again when a d_move() does happen. So any garbage in the buffer
  * due to mismatched pointer and length will be discarded.
  *
- * Data dependency barrier is needed to make sure that we see that terminating
- * NUL.  Alpha strikes again, film at 11...
+ * Load acquire is needed to make sure that we see that terminating NUL.
  */
 static int prepend_name(char **buffer, int *buflen, const struct qstr *name)
 {
-	const char *dname = READ_ONCE(name->name);
+	const char *dname = smp_load_acquire(&name->name); /* ^^^ */
 	u32 dlen = READ_ONCE(name->len);
 	char *p;
-
-	smp_read_barrier_depends();
 
 	*buflen -= dlen + 1;
 	if (*buflen < 0)
@@ -3602,8 +3598,9 @@ static void __init dcache_init(void)
 	 * but it is probably not worth it because of the cache nature
 	 * of the dcache.
 	 */
-	dentry_cache = KMEM_CACHE(dentry,
-		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
+	dentry_cache = KMEM_CACHE_USERCOPY(dentry,
+		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
+		d_iname);
 
 	/* Hash may have been set up in dcache_init_early */
 	if (!hashdist)
@@ -3640,8 +3637,8 @@ void __init vfs_caches_init_early(void)
 
 void __init vfs_caches_init(void)
 {
-	names_cachep = kmem_cache_create("names_cache", PATH_MAX, 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+	names_cachep = kmem_cache_create_usercopy("names_cache", PATH_MAX, 0,
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC, 0, PATH_MAX, NULL);
 
 	dcache_init();
 	inode_init();

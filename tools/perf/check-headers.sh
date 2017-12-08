@@ -30,6 +30,7 @@ arch/x86/include/uapi/asm/vmx.h
 arch/powerpc/include/uapi/asm/kvm.h
 arch/s390/include/uapi/asm/kvm.h
 arch/s390/include/uapi/asm/kvm_perf.h
+arch/s390/include/uapi/asm/ptrace.h
 arch/s390/include/uapi/asm/sie.h
 arch/arm/include/uapi/asm/kvm.h
 arch/arm64/include/uapi/asm/kvm.h
@@ -45,7 +46,6 @@ include/uapi/asm-generic/mman-common.h
 
 check () {
   file=$1
-  opts="--ignore-blank-lines --ignore-space-change"
 
   shift
   while [ -n "$*" ]; do
