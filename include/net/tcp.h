@@ -387,7 +387,7 @@ bool tcp_peer_is_proven(struct request_sock *req, struct dst_entry *dst);
 void tcp_close(struct sock *sk, long timeout);
 void tcp_init_sock(struct sock *sk);
 void tcp_init_transfer(struct sock *sk, int bpf_op);
-unsigned int tcp_poll(struct file *file, struct socket *sock,
+__poll_t tcp_poll(struct file *file, struct socket *sock,
 		      struct poll_table_struct *wait);
 int tcp_getsockopt(struct sock *sk, int level, int optname,
 		   char __user *optval, int __user *optlen);
@@ -2011,10 +2011,12 @@ static inline int tcp_call_bpf(struct sock *sk, int op)
 	struct bpf_sock_ops_kern sock_ops;
 	int ret;
 
-	if (sk_fullsock(sk))
-		sock_owned_by_me(sk);
-
 	memset(&sock_ops, 0, sizeof(sock_ops));
+	if (sk_fullsock(sk)) {
+		sock_ops.is_fullsock = 1;
+		sock_owned_by_me(sk);
+	}
+
 	sock_ops.sk = sk;
 	sock_ops.op = op;
 

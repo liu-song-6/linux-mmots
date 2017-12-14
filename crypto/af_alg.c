@@ -1062,13 +1062,13 @@ EXPORT_SYMBOL_GPL(af_alg_async_cb);
 /**
  * af_alg_poll - poll system call handler
  */
-unsigned int af_alg_poll(struct file *file, struct socket *sock,
+__poll_t af_alg_poll(struct file *file, struct socket *sock,
 			 poll_table *wait)
 {
 	struct sock *sk = sock->sk;
 	struct alg_sock *ask = alg_sk(sk);
 	struct af_alg_ctx *ctx = ask->private;
-	unsigned int mask;
+	__poll_t mask;
 
 	sock_poll_wait(file, sk_sleep(sk), wait);
 	mask = 0;
@@ -1137,12 +1137,6 @@ int af_alg_get_rsgl(struct sock *sk, struct msghdr *msg, int flags,
 		/* limit the amount of readable buffers */
 		if (!af_alg_readable(sk))
 			break;
-
-		if (!ctx->used) {
-			err = af_alg_wait_for_data(sk, flags);
-			if (err)
-				return err;
-		}
 
 		seglen = min_t(size_t, (maxsize - len),
 			       msg_data_left(msg));
