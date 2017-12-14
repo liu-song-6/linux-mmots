@@ -36,13 +36,8 @@
 #include "dell-smbios.h"
 
 struct quirk_entry {
-<<<<<<< HEAD
-	u8 touchpad_led;
-	u8 kbd_led_levels_off_1;
-=======
 	bool touchpad_led;
 	bool kbd_led_levels_off_1;
->>>>>>> linux-next/akpm-base
 
 	bool needs_kbd_timeouts;
 	/*
@@ -74,11 +69,7 @@ static struct quirk_entry quirk_dell_xps13_9333 = {
 };
 
 static struct quirk_entry quirk_dell_latitude_e6410 = {
-<<<<<<< HEAD
-	.kbd_led_levels_off_1 = 1,
-=======
 	.kbd_led_levels_off_1 = true,
->>>>>>> linux-next/akpm-base
 };
 
 static struct platform_driver platform_driver = {
