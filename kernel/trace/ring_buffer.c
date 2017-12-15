@@ -626,7 +626,7 @@ int ring_buffer_wait(struct ring_buffer *buffer, int cpu, bool full)
  * Returns POLLIN | POLLRDNORM if data exists in the buffers,
  * zero otherwise.
  */
-int ring_buffer_poll_wait(struct ring_buffer *buffer, int cpu,
+__poll_t ring_buffer_poll_wait(struct ring_buffer *buffer, int cpu,
 			  struct file *filp, poll_table *poll_table)
 {
 	struct ring_buffer_per_cpu *cpu_buffer;
@@ -1798,12 +1798,6 @@ void ring_buffer_change_overwrite(struct ring_buffer *buffer, int val)
 	mutex_unlock(&buffer->mutex);
 }
 EXPORT_SYMBOL_GPL(ring_buffer_change_overwrite);
-
-static __always_inline void *
-__rb_data_page_index(struct buffer_data_page *bpage, unsigned index)
-{
-	return bpage->data + index;
-}
 
 static __always_inline void *__rb_page_index(struct buffer_page *bpage, unsigned index)
 {
