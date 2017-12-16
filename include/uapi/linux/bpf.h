@@ -677,6 +677,10 @@ union bpf_attr {
  *     @buf: buf to fill
  *     @buf_size: size of the buf
  *     Return : 0 on success or negative error code
+ *
+ * int bpf_override_return(pt_regs, rc)
+ *	@pt_regs: pointer to struct pt_regs
+ *	@rc: the return value to set
  */
 #define __BPF_FUNC_MAPPER(FN)		\
 	FN(unspec),			\
@@ -736,7 +740,8 @@ union bpf_attr {
 	FN(xdp_adjust_meta),		\
 	FN(perf_event_read_value),	\
 	FN(perf_prog_read_value),	\
-	FN(getsockopt),
+	FN(getsockopt),			\
+	FN(override_return),
 
 /* integer value in 'imm' field of BPF_CALL instruction selects which helper
  * function eBPF program intends to call
@@ -941,6 +946,12 @@ struct bpf_sock_ops {
 	__u32 local_ip6[4];	/* Stored in network byte order */
 	__u32 remote_port;	/* Stored in network byte order */
 	__u32 local_port;	/* stored in host byte order */
+	__u32 is_fullsock;	/* Some TCP fields are only valid if
+				 * there is a full socket. If not, the
+				 * fields read as zero.
+				 */
+	__u32 snd_cwnd;
+	__u32 srtt_us;		/* Averaged RTT << 3 in usecs */
 };
 
 /* List of known BPF sock_ops operators.

@@ -2563,7 +2563,7 @@ static void ath10k_peer_assoc_h_qos(struct ath10k *ar,
 		}
 		break;
 	case WMI_VDEV_TYPE_STA:
-		if (vif->bss_conf.qos)
+		if (sta->wme)
 			arg->peer_flags |= arvif->ar->wmi.peer_flags->qos;
 		break;
 	case WMI_VDEV_TYPE_IBSS:
@@ -3574,7 +3574,9 @@ ath10k_mac_tx_h_get_txpath(struct ath10k *ar,
 		return ATH10K_MAC_TX_HTT;
 	case ATH10K_HW_TXRX_MGMT:
 		if (test_bit(ATH10K_FW_FEATURE_HAS_WMI_MGMT_TX,
-			     ar->running_fw->fw_file.fw_features))
+			     ar->running_fw->fw_file.fw_features) ||
+			     test_bit(WMI_SERVICE_MGMT_TX_WMI,
+				      ar->wmi.svc_map))
 			return ATH10K_MAC_TX_WMI_MGMT;
 		else if (ar->htt.target_version_major >= 3)
 			return ATH10K_MAC_TX_HTT;
@@ -3830,24 +3832,16 @@ static void ath10k_mac_txq_init(struct ieee80211_txq *txq)
 		return;
 
 	artxq = (void *)txq->drv_priv;
-	INIT_LIST_HEAD(&artxq->list);
 }
 
 static void ath10k_mac_txq_unref(struct ath10k *ar, struct ieee80211_txq *txq)
 {
-	struct ath10k_txq *artxq;
 	struct ath10k_skb_cb *cb;
 	struct sk_buff *msdu;
 	int msdu_id;
 
 	if (!txq)
 		return;
-
-	artxq = (void *)txq->drv_priv;
-	spin_lock_bh(&ar->txqs_lock);
-	if (!list_empty(&artxq->list))
-		list_del_init(&artxq->list);
-	spin_unlock_bh(&ar->txqs_lock);
 
 	spin_lock_bh(&ar->htt.tx_lock);
 	idr_for_each_entry(&ar->htt.pending_tx, msdu, msdu_id) {
@@ -3978,23 +3972,17 @@ int ath10k_mac_tx_push_txq(struct ieee80211_hw *hw,
 void ath10k_mac_tx_push_pending(struct ath10k *ar)
 {
 	struct ieee80211_hw *hw = ar->hw;
-	struct ieee80211_txq *txq;
-	struct ath10k_txq *artxq;
-	struct ath10k_txq *last;
+	struct ieee80211_txq *txq, *first = NULL;
 	int ret;
 	int max;
 
 	if (ar->htt.num_pending_tx >= (ar->htt.max_num_pending_tx / 2))
 		return;
 
-	spin_lock_bh(&ar->txqs_lock);
 	rcu_read_lock();
 
-	last = list_last_entry(&ar->txqs, struct ath10k_txq, list);
-	while (!list_empty(&ar->txqs)) {
-		artxq = list_first_entry(&ar->txqs, struct ath10k_txq, list);
-		txq = container_of((void *)artxq, struct ieee80211_txq,
-				   drv_priv);
+	txq = ieee80211_next_txq(hw);
+	while (txq) {
 
 		/* Prevent aggressive sta/tid taking over tx queue */
 		max = 16;
@@ -4005,18 +3993,21 @@ void ath10k_mac_tx_push_pending(struct ath10k *ar)
 				break;
 		}
 
-		list_del_init(&artxq->list);
 		if (ret != -ENOENT)
-			list_add_tail(&artxq->list, &ar->txqs);
+			ieee80211_schedule_txq(hw, txq);
 
 		ath10k_htt_tx_txq_update(hw, txq);
 
-		if (artxq == last || (ret < 0 && ret != -ENOENT))
+		if (first == txq || (ret < 0 && ret != -ENOENT))
 			break;
+
+		if (!first)
+			first = txq;
+
+		txq = ieee80211_next_txq(hw);
 	}
 
 	rcu_read_unlock();
-	spin_unlock_bh(&ar->txqs_lock);
 }
 
 /************/
@@ -4250,34 +4241,22 @@ static void ath10k_mac_op_tx(struct ieee80211_hw *hw,
 	}
 }
 
-static void ath10k_mac_op_wake_tx_queue(struct ieee80211_hw *hw,
-					struct ieee80211_txq *txq)
+static void ath10k_mac_op_wake_tx_queue(struct ieee80211_hw *hw)
 {
-	struct ath10k *ar = hw->priv;
-	struct ath10k_txq *artxq = (void *)txq->drv_priv;
-	struct ieee80211_txq *f_txq;
-	struct ath10k_txq *f_artxq;
+	struct ieee80211_txq *txq;
 	int ret = 0;
 	int max = 16;
 
-	spin_lock_bh(&ar->txqs_lock);
-	if (list_empty(&artxq->list))
-		list_add_tail(&artxq->list, &ar->txqs);
+	txq = ieee80211_next_txq(hw);
 
-	f_artxq = list_first_entry(&ar->txqs, struct ath10k_txq, list);
-	f_txq = container_of((void *)f_artxq, struct ieee80211_txq, drv_priv);
-	list_del_init(&f_artxq->list);
-
-	while (ath10k_mac_tx_can_push(hw, f_txq) && max--) {
-		ret = ath10k_mac_tx_push_txq(hw, f_txq);
+	while (ath10k_mac_tx_can_push(hw, txq) && max--) {
+		ret = ath10k_mac_tx_push_txq(hw, txq);
 		if (ret)
 			break;
 	}
 	if (ret != -ENOENT)
-		list_add_tail(&f_artxq->list, &ar->txqs);
-	spin_unlock_bh(&ar->txqs_lock);
+		ieee80211_schedule_txq(hw, txq);
 
-	ath10k_htt_tx_txq_update(hw, f_txq);
 	ath10k_htt_tx_txq_update(hw, txq);
 }
 
@@ -6201,6 +6180,16 @@ static int ath10k_sta_state(struct ieee80211_hw *hw,
 			   "mac vdev %d peer delete %pM sta %pK (sta gone)\n",
 			   arvif->vdev_id, sta->addr, sta);
 
+		if (sta->tdls) {
+			ret = ath10k_mac_tdls_peer_update(ar, arvif->vdev_id,
+							  sta,
+							  WMI_TDLS_PEER_STATE_TEARDOWN);
+			if (ret)
+				ath10k_warn(ar, "failed to update tdls peer state for %pM state %d: %i\n",
+					    sta->addr,
+					    WMI_TDLS_PEER_STATE_TEARDOWN, ret);
+		}
+
 		ret = ath10k_peer_delete(ar, arvif->vdev_id, sta->addr);
 		if (ret)
 			ath10k_warn(ar, "failed to delete peer %pM for vdev %d: %i\n",
@@ -7536,6 +7525,16 @@ ath10k_mac_op_assign_vif_chanctx(struct ieee80211_hw *hw,
 				    arvif->vdev_id, ret);
 	}
 
+	if (ath10k_peer_stats_enabled(ar)) {
+		ar->pktlog_filter |= ATH10K_PKTLOG_PEER_STATS;
+		ret = ath10k_wmi_pdev_pktlog_enable(ar,
+						    ar->pktlog_filter);
+		if (ret) {
+			ath10k_warn(ar, "failed to enable pktlog %d\n", ret);
+			goto err_stop;
+		}
+	}
+
 	mutex_unlock(&ar->conf_mutex);
 	return 0;
 
@@ -7620,6 +7619,34 @@ static void ath10k_mac_op_sta_pre_rcu_remove(struct ieee80211_hw *hw,
 			peer->removed = true;
 }
 
+static void ath10k_sta_statistics(struct ieee80211_hw *hw,
+				  struct ieee80211_vif *vif,
+				  struct ieee80211_sta *sta,
+				  struct station_info *sinfo)
+{
+	struct ath10k_sta *arsta = (struct ath10k_sta *)sta->drv_priv;
+	struct ath10k *ar = arsta->arvif->ar;
+
+	if (!ath10k_peer_stats_enabled(ar))
+		return;
+
+	sinfo->rx_duration = arsta->rx_duration;
+	sinfo->filled |= 1ULL << NL80211_STA_INFO_RX_DURATION;
+
+	if (!arsta->txrate.legacy && !arsta->txrate.nss)
+		return;
+
+	if (arsta->txrate.legacy) {
+		sinfo->txrate.legacy = arsta->txrate.legacy;
+	} else {
+		sinfo->txrate.mcs = arsta->txrate.mcs;
+		sinfo->txrate.nss = arsta->txrate.nss;
+		sinfo->txrate.bw = arsta->txrate.bw;
+	}
+	sinfo->txrate.flags = arsta->txrate.flags;
+	sinfo->filled |= 1ULL << NL80211_STA_INFO_TX_BITRATE;
+}
+
 static const struct ieee80211_ops ath10k_ops = {
 	.tx				= ath10k_mac_op_tx,
 	.wake_tx_queue			= ath10k_mac_op_wake_tx_queue,
@@ -7661,6 +7688,7 @@ static const struct ieee80211_ops ath10k_ops = {
 	.unassign_vif_chanctx		= ath10k_mac_op_unassign_vif_chanctx,
 	.switch_vif_chanctx		= ath10k_mac_op_switch_vif_chanctx,
 	.sta_pre_rcu_remove		= ath10k_mac_op_sta_pre_rcu_remove,
+	.sta_statistics			= ath10k_sta_statistics,
 
 	CFG80211_TESTMODE_CMD(ath10k_tm_cmd)
 
@@ -7671,7 +7699,6 @@ static const struct ieee80211_ops ath10k_ops = {
 #endif
 #ifdef CONFIG_MAC80211_DEBUGFS
 	.sta_add_debugfs		= ath10k_sta_add_debugfs,
-	.sta_statistics			= ath10k_sta_statistics,
 #endif
 };
 
@@ -8328,15 +8355,6 @@ int ath10k_mac_register(struct ath10k *ar)
 		if (!ar->dfs_detector)
 			ath10k_warn(ar, "failed to initialise DFS pattern detector\n");
 	}
-
-	/* Current wake_tx_queue implementation imposes a significant
-	 * performance penalty in some setups. The tx scheduling code needs
-	 * more work anyway so disable the wake_tx_queue unless firmware
-	 * supports the pull-push mechanism.
-	 */
-	if (!test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL,
-		      ar->running_fw->fw_file.fw_features))
-		ar->ops->wake_tx_queue = NULL;
 
 	ret = ath10k_mac_init_rd(ar);
 	if (ret) {

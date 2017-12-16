@@ -849,17 +849,6 @@ struct task_struct {
 	struct held_lock		held_locks[MAX_LOCK_DEPTH];
 #endif
 
-#ifdef CONFIG_LOCKDEP_CROSSRELEASE
-#define MAX_XHLOCKS_NR 64UL
-	struct hist_lock *xhlocks; /* Crossrelease history locks */
-	unsigned int xhlock_idx;
-	/* For restoring at history boundaries */
-	unsigned int xhlock_idx_hist[XHLOCK_CTX_NR];
-	unsigned int hist_id;
-	/* For overwrite check at each context exit */
-	unsigned int hist_id_save[XHLOCK_CTX_NR];
-#endif
-
 #ifdef CONFIG_UBSAN
 	unsigned int			in_ubsan;
 #endif
@@ -1457,11 +1446,20 @@ extern void ia64_set_curr_task(int cpu, struct task_struct *p);
 void yield(void);
 
 union thread_union {
+#ifndef CONFIG_ARCH_TASK_STRUCT_ON_STACK
+	struct task_struct task;
+#endif
 #ifndef CONFIG_THREAD_INFO_IN_TASK
 	struct thread_info thread_info;
 #endif
 	unsigned long stack[THREAD_SIZE/sizeof(long)];
 };
+
+#ifndef CONFIG_THREAD_INFO_IN_TASK
+extern struct thread_info init_thread_info;
+#endif
+
+extern unsigned long init_stack[THREAD_SIZE / sizeof(unsigned long)];
 
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 static inline struct thread_info *task_thread_info(struct task_struct *task)
