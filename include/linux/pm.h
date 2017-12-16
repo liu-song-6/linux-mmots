@@ -773,10 +773,7 @@ extern int pm_generic_poweroff(struct device *dev);
 extern void pm_generic_complete(struct device *dev);
 
 extern void dev_pm_skip_next_resume_phases(struct device *dev);
-<<<<<<< HEAD
-=======
 extern bool dev_pm_may_skip_resume(struct device *dev);
->>>>>>> linux-next/akpm-base
 extern bool dev_pm_smart_suspend_and_suspended(struct device *dev);
 
 #else /* !CONFIG_PM_SLEEP */

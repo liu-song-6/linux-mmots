@@ -541,8 +541,6 @@ void dev_pm_skip_next_resume_phases(struct device *dev)
 }
 
 /**
-<<<<<<< HEAD
-=======
  * dev_pm_may_skip_resume - System-wide device resume optimization check.
  * @dev: Target device.
  *
@@ -555,7 +553,6 @@ bool dev_pm_may_skip_resume(struct device *dev)
 }
 
 /**
->>>>>>> linux-next/akpm-base
  * device_resume_noirq - Execute a "noirq resume" callback for given device.
  * @dev: Device to handle.
  * @state: PM transition of the system being carried out.
