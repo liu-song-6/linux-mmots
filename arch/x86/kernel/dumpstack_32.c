@@ -26,8 +26,13 @@ const char *stack_type_name(enum stack_type type)
 	if (type == STACK_TYPE_SOFTIRQ)
 		return "SOFTIRQ";
 
+<<<<<<< HEAD
 	if (type == STACK_TYPE_SYSENTER)
 		return "SYSENTER";
+=======
+	if (type == STACK_TYPE_ENTRY)
+		return "ENTRY_TRAMPOLINE";
+>>>>>>> linux-next/akpm-base
 
 	return NULL;
 }
@@ -96,7 +101,11 @@ int get_stack_info(unsigned long *stack, struct task_struct *task,
 	if (task != current)
 		goto unknown;
 
+<<<<<<< HEAD
 	if (in_sysenter_stack(stack, info))
+=======
+	if (in_entry_stack(stack, info))
+>>>>>>> linux-next/akpm-base
 		goto recursion_check;
 
 	if (in_hardirq_stack(stack, info))

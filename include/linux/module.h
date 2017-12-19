@@ -475,6 +475,11 @@ struct module {
 	ctor_fn_t *ctors;
 	unsigned int num_ctors;
 #endif
+
+#ifdef CONFIG_BPF_KPROBE_OVERRIDE
+	unsigned int num_kprobe_ei_funcs;
+	unsigned long *kprobe_ei_funcs;
+#endif
 } ____cacheline_aligned __randomize_layout;
 #ifndef MODULE_ARCH_INIT
 #define MODULE_ARCH_INIT {}
@@ -605,6 +610,9 @@ int ref_module(struct module *a, struct module *b);
 	struct module *__mod = (mod);		\
 	__mod ? __mod->name : "kernel";		\
 })
+
+/* Dereference module function descriptor */
+void *dereference_module_function_descriptor(struct module *mod, void *ptr);
 
 /* For kallsyms to ask for address resolution.  namebuf should be at
  * least KSYM_NAME_LEN long: a pointer to namebuf is returned if
@@ -758,6 +766,13 @@ static inline bool module_requested_async_probing(struct module *module)
 static inline bool is_module_sig_enforced(void)
 {
 	return false;
+}
+
+/* Dereference module function descriptor */
+static inline
+void *dereference_module_function_descriptor(struct module *mod, void *ptr)
+{
+	return ptr;
 }
 
 #endif /* CONFIG_MODULES */

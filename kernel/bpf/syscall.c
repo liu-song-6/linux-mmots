@@ -1057,7 +1057,7 @@ struct bpf_prog *bpf_prog_inc_not_zero(struct bpf_prog *prog)
 }
 EXPORT_SYMBOL_GPL(bpf_prog_inc_not_zero);
 
-static bool bpf_prog_get_ok(struct bpf_prog *prog,
+bool bpf_prog_get_ok(struct bpf_prog *prog,
 			    enum bpf_prog_type *attach_type, bool attach_drv)
 {
 	/* not an attachment, just a refcount inc, always allow */
@@ -1194,7 +1194,8 @@ static int bpf_prog_load(union bpf_attr *attr)
 		goto free_used_maps;
 
 	/* eBPF program is ready to be JITed */
-	prog = bpf_prog_select_runtime(prog, &err);
+	if (!prog->bpf_func)
+		prog = bpf_prog_select_runtime(prog, &err);
 	if (err < 0)
 		goto free_used_maps;
 

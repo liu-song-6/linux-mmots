@@ -493,9 +493,9 @@ static void tcp_tx_timestamp(struct sock *sk, u16 tsflags)
  *	take care of normal races (between the test and the event) and we don't
  *	go look at any of the socket buffers directly.
  */
-unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
+__poll_t tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
 {
-	unsigned int mask;
+	__poll_t mask;
 	struct sock *sk = sock->sk;
 	const struct tcp_sock *tp = tcp_sk(sk);
 	int state;
@@ -3578,6 +3578,9 @@ void __init tcp_init(void)
 	percpu_counter_init(&tcp_sockets_allocated, 0, GFP_KERNEL);
 	percpu_counter_init(&tcp_orphan_count, 0, GFP_KERNEL);
 	inet_hashinfo_init(&tcp_hashinfo);
+	inet_hashinfo2_init(&tcp_hashinfo, "tcp_listen_portaddr_hash",
+			    thash_entries, 21,  /* one slot per 2 MB*/
+			    0, 64 * 1024);
 	tcp_hashinfo.bind_bucket_cachep =
 		kmem_cache_create("tcp_bind_bucket",
 				  sizeof(struct inet_bind_bucket), 0,

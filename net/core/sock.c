@@ -2496,7 +2496,7 @@ int sock_no_getname(struct socket *sock, struct sockaddr *saddr,
 }
 EXPORT_SYMBOL(sock_no_getname);
 
-unsigned int sock_no_poll(struct file *file, struct socket *sock, poll_table *pt)
+__poll_t sock_no_poll(struct file *file, struct socket *sock, poll_table *pt)
 {
 	return 0;
 }
@@ -3151,8 +3151,10 @@ static int req_prot_init(const struct proto *prot)
 int proto_register(struct proto *prot, int alloc_slab)
 {
 	if (alloc_slab) {
-		prot->slab = kmem_cache_create(prot->name, prot->obj_size, 0,
+		prot->slab = kmem_cache_create_usercopy(prot->name,
+					prot->obj_size, 0,
 					SLAB_HWCACHE_ALIGN | prot->slab_flags,
+					prot->useroffset, prot->usersize,
 					NULL);
 
 		if (prot->slab == NULL) {

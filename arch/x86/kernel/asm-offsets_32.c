@@ -48,7 +48,11 @@ void foo(void)
 
 	/* Offset from the sysenter stack to tss.sp0 */
 	DEFINE(TSS_sysenter_sp0, offsetof(struct cpu_entry_area, tss.x86_tss.sp0) -
+<<<<<<< HEAD
 	       offsetofend(struct cpu_entry_area, SYSENTER_stack_page.stack));
+=======
+	       offsetofend(struct cpu_entry_area, entry_stack_page.stack));
+>>>>>>> linux-next/akpm-base
 
 #ifdef CONFIG_CC_STACKPROTECTOR
 	BLANK();

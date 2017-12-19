@@ -197,13 +197,13 @@
 #define X86_FEATURE_CAT_L3		( 7*32+ 4) /* Cache Allocation Technology L3 */
 #define X86_FEATURE_CAT_L2		( 7*32+ 5) /* Cache Allocation Technology L2 */
 #define X86_FEATURE_CDP_L3		( 7*32+ 6) /* Code and Data Prioritization L3 */
+#define X86_FEATURE_INVPCID_SINGLE	( 7*32+ 7) /* Effectively INVPCID && CR4.PCIDE=1 */
 
 #define X86_FEATURE_HW_PSTATE		( 7*32+ 8) /* AMD HW-PState */
 #define X86_FEATURE_PROC_FEEDBACK	( 7*32+ 9) /* AMD ProcFeedbackInterface */
 #define X86_FEATURE_SME			( 7*32+10) /* AMD Secure Memory Encryption */
 
 #define X86_FEATURE_INTEL_PPIN		( 7*32+14) /* Intel Processor Inventory Number */
-#define X86_FEATURE_INTEL_PT		( 7*32+15) /* Intel Processor Trace */
 #define X86_FEATURE_AVX512_4VNNIW	( 7*32+16) /* AVX-512 Neural Network Instructions */
 #define X86_FEATURE_AVX512_4FMAPS	( 7*32+17) /* AVX-512 Multiply Accumulation Single precision */
 
@@ -242,6 +242,7 @@
 #define X86_FEATURE_AVX512IFMA		( 9*32+21) /* AVX-512 Integer Fused Multiply-Add instructions */
 #define X86_FEATURE_CLFLUSHOPT		( 9*32+23) /* CLFLUSHOPT instruction */
 #define X86_FEATURE_CLWB		( 9*32+24) /* CLWB instruction */
+#define X86_FEATURE_INTEL_PT		( 9*32+25) /* Intel Processor Trace */
 #define X86_FEATURE_AVX512PF		( 9*32+26) /* AVX-512 Prefetch */
 #define X86_FEATURE_AVX512ER		( 9*32+27) /* AVX-512 Exponential and Reciprocal */
 #define X86_FEATURE_AVX512CD		( 9*32+28) /* AVX-512 Conflict Detection */
@@ -340,5 +341,7 @@
 #define X86_BUG_SWAPGS_FENCE		X86_BUG(11) /* SWAPGS without input dep on GS */
 #define X86_BUG_MONITOR			X86_BUG(12) /* IPI required to wake up remote CPU */
 #define X86_BUG_AMD_E400		X86_BUG(13) /* CPU is among the affected by Erratum 400 */
+#define X86_BUG_CPU_INSECURE		X86_BUG(14) /* CPU is insecure and needs kernel page table isolation */
+#define X86_BUG_CPU_SECURE_MODE_PTI	X86_BUG(15) /* Kernel Page Table Isolation enabled*/
 
 #endif /* _ASM_X86_CPUFEATURES_H */

@@ -31,6 +31,7 @@
 #include <linux/cpumask.h>
 #include <asm/pgtable.h>
 #include <linux/atomic.h>
+#include <asm/intel_ds.h>
 #include <asm/proto.h>
 #include <asm/setup.h>
 #include <asm/apic.h>
@@ -511,8 +512,23 @@ static DEFINE_PER_CPU_PAGE_ALIGNED(char, exception_stacks
 	[(N_EXCEPTION_STACKS - 1) * EXCEPTION_STKSZ + DEBUG_STKSZ]);
 #endif
 
+<<<<<<< HEAD
 static DEFINE_PER_CPU_PAGE_ALIGNED(struct SYSENTER_stack_page,
 				   SYSENTER_stack_storage);
+=======
+static DEFINE_PER_CPU_PAGE_ALIGNED(struct entry_stack_page,
+				   entry_stack_storage);
+
+/*
+ * Force the population of PMDs for not yet allocated per cpu
+ * memory like debug store buffers.
+ */
+static void __init allocate_percpu_fixmap_ptes(int idx, int pages)
+{
+	for (; pages; pages--, idx--)
+		__set_fixmap(idx, 0, PAGE_NONE);
+}
+>>>>>>> linux-next/akpm-base
 
 static void __init
 set_percpu_fixmap_pages(int idx, void *ptr, int pages, pgprot_t prot)
@@ -521,6 +537,29 @@ set_percpu_fixmap_pages(int idx, void *ptr, int pages, pgprot_t prot)
 		__set_fixmap(idx, per_cpu_ptr_to_phys(ptr), prot);
 }
 
+<<<<<<< HEAD
+=======
+static void percpu_setup_debug_store(int cpu)
+{
+#ifdef CONFIG_CPU_SUP_INTEL
+	int npages, idx;
+
+	if (boot_cpu_data.x86_vendor != X86_VENDOR_INTEL)
+		return;
+
+	idx = get_cpu_entry_area_index(cpu, cpu_debug_store);
+	npages = sizeof(struct debug_store) / PAGE_SIZE;
+	BUILD_BUG_ON(sizeof(struct debug_store) % PAGE_SIZE != 0);
+	set_percpu_fixmap_pages(idx, &per_cpu(cpu_debug_store, cpu), npages,
+				PAGE_KERNEL);
+
+	idx = get_cpu_entry_area_index(cpu, cpu_debug_buffers);
+	npages = sizeof(struct debug_store_buffers) / PAGE_SIZE;
+	allocate_percpu_fixmap_ptes(idx, npages);
+#endif
+}
+
+>>>>>>> linux-next/akpm-base
 /* Setup the fixmap mappings only once per-processor */
 static void __init setup_cpu_entry_area(int cpu)
 {
@@ -547,8 +586,13 @@ static void __init setup_cpu_entry_area(int cpu)
 #endif
 
 	__set_fixmap(get_cpu_entry_area_index(cpu, gdt), get_cpu_gdt_paddr(cpu), gdt_prot);
+<<<<<<< HEAD
 	set_percpu_fixmap_pages(get_cpu_entry_area_index(cpu, SYSENTER_stack_page),
 				per_cpu_ptr(&SYSENTER_stack_storage, cpu), 1,
+=======
+	set_percpu_fixmap_pages(get_cpu_entry_area_index(cpu, entry_stack_page),
+				per_cpu_ptr(&entry_stack_storage, cpu), 1,
+>>>>>>> linux-next/akpm-base
 				PAGE_KERNEL);
 
 	/*
@@ -592,6 +636,10 @@ static void __init setup_cpu_entry_area(int cpu)
 	__set_fixmap(get_cpu_entry_area_index(cpu, entry_trampoline),
 		     __pa_symbol(_entry_trampoline), PAGE_KERNEL_RX);
 #endif
+<<<<<<< HEAD
+=======
+	percpu_setup_debug_store(cpu);
+>>>>>>> linux-next/akpm-base
 }
 
 void __init setup_cpu_entry_areas(void)
@@ -1016,6 +1064,10 @@ static void __init early_identify_cpu(struct cpuinfo_x86 *c)
 	}
 
 	setup_force_cpu_cap(X86_FEATURE_ALWAYS);
+
+	/* Assume for now that ALL x86 CPUs are insecure */
+	setup_force_cpu_bug(X86_BUG_CPU_INSECURE);
+
 	fpu__init_system(c);
 
 #ifdef CONFIG_X86_32
@@ -1348,7 +1400,11 @@ void enable_sep_cpu(void)
 
 	tss->x86_tss.ss1 = __KERNEL_CS;
 	wrmsr(MSR_IA32_SYSENTER_CS, tss->x86_tss.ss1, 0);
+<<<<<<< HEAD
 	wrmsr(MSR_IA32_SYSENTER_ESP, (unsigned long)(cpu_SYSENTER_stack(cpu) + 1), 0);
+=======
+	wrmsr(MSR_IA32_SYSENTER_ESP, (unsigned long)(cpu_entry_stack(cpu) + 1), 0);
+>>>>>>> linux-next/akpm-base
 	wrmsr(MSR_IA32_SYSENTER_EIP, (unsigned long)entry_SYSENTER_32, 0);
 
 	put_cpu();
@@ -1454,7 +1510,14 @@ void syscall_init(void)
 		(entry_SYSCALL_64_trampoline - _entry_trampoline);
 
 	wrmsr(MSR_STAR, 0, (__USER32_CS << 16) | __KERNEL_CS);
+<<<<<<< HEAD
 	wrmsrl(MSR_LSTAR, SYSCALL64_entry_trampoline);
+=======
+	if (static_cpu_has_bug(X86_BUG_CPU_SECURE_MODE_PTI))
+		wrmsrl(MSR_LSTAR, SYSCALL64_entry_trampoline);
+	else
+		wrmsrl(MSR_LSTAR, (unsigned long)entry_SYSCALL_64);
+>>>>>>> linux-next/akpm-base
 
 #ifdef CONFIG_IA32_EMULATION
 	wrmsrl(MSR_CSTAR, (unsigned long)entry_SYSCALL_compat);
@@ -1465,7 +1528,11 @@ void syscall_init(void)
 	 * AMD doesn't allow SYSENTER in long mode (either 32- or 64-bit).
 	 */
 	wrmsrl_safe(MSR_IA32_SYSENTER_CS, (u64)__KERNEL_CS);
+<<<<<<< HEAD
 	wrmsrl_safe(MSR_IA32_SYSENTER_ESP, (unsigned long)(cpu_SYSENTER_stack(cpu) + 1));
+=======
+	wrmsrl_safe(MSR_IA32_SYSENTER_ESP, (unsigned long)(cpu_entry_stack(cpu) + 1));
+>>>>>>> linux-next/akpm-base
 	wrmsrl_safe(MSR_IA32_SYSENTER_EIP, (u64)entry_SYSENTER_compat);
 #else
 	wrmsrl(MSR_CSTAR, (unsigned long)ignore_sysret);
@@ -1680,7 +1747,11 @@ void cpu_init(void)
 	 */
 	set_tss_desc(cpu, &get_cpu_entry_area(cpu)->tss.x86_tss);
 	load_TR_desc();
+<<<<<<< HEAD
 	load_sp0((unsigned long)(cpu_SYSENTER_stack(cpu) + 1));
+=======
+	load_sp0((unsigned long)(cpu_entry_stack(cpu) + 1));
+>>>>>>> linux-next/akpm-base
 
 	load_mm_ldt(&init_mm);
 

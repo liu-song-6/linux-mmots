@@ -942,9 +942,15 @@ ENTRY(debug)
 
 	/* Are we currently on the SYSENTER stack? */
 	movl	PER_CPU_VAR(cpu_entry_area), %ecx
+<<<<<<< HEAD
 	addl	$CPU_ENTRY_AREA_SYSENTER_stack + SIZEOF_SYSENTER_stack, %ecx
 	subl	%eax, %ecx	/* ecx = (end of SYSENTER_stack) - esp */
 	cmpl	$SIZEOF_SYSENTER_stack, %ecx
+=======
+	addl	$CPU_ENTRY_AREA_entry_stack + SIZEOF_entry_stack, %ecx
+	subl	%eax, %ecx	/* ecx = (end of entry_stack) - esp */
+	cmpl	$SIZEOF_entry_stack, %ecx
+>>>>>>> linux-next/akpm-base
 	jb	.Ldebug_from_sysenter_stack
 
 	TRACE_IRQS_OFF
@@ -986,9 +992,15 @@ ENTRY(nmi)
 
 	/* Are we currently on the SYSENTER stack? */
 	movl	PER_CPU_VAR(cpu_entry_area), %ecx
+<<<<<<< HEAD
 	addl	$CPU_ENTRY_AREA_SYSENTER_stack + SIZEOF_SYSENTER_stack, %ecx
 	subl	%eax, %ecx	/* ecx = (end of SYSENTER_stack) - esp */
 	cmpl	$SIZEOF_SYSENTER_stack, %ecx
+=======
+	addl	$CPU_ENTRY_AREA_entry_stack + SIZEOF_entry_stack, %ecx
+	subl	%eax, %ecx	/* ecx = (end of entry_stack) - esp */
+	cmpl	$SIZEOF_entry_stack, %ecx
+>>>>>>> linux-next/akpm-base
 	jb	.Lnmi_from_sysenter_stack
 
 	/* Not on SYSENTER stack. */

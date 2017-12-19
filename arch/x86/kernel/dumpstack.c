@@ -43,9 +43,15 @@ bool in_task_stack(unsigned long *stack, struct task_struct *task,
 	return true;
 }
 
+<<<<<<< HEAD
 bool in_sysenter_stack(unsigned long *stack, struct stack_info *info)
 {
 	struct SYSENTER_stack *ss = cpu_SYSENTER_stack(smp_processor_id());
+=======
+bool in_entry_stack(unsigned long *stack, struct stack_info *info)
+{
+	struct entry_stack *ss = cpu_entry_stack(smp_processor_id());
+>>>>>>> linux-next/akpm-base
 
 	void *begin = ss;
 	void *end = ss + 1;
@@ -53,7 +59,11 @@ bool in_sysenter_stack(unsigned long *stack, struct stack_info *info)
 	if ((void *)stack < begin || (void *)stack >= end)
 		return false;
 
+<<<<<<< HEAD
 	info->type	= STACK_TYPE_SYSENTER;
+=======
+	info->type	= STACK_TYPE_ENTRY;
+>>>>>>> linux-next/akpm-base
 	info->begin	= begin;
 	info->end	= end;
 	info->next_sp	= NULL;
@@ -111,13 +121,21 @@ void show_trace_log_lvl(struct task_struct *task, struct pt_regs *regs,
 	 * - task stack
 	 * - interrupt stack
 	 * - HW exception stacks (double fault, nmi, debug, mce)
+<<<<<<< HEAD
 	 * - SYSENTER stack
+=======
+	 * - entry stack
+>>>>>>> linux-next/akpm-base
 	 *
 	 * x86-32 can have up to four stacks:
 	 * - task stack
 	 * - softirq stack
 	 * - hardirq stack
+<<<<<<< HEAD
 	 * - SYSENTER stack
+=======
+	 * - entry stack
+>>>>>>> linux-next/akpm-base
 	 */
 	for (regs = NULL; stack; stack = PTR_ALIGN(stack_info.next_sp, sizeof(long))) {
 		const char *stack_name;
