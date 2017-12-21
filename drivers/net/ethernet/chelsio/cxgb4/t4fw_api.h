@@ -513,6 +513,13 @@ struct fw_ulptx_wr {
 	u64 cookie;
 };
 
+#define FW_ULPTX_WR_DATA_S      28
+#define FW_ULPTX_WR_DATA_M      0x1
+#define FW_ULPTX_WR_DATA_V(x)   ((x) << FW_ULPTX_WR_DATA_S)
+#define FW_ULPTX_WR_DATA_G(x)   \
+	(((x) >> FW_ULPTX_WR_DATA_S) & FW_ULPTX_WR_DATA_M)
+#define FW_ULPTX_WR_DATA_F      FW_ULPTX_WR_DATA_V(1U)
+
 struct fw_tp_wr {
 	__be32 op_to_immdlen;
 	__be32 flowid_len16;
@@ -828,6 +835,7 @@ enum fw_ldst_addrspc {
 	FW_LDST_ADDRSPC_MPS       = 0x0020,
 	FW_LDST_ADDRSPC_FUNC      = 0x0028,
 	FW_LDST_ADDRSPC_FUNC_PCIE = 0x0029,
+	FW_LDST_ADDRSPC_I2C       = 0x0038,
 };
 
 enum fw_ldst_mps_fid {

@@ -1108,6 +1108,8 @@ struct proto {
 	struct kmem_cache	*slab;
 	unsigned int		obj_size;
 	slab_flags_t		slab_flags;
+	size_t			useroffset;	/* Usercopy region offset */
+	size_t			usersize;	/* Usercopy region size */
 
 	struct percpu_counter	*orphan_count;
 
@@ -1262,6 +1264,7 @@ proto_memory_pressure(struct proto *prot)
 /* Called with local bh disabled */
 void sock_prot_inuse_add(struct net *net, struct proto *prot, int inc);
 int sock_prot_inuse_get(struct net *net, struct proto *proto);
+int sock_inuse_get(struct net *net);
 #else
 static inline void sock_prot_inuse_add(struct net *net, struct proto *prot,
 		int inc)
@@ -1578,7 +1581,7 @@ int sock_no_connect(struct socket *, struct sockaddr *, int, int);
 int sock_no_socketpair(struct socket *, struct socket *);
 int sock_no_accept(struct socket *, struct socket *, int, bool);
 int sock_no_getname(struct socket *, struct sockaddr *, int *, int);
-unsigned int sock_no_poll(struct file *, struct socket *,
+__poll_t sock_no_poll(struct file *, struct socket *,
 			  struct poll_table_struct *);
 int sock_no_ioctl(struct socket *, unsigned int, unsigned long);
 int sock_no_listen(struct socket *, int);
@@ -2405,6 +2408,17 @@ static inline int sk_get_rmem0(const struct sock *sk, const struct proto *proto)
 		return *(int *)((void *)sock_net(sk) + proto->sysctl_rmem_offset);
 
 	return *proto->sysctl_rmem;
+}
+
+/* Default TCP Small queue budget is ~1 ms of data (1sec >> 10)
+ * Some wifi drivers need to tweak it to get more chunks.
+ * They can use this helper from their ndo_start_xmit()
+ */
+static inline void sk_pacing_shift_update(struct sock *sk, int val)
+{
+	if (!sk || !sk_fullsock(sk) || sk->sk_pacing_shift == val)
+		return;
+	sk->sk_pacing_shift = val;
 }
 
 #endif	/* _SOCK_H */

@@ -136,6 +136,15 @@
 #define KPROBE_BLACKLIST()
 #endif
 
+#ifdef CONFIG_BPF_KPROBE_OVERRIDE
+#define ERROR_INJECT_LIST()	. = ALIGN(8);						\
+				VMLINUX_SYMBOL(__start_kprobe_error_inject_list) = .;	\
+				KEEP(*(_kprobe_error_inject_list))			\
+				VMLINUX_SYMBOL(__stop_kprobe_error_inject_list) = .;
+#else
+#define ERROR_INJECT_LIST()
+#endif
+
 #ifdef CONFIG_EVENT_TRACING
 #define FTRACE_EVENTS()	. = ALIGN(8);					\
 			VMLINUX_SYMBOL(__start_ftrace_events) = .;	\
@@ -268,7 +277,11 @@
 #define INIT_TASK_DATA(align)						\
 	. = ALIGN(align);						\
 	VMLINUX_SYMBOL(__start_init_task) = .;				\
+	VMLINUX_SYMBOL(init_thread_union) = .;				\
+	VMLINUX_SYMBOL(init_stack) = .;					\
 	*(.data..init_task)						\
+	*(.data..init_thread_info)					\
+	. = VMLINUX_SYMBOL(__start_init_task) + THREAD_SIZE;		\
 	VMLINUX_SYMBOL(__end_init_task) = .;
 
 /*
@@ -564,6 +577,7 @@
 	FTRACE_EVENTS()							\
 	TRACE_SYSCALLS()						\
 	KPROBE_BLACKLIST()						\
+	ERROR_INJECT_LIST()						\
 	MEM_DISCARD(init.rodata)					\
 	CLK_OF_TABLES()							\
 	RESERVEDMEM_OF_TABLES()						\

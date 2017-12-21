@@ -968,7 +968,7 @@ static inline bool xfrm_sec_ctx_match(struct xfrm_sec_ctx *s1, struct xfrm_sec_c
 
 /* A struct encoding bundle of transformations to apply to some set of flow.
  *
- * dst->child points to the next element of bundle.
+ * xdst->child points to the next element of bundle.
  * dst->xfrm  points to an instanse of transformer.
  *
  * Due to unfortunate limitations of current routing cache, which we
@@ -984,6 +984,8 @@ struct xfrm_dst {
 		struct rt6_info		rt6;
 	} u;
 	struct dst_entry *route;
+	struct dst_entry *child;
+	struct dst_entry *path;
 	struct xfrm_policy *pols[XFRM_POLICY_TYPE_MAX];
 	int num_pols, num_xfrms;
 	u32 xfrm_genid;
@@ -994,7 +996,35 @@ struct xfrm_dst {
 	u32 path_cookie;
 };
 
+static inline struct dst_entry *xfrm_dst_path(const struct dst_entry *dst)
+{
 #ifdef CONFIG_XFRM
+	if (dst->xfrm) {
+		const struct xfrm_dst *xdst = (const struct xfrm_dst *) dst;
+
+		return xdst->path;
+	}
+#endif
+	return (struct dst_entry *) dst;
+}
+
+static inline struct dst_entry *xfrm_dst_child(const struct dst_entry *dst)
+{
+#ifdef CONFIG_XFRM
+	if (dst->xfrm) {
+		struct xfrm_dst *xdst = (struct xfrm_dst *) dst;
+		return xdst->child;
+	}
+#endif
+	return NULL;
+}
+
+#ifdef CONFIG_XFRM
+static inline void xfrm_dst_set_child(struct xfrm_dst *xdst, struct dst_entry *child)
+{
+	xdst->child = child;
+}
+
 static inline void xfrm_dst_destroy(struct xfrm_dst *xdst)
 {
 	xfrm_pols_put(xdst->pols, xdst->num_pols);
@@ -1570,6 +1600,9 @@ int xfrm_init_state(struct xfrm_state *x);
 int xfrm_prepare_input(struct xfrm_state *x, struct sk_buff *skb);
 int xfrm_input(struct sk_buff *skb, int nexthdr, __be32 spi, int encap_type);
 int xfrm_input_resume(struct sk_buff *skb, int nexthdr);
+int xfrm_trans_queue(struct sk_buff *skb,
+		     int (*finish)(struct net *, struct sock *,
+				   struct sk_buff *));
 int xfrm_output_resume(struct sk_buff *skb, int err);
 int xfrm_output(struct sock *sk, struct sk_buff *skb);
 int xfrm_inner_extract_output(struct xfrm_state *x, struct sk_buff *skb);
@@ -1866,12 +1899,14 @@ bool xfrm_dev_offload_ok(struct sk_buff *skb, struct xfrm_state *x);
 static inline bool xfrm_dst_offload_ok(struct dst_entry *dst)
 {
 	struct xfrm_state *x = dst->xfrm;
+	struct xfrm_dst *xdst;
 
 	if (!x || !x->type_offload)
 		return false;
 
-	if (x->xso.offload_handle && (x->xso.dev == dst->path->dev) &&
-	    !dst->child->xfrm)
+	xdst = (struct xfrm_dst *) dst;
+	if (x->xso.offload_handle && (x->xso.dev == xfrm_dst_path(dst)->dev) &&
+	    !xdst->child->xfrm)
 		return true;
 
 	return false;
