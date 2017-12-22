@@ -861,7 +861,7 @@ int ip6_tnl_rcv(struct ip6_tnl *t, struct sk_buff *skb,
 		struct metadata_dst *tun_dst,
 		bool log_ecn_err)
 {
-	return __ip6_tnl_rcv(t, skb, tpi, NULL, ip6ip6_dscp_ecn_decapsulate,
+	return __ip6_tnl_rcv(t, skb, tpi, tun_dst, ip6ip6_dscp_ecn_decapsulate,
 			     log_ecn_err);
 }
 EXPORT_SYMBOL(ip6_tnl_rcv);
@@ -978,6 +978,9 @@ int ip6_tnl_xmit_ctl(struct ip6_tnl *t,
 	struct __ip6_tnl_parm *p = &t->parms;
 	int ret = 0;
 	struct net *net = t->net;
+
+	if (t->parms.collect_md)
+		return 1;
 
 	if ((p->flags & IP6_TNL_F_CAP_XMIT) ||
 	    ((p->flags & IP6_TNL_F_CAP_PER_PACKET) &&
@@ -1123,8 +1126,13 @@ route_lookup:
 		max_headroom += 8;
 		mtu -= 8;
 	}
-	if (mtu < IPV6_MIN_MTU)
-		mtu = IPV6_MIN_MTU;
+	if (skb->protocol == htons(ETH_P_IPV6)) {
+		if (mtu < IPV6_MIN_MTU)
+			mtu = IPV6_MIN_MTU;
+	} else if (mtu < 576) {
+		mtu = 576;
+	}
+
 	if (skb_dst(skb) && !t->parms.collect_md)
 		skb_dst(skb)->ops->update_pmtu(skb_dst(skb), NULL, skb, mtu);
 	if (skb->len - t->tun_hlen - eth_hlen > mtu && !skb_is_gso(skb)) {
