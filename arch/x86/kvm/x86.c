@@ -7336,10 +7336,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *kvm_run)
 {
 	int r;
 
-<<<<<<< HEAD
-=======
 	vcpu_load(vcpu);
->>>>>>> linux-next/akpm-base
 	kvm_sigset_activate(vcpu);
 	kvm_load_guest_fpu(vcpu);
 

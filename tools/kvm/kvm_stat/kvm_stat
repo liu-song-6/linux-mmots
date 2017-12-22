@@ -1579,15 +1579,6 @@ def main():
 
     stats = Stats(options)
 
-<<<<<<< HEAD
-    if options.fields == 'help':
-        stats.fields_filter = None
-        event_list = []
-        for key in stats.get().keys():
-            event_list.append(key.split('(', 1)[0])
-        sys.stdout.write('  ' + '\n  '.join(sorted(set(event_list))) + '\n')
-        sys.exit(0)
-=======
     if options.fields == "help":
         stats.fields_filter = None
         event_list = "\n"
@@ -1599,7 +1590,6 @@ def main():
                 event_list += key + '\n'
         sys.stdout.write(event_list)
         return ""
->>>>>>> linux-next/akpm-base
 
     if options.log:
         log(stats)
