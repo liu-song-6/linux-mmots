@@ -1454,8 +1454,6 @@ static void coerce_reg_to_size(struct bpf_reg_state *reg, int size)
 	reg->smax_value = reg->umax_value;
 }
 
-<<<<<<< HEAD
-=======
 static int update_stack_depth(struct bpf_verifier_env *env,
 			      const struct bpf_func_state *func,
 			      int off)
@@ -1504,7 +1502,6 @@ static int get_callee_stack_depth(struct bpf_verifier_env *env,
 	return env->subprog_stack_depth[subprog];
 }
 
->>>>>>> linux-next/akpm-base
 /* check whether memory at (regno + off) is accessible for t = (read | write)
  * if t==write, value_regno is a register which value is stored into memory
  * if t==read, value_regno is a register which will receive the value from memory

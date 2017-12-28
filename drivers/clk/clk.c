@@ -1821,8 +1821,6 @@ static void clk_change_rate(struct clk_core *core)
 		clk_change_rate(core->new_child);
 
 	clk_pm_runtime_put(core);
-<<<<<<< HEAD
-=======
 }
 
 static unsigned long clk_core_req_round_rate_nolock(struct clk_core *core,
@@ -1850,7 +1848,6 @@ static unsigned long clk_core_req_round_rate_nolock(struct clk_core *core,
 	clk_core_rate_restore_protect(core, cnt);
 
 	return ret ? 0 : req.rate;
->>>>>>> linux-next/akpm-base
 }
 
 static int clk_core_set_rate_nolock(struct clk_core *core,

@@ -399,8 +399,6 @@ static const struct file_operations drm_syncobj_file_fops = {
 	.release = drm_syncobj_file_release,
 };
 
-<<<<<<< HEAD
-=======
 static int drm_syncobj_alloc_file(struct drm_syncobj *syncobj)
 {
 	struct file *file = anon_inode_getfile("syncobj_file",
@@ -427,7 +425,6 @@ static int drm_syncobj_alloc_file(struct drm_syncobj *syncobj)
  *
  * Returns 0 on success or a negative error value on failure.
  */
->>>>>>> linux-next/akpm-base
 int drm_syncobj_get_fd(struct drm_syncobj *syncobj, int *p_fd)
 {
 	struct file *file;

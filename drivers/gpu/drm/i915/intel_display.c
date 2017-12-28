@@ -9855,39 +9855,11 @@ found:
 	if (!mode)
 		mode = &load_detect_mode;
 
-<<<<<<< HEAD
-	/* We need a framebuffer large enough to accommodate all accesses
-	 * that the plane may generate whilst we perform load detection.
-	 * We can not rely on the fbcon either being present (we get called
-	 * during its initialisation to detect all boot displays, or it may
-	 * not even exist) or that it is large enough to satisfy the
-	 * requested mode.
-	 */
-	fb = mode_fits_in_fbdev(dev, mode);
-	if (fb == NULL) {
-		DRM_DEBUG_KMS("creating tmp fb for load-detection\n");
-		fb = intel_framebuffer_create_for_mode(dev, mode, 24, 32);
-	} else
-		DRM_DEBUG_KMS("reusing fbdev for load-detection framebuffer\n");
-	if (IS_ERR(fb)) {
-		DRM_DEBUG_KMS("failed to allocate framebuffer for load-detection\n");
-		ret = PTR_ERR(fb);
-		goto fail;
-	}
-
-	ret = intel_modeset_setup_plane_state(state, crtc, mode, fb, 0, 0);
-	drm_framebuffer_put(fb);
-	if (ret)
-		goto fail;
-
-	ret = drm_atomic_set_mode_for_crtc(&crtc_state->base, mode);
-=======
 	ret = drm_atomic_set_mode_for_crtc(&crtc_state->base, mode);
 	if (ret)
 		goto fail;
 
 	ret = intel_modeset_disable_planes(state, crtc);
->>>>>>> linux-next/akpm-base
 	if (ret)
 		goto fail;
 

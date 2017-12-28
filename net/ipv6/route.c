@@ -4321,14 +4321,8 @@ static int inet6_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr *nlh,
 		goto errout;
 	}
 
-<<<<<<< HEAD
-	if (fibmatch && rt->dst.from) {
-		struct rt6_info *ort = container_of(rt->dst.from,
-						    struct rt6_info, dst);
-=======
 	if (fibmatch && rt->from) {
 		struct rt6_info *ort = rt->from;
->>>>>>> linux-next/akpm-base
 
 		dst_hold(&ort->dst);
 		ip6_rt_put(rt);

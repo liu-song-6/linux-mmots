@@ -84,38 +84,6 @@ static const char *nfp_bpf_extra_cap(struct nfp_app *app, struct nfp_net *nn)
 	return nfp_net_ebpf_capable(nn) ? "BPF" : "";
 }
 
-<<<<<<< HEAD
-static int
-nfp_bpf_vnic_alloc(struct nfp_app *app, struct nfp_net *nn, unsigned int id)
-{
-	int err;
-
-	nn->app_priv = kzalloc(sizeof(struct nfp_bpf_vnic), GFP_KERNEL);
-	if (!nn->app_priv)
-		return -ENOMEM;
-
-	err = nfp_app_nic_vnic_alloc(app, nn, id);
-	if (err)
-		goto err_free_priv;
-
-	return 0;
-err_free_priv:
-	kfree(nn->app_priv);
-	return err;
-}
-
-static void nfp_bpf_vnic_free(struct nfp_app *app, struct nfp_net *nn)
-{
-	struct nfp_bpf_vnic *bv = nn->app_priv;
-
-	if (nn->dp.bpf_offload_xdp)
-		nfp_bpf_xdp_offload(app, nn, NULL);
-	WARN_ON(bv->tc_prog);
-	kfree(bv);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 static int nfp_bpf_setup_tc_block_cb(enum tc_setup_type type,
 				     void *type_data, void *cb_priv)
 {
@@ -142,26 +110,7 @@ static int nfp_bpf_setup_tc_block_cb(enum tc_setup_type type,
 	if (cls_bpf->command != TC_CLSBPF_OFFLOAD)
 		return -EOPNOTSUPP;
 
-<<<<<<< HEAD
-	bv = nn->app_priv;
-	oldprog = cls_bpf->oldprog;
-
-	/* Don't remove if oldprog doesn't match driver's state */
-	if (bv->tc_prog != oldprog) {
-		oldprog = NULL;
-		if (!cls_bpf->prog)
-			return 0;
-	}
-
-	err = nfp_net_bpf_offload(nn, cls_bpf->prog, oldprog);
-	if (err)
-		return err;
-
-	bv->tc_prog = cls_bpf->prog;
-	return 0;
-=======
 	return nfp_net_bpf_offload(nn, cls_bpf->prog, cls_bpf->oldprog);
->>>>>>> linux-next/akpm-base
 }
 
 static int nfp_bpf_setup_tc_block(struct net_device *netdev,
@@ -322,12 +271,7 @@ const struct nfp_app_type app_bpf = {
 
 	.extra_cap	= nfp_bpf_extra_cap,
 
-<<<<<<< HEAD
-	.vnic_alloc	= nfp_bpf_vnic_alloc,
-	.vnic_free	= nfp_bpf_vnic_free,
-=======
 	.vnic_alloc	= nfp_app_nic_vnic_alloc,
->>>>>>> linux-next/akpm-base
 
 	.setup_tc	= nfp_bpf_setup_tc,
 	.tc_busy	= nfp_bpf_tc_busy,

@@ -2083,10 +2083,6 @@ static struct phy_driver marvell_drivers[] = {
 		.probe = marvell_probe,
 		.config_init = &m88e1145_config_init,
 		.config_aneg = &m88e1101_config_aneg,
-<<<<<<< HEAD
-		.read_status = &genphy_read_status,
-=======
->>>>>>> linux-next/akpm-base
 		.ack_interrupt = &marvell_ack_interrupt,
 		.config_intr = &marvell_config_intr,
 		.resume = &genphy_resume,

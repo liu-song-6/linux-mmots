@@ -2095,11 +2095,7 @@ static void intel_ddi_clk_select(struct intel_encoder *encoder,
 	if (WARN_ON(!pll))
 		return;
 
-<<<<<<< HEAD
-	 mutex_lock(&dev_priv->dpll_lock);
-=======
 	mutex_lock(&dev_priv->dpll_lock);
->>>>>>> linux-next/akpm-base
 
 	if (IS_CANNONLAKE(dev_priv)) {
 		/* Configure DPCLKA_CFGCR0 to map the DPLL to the DDI. */
