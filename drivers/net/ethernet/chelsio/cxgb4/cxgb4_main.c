@@ -1673,7 +1673,7 @@ int cxgb4_flush_eq_cache(struct net_device *dev)
 {
 	struct adapter *adap = netdev2adap(dev);
 
-	return t4_sge_ctxt_flush(adap, adap->mbox);
+	return t4_sge_ctxt_flush(adap, adap->mbox, CTXT_EGRESS);
 }
 EXPORT_SYMBOL(cxgb4_flush_eq_cache);
 
@@ -4096,7 +4096,7 @@ static int adap_init0(struct adapter *adap)
 		} else {
 			adap->vres.ncrypto_fc = val[0];
 		}
-		adap->params.crypto |= ULP_CRYPTO_LOOKASIDE;
+		adap->params.crypto = ntohs(caps_cmd.cryptocaps);
 		adap->num_uld += 1;
 	}
 #undef FW_PARAM_PFVF
