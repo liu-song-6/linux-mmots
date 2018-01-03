@@ -31,6 +31,16 @@ config BT_HCIBTUSB
 	  Say Y here to compile support for Bluetooth USB devices into the
 	  kernel or say M to compile it as module (btusb).
 
+config BT_HCIBTUSB_AUTOSUSPEND
+	bool "Enable USB autosuspend for Bluetooth USB devices by default"
+	depends on BT_HCIBTUSB
+	help
+	  Say Y here to enable USB autosuspend for Bluetooth USB devices by
+	  default.
+
+	  This can be overridden by passing btusb.enable_autosuspend=[y|n]
+	  on the kernel commandline.
+
 config BT_HCIBTUSB_BCM
 	bool "Broadcom protocol support"
 	depends on BT_HCIBTUSB
@@ -100,6 +110,7 @@ config BT_HCIUART_NOKIA
 	depends on PM
 	select BT_HCIUART_H4
 	select BT_BCM
+	select GPIOLIB
 	help
 	  Nokia H4+ is serial protocol for communication between Bluetooth
 	  device and host. This protocol is required for Bluetooth devices
@@ -160,6 +171,7 @@ config BT_HCIUART_INTEL
 	depends on BT_HCIUART
 	select BT_HCIUART_H4
 	select BT_INTEL
+	select GPIOLIB
 	help
 	  The Intel protocol support enables Bluetooth HCI over serial
 	  port interface for Intel Bluetooth controllers.
@@ -173,6 +185,7 @@ config BT_HCIUART_BCM
 	depends on (!ACPI || SERIAL_DEV_CTRL_TTYPORT)
 	select BT_HCIUART_H4
 	select BT_BCM
+	select GPIOLIB
 	help
 	  The Broadcom protocol support enables Bluetooth HCI over serial
 	  port interface for Broadcom Bluetooth controllers.

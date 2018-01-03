@@ -193,7 +193,6 @@ out:
 	return ret;
 }
 
-
 static struct proto_ops algif_skcipher_ops = {
 	.family		=	PF_ALG,
 
@@ -390,7 +389,7 @@ static int skcipher_accept_parent_nokey(void *private, struct sock *sk)
 	INIT_LIST_HEAD(&ctx->tsgl_list);
 	ctx->len = len;
 	ctx->used = 0;
-	ctx->rcvused = 0;
+	atomic_set(&ctx->rcvused, 0);
 	ctx->more = 0;
 	ctx->merge = 0;
 	ctx->enc = 0;

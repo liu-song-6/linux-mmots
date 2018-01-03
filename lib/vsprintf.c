@@ -42,7 +42,6 @@
 #include "../mm/internal.h"	/* For the trace_print_flags arrays */
 
 #include <asm/page.h>		/* for PAGE_SIZE */
-#include <asm/sections.h>	/* for dereference_function_descriptor() */
 #include <asm/byteorder.h>	/* cpu_to_le16 */
 
 #include <linux/string_helpers.h>
@@ -1834,7 +1833,8 @@ static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
  *
  * - 'x' For printing the address. Equivalent to "%lx".
  *
- * ** Please update also Documentation/printk-formats.txt when making changes **
+ * ** When making changes please also update:
+ *	Documentation/core-api/printk-formats.rst
  *
  * Note: The difference between 'S' and 'F' is that on ia64 and ppc64
  * function pointers are really function descriptors, which contain a
@@ -1862,10 +1862,10 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 	switch (*fmt) {
 	case 'F':
 	case 'f':
-		ptr = dereference_function_descriptor(ptr);
-		/* Fallthrough */
 	case 'S':
 	case 's':
+		ptr = dereference_symbol_descriptor(ptr);
+		/* Fallthrough */
 	case 'B':
 		return symbol_string(buf, end, ptr, spec, fmt);
 	case 'R':
@@ -2194,7 +2194,7 @@ set_precision(struct printf_spec *spec, int prec)
  *  - ``%n`` is unsupported
  *  - ``%p*`` is handled by pointer()
  *
- * See pointer() or Documentation/printk-formats.txt for more
+ * See pointer() or Documentation/core-api/printk-formats.rst for more
  * extensive description.
  *
  * **Please update the documentation in both places when making changes**

@@ -491,7 +491,7 @@ static void *aead_bind(const char *name, u32 type, u32 mask)
 		return ERR_CAST(aead);
 	}
 
-	null_tfm = crypto_get_default_null_skcipher2();
+	null_tfm = crypto_get_default_null_skcipher();
 	if (IS_ERR(null_tfm)) {
 		crypto_free_aead(aead);
 		kfree(tfm);
@@ -509,7 +509,7 @@ static void aead_release(void *private)
 	struct aead_tfm *tfm = private;
 
 	crypto_free_aead(tfm->aead);
-	crypto_put_default_null_skcipher2();
+	crypto_put_default_null_skcipher();
 	kfree(tfm);
 }
 
@@ -571,7 +571,7 @@ static int aead_accept_parent_nokey(void *private, struct sock *sk)
 	INIT_LIST_HEAD(&ctx->tsgl_list);
 	ctx->len = len;
 	ctx->used = 0;
-	ctx->rcvused = 0;
+	atomic_set(&ctx->rcvused, 0);
 	ctx->more = 0;
 	ctx->merge = 0;
 	ctx->enc = 0;
