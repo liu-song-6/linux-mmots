@@ -710,13 +710,13 @@ static int tipc_getname(struct socket *sock, struct sockaddr *uaddr,
  * imply that the operation will succeed, merely that it should be performed
  * and will not block.
  */
-static unsigned int tipc_poll(struct file *file, struct socket *sock,
+static __poll_t tipc_poll(struct file *file, struct socket *sock,
 			      poll_table *wait)
 {
 	struct sock *sk = sock->sk;
 	struct tipc_sock *tsk = tipc_sk(sk);
 	struct tipc_group *grp = tsk->group;
-	u32 revents = 0;
+	__poll_t revents = 0;
 
 	sock_poll_wait(file, sk_sleep(sk), wait);
 
@@ -2640,9 +2640,7 @@ void tipc_sk_reinit(struct net *net)
 	rhashtable_walk_enter(&tn->sk_rht, &iter);
 
 	do {
-		tsk = ERR_PTR(rhashtable_walk_start(&iter));
-		if (IS_ERR(tsk))
-			goto walk_stop;
+		rhashtable_walk_start(&iter);
 
 		while ((tsk = rhashtable_walk_next(&iter)) && !IS_ERR(tsk)) {
 			spin_lock_bh(&tsk->sk.sk_lock.slock);
@@ -2651,7 +2649,7 @@ void tipc_sk_reinit(struct net *net)
 			msg_set_orignode(msg, tn->own_addr);
 			spin_unlock_bh(&tsk->sk.sk_lock.slock);
 		}
-walk_stop:
+
 		rhashtable_walk_stop(&iter);
 	} while (tsk == ERR_PTR(-EAGAIN));
 }

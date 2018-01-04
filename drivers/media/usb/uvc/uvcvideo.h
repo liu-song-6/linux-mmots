@@ -154,6 +154,11 @@
 	{ 'I',  'N',  'V',  'I', 0xdb, 0x57, 0x49, 0x5e, \
 	 0x8e, 0x3f, 0xf4, 0x79, 0x53, 0x2b, 0x94, 0x6f}
 
+#define UVC_GUID_FORMAT_D3DFMT_L8 \
+	{0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, \
+	 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}
+
+
 /* ------------------------------------------------------------------------
  * Driver specific constants.
  */
@@ -678,7 +683,7 @@ extern struct uvc_buffer *uvc_queue_next_buffer(struct uvc_video_queue *queue,
 		struct uvc_buffer *buf);
 extern int uvc_queue_mmap(struct uvc_video_queue *queue,
 		struct vm_area_struct *vma);
-extern unsigned int uvc_queue_poll(struct uvc_video_queue *queue,
+extern __poll_t uvc_queue_poll(struct uvc_video_queue *queue,
 		struct file *file, poll_table *wait);
 #ifndef CONFIG_MMU
 extern unsigned long uvc_queue_get_unmapped_area(struct uvc_video_queue *queue,
