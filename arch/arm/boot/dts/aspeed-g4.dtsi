@@ -203,11 +203,7 @@
 				reg = <0x1e787000 0x40>;
 				reg-shift = <2>;
 				interrupts = <8>;
-<<<<<<< HEAD
-				clocks = <&clk_uart>;
-=======
 				clocks = <&syscon ASPEED_CLK_APB>;
->>>>>>> linux-next/akpm-base
 				no-loopback-test;
 				status = "disabled";
 			};
