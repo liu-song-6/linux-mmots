@@ -186,7 +186,7 @@ static int _snd_pcm_hw_param_mask(struct snd_pcm_hw_params *params,
 {
 	int changed;
 	changed = snd_mask_refine(hw_param_mask(params, var), val);
-	if (changed) {
+	if (changed > 0) {
 		params->cmask |= 1 << var;
 		params->rmask |= 1 << var;
 	}
@@ -233,7 +233,7 @@ static int _snd_pcm_hw_param_min(struct snd_pcm_hw_params *params,
 						  val, open);
 	else
 		return -EINVAL;
-	if (changed) {
+	if (changed > 0) {
 		params->cmask |= 1 << var;
 		params->rmask |= 1 << var;
 	}
@@ -294,7 +294,7 @@ static int _snd_pcm_hw_param_max(struct snd_pcm_hw_params *params,
 						  val, open);
 	else
 		return -EINVAL;
-	if (changed) {
+	if (changed > 0) {
 		params->cmask |= 1 << var;
 		params->rmask |= 1 << var;
 	}
@@ -455,7 +455,6 @@ static int snd_pcm_hw_param_near(struct snd_pcm_substream *pcm,
 		v = snd_pcm_hw_param_last(pcm, params, var, dir);
 	else
 		v = snd_pcm_hw_param_first(pcm, params, var, dir);
-	snd_BUG_ON(v < 0);
 	return v;
 }
 
@@ -500,7 +499,7 @@ static int _snd_pcm_hw_param_set(struct snd_pcm_hw_params *params,
 		}
 	} else
 		return -EINVAL;
-	if (changed) {
+	if (changed > 0) {
 		params->cmask |= 1 << var;
 		params->rmask |= 1 << var;
 	}
@@ -540,7 +539,7 @@ static int _snd_pcm_hw_param_setinteger(struct snd_pcm_hw_params *params,
 {
 	int changed;
 	changed = snd_interval_setinteger(hw_param_interval(params, var));
-	if (changed) {
+	if (changed > 0) {
 		params->cmask |= 1 << var;
 		params->rmask |= 1 << var;
 	}
@@ -2673,10 +2672,10 @@ static int snd_pcm_oss_capture_ready(struct snd_pcm_substream *substream)
 						runtime->oss.period_frames;
 }
 
-static unsigned int snd_pcm_oss_poll(struct file *file, poll_table * wait)
+static __poll_t snd_pcm_oss_poll(struct file *file, poll_table * wait)
 {
 	struct snd_pcm_oss_file *pcm_oss_file;
-	unsigned int mask;
+	__poll_t mask;
 	struct snd_pcm_substream *psubstream = NULL, *csubstream = NULL;
 	
 	pcm_oss_file = file->private_data;
