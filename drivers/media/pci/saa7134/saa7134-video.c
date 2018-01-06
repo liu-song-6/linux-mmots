@@ -1227,11 +1227,11 @@ static ssize_t radio_read(struct file *file, char __user *data,
 	return cmd.result;
 }
 
-static unsigned int radio_poll(struct file *file, poll_table *wait)
+static __poll_t radio_poll(struct file *file, poll_table *wait)
 {
 	struct saa7134_dev *dev = video_drvdata(file);
 	struct saa6588_command cmd;
-	unsigned int rc = v4l2_ctrl_poll(file, wait);
+	__poll_t rc = v4l2_ctrl_poll(file, wait);
 
 	cmd.instance = file;
 	cmd.event_list = wait;
@@ -1531,6 +1531,8 @@ int saa7134_querycap(struct file *file, void *priv,
 	case VFL_TYPE_VBI:
 		cap->device_caps |= vbi_caps;
 		break;
+	default:
+		return -EINVAL;
 	}
 	cap->capabilities = radio_caps | video_caps | vbi_caps |
 		cap->device_caps | V4L2_CAP_DEVICE_CAPS;

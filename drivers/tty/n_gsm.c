@@ -2457,10 +2457,10 @@ static ssize_t gsmld_write(struct tty_struct *tty, struct file *file,
  *	Called without the kernel lock held - fine
  */
 
-static unsigned int gsmld_poll(struct tty_struct *tty, struct file *file,
+static __poll_t gsmld_poll(struct tty_struct *tty, struct file *file,
 							poll_table *wait)
 {
-	unsigned int mask = 0;
+	__poll_t mask = 0;
 	struct gsm_mux *gsm = tty->disc_data;
 
 	poll_wait(file, &tty->read_wait, wait);
@@ -2955,7 +2955,6 @@ static int gsmtty_open(struct tty_struct *tty, struct file *filp)
 static void gsmtty_close(struct tty_struct *tty, struct file *filp)
 {
 	struct gsm_dlci *dlci = tty->driver_data;
-	struct gsm_mux *gsm;
 
 	if (dlci == NULL)
 		return;
@@ -2964,7 +2963,6 @@ static void gsmtty_close(struct tty_struct *tty, struct file *filp)
 	mutex_lock(&dlci->mutex);
 	gsm_destroy_network(dlci);
 	mutex_unlock(&dlci->mutex);
-	gsm = dlci->gsm;
 	if (tty_port_close_start(&dlci->port, tty, filp) == 0)
 		return;
 	gsm_dlci_begin_close(dlci);
