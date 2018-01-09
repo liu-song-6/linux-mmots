@@ -296,7 +296,8 @@ void zpool_free(struct zpool *zpool, unsigned long handle)
 int zpool_shrink(struct zpool *zpool, unsigned int pages,
 			unsigned int *reclaimed)
 {
-	return zpool->driver->shrink(zpool->pool, pages, reclaimed);
+	return zpool_shrinkable(zpool) ?
+	       zpool->driver->shrink(zpool->pool, pages, reclaimed) : -EINVAL;
 }
 
 /**
@@ -353,6 +354,20 @@ void zpool_unmap_handle(struct zpool *zpool, unsigned long handle)
 u64 zpool_get_total_size(struct zpool *zpool)
 {
 	return zpool->driver->total_size(zpool->pool);
+}
+
+/**
+ * zpool_shrinkable() - Test if zpool is shrinkable
+ * @pool	The zpool to test
+ *
+ * Zpool is only shrinkable when it's created with struct
+ * zpool_ops.evict and its driver implements struct zpool_driver.shrink.
+ *
+ * Returns: true if shrinkable; false otherwise.
+ */
+bool zpool_shrinkable(struct zpool *zpool)
+{
+	return zpool->ops && zpool->ops->evict && zpool->driver->shrink;
 }
 
 MODULE_LICENSE("GPL");
