@@ -27,6 +27,7 @@
 #include <linux/prefetch.h>
 #include <net/busy_poll.h>
 #include <linux/bpf_trace.h>
+#include <net/xdp.h>
 #include "i40e.h"
 #include "i40e_trace.h"
 #include "i40e_prototype.h"
@@ -1236,6 +1237,8 @@ void i40e_clean_rx_ring(struct i40e_ring *rx_ring)
 void i40e_free_rx_resources(struct i40e_ring *rx_ring)
 {
 	i40e_clean_rx_ring(rx_ring);
+	if (rx_ring->vsi->type == I40E_VSI_MAIN)
+		xdp_rxq_info_unreg(&rx_ring->xdp_rxq);
 	rx_ring->xdp_prog = NULL;
 	kfree(rx_ring->rx_bi);
 	rx_ring->rx_bi = NULL;
@@ -1256,6 +1259,7 @@ void i40e_free_rx_resources(struct i40e_ring *rx_ring)
 int i40e_setup_rx_descriptors(struct i40e_ring *rx_ring)
 {
 	struct device *dev = rx_ring->dev;
+	int err = -ENOMEM;
 	int bi_size;
 
 	/* warn if we are about to overwrite the pointer */
@@ -1283,13 +1287,21 @@ int i40e_setup_rx_descriptors(struct i40e_ring *rx_ring)
 	rx_ring->next_to_clean = 0;
 	rx_ring->next_to_use = 0;
 
+	/* XDP RX-queue info only needed for RX rings exposed to XDP */
+	if (rx_ring->vsi->type == I40E_VSI_MAIN) {
+		err = xdp_rxq_info_reg(&rx_ring->xdp_rxq, rx_ring->netdev,
+				       rx_ring->queue_index);
+		if (err < 0)
+			goto err;
+	}
+
 	rx_ring->xdp_prog = rx_ring->vsi->xdp_prog;
 
 	return 0;
 err:
 	kfree(rx_ring->rx_bi);
 	rx_ring->rx_bi = NULL;
-	return -ENOMEM;
+	return err;
 }
 
 /**
@@ -2068,11 +2080,13 @@ static int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget)
 	struct sk_buff *skb = rx_ring->skb;
 	u16 cleaned_count = I40E_DESC_UNUSED(rx_ring);
 	bool failure = false, xdp_xmit = false;
+	struct xdp_buff xdp;
+
+	xdp.rxq = &rx_ring->xdp_rxq;
 
 	while (likely(total_rx_packets < (unsigned int)budget)) {
 		struct i40e_rx_buffer *rx_buffer;
 		union i40e_rx_desc *rx_desc;
-		struct xdp_buff xdp;
 		unsigned int size;
 		u16 vlan_tag;
 		u8 rx_ptype;
@@ -3047,9 +3061,29 @@ bool __i40e_chk_linearize(struct sk_buff *skb)
 	/* Walk through fragments adding latest fragment, testing it, and
 	 * then removing stale fragments from the sum.
 	 */
-	stale = &skb_shinfo(skb)->frags[0];
-	for (;;) {
+	for (stale = &skb_shinfo(skb)->frags[0];; stale++) {
+		int stale_size = skb_frag_size(stale);
+
 		sum += skb_frag_size(frag++);
+
+		/* The stale fragment may present us with a smaller
+		 * descriptor than the actual fragment size. To account
+		 * for that we need to remove all the data on the front and
+		 * figure out what the remainder would be in the last
+		 * descriptor associated with the fragment.
+		 */
+		if (stale_size > I40E_MAX_DATA_PER_TXD) {
+			int align_pad = -(stale->page_offset) &
+					(I40E_MAX_READ_REQ_SIZE - 1);
+
+			sum -= align_pad;
+			stale_size -= align_pad;
+
+			do {
+				sum -= I40E_MAX_DATA_PER_TXD_ALIGNED;
+				stale_size -= I40E_MAX_DATA_PER_TXD_ALIGNED;
+			} while (stale_size > I40E_MAX_DATA_PER_TXD);
+		}
 
 		/* if sum is negative we failed to make sufficient progress */
 		if (sum < 0)
@@ -3058,7 +3092,7 @@ bool __i40e_chk_linearize(struct sk_buff *skb)
 		if (!nr_frags--)
 			break;
 
-		sum -= skb_frag_size(stale++);
+		sum -= stale_size;
 	}
 
 	return false;

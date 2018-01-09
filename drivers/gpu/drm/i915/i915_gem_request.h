@@ -204,6 +204,8 @@ struct drm_i915_gem_request {
 	struct list_head client_link;
 };
 
+#define I915_FENCE_GFP (GFP_KERNEL | __GFP_RETRY_MAYFAIL | __GFP_NOWARN)
+
 extern const struct dma_fence_ops i915_fence_ops;
 
 static inline bool dma_fence_is_i915(const struct dma_fence *fence)
@@ -241,18 +243,6 @@ static inline void
 i915_gem_request_put(struct drm_i915_gem_request *req)
 {
 	dma_fence_put(&req->fence);
-}
-
-static inline void i915_gem_request_assign(struct drm_i915_gem_request **pdst,
-					   struct drm_i915_gem_request *src)
-{
-	if (src)
-		i915_gem_request_get(src);
-
-	if (*pdst)
-		i915_gem_request_put(*pdst);
-
-	*pdst = src;
 }
 
 /**
@@ -337,6 +327,14 @@ i915_gem_request_completed(const struct drm_i915_gem_request *req)
 		return false;
 
 	return __i915_gem_request_completed(req, seqno);
+}
+
+static inline bool i915_priotree_signaled(const struct i915_priotree *pt)
+{
+	const struct drm_i915_gem_request *rq =
+		container_of(pt, const struct drm_i915_gem_request, priotree);
+
+	return i915_gem_request_completed(rq);
 }
 
 /* We treat requests as fences. This is not be to confused with our
