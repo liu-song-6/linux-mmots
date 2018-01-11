@@ -233,8 +233,7 @@ static void recv_handler(struct ib_mad_agent *agent,
 	 * On OPA devices it is okay to lose the upper 16 bits of LID as this
 	 * information is obtained elsewhere. Mask off the upper 16 bits.
 	 */
-	if (agent->device->port_immutable[agent->port_num].core_cap_flags &
-	    RDMA_CORE_PORT_INTEL_OPA)
+	if (rdma_cap_opa_mad(agent->device, agent->port_num))
 		packet->mad.hdr.lid = ib_lid_be16(0xFFFF &
 						  mad_recv_wc->wc->slid);
 	else
@@ -246,10 +245,14 @@ static void recv_handler(struct ib_mad_agent *agent,
 	if (packet->mad.hdr.grh_present) {
 		struct rdma_ah_attr ah_attr;
 		const struct ib_global_route *grh;
+		int ret;
 
-		ib_init_ah_from_wc(agent->device, agent->port_num,
-				   mad_recv_wc->wc, mad_recv_wc->recv_buf.grh,
-				   &ah_attr);
+		ret = ib_init_ah_attr_from_wc(agent->device, agent->port_num,
+					      mad_recv_wc->wc,
+					      mad_recv_wc->recv_buf.grh,
+					      &ah_attr);
+		if (ret)
+			goto err2;
 
 		grh = rdma_ah_read_grh(&ah_attr);
 		packet->mad.hdr.gid_index = grh->sgid_index;
@@ -617,12 +620,12 @@ err:
 	return ret;
 }
 
-static unsigned int ib_umad_poll(struct file *filp, struct poll_table_struct *wait)
+static __poll_t ib_umad_poll(struct file *filp, struct poll_table_struct *wait)
 {
 	struct ib_umad_file *file = filp->private_data;
 
 	/* we will always be able to post a MAD send */
-	unsigned int mask = POLLOUT | POLLWRNORM;
+	__poll_t mask = POLLOUT | POLLWRNORM;
 
 	poll_wait(filp, &file->recv_wait, wait);
 

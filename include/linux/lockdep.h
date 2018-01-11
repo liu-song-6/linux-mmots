@@ -367,8 +367,6 @@ extern struct pin_cookie lock_pin_lock(struct lockdep_map *lock);
 extern void lock_repin_lock(struct lockdep_map *lock, struct pin_cookie);
 extern void lock_unpin_lock(struct lockdep_map *lock, struct pin_cookie);
 
-# define INIT_LOCKDEP				.lockdep_recursion = 0,
-
 #define lockdep_depth(tsk)	(debug_locks ? (tsk)->lockdep_depth : 0)
 
 #define lockdep_assert_held(l)	do {				\
@@ -426,7 +424,6 @@ static inline void lockdep_on(void)
  * #ifdef the call himself.
  */
 
-# define INIT_LOCKDEP
 # define lockdep_reset()		do { debug_locks = 1; } while (0)
 # define lockdep_free_key_range(start, size)	do { } while (0)
 # define lockdep_sys_exit() 			do { } while (0)
@@ -475,8 +472,6 @@ enum xhlock_context_t {
 #define STATIC_LOCKDEP_MAP_INIT(_name, _key) \
 	{ .name = (_name), .key = (void *)(_key), }
 
-static inline void crossrelease_hist_start(enum xhlock_context_t c) {}
-static inline void crossrelease_hist_end(enum xhlock_context_t c) {}
 static inline void lockdep_invariant_state(bool force) {}
 static inline void lockdep_init_task(struct task_struct *task) {}
 static inline void lockdep_free_task(struct task_struct *task) {}
