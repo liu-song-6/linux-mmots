@@ -79,7 +79,7 @@ _GLOBAL_TOC(kvmppc_hv_entry_trampoline)
 	mtmsrd	r0,1		/* clear RI in MSR */
 	mtsrr0	r5
 	mtsrr1	r6
-	RFI
+	RFI_TO_KERNEL
 
 kvmppc_call_hv_entry:
 BEGIN_FTR_SECTION
@@ -199,7 +199,7 @@ END_FTR_SECTION_IFSET(CPU_FTR_ARCH_207S)
 	mtmsrd	r6, 1			/* Clear RI in MSR */
 	mtsrr0	r8
 	mtsrr1	r7
-	RFI
+	RFI_TO_KERNEL
 
 	/* Virtual-mode return */
 .Lvirt_return:
@@ -957,7 +957,6 @@ ALT_FTR_SECTION_END_IFCLR(CPU_FTR_ARCH_300)
 	mftb	r7
 	subf	r3,r7,r8
 	mtspr	SPRN_DEC,r3
-	std	r3,VCPU_DEC(r4)
 
 	ld	r5, VCPU_SPRG0(r4)
 	ld	r6, VCPU_SPRG1(r4)
@@ -1167,8 +1166,7 @@ END_FTR_SECTION_IFSET(CPU_FTR_ARCH_300)
 
 	ld	r0, VCPU_GPR(R0)(r4)
 	ld	r4, VCPU_GPR(R4)(r4)
-
-	hrfid
+	HRFI_TO_GUEST
 	b	.
 
 secondary_too_late:
@@ -3320,7 +3318,7 @@ END_MMU_FTR_SECTION_IFSET(MMU_FTR_TYPE_RADIX)
 	ld	r4, PACAKMSR(r13)
 	mtspr	SPRN_SRR0, r3
 	mtspr	SPRN_SRR1, r4
-	rfid
+	RFI_TO_KERNEL
 9:	addi	r3, r1, STACK_FRAME_OVERHEAD
 	bl	kvmppc_bad_interrupt
 	b	9b

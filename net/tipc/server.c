@@ -264,8 +264,8 @@ static int tipc_receive_from_sock(struct tipc_conn *con)
 	iov.iov_base = buf;
 	iov.iov_len = s->max_rcvbuf_size;
 	msg.msg_name = &addr;
-	ret = kernel_recvmsg(con->sock, &msg, &iov, 1, iov.iov_len,
-			     MSG_DONTWAIT);
+	iov_iter_kvec(&msg.msg_iter, READ | ITER_KVEC, &iov, 1, iov.iov_len);
+	ret = sock_recvmsg(con->sock, &msg, MSG_DONTWAIT);
 	if (ret <= 0) {
 		kmem_cache_free(s->rcvbuf_cache, buf);
 		goto out_close;
@@ -489,8 +489,8 @@ void tipc_conn_terminate(struct tipc_server *s, int conid)
 	}
 }
 
-bool tipc_topsrv_kern_subscr(struct net *net, u32 port, u32 type,
-			     u32 lower, u32 upper, int *conid)
+bool tipc_topsrv_kern_subscr(struct net *net, u32 port, u32 type, u32 lower,
+			     u32 upper, u32 filter, int *conid)
 {
 	struct tipc_subscriber *scbr;
 	struct tipc_subscr sub;
@@ -501,7 +501,7 @@ bool tipc_topsrv_kern_subscr(struct net *net, u32 port, u32 type,
 	sub.seq.lower = lower;
 	sub.seq.upper = upper;
 	sub.timeout = TIPC_WAIT_FOREVER;
-	sub.filter = TIPC_SUB_PORTS;
+	sub.filter = filter;
 	*(u32 *)&sub.usr_handle = port;
 
 	con = tipc_alloc_conn(tipc_topsrv(net));

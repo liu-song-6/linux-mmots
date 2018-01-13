@@ -381,7 +381,7 @@ void kvm_mmu_set_mask_ptes(u64 user_mask, u64 accessed_mask,
 }
 EXPORT_SYMBOL_GPL(kvm_mmu_set_mask_ptes);
 
-void kvm_mmu_clear_all_pte_masks(void)
+static void kvm_mmu_clear_all_pte_masks(void)
 {
 	shadow_user_mask = 0;
 	shadow_accessed_mask = 0;
@@ -3781,7 +3781,8 @@ static int kvm_arch_setup_async_pf(struct kvm_vcpu *vcpu, gva_t gva, gfn_t gfn)
 bool kvm_can_do_async_pf(struct kvm_vcpu *vcpu)
 {
 	if (unlikely(!lapic_in_kernel(vcpu) ||
-		     kvm_event_needs_reinjection(vcpu)))
+		     kvm_event_needs_reinjection(vcpu) ||
+		     vcpu->arch.exception.pending))
 		return false;
 
 	if (!vcpu->arch.apf.delivery_as_pf_vmexit && is_guest_mode(vcpu))
