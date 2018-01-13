@@ -5085,11 +5085,7 @@ static int sctp_getsockopt_autoclose(struct sock *sk, int len, char __user *optv
 	len = sizeof(int);
 	if (put_user(len, optlen))
 		return -EFAULT;
-<<<<<<< HEAD
-	if (copy_to_user(optval, &sctp_sk(sk)->autoclose, len))
-=======
 	if (put_user(sctp_sk(sk)->autoclose, (int __user *)optval))
->>>>>>> linux-next/akpm-base
 		return -EFAULT;
 	return 0;
 }
