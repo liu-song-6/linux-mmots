@@ -680,6 +680,7 @@ struct css_set init_css_set = {
 	 */
 	.dfl_cgrp		= &cgrp_dfl_root.cgrp,
 };
+EXPORT_SYMBOL_GPL(init_css_set);
 
 static int css_set_count	= 1;	/* 1 for init_css_set */
 
@@ -4457,6 +4458,7 @@ static struct cftype cgroup_base_files[] = {
 	},
 	{
 		.name = "cgroup.threads",
+		.flags = CFTYPE_NS_DELEGATABLE,
 		.release = cgroup_procs_release,
 		.seq_start = cgroup_threads_start,
 		.seq_next = cgroup_procs_next,
