@@ -428,6 +428,9 @@ static int show_map_close_json(int fd, struct bpf_map_info *info)
 
 	jsonw_name(json_wtr, "flags");
 	jsonw_printf(json_wtr, "%#x", info->map_flags);
+
+	print_dev_json(info->ifindex, info->netns_dev, info->netns_ino);
+
 	jsonw_uint_field(json_wtr, "bytes_key", info->key_size);
 	jsonw_uint_field(json_wtr, "bytes_value", info->value_size);
 	jsonw_uint_field(json_wtr, "max_entries", info->max_entries);
@@ -469,7 +472,9 @@ static int show_map_close_plain(int fd, struct bpf_map_info *info)
 	if (*info->name)
 		printf("name %s  ", info->name);
 
-	printf("flags 0x%x\n", info->map_flags);
+	printf("flags 0x%x", info->map_flags);
+	print_dev_plain(info->ifindex, info->netns_dev, info->netns_ino);
+	printf("\n");
 	printf("\tkey %uB  value %uB  max_entries %u",
 	       info->key_size, info->value_size, info->max_entries);
 
@@ -861,7 +866,7 @@ static int do_help(int argc, char **argv)
 	}
 
 	fprintf(stderr,
-		"Usage: %s %s show   [MAP]\n"
+		"Usage: %s %s { show | list }   [MAP]\n"
 		"       %s %s dump    MAP\n"
 		"       %s %s update  MAP  key BYTES value VALUE [UPDATE_FLAGS]\n"
 		"       %s %s lookup  MAP  key BYTES\n"
@@ -885,6 +890,7 @@ static int do_help(int argc, char **argv)
 
 static const struct cmd cmds[] = {
 	{ "show",	do_show },
+	{ "list",	do_show },
 	{ "help",	do_help },
 	{ "dump",	do_dump },
 	{ "update",	do_update },

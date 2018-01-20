@@ -1059,8 +1059,8 @@ static struct pnv_ioda_pe *pnv_ioda_setup_dev_PE(struct pci_dev *dev)
 
 	pe = pnv_ioda_alloc_pe(phb);
 	if (!pe) {
-		pr_warning("%s: Not enough PE# available, disabling device\n",
-			   pci_name(dev));
+		pr_warn("%s: Not enough PE# available, disabling device\n",
+			pci_name(dev));
 		return NULL;
 	}
 
@@ -1164,7 +1164,7 @@ static struct pnv_ioda_pe *pnv_ioda_setup_bus_PE(struct pci_bus *bus, bool all)
 		pe = pnv_ioda_alloc_pe(phb);
 
 	if (!pe) {
-		pr_warning("%s: Not enough PE# available for PCI bus %04x:%02x\n",
+		pr_warn("%s: Not enough PE# available for PCI bus %04x:%02x\n",
 			__func__, pci_domain_nr(bus), bus->number);
 		return NULL;
 	}
@@ -1692,7 +1692,7 @@ m64_failed:
 	return ret;
 }
 
-int pcibios_sriov_disable(struct pci_dev *pdev)
+int pnv_pcibios_sriov_disable(struct pci_dev *pdev)
 {
 	pnv_pci_sriov_disable(pdev);
 
@@ -1701,7 +1701,7 @@ int pcibios_sriov_disable(struct pci_dev *pdev)
 	return 0;
 }
 
-int pcibios_sriov_enable(struct pci_dev *pdev, u16 num_vfs)
+int pnv_pcibios_sriov_enable(struct pci_dev *pdev, u16 num_vfs)
 {
 	/* Allocate PCI data */
 	add_dev_pci_data(pdev);
@@ -1850,7 +1850,7 @@ static int pnv_pci_ioda_dma_set_mask(struct pci_dev *pdev, u64 dma_mask)
 
 	if (bypass) {
 		dev_info(&pdev->dev, "Using 64-bit DMA iommu bypass\n");
-		set_dma_ops(&pdev->dev, &dma_direct_ops);
+		set_dma_ops(&pdev->dev, &dma_nommu_ops);
 	} else {
 		/*
 		 * If the device can't set the TCE bypass bit but still wants
@@ -1868,7 +1868,7 @@ static int pnv_pci_ioda_dma_set_mask(struct pci_dev *pdev, u64 dma_mask)
 				return rc;
 			/* 4GB offset bypasses 32-bit space */
 			set_dma_offset(&pdev->dev, (1ULL << 32));
-			set_dma_ops(&pdev->dev, &dma_direct_ops);
+			set_dma_ops(&pdev->dev, &dma_nommu_ops);
 		} else if (dma_mask >> 32 && dma_mask != DMA_BIT_MASK(64)) {
 			/*
 			 * Fail the request if a DMA mask between 32 and 64 bits
@@ -3293,7 +3293,7 @@ static void pnv_pci_ioda_create_dbgfs(void)
 		sprintf(name, "PCI%04x", hose->global_number);
 		phb->dbgfs = debugfs_create_dir(name, powerpc_debugfs_root);
 		if (!phb->dbgfs) {
-			pr_warning("%s: Error on creating debugfs on PHB#%x\n",
+			pr_warn("%s: Error on creating debugfs on PHB#%x\n",
 				__func__, hose->global_number);
 			continue;
 		}
@@ -4019,6 +4019,8 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 #ifdef CONFIG_PCI_IOV
 	ppc_md.pcibios_fixup_sriov = pnv_pci_ioda_fixup_iov_resources;
 	ppc_md.pcibios_iov_resource_alignment = pnv_pci_iov_resource_alignment;
+	ppc_md.pcibios_sriov_enable = pnv_pcibios_sriov_enable;
+	ppc_md.pcibios_sriov_disable = pnv_pcibios_sriov_disable;
 #endif
 
 	pci_add_flags(PCI_REASSIGN_ALL_RSRC);
@@ -4026,7 +4028,7 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 	/* Reset IODA tables to a clean state */
 	rc = opal_pci_reset(phb_id, OPAL_RESET_PCI_IODA_TABLE, OPAL_ASSERT_RESET);
 	if (rc)
-		pr_warning("  OPAL Error %ld performing IODA table reset !\n", rc);
+		pr_warn("  OPAL Error %ld performing IODA table reset !\n", rc);
 
 	/*
 	 * If we're running in kdump kernel, the previous kernel never

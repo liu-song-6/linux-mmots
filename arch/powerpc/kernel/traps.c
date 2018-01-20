@@ -337,7 +337,7 @@ void system_reset_exception(struct pt_regs *regs)
 	 * No debugger or crash dump registered, print logs then
 	 * panic.
 	 */
-	__die("System Reset", regs, SIGABRT);
+	die("System Reset", regs, SIGABRT);
 
 	mdelay(2*MSEC_PER_SEC); /* Wait a little while for others to print */
 	add_taint(TAINT_DIE, LOCKDEP_NOW_UNRELIABLE);
@@ -917,7 +917,7 @@ void unknown_exception(struct pt_regs *regs)
 	printk("Bad trap at PC: %lx, SR: %lx, vector=%lx\n",
 	       regs->nip, regs->msr, regs->trap);
 
-	_exception(SIGTRAP, regs, 0, 0);
+	_exception(SIGTRAP, regs, TRAP_FIXME, 0);
 
 	exception_exit(prev_state);
 }
@@ -939,7 +939,7 @@ bail:
 
 void RunModeException(struct pt_regs *regs)
 {
-	_exception(SIGTRAP, regs, 0, 0);
+	_exception(SIGTRAP, regs, TRAP_FIXME, 0);
 }
 
 void single_step_exception(struct pt_regs *regs)
@@ -978,7 +978,7 @@ static void emulate_single_step(struct pt_regs *regs)
 
 static inline int __parse_fpscr(unsigned long fpscr)
 {
-	int ret = 0;
+	int ret = FPE_FIXME;
 
 	/* Invalid operation */
 	if ((fpscr & FPSCR_VE) && (fpscr & FPSCR_VX))
@@ -1564,7 +1564,7 @@ void facility_unavailable_exception(struct pt_regs *regs)
 	u8 status;
 	bool hv;
 
-	hv = (regs->trap == 0xf80);
+	hv = (TRAP(regs) == 0xf80);
 	if (hv)
 		value = mfspr(SPRN_HFSCR);
 	else
@@ -1929,7 +1929,7 @@ void SPEFloatingPointException(struct pt_regs *regs)
 	extern int do_spe_mathemu(struct pt_regs *regs);
 	unsigned long spefscr;
 	int fpexc_mode;
-	int code = 0;
+	int code = FPE_FIXME;
 	int err;
 
 	flush_spe_to_thread(current);
@@ -1998,7 +1998,7 @@ void SPEFloatingPointRoundException(struct pt_regs *regs)
 		printk(KERN_ERR "unrecognized spe instruction "
 		       "in %s at %lx\n", current->comm, regs->nip);
 	} else {
-		_exception(SIGFPE, regs, 0, regs->nip);
+		_exception(SIGFPE, regs, FPE_FIXME, regs->nip);
 		return;
 	}
 }
