@@ -1092,6 +1092,10 @@ int ptrace_request(struct task_struct *child, long request,
 		ret = seccomp_get_filter(child, addr, datavp);
 		break;
 
+	case PTRACE_SECCOMP_GET_METADATA:
+		ret = seccomp_get_metadata(child, addr, datavp);
+		break;
+
 	default:
 		break;
 	}
@@ -1211,7 +1215,6 @@ int compat_ptrace_request(struct task_struct *child, compat_long_t request,
 		break;
 
 	case PTRACE_SETSIGINFO:
-		memset(&siginfo, 0, sizeof siginfo);
 		if (copy_siginfo_from_user32(
 			    &siginfo, (struct compat_siginfo __user *) datap))
 			ret = -EFAULT;

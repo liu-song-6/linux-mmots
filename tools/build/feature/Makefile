@@ -13,6 +13,7 @@ FILES=                                          \
          test-hello.bin                         \
          test-libaudit.bin                      \
          test-libbfd.bin                        \
+         test-disassembler-four-args.bin        \
          test-liberty.bin                       \
          test-liberty-z.bin                     \
          test-cplus-demangle.bin                \
@@ -37,6 +38,7 @@ FILES=                                          \
          test-libunwind-debug-frame-arm.bin     \
          test-libunwind-debug-frame-aarch64.bin \
          test-pthread-attr-setaffinity-np.bin   \
+         test-pthread-barrier.bin		\
          test-stackprotector-all.bin            \
          test-timerfd.bin                       \
          test-libdw-dwarf-unwind.bin            \
@@ -78,6 +80,9 @@ $(OUTPUT)test-hello.bin:
 
 $(OUTPUT)test-pthread-attr-setaffinity-np.bin:
 	$(BUILD) -D_GNU_SOURCE -lpthread
+
+$(OUTPUT)test-pthread-barrier.bin:
+	$(BUILD) -lpthread
 
 $(OUTPUT)test-stackprotector-all.bin:
 	$(BUILD) -fstack-protector-all
@@ -187,6 +192,9 @@ $(OUTPUT)test-libpython-version.bin:
 
 $(OUTPUT)test-libbfd.bin:
 	$(BUILD) -DPACKAGE='"perf"' -lbfd -lz -liberty -ldl
+
+$(OUTPUT)test-disassembler-four-args.bin:
+	$(BUILD) -DPACKAGE='"perf"' -lbfd -lopcodes
 
 $(OUTPUT)test-liberty.bin:
 	$(CC) $(CFLAGS) -Wall -Werror -o $@ test-libbfd.c -DPACKAGE='"perf"' $(LDFLAGS) -lbfd -ldl -liberty
