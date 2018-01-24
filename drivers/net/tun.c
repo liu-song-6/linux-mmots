@@ -733,14 +733,10 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 			    tun->dev->reg_state == NETREG_REGISTERED)
 				unregister_netdevice(tun->dev);
 		}
-<<<<<<< HEAD
-		tun_cleanup_tx_array(tfile);
-=======
 		if (tun) {
 			ptr_ring_cleanup(&tfile->tx_ring, tun_ptr_free);
 			xdp_rxq_info_unreg(&tfile->xdp_rxq);
 		}
->>>>>>> linux-next/akpm-base
 		sock_put(&tfile->sk);
 	}
 }

@@ -433,10 +433,7 @@ static s32 i2c_smbus_xfer_emulated(struct i2c_adapter *adapter, u16 addr,
 			i2c_smbus_try_get_dmabuf(&msg[1], 0);
 		} else {
 			msg[0].len = data->block[0] + 1;
-<<<<<<< HEAD
-=======
 			i2c_smbus_try_get_dmabuf(&msg[0], command);
->>>>>>> linux-next/akpm-base
 			for (i = 1; i <= data->block[0]; i++)
 				msg[0].buf[i] = data->block[i];
 		}
