@@ -3296,22 +3296,12 @@ static void i9xx_disable_plane(struct intel_plane *plane,
 	spin_unlock_irqrestore(&dev_priv->uncore.lock, irqflags);
 }
 
-<<<<<<< HEAD
-static bool i9xx_plane_get_hw_state(struct intel_plane *primary)
-{
-
-	struct drm_i915_private *dev_priv = to_i915(primary->base.dev);
-	enum intel_display_power_domain power_domain;
-	enum plane plane = primary->plane;
-	enum pipe pipe = primary->pipe;
-=======
 static bool i9xx_plane_get_hw_state(struct intel_plane *plane)
 {
 	struct drm_i915_private *dev_priv = to_i915(plane->base.dev);
 	enum intel_display_power_domain power_domain;
 	enum i9xx_plane_id i9xx_plane = plane->i9xx_plane;
 	enum pipe pipe = plane->pipe;
->>>>>>> linux-next/akpm-base
 	bool ret;
 
 	/*
@@ -3323,11 +3313,7 @@ static bool i9xx_plane_get_hw_state(struct intel_plane *plane)
 	if (!intel_display_power_get_if_enabled(dev_priv, power_domain))
 		return false;
 
-<<<<<<< HEAD
-	ret = I915_READ(DSPCNTR(plane)) & DISPLAY_PLANE_ENABLE;
-=======
 	ret = I915_READ(DSPCNTR(i9xx_plane)) & DISPLAY_PLANE_ENABLE;
->>>>>>> linux-next/akpm-base
 
 	intel_display_power_put(dev_priv, power_domain);
 
@@ -4869,11 +4855,6 @@ void hsw_enable_ips(const struct intel_crtc_state *crtc_state)
 	 */
 	WARN_ON(!(crtc_state->active_planes & ~BIT(PLANE_CURSOR)));
 
-<<<<<<< HEAD
-	assert_plane_enabled(to_intel_plane(crtc->base.primary));
-
-=======
->>>>>>> linux-next/akpm-base
 	if (IS_BROADWELL(dev_priv)) {
 		mutex_lock(&dev_priv->pcu_lock);
 		WARN_ON(sandybridge_pcode_write(dev_priv, DISPLAY_IPS_CONTROL,
@@ -4907,11 +4888,6 @@ void hsw_disable_ips(const struct intel_crtc_state *crtc_state)
 	if (!crtc_state->ips_enabled)
 		return;
 
-<<<<<<< HEAD
-	assert_plane_enabled(to_intel_plane(crtc->base.primary));
-
-=======
->>>>>>> linux-next/akpm-base
 	if (IS_BROADWELL(dev_priv)) {
 		mutex_lock(&dev_priv->pcu_lock);
 		WARN_ON(sandybridge_pcode_write(dev_priv, DISPLAY_IPS_CONTROL, 0));
@@ -13204,26 +13180,16 @@ intel_primary_plane_create(struct drm_i915_private *dev_priv, enum pipe pipe)
 		num_formats = ARRAY_SIZE(i965_primary_formats);
 		modifiers = i9xx_format_modifiers;
 
-<<<<<<< HEAD
-		primary->update_plane = i9xx_update_primary_plane;
-		primary->disable_plane = i9xx_disable_primary_plane;
-=======
 		primary->update_plane = i9xx_update_plane;
 		primary->disable_plane = i9xx_disable_plane;
->>>>>>> linux-next/akpm-base
 		primary->get_hw_state = i9xx_plane_get_hw_state;
 	} else {
 		intel_primary_formats = i8xx_primary_formats;
 		num_formats = ARRAY_SIZE(i8xx_primary_formats);
 		modifiers = i9xx_format_modifiers;
 
-<<<<<<< HEAD
-		primary->update_plane = i9xx_update_primary_plane;
-		primary->disable_plane = i9xx_disable_primary_plane;
-=======
 		primary->update_plane = i9xx_update_plane;
 		primary->disable_plane = i9xx_disable_plane;
->>>>>>> linux-next/akpm-base
 		primary->get_hw_state = i9xx_plane_get_hw_state;
 	}
 
@@ -14713,24 +14679,15 @@ void i830_disable_pipe(struct drm_i915_private *dev_priv, enum pipe pipe)
 }
 
 static bool intel_plane_mapping_ok(struct intel_crtc *crtc,
-<<<<<<< HEAD
-				   struct intel_plane *primary)
-{
-	struct drm_i915_private *dev_priv = to_i915(crtc->base.dev);
-	enum plane plane = primary->plane;
-	u32 val = I915_READ(DSPCNTR(plane));
-=======
 				   struct intel_plane *plane)
 {
 	struct drm_i915_private *dev_priv = to_i915(crtc->base.dev);
 	enum i9xx_plane_id i9xx_plane = plane->i9xx_plane;
 	u32 val = I915_READ(DSPCNTR(i9xx_plane));
->>>>>>> linux-next/akpm-base
 
 	return (val & DISPLAY_PLANE_ENABLE) == 0 ||
 		(val & DISPPLANE_SEL_PIPE_MASK) == DISPPLANE_SEL_PIPE(crtc->pipe);
 }
-<<<<<<< HEAD
 
 static void
 intel_sanitize_plane_mapping(struct drm_i915_private *dev_priv)
@@ -14744,21 +14701,6 @@ intel_sanitize_plane_mapping(struct drm_i915_private *dev_priv)
 		struct intel_plane *plane =
 			to_intel_plane(crtc->base.primary);
 
-=======
-
-static void
-intel_sanitize_plane_mapping(struct drm_i915_private *dev_priv)
-{
-	struct intel_crtc *crtc;
-
-	if (INTEL_GEN(dev_priv) >= 4)
-		return;
-
-	for_each_intel_crtc(&dev_priv->drm, crtc) {
-		struct intel_plane *plane =
-			to_intel_plane(crtc->base.primary);
-
->>>>>>> linux-next/akpm-base
 		if (intel_plane_mapping_ok(crtc, plane))
 			continue;
 

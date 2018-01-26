@@ -347,10 +347,6 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		   (loops_per_jiffy / (5000/HZ)) % 100);
 #endif
 	seq_printf(m, "\n");
-<<<<<<< HEAD
-#endif
-=======
->>>>>>> linux-next/akpm-base
 	/* If this is the last cpu, print the summary */
 	if (cpumask_next(cpu_id, cpu_online_mask) >= nr_cpu_ids)
 		show_cpuinfo_summary(m);

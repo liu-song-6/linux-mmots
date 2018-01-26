@@ -143,16 +143,7 @@ static struct sk_buff *esp6_gso_segment(struct sk_buff *skb,
 	struct xfrm_offload *xo = xfrm_offload(skb);
 
 	if (!xo)
-<<<<<<< HEAD
-		goto out;
-
-	if (!(skb_shinfo(skb)->gso_type & SKB_GSO_ESP))
-		goto out;
-
-	seq = xo->seq.low;
-=======
 		return ERR_PTR(-EINVAL);
->>>>>>> linux-next/akpm-base
 
 	x = skb->sp->xvec[skb->sp->len - 1];
 	aead = x->data;

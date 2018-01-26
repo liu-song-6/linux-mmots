@@ -681,10 +681,10 @@ static void tun_queue_purge(struct tun_file *tfile)
 
 static void tun_cleanup_tx_array(struct tun_file *tfile)
 {
-	if (tfile->tx_array.ring.queue) {
-		skb_array_cleanup(&tfile->tx_array);
-		memset(&tfile->tx_array, 0, sizeof(tfile->tx_array));
-	}
+//	if (tfile->tx_ring.queue) {
+//		skb_array_cleanup(&tfile->tx_ring);
+//		memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
+//	}
 }
 
 static void __tun_detach(struct tun_file *tfile, bool clean)
@@ -733,14 +733,10 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 			    tun->dev->reg_state == NETREG_REGISTERED)
 				unregister_netdevice(tun->dev);
 		}
-<<<<<<< HEAD
-		tun_cleanup_tx_array(tfile);
-=======
 		if (tun) {
 			ptr_ring_cleanup(&tfile->tx_ring, tun_ptr_free);
 			xdp_rxq_info_unreg(&tfile->xdp_rxq);
 		}
->>>>>>> linux-next/akpm-base
 		sock_put(&tfile->sk);
 	}
 }
@@ -3159,7 +3155,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
-	memset(&tfile->tx_array, 0, sizeof(tfile->tx_array));
+	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
 
 	return 0;
 }
