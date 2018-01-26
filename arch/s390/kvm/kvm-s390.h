@@ -54,7 +54,7 @@ static inline int is_vcpu_stopped(struct kvm_vcpu *vcpu)
 
 static inline int is_vcpu_idle(struct kvm_vcpu *vcpu)
 {
-	return test_bit(vcpu->vcpu_id, vcpu->arch.local_int.float_int->idle_mask);
+	return test_bit(vcpu->vcpu_id, vcpu->kvm->arch.float_int.idle_mask);
 }
 
 static inline int kvm_is_ucontrol(struct kvm *kvm)
@@ -367,6 +367,13 @@ int kvm_s390_set_irq_state(struct kvm_vcpu *vcpu,
 			   void __user *buf, int len);
 int kvm_s390_get_irq_state(struct kvm_vcpu *vcpu,
 			   __u8 __user *buf, int len);
+void kvm_s390_gisa_set_ipm_gisc(struct kvm_s390_gisa *gisa, u32 gisc);
+u8 kvm_s390_gisa_get_ipm(struct kvm_s390_gisa *gisa);
+void kvm_s390_gisa_clear_ipm_gisc(struct kvm_s390_gisa *gisa, u32 gisc);
+int kvm_s390_gisa_tac_ipm_gisc(struct kvm_s390_gisa *gisa, u32 gisc);
+void kvm_s390_gisa_init(struct kvm *kvm);
+void kvm_s390_gisa_clear(struct kvm *kvm);
+void kvm_s390_gisa_destroy(struct kvm *kvm);
 
 /* implemented in guestdbg.c */
 void kvm_s390_backup_guest_per_regs(struct kvm_vcpu *vcpu);

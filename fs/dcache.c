@@ -32,7 +32,6 @@
 #include <linux/swap.h>
 #include <linux/bootmem.h>
 #include <linux/fs_struct.h>
-#include <linux/hardirq.h>
 #include <linux/bit_spinlock.h>
 #include <linux/rculist_bl.h>
 #include <linux/prefetch.h>
@@ -49,8 +48,8 @@
  *   - i_dentry, d_u.d_alias, d_inode of aliases
  * dcache_hash_bucket lock protects:
  *   - the dcache hash table
- * s_anon bl list spinlock protects:
- *   - the s_anon list (see __d_drop)
+ * s_roots bl list spinlock protects:
+ *   - the s_roots list (see __d_drop)
  * dentry->d_sb->s_dentry_lru_lock protects:
  *   - the dcache lru lists and counters
  * d_lock protects:
@@ -68,7 +67,7 @@
  *   dentry->d_lock
  *     dentry->d_sb->s_dentry_lru_lock
  *     dcache_hash_bucket lock
- *     s_anon lock
+ *     s_roots lock
  *
  * If there is an ancestor relationship:
  * dentry->d_parent->...->d_parent->d_lock
@@ -478,10 +477,10 @@ void __d_drop(struct dentry *dentry)
 		/*
 		 * Hashed dentries are normally on the dentry hashtable,
 		 * with the exception of those newly allocated by
-		 * d_obtain_alias, which are always IS_ROOT:
+		 * d_obtain_root, which are always IS_ROOT:
 		 */
 		if (unlikely(IS_ROOT(dentry)))
-			b = &dentry->d_sb->s_anon;
+			b = &dentry->d_sb->s_roots;
 		else
 			b = d_hash(dentry->d_name.hash);
 
@@ -1501,8 +1500,8 @@ void shrink_dcache_for_umount(struct super_block *sb)
 	sb->s_root = NULL;
 	do_one_tree(dentry);
 
-	while (!hlist_bl_empty(&sb->s_anon)) {
-		dentry = dget(hlist_bl_entry(hlist_bl_first(&sb->s_anon), struct dentry, d_hash));
+	while (!hlist_bl_empty(&sb->s_roots)) {
+		dentry = dget(hlist_bl_entry(hlist_bl_first(&sb->s_roots), struct dentry, d_hash));
 		do_one_tree(dentry);
 	}
 }
@@ -1637,8 +1636,7 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	dname[name->len] = 0;
 
 	/* Make sure we always see the terminating NUL character */
-	smp_wmb();
-	dentry->d_name.name = dname;
+	smp_store_release(&dentry->d_name.name, dname); /* ^^^ */
 
 	dentry->d_lockref.count = 1;
 	dentry->d_flags = 0;
@@ -1966,9 +1964,11 @@ static struct dentry *__d_obtain_alias(struct inode *inode, int disconnected)
 	spin_lock(&tmp->d_lock);
 	__d_set_inode_and_type(tmp, inode, add_flags);
 	hlist_add_head(&tmp->d_u.d_alias, &inode->i_dentry);
-	hlist_bl_lock(&tmp->d_sb->s_anon);
-	hlist_bl_add_head(&tmp->d_hash, &tmp->d_sb->s_anon);
-	hlist_bl_unlock(&tmp->d_sb->s_anon);
+	if (!disconnected) {
+		hlist_bl_lock(&tmp->d_sb->s_roots);
+		hlist_bl_add_head(&tmp->d_hash, &tmp->d_sb->s_roots);
+		hlist_bl_unlock(&tmp->d_sb->s_roots);
+	}
 	spin_unlock(&tmp->d_lock);
 	spin_unlock(&inode->i_lock);
 
@@ -3048,16 +3048,13 @@ static int prepend(char **buffer, int *buflen, const char *str, int namelen)
  * retry it again when a d_move() does happen. So any garbage in the buffer
  * due to mismatched pointer and length will be discarded.
  *
- * Data dependency barrier is needed to make sure that we see that terminating
- * NUL.  Alpha strikes again, film at 11...
+ * Load acquire is needed to make sure that we see that terminating NUL.
  */
 static int prepend_name(char **buffer, int *buflen, const struct qstr *name)
 {
-	const char *dname = READ_ONCE(name->name);
+	const char *dname = smp_load_acquire(&name->name); /* ^^^ */
 	u32 dlen = READ_ONCE(name->len);
 	char *p;
-
-	smp_read_barrier_depends();
 
 	*buflen -= dlen + 1;
 	if (*buflen < 0)
@@ -3602,8 +3599,9 @@ static void __init dcache_init(void)
 	 * but it is probably not worth it because of the cache nature
 	 * of the dcache.
 	 */
-	dentry_cache = KMEM_CACHE(dentry,
-		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
+	dentry_cache = KMEM_CACHE_USERCOPY(dentry,
+		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
+		d_iname);
 
 	/* Hash may have been set up in dcache_init_early */
 	if (!hashdist)
@@ -3640,8 +3638,8 @@ void __init vfs_caches_init_early(void)
 
 void __init vfs_caches_init(void)
 {
-	names_cachep = kmem_cache_create("names_cache", PATH_MAX, 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+	names_cachep = kmem_cache_create_usercopy("names_cache", PATH_MAX, 0,
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC, 0, PATH_MAX, NULL);
 
 	dcache_init();
 	inode_init();
