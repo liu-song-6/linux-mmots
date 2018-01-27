@@ -83,7 +83,7 @@ axon_ram_sysfs_ecc(struct device *dev, struct device_attribute *attr, char *buf)
 	return sprintf(buf, "%ld\n", bank->ecc_counter);
 }
 
-static DEVICE_ATTR(ecc, S_IRUGO, axon_ram_sysfs_ecc, NULL);
+static DEVICE_ATTR(ecc, 0444, axon_ram_sysfs_ecc, NULL);
 
 /**
  * axon_ram_irq_handler - interrupt handler for Axon RAM ECC
@@ -151,7 +151,7 @@ __axon_ram_direct_access(struct axon_ram_bank *bank, pgoff_t pgoff, long nr_page
 	resource_size_t offset = pgoff * PAGE_SIZE;
 
 	*kaddr = (void *) bank->io_addr + offset;
-	*pfn = phys_to_pfn_t(bank->ph_addr + offset, PFN_DEV);
+	*pfn = phys_to_pfn_t(bank->ph_addr + offset, PFN_DEV|PFN_SPECIAL);
 	return (bank->size - offset) / PAGE_SIZE;
 }
 
