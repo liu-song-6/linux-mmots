@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 /* SPDX-License-Identifier: GPL-2.0 */
 /* Copyright (c) 2017, Maxim Integrated */
+=======
+// SPDX-License-Identifier: GPL-2.0
+// Copyright (c) 2017, Maxim Integrated
+
+>>>>>>> linux-next/akpm-base
 #ifndef _MAX98373_H
 #define _MAX98373_H
 

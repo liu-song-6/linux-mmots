@@ -1405,6 +1405,22 @@ static int mt2701_afe_runtime_resume(struct device *dev)
 	return mt2701_afe_enable_clock(afe);
 }
 
+static int mt2701_afe_add_component(struct mtk_base_afe *afe)
+{
+	struct snd_soc_component *component;
+
+	component = kzalloc(sizeof(*component), GFP_KERNEL);
+	if (!component)
+		return -ENOMEM;
+
+	component->regmap = afe->regmap;
+
+	return snd_soc_add_component(afe->dev, component,
+				     &mt2701_afe_pcm_dai_component,
+				     mt2701_afe_pcm_dais,
+				     ARRAY_SIZE(mt2701_afe_pcm_dais));
+}
+
 static int mt2701_afe_pcm_dev_probe(struct platform_device *pdev)
 {
 	struct snd_soc_component *component;
@@ -1514,10 +1530,14 @@ static int mt2701_afe_pcm_dev_probe(struct platform_device *pdev)
 		goto err_platform;
 	}
 
+<<<<<<< HEAD
 	ret = snd_soc_add_component(dev, component,
 				    &mt2701_afe_pcm_dai_component,
 				    mt2701_afe_pcm_dais,
 				    ARRAY_SIZE(mt2701_afe_pcm_dais));
+=======
+	ret = mt2701_afe_add_component(afe);
+>>>>>>> linux-next/akpm-base
 	if (ret) {
 		dev_warn(dev, "err_dai_component\n");
 		goto err_dai_component;
@@ -1531,8 +1551,11 @@ err_platform:
 	pm_runtime_put_sync(dev);
 err_pm_disable:
 	pm_runtime_disable(dev);
+<<<<<<< HEAD
 err_init_clock:
 	kfree(component);
+=======
+>>>>>>> linux-next/akpm-base
 
 	return ret;
 }

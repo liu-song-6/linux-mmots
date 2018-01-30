@@ -96,6 +96,12 @@ config SND_SST_ATOM_HIFI2_PLATFORM
 	  If you have a Intel Baytrail or Cherrytrail platform with an I2S
 	  codec, then enable this option by saying Y or m. This is a
 	  recommended option
+<<<<<<< HEAD
+=======
+
+config SND_SOC_INTEL_SKYLAKE_SSP_CLK
+	tristate
+>>>>>>> linux-next/akpm-base
 
 config SND_SOC_INTEL_SKYLAKE
 	tristate "SKL/BXT/KBL/GLK/CNL... Platforms"

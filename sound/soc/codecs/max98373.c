@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 /* SPDX-License-Identifier: GPL-2.0 */
 /* Copyright (c) 2017, Maxim Integrated */
+=======
+// SPDX-License-Identifier: GPL-2.0
+// Copyright (c) 2017, Maxim Integrated
+>>>>>>> linux-next/akpm-base
 
 #include <linux/acpi.h>
 #include <linux/i2c.h>

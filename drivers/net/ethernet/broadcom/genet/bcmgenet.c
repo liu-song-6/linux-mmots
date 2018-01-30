@@ -1321,7 +1321,7 @@ static struct sk_buff *bcmgenet_free_tx_cb(struct device *dev,
 		dma_unmap_addr_set(cb, dma_addr, 0);
 	}
 
-	return 0;
+	return NULL;
 }
 
 /* Simple helper to free a receive control block's resources */
@@ -1480,7 +1480,7 @@ static struct sk_buff *bcmgenet_put_tx_csum(struct net_device *dev,
 	status = (struct status_64 *)skb->data;
 
 	if (skb->ip_summed  == CHECKSUM_PARTIAL) {
-		ip_ver = htons(skb->protocol);
+		ip_ver = ntohs(skb->protocol);
 		switch (ip_ver) {
 		case ETH_P_IP:
 			ip_proto = ip_hdr(skb)->protocol;
@@ -2527,9 +2527,10 @@ static void bcmgenet_irq_task(struct work_struct *work)
 	spin_unlock_irq(&priv->lock);
 
 	/* Link UP/DOWN event */
-	if (status & UMAC_IRQ_LINK_EVENT)
-		phy_mac_interrupt(priv->dev->phydev,
-				  !!(status & UMAC_IRQ_LINK_UP));
+	if (status & UMAC_IRQ_LINK_EVENT) {
+		priv->dev->phydev->link = !!(status & UMAC_IRQ_LINK_UP);
+		phy_mac_interrupt(priv->dev->phydev);
+	}
 }
 
 /* bcmgenet_isr1: handle Rx and Tx priority queues */
