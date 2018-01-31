@@ -1156,7 +1156,7 @@ static struct sk_buff *bcm_sysport_insert_tsb(struct sk_buff *skb,
 	memset(tsb, 0, sizeof(*tsb));
 
 	if (skb->ip_summed == CHECKSUM_PARTIAL) {
-		ip_ver = htons(skb->protocol);
+		ip_ver = ntohs(skb->protocol);
 		switch (ip_ver) {
 		case ETH_P_IP:
 			ip_proto = ip_hdr(skb)->protocol;
@@ -1213,18 +1213,6 @@ static netdev_tx_t bcm_sysport_xmit(struct sk_buff *skb,
 		netif_tx_stop_queue(txq);
 		netdev_err(dev, "queue %d awake and ring full!\n", queue);
 		ret = NETDEV_TX_BUSY;
-		goto out;
-	}
-
-	/* The Ethernet switch we are interfaced with needs packets to be at
-	 * least 64 bytes (including FCS) otherwise they will be discarded when
-	 * they enter the switch port logic. When Broadcom tags are enabled, we
-	 * need to make sure that packets are at least 68 bytes
-	 * (including FCS and tag) because the length verification is done after
-	 * the Broadcom tag is stripped off the ingress packet.
-	 */
-	if (skb_put_padto(skb, ETH_ZLEN + ENET_BRCM_TAG_LEN)) {
-		ret = NETDEV_TX_OK;
 		goto out;
 	}
 

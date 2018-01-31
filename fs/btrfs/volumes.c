@@ -740,7 +740,11 @@ static noinline struct btrfs_device *device_list_add(const char *path,
 	if (!fs_devices) {
 		fs_devices = alloc_fs_devices(disk_super->fsid);
 		if (IS_ERR(fs_devices))
+<<<<<<< HEAD
 			return ERR_CAST(fs_devices);
+=======
+			return ERR_PTR(PTR_ERR(fs_devices));
+>>>>>>> linux-next/akpm-base
 
 		list_add(&fs_devices->list, &fs_uuids);
 

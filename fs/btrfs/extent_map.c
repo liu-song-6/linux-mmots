@@ -552,6 +552,12 @@ int btrfs_add_extent_mapping(struct extent_map_tree *em_tree,
 		ret = 0;
 
 		existing = search_extent_mapping(em_tree, start, len);
+<<<<<<< HEAD
+=======
+
+		trace_btrfs_handle_em_exist(existing, em, start, len);
+
+>>>>>>> linux-next/akpm-base
 		/*
 		 * existing will always be non-NULL, since there must be
 		 * extent causing the -EEXIST.
