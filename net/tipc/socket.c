@@ -716,10 +716,6 @@ static __poll_t tipc_poll(struct file *file, struct socket *sock,
 {
 	struct sock *sk = sock->sk;
 	struct tipc_sock *tsk = tipc_sk(sk);
-<<<<<<< HEAD
-	struct tipc_group *grp = tsk->group;
-=======
->>>>>>> linux-next/akpm-base
 	__poll_t revents = 0;
 
 	sock_poll_wait(file, sk_sleep(sk), wait);

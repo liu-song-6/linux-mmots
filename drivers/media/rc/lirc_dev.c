@@ -321,18 +321,11 @@ static ssize_t ir_lirc_transmit_ir(struct file *file, const char __user *buf,
 			goto out_unlock;
 		}
 
-<<<<<<< HEAD
-__poll_t lirc_dev_fop_poll(struct file *file, poll_table *wait)
-{
-	struct lirc_dev *d = file->private_data;
-	__poll_t ret;
-=======
 		count = n / sizeof(unsigned int);
 		if (count > LIRCBUF_SIZE || count % 2 == 0) {
 			ret = -EINVAL;
 			goto out_unlock;
 		}
->>>>>>> linux-next/akpm-base
 
 		txbuf = memdup_user(buf, n);
 		if (IS_ERR(txbuf)) {

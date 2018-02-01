@@ -519,40 +519,9 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 	f2fs_unlock_op(sbi);
 	alloc_nid_done(sbi, inode->i_ino);
 
-<<<<<<< HEAD
-	if (f2fs_encrypted_inode(inode)) {
-		struct qstr istr = QSTR_INIT(symname, len);
-		struct fscrypt_str ostr;
-
-		sd = f2fs_kzalloc(sbi, disk_link.len, GFP_NOFS);
-		if (!sd) {
-			err = -ENOMEM;
-			goto err_out;
-		}
-
-		err = fscrypt_get_encryption_info(inode);
-		if (err)
-			goto err_out;
-
-		if (!fscrypt_has_encryption_key(inode)) {
-			err = -ENOKEY;
-			goto err_out;
-		}
-
-		ostr.name = sd->encrypted_path;
-		ostr.len = disk_link.len;
-		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
-		if (err)
-			goto err_out;
-
-		sd->len = cpu_to_le16(ostr.len);
-		disk_link.name = (char *)sd;
-	}
-=======
 	err = fscrypt_encrypt_symlink(inode, symname, len, &disk_link);
 	if (err)
 		goto err_out;
->>>>>>> linux-next/akpm-base
 
 	err = page_symlink(inode, disk_link.name, disk_link.len);
 

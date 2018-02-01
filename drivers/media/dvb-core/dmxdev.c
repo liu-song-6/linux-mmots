@@ -1322,14 +1322,11 @@ static __poll_t dvb_dvr_poll(struct file *file, poll_table *wait)
 	struct dvb_device *dvbdev = file->private_data;
 	struct dmxdev *dmxdev = dvbdev->priv;
 	__poll_t mask = 0;
-<<<<<<< HEAD
-=======
 #ifndef DVB_MMAP
 	bool need_ringbuffer = false;
 #else
 	const bool need_ringbuffer = true;
 #endif
->>>>>>> linux-next/akpm-base
 
 	dprintk("%s\n", __func__);
 

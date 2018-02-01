@@ -137,11 +137,7 @@ int smc_clc_wait_msg(struct smc_sock *smc, void *buf, int buflen,
 	krflags = MSG_WAITALL;
 	smc->clcsock->sk->sk_rcvtimeo = CLC_WAIT_TIME;
 	len = sock_recvmsg(smc->clcsock, &msg, krflags);
-<<<<<<< HEAD
-	if (len < datlen) {
-=======
 	if (len < datlen || !smc_clc_msg_hdr_valid(clcm)) {
->>>>>>> linux-next/akpm-base
 		smc->sk.sk_err = EPROTO;
 		reason_code = -EPROTO;
 		goto out;

@@ -1959,17 +1959,6 @@ static struct dentry *__d_instantiate_anon(struct dentry *dentry,
 	if (disconnected)
 		add_flags |= DCACHE_DISCONNECTED;
 
-<<<<<<< HEAD
-	spin_lock(&tmp->d_lock);
-	__d_set_inode_and_type(tmp, inode, add_flags);
-	hlist_add_head(&tmp->d_u.d_alias, &inode->i_dentry);
-	if (!disconnected) {
-		hlist_bl_lock(&tmp->d_sb->s_roots);
-		hlist_bl_add_head(&tmp->d_hash, &tmp->d_sb->s_roots);
-		hlist_bl_unlock(&tmp->d_sb->s_roots);
-	}
-	spin_unlock(&tmp->d_lock);
-=======
 	spin_lock(&dentry->d_lock);
 	__d_set_inode_and_type(dentry, inode, add_flags);
 	hlist_add_head(&dentry->d_u.d_alias, &inode->i_dentry);
@@ -1979,7 +1968,6 @@ static struct dentry *__d_instantiate_anon(struct dentry *dentry,
 		hlist_bl_unlock(&dentry->d_sb->s_roots);
 	}
 	spin_unlock(&dentry->d_lock);
->>>>>>> linux-next/akpm-base
 	spin_unlock(&inode->i_lock);
 
 	return dentry;
