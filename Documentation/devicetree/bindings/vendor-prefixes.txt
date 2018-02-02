@@ -97,6 +97,7 @@ dptechnics	DPTechnics
 dragino	Dragino Technology Co., Limited
 ea	Embedded Artists AB
 ebv	EBV Elektronik
+eckelmann	Eckelmann AG
 edt	Emerging Display Technologies
 eeti	eGalax_eMPIA Technology Inc
 elan	Elan Microelectronic Corp.
@@ -347,6 +348,7 @@ tcg	Trusted Computing Group
 tcl	Toby Churchill Ltd.
 technexion	TechNexion
 technologic	Technologic Systems
+tempo	Tempo Semiconductor
 terasic	Terasic Inc.
 thine	THine Electronics, Inc.
 ti	Texas Instruments
