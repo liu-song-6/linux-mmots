@@ -131,10 +131,7 @@ enum {
  * @HWSIM_ATTR_FREQ: Frequency at which packet is transmitted or received.
  * @HWSIM_ATTR_TX_INFO_FLAGS: additional flags for corresponding
  *	rates of %HWSIM_ATTR_TX_INFO
-<<<<<<< HEAD
-=======
  * @HWSIM_ATTR_PERM_ADDR: permanent mac address of new radio
->>>>>>> linux-next/akpm-base
  * @__HWSIM_ATTR_MAX: enum limit
  */
 
@@ -162,10 +159,7 @@ enum {
 	HWSIM_ATTR_FREQ,
 	HWSIM_ATTR_PAD,
 	HWSIM_ATTR_TX_INFO_FLAGS,
-<<<<<<< HEAD
-=======
 	HWSIM_ATTR_PERM_ADDR,
->>>>>>> linux-next/akpm-base
 	__HWSIM_ATTR_MAX,
 };
 #define HWSIM_ATTR_MAX (__HWSIM_ATTR_MAX - 1)

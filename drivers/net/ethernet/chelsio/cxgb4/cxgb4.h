@@ -1752,11 +1752,8 @@ void free_rspq_fl(struct adapter *adap, struct sge_rspq *rq, struct sge_fl *fl);
 void free_tx_desc(struct adapter *adap, struct sge_txq *q,
 		  unsigned int n, bool unmap);
 void free_txq(struct adapter *adap, struct sge_txq *q);
-<<<<<<< HEAD
-=======
 int t4_set_vlan_acl(struct adapter *adap, unsigned int mbox, unsigned int vf,
 		    u16 vlan);
->>>>>>> linux-next/akpm-base
 void cxgb4_reclaim_completed_tx(struct adapter *adap,
 				struct sge_txq *q, bool unmap);
 int cxgb4_map_skb(struct device *dev, const struct sk_buff *skb,
@@ -1767,9 +1764,4 @@ void cxgb4_write_sgl(const struct sk_buff *skb, struct sge_txq *q,
 		     struct ulptx_sgl *sgl, u64 *end, unsigned int start,
 		     const dma_addr_t *addr);
 void cxgb4_ring_tx_db(struct adapter *adap, struct sge_txq *q, int n);
-<<<<<<< HEAD
-int t4_set_vlan_acl(struct adapter *adap, unsigned int mbox, unsigned int vf,
-		    u16 vlan);
-=======
->>>>>>> linux-next/akpm-base
 #endif /* __CXGB4_H__ */

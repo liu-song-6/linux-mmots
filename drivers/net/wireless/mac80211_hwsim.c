@@ -2798,16 +2798,11 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 	err = rhashtable_insert_fast(&hwsim_radios_rht, &data->rht,
 				     hwsim_rht_params);
 	if (err < 0) {
-<<<<<<< HEAD
-		pr_debug("mac80211_hwsim: radio index %d already present\n",
-			 idx);
-=======
 		if (info) {
 			GENL_SET_ERR_MSG(info, "perm addr already present");
 			NL_SET_BAD_ATTR(info->extack,
 					info->attrs[HWSIM_ATTR_PERM_ADDR]);
 		}
->>>>>>> linux-next/akpm-base
 		spin_unlock_bh(&hwsim_radio_lock);
 		goto failed_final_insert;
 	}
@@ -3284,10 +3279,7 @@ static int hwsim_del_radio_nl(struct sk_buff *msg, struct genl_info *info)
 		list_del(&data->list);
 		rhashtable_remove_fast(&hwsim_radios_rht, &data->rht,
 				       hwsim_rht_params);
-<<<<<<< HEAD
-=======
 		hwsim_radios_generation++;
->>>>>>> linux-next/akpm-base
 		spin_unlock_bh(&hwsim_radio_lock);
 		mac80211_hwsim_del_radio(data, wiphy_name(data->hw->wiphy),
 					 info);

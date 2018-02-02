@@ -213,18 +213,12 @@ source "drivers/mux/Kconfig"
 
 source "drivers/opp/Kconfig"
 
-<<<<<<< HEAD
 source "drivers/visorbus/Kconfig"
 
-=======
->>>>>>> linux-next/akpm-base
 source "drivers/siox/Kconfig"
 
 source "drivers/slimbus/Kconfig"
 
-<<<<<<< HEAD
-=======
 source "drivers/visorbus/Kconfig"
 
->>>>>>> linux-next/akpm-base
 endmenu

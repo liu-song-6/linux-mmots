@@ -186,10 +186,4 @@ obj-$(CONFIG_FPGA)		+= fpga/
 obj-$(CONFIG_FSI)		+= fsi/
 obj-$(CONFIG_TEE)		+= tee/
 obj-$(CONFIG_MULTIPLEXER)	+= mux/
-<<<<<<< HEAD
 obj-$(CONFIG_UNISYS_VISORBUS)	+= visorbus/
-obj-$(CONFIG_SIOX)		+= siox/
-=======
-obj-$(CONFIG_SIOX)		+= siox/
-obj-$(CONFIG_UNISYS_VISORBUS)	+= visorbus/
->>>>>>> linux-next/akpm-base
