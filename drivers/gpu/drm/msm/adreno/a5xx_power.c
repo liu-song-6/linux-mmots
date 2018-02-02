@@ -103,10 +103,16 @@ static inline uint32_t _get_mvolts(struct msm_gpu *gpu, uint32_t freq)
 	struct msm_drm_private *priv = dev->dev_private;
 	struct platform_device *pdev = priv->gpu_pdev;
 	struct dev_pm_opp *opp;
+	u32 ret = 0;
 
 	opp = dev_pm_opp_find_freq_exact(&pdev->dev, freq, true);
 
-	return (!IS_ERR(opp)) ? dev_pm_opp_get_voltage(opp) / 1000 : 0;
+	if (!IS_ERR(opp)) {
+		ret = dev_pm_opp_get_voltage(opp) / 1000;
+		dev_pm_opp_put(opp);
+	}
+
+	return ret;
 }
 
 /* Setup thermal limit management */
@@ -264,7 +270,7 @@ void a5xx_gpmu_ucode_init(struct msm_gpu *gpu)
 		return;
 
 	/* Get the firmware */
-	fw = adreno_request_fw(adreno_gpu, adreno_gpu->info->gpmufw);
+	fw = adreno_request_fw(adreno_gpu, adreno_gpu->info->powerfw);
 	if (IS_ERR(fw)) {
 		DRM_ERROR("%s: Could not get GPMU firmware. GPMU will not be active\n",
 			gpu->name);

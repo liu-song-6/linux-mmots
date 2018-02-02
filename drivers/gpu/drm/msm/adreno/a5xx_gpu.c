@@ -17,6 +17,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/of_address.h>
 #include <linux/soc/qcom/mdt_loader.h>
+#include <linux/pm_opp.h>
+#include <linux/nvmem-consumer.h>
 #include "msm_gem.h"
 #include "msm_mmu.h"
 #include "a5xx_gpu.h"
@@ -138,6 +140,65 @@ static void a5xx_flush(struct msm_gpu *gpu, struct msm_ringbuffer *ring)
 		gpu_write(gpu, REG_A5XX_CP_RB_WPTR, wptr);
 }
 
+static void a5xx_submit_in_rb(struct msm_gpu *gpu, struct msm_gem_submit *submit,
+	struct msm_file_private *ctx)
+{
+	struct msm_drm_private *priv = gpu->dev->dev_private;
+	struct msm_ringbuffer *ring = submit->ring;
+	struct msm_gem_object *obj;
+	uint32_t *ptr, dwords;
+	unsigned int i;
+
+	for (i = 0; i < submit->nr_cmds; i++) {
+		switch (submit->cmd[i].type) {
+		case MSM_SUBMIT_CMD_IB_TARGET_BUF:
+			break;
+		case MSM_SUBMIT_CMD_CTX_RESTORE_BUF:
+			if (priv->lastctx == ctx)
+				break;
+		case MSM_SUBMIT_CMD_BUF:
+			/* copy commands into RB: */
+			obj = submit->bos[submit->cmd[i].idx].obj;
+			dwords = submit->cmd[i].size;
+
+			ptr = msm_gem_get_vaddr(&obj->base);
+
+			/* _get_vaddr() shouldn't fail at this point,
+			 * since we've already mapped it once in
+			 * submit_reloc()
+			 */
+			if (WARN_ON(!ptr))
+				return;
+
+			for (i = 0; i < dwords; i++) {
+				/* normally the OUT_PKTn() would wait
+				 * for space for the packet.  But since
+				 * we just OUT_RING() the whole thing,
+				 * need to call adreno_wait_ring()
+				 * ourself:
+				 */
+				adreno_wait_ring(ring, 1);
+				OUT_RING(ring, ptr[i]);
+			}
+
+			msm_gem_put_vaddr(&obj->base);
+
+			break;
+		}
+	}
+
+	a5xx_flush(gpu, ring);
+	a5xx_preempt_trigger(gpu);
+
+	/* we might not necessarily have a cmd from userspace to
+	 * trigger an event to know that submit has completed, so
+	 * do this manually:
+	 */
+	a5xx_idle(gpu, ring);
+	ring->memptrs->fence = submit->seqno;
+	msm_gpu_retire(gpu);
+}
+
 static void a5xx_submit(struct msm_gpu *gpu, struct msm_gem_submit *submit,
 	struct msm_file_private *ctx)
 {
@@ -146,6 +207,12 @@ static void a5xx_submit(struct msm_gpu *gpu, struct msm_gem_submit *submit,
 	struct msm_drm_private *priv = gpu->dev->dev_private;
 	struct msm_ringbuffer *ring = submit->ring;
 	unsigned int i, ibs = 0;
+
+	if (IS_ENABLED(CONFIG_DRM_MSM_GPU_SUDO) && submit->in_rb) {
+		priv->lastctx = NULL;
+		a5xx_submit_in_rb(gpu, submit, ctx);
+		return;
+	}
 
 	OUT_PKT7(ring, CP_PREEMPT_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x02);
@@ -595,6 +662,12 @@ static int a5xx_hw_init(struct msm_gpu *gpu)
 	/* Turn on performance counters */
 	gpu_write(gpu, REG_A5XX_RBBM_PERFCTR_CNTL, 0x01);
 
+	/* Select CP0 to always count cycles */
+	gpu_write(gpu, REG_A5XX_CP_PERFCTR_CP_SEL_0, PERF_CP_ALWAYS_COUNT);
+
+	/* Select RBBM0 to countable 6 to get the busy status for devfreq */
+	gpu_write(gpu, REG_A5XX_RBBM_PERFCTR_RBBM_SEL_0, 6);
+
 	/* Increase VFD cache access so LRZ and other data gets evicted less */
 	gpu_write(gpu, REG_A5XX_UCHE_CACHE_WAYS, 0x02);
 
@@ -785,19 +858,19 @@ static void a5xx_destroy(struct msm_gpu *gpu)
 	if (a5xx_gpu->pm4_bo) {
 		if (a5xx_gpu->pm4_iova)
 			msm_gem_put_iova(a5xx_gpu->pm4_bo, gpu->aspace);
-		drm_gem_object_unreference_unlocked(a5xx_gpu->pm4_bo);
+		drm_gem_object_put_unlocked(a5xx_gpu->pm4_bo);
 	}
 
 	if (a5xx_gpu->pfp_bo) {
 		if (a5xx_gpu->pfp_iova)
 			msm_gem_put_iova(a5xx_gpu->pfp_bo, gpu->aspace);
-		drm_gem_object_unreference_unlocked(a5xx_gpu->pfp_bo);
+		drm_gem_object_put_unlocked(a5xx_gpu->pfp_bo);
 	}
 
 	if (a5xx_gpu->gpmu_bo) {
 		if (a5xx_gpu->gpmu_iova)
 			msm_gem_put_iova(a5xx_gpu->gpmu_bo, gpu->aspace);
-		drm_gem_object_unreference_unlocked(a5xx_gpu->gpmu_bo);
+		drm_gem_object_put_unlocked(a5xx_gpu->gpmu_bo);
 	}
 
 	adreno_gpu_cleanup(adreno_gpu);
@@ -1165,6 +1238,14 @@ static struct msm_ringbuffer *a5xx_active_ring(struct msm_gpu *gpu)
 	return a5xx_gpu->cur_ring;
 }
 
+static int a5xx_gpu_busy(struct msm_gpu *gpu, uint64_t *value)
+{
+	*value = gpu_read64(gpu, REG_A5XX_RBBM_PERFCTR_RBBM_0_LO,
+		REG_A5XX_RBBM_PERFCTR_RBBM_0_HI);
+
+	return 0;
+}
+
 static const struct adreno_gpu_funcs funcs = {
 	.base = {
 		.get_param = adreno_get_param,
@@ -1179,10 +1260,31 @@ static const struct adreno_gpu_funcs funcs = {
 		.destroy = a5xx_destroy,
 #ifdef CONFIG_DEBUG_FS
 		.show = a5xx_show,
+		.debugfs_init = a5xx_debugfs_init,
 #endif
+		.gpu_busy = a5xx_gpu_busy,
 	},
 	.get_timestamp = a5xx_get_timestamp,
 };
+
+static void check_speed_bin(struct device *dev)
+{
+	struct nvmem_cell *cell;
+	u32 bin, val;
+
+	cell = nvmem_cell_get(dev, "speed_bin");
+
+	/* If a nvmem cell isn't defined, nothing to do */
+	if (IS_ERR(cell))
+		return;
+
+	bin = *((u32 *) nvmem_cell_read(cell, NULL));
+	nvmem_cell_put(cell);
+
+	val = (1 << bin);
+
+	dev_pm_opp_set_supported_hw(dev, &val, 1);
+}
 
 struct msm_gpu *a5xx_gpu_init(struct drm_device *dev)
 {
@@ -1209,6 +1311,8 @@ struct msm_gpu *a5xx_gpu_init(struct drm_device *dev)
 	adreno_gpu->reg_offsets = a5xx_register_offsets;
 
 	a5xx_gpu->lm_leakage = 0x4E001A;
+
+	check_speed_bin(&pdev->dev);
 
 	ret = adreno_gpu_init(dev, pdev, adreno_gpu, &funcs, 4);
 	if (ret) {

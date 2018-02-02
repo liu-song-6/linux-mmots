@@ -73,7 +73,7 @@ struct adreno_info {
 	uint32_t revn;
 	const char *name;
 	const char *pm4fw, *pfpfw;
-	const char *gpmufw;
+	const char *powerfw;
 	uint32_t gmem;
 	enum adreno_quirks quirks;
 	struct msm_gpu *(*init)(struct drm_device *dev);
@@ -129,10 +129,6 @@ struct adreno_gpu {
 /* platform config data (ie. from DT, or pdata) */
 struct adreno_platform_config {
 	struct adreno_rev rev;
-	uint32_t fast_rate, bus_freq;
-#ifdef DOWNSTREAM_CONFIG_MSM_BUS_SCALING
-	struct msm_bus_scale_pdata *bus_scale_table;
-#endif
 };
 
 #define ADRENO_IDLE_TIMEOUT msecs_to_jiffies(1000)
