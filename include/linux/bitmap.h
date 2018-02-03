@@ -233,7 +233,7 @@ static inline void bitmap_copy(unsigned long *dst, const unsigned long *src,
 /*
  * Copy bitmap and clear tail bits in last word.
  */
-static inline void bitmap_copy_safe(unsigned long *dst,
+static inline void bitmap_copy_clear_tail(unsigned long *dst,
 		const unsigned long *src, unsigned int nbits)
 {
 	bitmap_copy(dst, src, nbits);
@@ -251,11 +251,11 @@ extern void bitmap_from_arr32(unsigned long *bitmap, const u32 *buf,
 extern void bitmap_to_arr32(u32 *buf, const unsigned long *bitmap,
 							unsigned int nbits);
 #else
-#define bitmap_from_arr32(bitmap, buf, nbits)		\
-	bitmap_copy_safe((unsigned long *) (bitmap),	\
+#define bitmap_from_arr32(bitmap, buf, nbits)			\
+	bitmap_copy_clear_tail((unsigned long *) (bitmap),	\
 			(const unsigned long *) (buf), (nbits))
-#define bitmap_to_arr32(buf, bitmap, nbits)		\
-	bitmap_copy_safe((unsigned long *) (buf),	\
+#define bitmap_to_arr32(buf, bitmap, nbits)			\
+	bitmap_copy_clear_tail((unsigned long *) (buf),		\
 			(const unsigned long *) (bitmap), (nbits))
 #endif
 
