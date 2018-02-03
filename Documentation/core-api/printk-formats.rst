@@ -76,12 +76,19 @@ Symbols/Function Pointers
 		(with __builtin_extract_return_addr() translation)
 	%pB	prev_fn_of_versatile_init+0x88/0x88
 
+The ``S`` and ``s`` specifiers are used for printing a pointer in symbolic
+format. They result in the symbol name with (S) or without (s)
+offsets. If KALLSYMS are disabled then the symbol address is printed instead.
 
+<<<<<<< HEAD
 The ``S`` and ``s`` specifiers are used for printing a pointer in symbolic
 format. They result in the symbol name with (S) or without (s)
 offsets. If KALLSYMS are disabled then the symbol address is printed instead.
 
 Note, that the ``F`` and ``f`` specifiers are identical to ``S`` (``s``)
+=======
+Note, that the ``F`` and ``f`` specifiers are identical to ``S`` (s)
+>>>>>>> linux-next/akpm-base
 and thus deprecated. We have ``F`` and ``f`` because on ia64, ppc64 and
 parisc64 function pointers are indirect and, in fact, are function
 descriptors, which require additional dereferencing before we can lookup

@@ -275,6 +275,11 @@ static void mark_busy(struct drm_i915_private *i915)
 	i915_pmu_gt_unparked(i915);
 
 	intel_engines_unpark(i915);
+<<<<<<< HEAD
+=======
+
+	i915_queue_hangcheck(i915);
+>>>>>>> linux-next/akpm-base
 
 	queue_delayed_work(i915->wq,
 			   &i915->gt.retire_work,

@@ -756,6 +756,7 @@ int eeh_restore_vf_config(struct pci_dn *pdn)
 		eeh_ops->write_config(pdn, edev->pcie_cap + PCI_EXP_DEVCTL,
 				      2, devctl);
 
+<<<<<<< HEAD
 		/* Disable Completion Timeout */
 		eeh_ops->read_config(pdn, edev->pcie_cap + PCI_EXP_DEVCAP2,
 				     4, &cap2);
@@ -764,6 +765,16 @@ int eeh_restore_vf_config(struct pci_dn *pdn)
 					     edev->pcie_cap + PCI_EXP_DEVCTL2,
 					     4, &cap2);
 			cap2 |= 0x10;
+=======
+		/* Disable Completion Timeout if possible */
+		eeh_ops->read_config(pdn, edev->pcie_cap + PCI_EXP_DEVCAP2,
+				     4, &cap2);
+		if (cap2 & PCI_EXP_DEVCAP2_COMP_TMOUT_DIS) {
+			eeh_ops->read_config(pdn,
+					     edev->pcie_cap + PCI_EXP_DEVCTL2,
+					     4, &cap2);
+			cap2 |= PCI_EXP_DEVCTL2_COMP_TMOUT_DIS;
+>>>>>>> linux-next/akpm-base
 			eeh_ops->write_config(pdn,
 					      edev->pcie_cap + PCI_EXP_DEVCTL2,
 					      4, cap2);

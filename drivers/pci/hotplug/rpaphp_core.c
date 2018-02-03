@@ -1,23 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * PCI Hot Plug Controller Driver for RPA-compliant PPC64 platform.
  * Copyright (C) 2003 Linda Xie <lxie@us.ibm.com>
  *
  * All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or (at
- * your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, GOOD TITLE or
- * NON INFRINGEMENT.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * Send feedback to <lxie@us.ibm.com>
  *
@@ -233,6 +219,7 @@ static int rpaphp_check_drc_props_v1(struct device_node *dn, char *drc_name,
 	    ((drc_type == NULL) || (drc_type && !strcmp(drc_type, type_tmp))))
 		return 0;
 
+<<<<<<< HEAD
 	return -EINVAL;
 }
 
@@ -280,6 +267,55 @@ static int rpaphp_check_drc_props_v2(struct device_node *dn, char *drc_name,
 	return -EINVAL;
 }
 
+=======
+	return -EINVAL;
+}
+
+static int rpaphp_check_drc_props_v2(struct device_node *dn, char *drc_name,
+				char *drc_type, unsigned int my_index)
+{
+	struct property *info;
+	unsigned int entries;
+	struct of_drc_info drc;
+	const __be32 *value;
+	char cell_drc_name[MAX_DRC_NAME_LEN];
+	int j, fndit;
+
+	info = of_find_property(dn->parent, "ibm,drc-info", NULL);
+	if (info == NULL)
+		return -EINVAL;
+
+	value = of_prop_next_u32(info, NULL, &entries);
+	if (!value)
+		return -EINVAL;
+
+	for (j = 0; j < entries; j++) {
+		of_read_drc_info_cell(&info, &value, &drc);
+
+		/* Should now know end of current entry */
+
+		if (my_index > drc.last_drc_index)
+			continue;
+
+		fndit = 1;
+		break;
+	}
+	/* Found it */
+
+	if (fndit)
+		sprintf(cell_drc_name, "%s%d", drc.drc_name_prefix, 
+			my_index);
+
+	if (((drc_name == NULL) ||
+	     (drc_name && !strcmp(drc_name, cell_drc_name))) &&
+	    ((drc_type == NULL) ||
+	     (drc_type && !strcmp(drc_type, drc.drc_type))))
+		return 0;
+
+	return -EINVAL;
+}
+
+>>>>>>> linux-next/akpm-base
 int rpaphp_check_drc_props(struct device_node *dn, char *drc_name,
 			char *drc_type)
 {

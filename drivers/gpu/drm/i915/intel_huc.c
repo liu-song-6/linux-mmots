@@ -54,10 +54,6 @@
 #define KBL_HUC_FW_MINOR 00
 #define KBL_BLD_NUM 1810
 
-#define GLK_HUC_FW_MAJOR 02
-#define GLK_HUC_FW_MINOR 00
-#define GLK_BLD_NUM 1748
-
 #define HUC_FW_PATH(platform, major, minor, bld_num) \
 	"i915/" __stringify(platform) "_huc_ver" __stringify(major) "_" \
 	__stringify(minor) "_" __stringify(bld_num) ".bin"
@@ -74,9 +70,12 @@ MODULE_FIRMWARE(I915_BXT_HUC_UCODE);
 	KBL_HUC_FW_MINOR, KBL_BLD_NUM)
 MODULE_FIRMWARE(I915_KBL_HUC_UCODE);
 
+<<<<<<< HEAD
 #define I915_GLK_HUC_UCODE HUC_FW_PATH(glk, GLK_HUC_FW_MAJOR, \
 	GLK_HUC_FW_MINOR, GLK_BLD_NUM)
 
+=======
+>>>>>>> linux-next/akpm-base
 static void huc_fw_select(struct intel_uc_fw *huc_fw)
 {
 	struct intel_huc *huc = container_of(huc_fw, struct intel_huc, fw);
@@ -103,10 +102,13 @@ static void huc_fw_select(struct intel_uc_fw *huc_fw)
 		huc_fw->path = I915_KBL_HUC_UCODE;
 		huc_fw->major_ver_wanted = KBL_HUC_FW_MAJOR;
 		huc_fw->minor_ver_wanted = KBL_HUC_FW_MINOR;
+<<<<<<< HEAD
 	} else if (IS_GEMINILAKE(dev_priv)) {
 		huc_fw->path = I915_GLK_HUC_UCODE;
 		huc_fw->major_ver_wanted = GLK_HUC_FW_MAJOR;
 		huc_fw->minor_ver_wanted = GLK_HUC_FW_MINOR;
+=======
+>>>>>>> linux-next/akpm-base
 	} else {
 		DRM_WARN("%s: No firmware known for this platform!\n",
 			 intel_uc_fw_type_repr(huc_fw->type));

@@ -209,8 +209,11 @@ void intel_uc_fini_wq(struct drm_i915_private *dev_priv)
 	if (!USES_GUC(dev_priv))
 		return;
 
+<<<<<<< HEAD
 	GEM_BUG_ON(!HAS_GUC(dev_priv));
 
+=======
+>>>>>>> linux-next/akpm-base
 	intel_guc_fini_wq(&dev_priv->guc);
 }
 

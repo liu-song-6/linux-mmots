@@ -472,7 +472,10 @@ int intel_vgpu_get_dmabuf(struct intel_vgpu *vgpu, unsigned int dmabuf_id)
 		ret = PTR_ERR(dmabuf);
 		goto out_free_gem;
 	}
+<<<<<<< HEAD
 	obj->base.dma_buf = dmabuf;
+=======
+>>>>>>> linux-next/akpm-base
 
 	i915_gem_object_put(obj);
 
