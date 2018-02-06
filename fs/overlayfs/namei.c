@@ -976,11 +976,6 @@ struct dentry *ovl_lookup(struct inode *dir, struct dentry *dentry,
 		upperdentry = dget(index);
 
 	if (upperdentry || ctr) {
-<<<<<<< HEAD
-		if (ctr)
-			origin = stack[0].dentry;
-=======
->>>>>>> linux-next/akpm-base
 		inode = ovl_get_inode(dentry->d_sb, upperdentry, origin, index,
 				      ctr);
 		err = PTR_ERR(inode);
