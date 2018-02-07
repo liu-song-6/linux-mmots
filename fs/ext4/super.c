@@ -3621,8 +3621,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 		}
 		if (test_opt(sb, DELALLOC))
 			clear_opt(sb, DELALLOC);
-	} else {
-		sb->s_iflags |= SB_I_CGROUPWB;
 	}
 
 	sb->s_flags = (sb->s_flags & ~SB_POSIXACL) |
@@ -3712,11 +3710,14 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 		if (ext4_has_feature_inline_data(sb)) {
 			ext4_msg(sb, KERN_ERR, "Cannot use DAX on a filesystem"
 					" that may contain inline data");
-			goto failed_mount;
+			sbi->s_mount_opt &= ~EXT4_MOUNT_DAX;
 		}
 		err = bdev_dax_supported(sb, blocksize);
-		if (err)
-			goto failed_mount;
+		if (err) {
+			ext4_msg(sb, KERN_ERR,
+				"DAX unsupported by block device. Turning off DAX.");
+			sbi->s_mount_opt &= ~EXT4_MOUNT_DAX;
+		}
 	}
 
 	if (ext4_has_feature_encrypt(sb) && es->s_encryption_level) {
