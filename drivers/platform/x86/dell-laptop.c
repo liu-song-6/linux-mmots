@@ -1217,12 +1217,9 @@ static int kbd_get_info(struct kbd_info *info)
 	info->triggers = buffer.output[2] & 0xFF;
 	units = (buffer.output[2] >> 8) & 0xFF;
 	info->levels = (buffer.output[2] >> 16) & 0xFF;
-<<<<<<< HEAD
-=======
 
 	if (quirks && quirks->kbd_led_levels_off_1 && info->levels)
 		info->levels--;
->>>>>>> linux-next/akpm-base
 
 	if (quirks && quirks->kbd_led_levels_off_1 && info->levels)
 		info->levels--;
