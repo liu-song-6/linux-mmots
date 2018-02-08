@@ -7748,7 +7748,9 @@ F:	arch/powerpc/kernel/kvm*
 
 KERNEL VIRTUAL MACHINE for s390 (KVM/s390)
 M:	Christian Borntraeger <borntraeger@de.ibm.com>
-M:	Cornelia Huck <cohuck@redhat.com>
+M:	Janosch Frank <frankja@linux.vnet.ibm.com>
+R:	David Hildenbrand <david@redhat.com>
+R:	Cornelia Huck <cohuck@redhat.com>
 L:	linux-s390@vger.kernel.org
 W:	http://www.ibm.com/developerworks/linux/linux390/
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/kvms390/linux.git
@@ -9188,6 +9190,7 @@ S:	Supported
 F:	Documentation/devicetree/bindings/mips/
 F:	Documentation/mips/
 F:	arch/mips/
+F:	drivers/platform/mips/
 
 MIPS BOSTON DEVELOPMENT BOARD
 M:	Paul Burton <paul.burton@mips.com>
@@ -9214,6 +9217,25 @@ F:	arch/mips/loongson32/
 F:	arch/mips/include/asm/mach-loongson32/
 F:	drivers/*/*loongson1*
 F:	drivers/*/*/*loongson1*
+
+MIPS/LOONGSON2 ARCHITECTURE
+M:	Jiaxun Yang <jiaxun.yang@flygoat.com>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/loongson64/*{2e/2f}*
+F:	arch/mips/include/asm/mach-loongson64/
+F:	drivers/*/*loongson2*
+F:	drivers/*/*/*loongson2*
+
+MIPS/LOONGSON3 ARCHITECTURE
+M:	Huacai Chen <chenhc@lemote.com>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/loongson64/
+F:	arch/mips/include/asm/mach-loongson64/
+F:	drivers/platform/mips/cpu_hwmon.c
+F:	drivers/*/*loongson3*
+F:	drivers/*/*/*loongson3*
 
 MIPS RINT INSTRUCTION EMULATION
 M:	Aleksandar Markovic <aleksandar.markovic@mips.com>
@@ -9260,7 +9282,6 @@ F:	drivers/media/dvb-frontends/mn88473*
 
 MODULE SUPPORT
 M:	Jessica Yu <jeyu@kernel.org>
-M:	Rusty Russell <rusty@rustcorp.com.au>
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jeyu/linux.git modules-next
 S:	Maintained
 F:	include/linux/module.h
@@ -10312,7 +10333,8 @@ F:	fs/ocfs2/
 
 ORANGEFS FILESYSTEM
 M:	Mike Marshall <hubcap@omnibond.com>
-L:	pvfs2-developers@beowulf-underground.org (subscribers-only)
+R:	Martin Brandenburg <martin@omnibond.com>
+L:	devel@lists.orangefs.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/hubcap/linux.git
 S:	Supported
 F:	fs/orangefs/
@@ -10410,7 +10432,6 @@ F:	Documentation/parport*.txt
 PARAVIRT_OPS INTERFACE
 M:	Juergen Gross <jgross@suse.com>
 M:	Alok Kataria <akataria@vmware.com>
-M:	Rusty Russell <rusty@rustcorp.com.au>
 L:	virtualization@lists.linux-foundation.org
 S:	Supported
 F:	Documentation/virtual/paravirt_ops.txt
@@ -11586,6 +11607,13 @@ S:	Maintained
 F:	Documentation/blockdev/ramdisk.txt
 F:	drivers/block/brd.c
 
+RANCHU VIRTUAL BOARD FOR MIPS
+M:	Miodrag Dinic <miodrag.dinic@mips.com>
+L:	linux-mips@linux-mips.org
+S:	Supported
+F:	arch/mips/generic/board-ranchu.c
+F:	arch/mips/configs/generic/board-ranchu.config
+
 RANDOM NUMBER DRIVER
 M:	"Theodore Ts'o" <tytso@mit.edu>
 S:	Maintained
@@ -12002,6 +12030,7 @@ F:	drivers/pci/hotplug/s390_pci_hpc.c
 S390 VFIO-CCW DRIVER
 M:	Cornelia Huck <cohuck@redhat.com>
 M:	Dong Jia Shi <bjsdjshi@linux.vnet.ibm.com>
+M:	Halil Pasic <pasic@linux.vnet.ibm.com>
 L:	linux-s390@vger.kernel.org
 L:	kvm@vger.kernel.org
 S:	Supported
@@ -14964,8 +14993,8 @@ S:	Maintained
 F:	drivers/input/tablet/wacom_serial4.c
 
 WATCHDOG DEVICE DRIVERS
-M:	Wim Van Sebroeck <wim@iguana.be>
-R:	Guenter Roeck <linux@roeck-us.net>
+M:	Wim Van Sebroeck <wim@linux-watchdog.org>
+M:	Guenter Roeck <linux@roeck-us.net>
 L:	linux-watchdog@vger.kernel.org
 W:	http://www.linux-watchdog.org/
 T:	git git://www.linux-watchdog.org/linux-watchdog.git

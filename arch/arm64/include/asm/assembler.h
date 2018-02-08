@@ -116,6 +116,24 @@
 	.endm
 
 /*
+ * Value prediction barrier
+ */
+	.macro	csdb
+	hint	#20
+	.endm
+
+/*
+ * Sanitise a 64-bit bounded index wrt speculation, returning zero if out
+ * of bounds.
+ */
+	.macro	mask_nospec64, idx, limit, tmp
+	sub	\tmp, \idx, \limit
+	bic	\tmp, \tmp, \idx
+	and	\idx, \idx, \tmp, asr #63
+	csdb
+	.endm
+
+/*
  * NOP sequence
  */
 	.macro	nops, num
@@ -418,6 +436,27 @@ alternative_endif
 	.endm
 
 /*
+ * Macro to perform an instruction cache maintenance for the interval
+ * [start, end)
+ *
+ * 	start, end:	virtual addresses describing the region
+ *	label:		A label to branch to on user fault.
+ * 	Corrupts:	tmp1, tmp2
+ */
+	.macro invalidate_icache_by_line start, end, tmp1, tmp2, label
+	icache_line_size \tmp1, \tmp2
+	sub	\tmp2, \tmp1, #1
+	bic	\tmp2, \start, \tmp2
+9997:
+USER(\label, ic	ivau, \tmp2)			// invalidate I line PoU
+	add	\tmp2, \tmp2, \tmp1
+	cmp	\tmp2, \end
+	b.lo	9997b
+	dsb	ish
+	isb
+	.endm
+
+/*
  * reset_pmuserenr_el0 - reset PMUSERENR_EL0 if PMUv3 present
  */
 	.macro	reset_pmuserenr_el0, tmpreg
@@ -514,12 +553,35 @@ alternative_endif
  * 	phys:	physical address, preserved
  * 	ttbr:	returns the TTBR value
  */
-	.macro	phys_to_ttbr, phys, ttbr
+	.macro	phys_to_ttbr, ttbr, phys
 #ifdef CONFIG_ARM64_PA_BITS_52
 	orr	\ttbr, \phys, \phys, lsr #46
 	and	\ttbr, \ttbr, #TTBR_BADDR_MASK_52
 #else
 	mov	\ttbr, \phys
+#endif
+	.endm
+
+	.macro	phys_to_pte, pte, phys
+#ifdef CONFIG_ARM64_PA_BITS_52
+	/*
+	 * We assume \phys is 64K aligned and this is guaranteed by only
+	 * supporting this configuration with 64K pages.
+	 */
+	orr	\pte, \phys, \phys, lsr #36
+	and	\pte, \pte, #PTE_ADDR_MASK
+#else
+	mov	\pte, \phys
+#endif
+	.endm
+
+	.macro	pte_to_phys, phys, pte
+#ifdef CONFIG_ARM64_PA_BITS_52
+	ubfiz	\phys, \pte, #(48 - 16 - 12), #16
+	bfxil	\phys, \pte, #16, #32
+	lsl	\phys, \phys, #16
+#else
+	and	\phys, \pte, #PTE_ADDR_MASK
 #endif
 	.endm
 

@@ -18,10 +18,17 @@ The role of PGP in Linux Kernel development
 ===========================================
 
 PGP helps ensure the integrity of the code that is produced by the Linux
+<<<<<<< HEAD
 kernel development community and, to a lesser degree, establish trusted
 communication channels between developers via PGP-signed email exchange.
 
 The Linux kernel source code is available in two main formats:
+=======
+Kernel development community and, to a lesser degree, establish trusted
+communication channels between developers via PGP-signed email exchange.
+
+The Linux Kernel source code is available in two main formats:
+>>>>>>> linux-next/akpm-base
 
 - Distributed source repositories (git)
 - Periodic release snapshots (tarballs)
@@ -53,7 +60,11 @@ want to make sure that by placing trust into developers we do not simply
 shift the blame for potential future security incidents to someone else.
 The goal is to provide a set of guidelines developers can use to create
 a secure working environment and safeguard the PGP keys used to
+<<<<<<< HEAD
 establish the integrity of the Linux kernel itself.
+=======
+establish the integrity of the Linux Kernel itself.
+>>>>>>> linux-next/akpm-base
 
 .. _pgp_tools:
 
@@ -139,7 +150,11 @@ Protect your master PGP key
 ===========================
 
 This guide assumes that you already have a PGP key that you use for Linux
+<<<<<<< HEAD
 kernel development purposes. If you do not yet have one, please see the
+=======
+Kernel development purposes. If you do not yet have one, please see the
+>>>>>>> linux-next/akpm-base
 "`Protecting Code Integrity`_" document mentioned earlier for guidance
 on how to create a new one.
 
@@ -149,9 +164,13 @@ You should also make a new key if your current one is weaker than 2048 bits
 Master key vs. Subkeys
 ----------------------
 
+<<<<<<< HEAD
 Subkeys are fully independent PGP keypairs that are tied to the "master"
 key using certifying key signatures (certificates). It is important to
 understand the following:
+=======
+It is important to understand the following:
+>>>>>>> linux-next/akpm-base
 
 1. There are no technical differences between the "master key" and "subkeys."
 2. At creation time, we assign functional limitations to each key by
@@ -744,6 +763,7 @@ How to work with signed commits
 -------------------------------
 
 It is easy to create signed commits, but it is much more difficult to
+<<<<<<< HEAD
 use them in Linux kernel development, since it relies on patches sent to
 the mailing list, and this workflow does not preserve PGP commit
 signatures. Furthermore, when rebasing your repository to match
@@ -767,6 +787,19 @@ We recommend this for the following reasons:
    integrity before resuming your work.
 3. If someone needs to cherry-pick your commits, this allows them to
    quickly verify their integrity before applying them.
+=======
+use them in Linux Kernel development, since it relies on patches sent to
+the mailing list, and this workflow does not preserve PGP commit
+signatures.
+
+If you have your working git tree publicly available at some git hosting
+service (kernel.org, infradead.org, ozlabs.org, or others), then the
+recommendation is that you sign all your git commits even if upstream
+developers do not directly benefit from this practice. Should there ever
+be a need to perform code forensics or track code provenance, even
+externally maintained trees carrying PGP commit signatures will be
+extremely valuable for such purposes.
+>>>>>>> linux-next/akpm-base
 
 Creating signed commits
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -784,10 +817,13 @@ You can tell git to always sign commits::
 
     git config --global commit.gpgSign true
 
+<<<<<<< HEAD
 .. note::
 
     Make sure you configure ``gpg-agent`` before you turn this on.
 
+=======
+>>>>>>> linux-next/akpm-base
 .. _verify_identities:
 
 How to verify kernel developer identities
@@ -900,7 +936,11 @@ Locate the ID of the master key in the output, in our example
 ``C94035C21B4F2AEB``. Now display the key of Linus Torvalds that you
 have on your keyring::
 
+<<<<<<< HEAD
     $ gpg --list-key torvalds@kernel.org
+=======
+    $ git --list-key torvalds@kernel.org
+>>>>>>> linux-next/akpm-base
     pub   rsa2048 2011-09-20 [SC]
           ABAF11C65A2970B130ABE3C479BE3E4300411886
     uid           [ unknown] Linus Torvalds <torvalds@kernel.org>
