@@ -285,6 +285,7 @@ static int inotify_release(struct inode *ignored, struct file *file)
 static long inotify_ioctl(struct file *file, unsigned int cmd,
 			  unsigned long arg)
 {
+	struct inotify_group_private_data *data __maybe_unused;
 	struct fsnotify_group *group;
 	struct fsnotify_event *fsn_event;
 	void __user *p;
@@ -293,6 +294,7 @@ static long inotify_ioctl(struct file *file, unsigned int cmd,
 
 	group = file->private_data;
 	p = (void __user *) arg;
+	data = &group->inotify_data;
 
 	pr_debug("%s: group=%p cmd=%u\n", __func__, group, cmd);
 
@@ -307,6 +309,17 @@ static long inotify_ioctl(struct file *file, unsigned int cmd,
 		spin_unlock(&group->notification_lock);
 		ret = put_user(send_len, (int __user *) p);
 		break;
+#ifdef CONFIG_CHECKPOINT_RESTORE
+	case INOTIFY_IOC_SETNEXTWD:
+		ret = -EINVAL;
+		if (arg >= 1 && arg <= INT_MAX) {
+			spin_lock(&data->idr_lock);
+			idr_set_cursor(&data->idr, (unsigned int)arg);
+			spin_unlock(&data->idr_lock);
+			ret = 0;
+		}
+		break;
+#endif /* CONFIG_CHECKPOINT_RESTORE */
 	}
 
 	return ret;
