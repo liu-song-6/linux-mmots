@@ -1568,14 +1568,14 @@ static int __init deferred_init_memmap(void *data)
 }
 
 /*
- * This lock grantees that only one thread at a time is allowed to grow zones
+ * This lock guarantees that only one thread at a time is allowed to grow zones
  * (decrease number of deferred pages).
  * Protects first_deferred_pfn field in all zones during early boot before
  * deferred pages are initialized.  Deferred pages are initialized in
  * page_alloc_init_late() soon after smp_init() is complete.
  */
 static __initdata DEFINE_SPINLOCK(deferred_zone_grow_lock);
-DEFINE_STATIC_KEY_TRUE(deferred_pages);
+static DEFINE_STATIC_KEY_TRUE(deferred_pages);
 
 /*
  * If this zone has deferred pages, try to grow it by initializing enough
