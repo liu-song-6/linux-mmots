@@ -6341,8 +6341,8 @@ void __paginginit free_area_init_node(int nid, unsigned long *zones_size,
 	 * We start only with one section of pages, more pages are added as
 	 * needed until the rest of deferred pages are initialized.
 	 */
-	pgdat->static_init_pgcnt = min(PAGES_PER_SECTION,
-				       pgdat->node_spanned_pages);
+	pgdat->static_init_pgcnt = min_t(unsigned long, PAGES_PER_SECTION,
+					 pgdat->node_spanned_pages);
 	pgdat->first_deferred_pfn = ULONG_MAX;
 #endif
 	free_area_init_core(pgdat);
