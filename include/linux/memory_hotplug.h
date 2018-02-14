@@ -236,9 +236,6 @@ void mem_hotplug_done(void);
 
 int get_section_nid(unsigned long section_nr);
 
-extern void set_zone_contiguous(struct zone *zone);
-extern void clear_zone_contiguous(struct zone *zone);
-
 #else /* ! CONFIG_MEMORY_HOTPLUG */
 #define pfn_to_online_page(pfn)			\
 ({						\
