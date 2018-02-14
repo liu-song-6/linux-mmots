@@ -1863,7 +1863,6 @@ Q:	https://patchwork.kernel.org/project/linux-samsung-soc/list/
 S:	Maintained
 F:	arch/arm/boot/dts/s3c*
 F:	arch/arm/boot/dts/s5p*
-F:	arch/arm/boot/dts/samsung*
 F:	arch/arm/boot/dts/exynos*
 F:	arch/arm64/boot/dts/exynos/
 F:	arch/arm/plat-samsung/
@@ -9946,6 +9945,7 @@ F:	drivers/nfc/nxp-nci
 
 OBJTOOL
 M:	Josh Poimboeuf <jpoimboe@redhat.com>
+M:	Peter Zijlstra <peterz@infradead.org>
 S:	Supported
 F:	tools/objtool/
 
@@ -10833,6 +10833,7 @@ F:	drivers/platform/x86/peaq-wmi.c
 PER-CPU MEMORY ALLOCATOR
 M:	Tejun Heo <tj@kernel.org>
 M:	Christoph Lameter <cl@linux.com>
+M:	Dennis Zhou <dennisszhou@gmail.com>
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tj/percpu.git
 S:	Maintained
 F:	include/linux/percpu*.h
@@ -12092,6 +12093,7 @@ M:	Sylwester Nawrocki <s.nawrocki@samsung.com>
 L:	alsa-devel@alsa-project.org (moderated for non-subscribers)
 S:	Supported
 F:	sound/soc/samsung/
+F:	Documentation/devicetree/bindings/sound/samsung*
 
 SAMSUNG EXYNOS PSEUDO RANDOM NUMBER GENERATOR (RNG) DRIVER
 M:	Krzysztof Kozlowski <krzk@kernel.org>
