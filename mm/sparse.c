@@ -30,11 +30,14 @@ struct mem_section mem_section[NR_SECTION_ROOTS][SECTIONS_PER_ROOT]
 #endif
 EXPORT_SYMBOL(mem_section);
 
-#ifdef NODE_NOT_IN_PAGE_FLAGS
+#if defined(NODE_NOT_IN_PAGE_FLAGS) || defined(CONFIG_MEMORY_HOTPLUG)
 /*
  * If we did not store the node number in the page then we have to
  * do a lookup in the section_to_node_table in order to find which
  * node the page belongs to.
+ *
+ * We also use this data in case memory hotplugging is enabled to be
+ * able to determine nid while struct pages are not yet initialized.
  */
 #if MAX_NUMNODES <= 256
 static u8 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;
@@ -42,17 +45,28 @@ static u8 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;
 static u16 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;
 #endif
 
+#ifdef NODE_NOT_IN_PAGE_FLAGS
 int page_to_nid(const struct page *page)
 {
 	return section_to_node_table[page_to_section(page)];
 }
 EXPORT_SYMBOL(page_to_nid);
+#endif /* NODE_NOT_IN_PAGE_FLAGS */
 
 static void set_section_nid(unsigned long section_nr, int nid)
 {
 	section_to_node_table[section_nr] = nid;
 }
-#else /* !NODE_NOT_IN_PAGE_FLAGS */
+
+/* Return NID for given section number */
+int get_section_nid(unsigned long section_nr)
+{
+	if (WARN_ON(section_nr >= NR_MEM_SECTIONS))
+		return 0;
+	return section_to_node_table[section_nr];
+}
+EXPORT_SYMBOL(get_section_nid);
+#else /* ! (NODE_NOT_IN_PAGE_FLAGS || CONFIG_MEMORY_HOTPLUG) */
 static inline void set_section_nid(unsigned long section_nr, int nid)
 {
 }
@@ -816,7 +830,14 @@ int __meminit sparse_add_one_section(struct pglist_data *pgdat,
 		goto out;
 	}
 
-	memset(memmap, 0, sizeof(struct page) * PAGES_PER_SECTION);
+#ifdef CONFIG_DEBUG_VM
+	/*
+	 * poison uninitialized struct pages in order to catch invalid flags
+	 * combinations.
+	 */
+	memset(memmap, PAGE_POISON_PATTERN,
+	       sizeof(struct page) * PAGES_PER_SECTION);
+#endif
 
 	section_mark_present(ms);
 
@@ -827,6 +848,8 @@ out:
 	if (ret <= 0) {
 		kfree(usemap);
 		__kfree_section_memmap(memmap, altmap);
+	} else {
+		set_section_nid(section_nr, pgdat->node_id);
 	}
 	return ret;
 }
