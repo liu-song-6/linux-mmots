@@ -4871,8 +4871,6 @@ static int qlt_24xx_handle_els(struct scsi_qla_host *vha,
 				    sess);
 				qlt_send_term_imm_notif(vha, iocb, 1);
 				res = 0;
-				spin_lock_irqsave(&tgt->ha->tgt.sess_lock,
-				    flags);
 				break;
 			}
 
@@ -6299,10 +6297,11 @@ static void qlt_lport_dump(struct scsi_qla_host *vha, u64 wwpn,
 /**
  * qla_tgt_lport_register - register lport with external module
  *
- * @qla_tgt_ops: Pointer for tcm_qla2xxx qla_tgt_ops
- * @wwpn: Passwd FC target WWPN
- * @callback:  lport initialization callback for tcm_qla2xxx code
  * @target_lport_ptr: pointer for tcm_qla2xxx specific lport data
+ * @phys_wwpn:
+ * @npiv_wwpn:
+ * @npiv_wwnn:
+ * @callback:  lport initialization callback for tcm_qla2xxx code
  */
 int qlt_lport_register(void *target_lport_ptr, u64 phys_wwpn,
 		       u64 npiv_wwpn, u64 npiv_wwnn,

@@ -259,7 +259,7 @@ qla2300_intr_handler(int irq, void *dev_id)
 
 /**
  * qla2x00_mbx_completion() - Process mailbox command completions.
- * @ha: SCSI driver HA context
+ * @vha: SCSI driver HA context
  * @mb0: Mailbox0 register
  */
 static void
@@ -272,7 +272,8 @@ qla2x00_mbx_completion(scsi_qla_host_t *vha, uint16_t mb0)
 	struct device_reg_2xxx __iomem *reg = &ha->iobase->isp;
 
 	/* Read all mbox registers? */
-	mboxes = (1 << ha->mbx_count) - 1;
+	WARN_ON_ONCE(ha->mbx_count > 32);
+	mboxes = (1ULL << ha->mbx_count) - 1;
 	if (!ha->mcp)
 		ql_dbg(ql_dbg_async, vha, 0x5001, "MBX pointer ERROR.\n");
 	else
@@ -612,7 +613,8 @@ qla2x00_find_fcport_by_nportid(scsi_qla_host_t *vha, port_id_t *id,
 
 /**
  * qla2x00_async_event() - Process aynchronous events.
- * @ha: SCSI driver HA context
+ * @vha: SCSI driver HA context
+ * @rsp: response queue
  * @mb: Mailbox registers (0 - 3)
  */
 void
@@ -1255,7 +1257,8 @@ global_port_update:
 
 /**
  * qla2x00_process_completed_request() - Process a Fast Post response.
- * @ha: SCSI driver HA context
+ * @vha: SCSI driver HA context
+ * @req: request queue
  * @index: SRB index
  */
 void
@@ -1969,7 +1972,7 @@ static void qla_ctrlvp_completed(scsi_qla_host_t *vha, struct req_que *req,
 
 /**
  * qla2x00_process_response_queue() - Process response queue entries.
- * @ha: SCSI driver HA context
+ * @rsp: response queue
  */
 void
 qla2x00_process_response_queue(struct rsp_que *rsp)
@@ -2373,7 +2376,8 @@ done:
 
 /**
  * qla2x00_status_entry() - Process a Status IOCB entry.
- * @ha: SCSI driver HA context
+ * @vha: SCSI driver HA context
+ * @rsp: response queue
  * @pkt: Entry pointer
  */
 static void
@@ -2750,7 +2754,7 @@ out:
 
 /**
  * qla2x00_status_cont_entry() - Process a Status Continuations entry.
- * @ha: SCSI driver HA context
+ * @rsp: response queue
  * @pkt: Entry pointer
  *
  * Extended sense data.
@@ -2808,7 +2812,8 @@ qla2x00_status_cont_entry(struct rsp_que *rsp, sts_cont_entry_t *pkt)
 
 /**
  * qla2x00_error_entry() - Process an error entry.
- * @ha: SCSI driver HA context
+ * @vha: SCSI driver HA context
+ * @rsp: response queue
  * @pkt: Entry pointer
  * return : 1=allow further error analysis. 0=no additional error analysis.
  */
@@ -2867,7 +2872,7 @@ fatal:
 
 /**
  * qla24xx_mbx_completion() - Process mailbox command completions.
- * @ha: SCSI driver HA context
+ * @vha: SCSI driver HA context
  * @mb0: Mailbox0 register
  */
 static void
@@ -2880,7 +2885,8 @@ qla24xx_mbx_completion(scsi_qla_host_t *vha, uint16_t mb0)
 	struct device_reg_24xx __iomem *reg = &ha->iobase->isp24;
 
 	/* Read all mbox registers? */
-	mboxes = (1 << ha->mbx_count) - 1;
+	WARN_ON_ONCE(ha->mbx_count > 32);
+	mboxes = (1ULL << ha->mbx_count) - 1;
 	if (!ha->mcp)
 		ql_dbg(ql_dbg_async, vha, 0x504e, "MBX pointer ERROR.\n");
 	else
@@ -2935,7 +2941,8 @@ void qla24xx_nvme_ls4_iocb(struct scsi_qla_host *vha,
 
 /**
  * qla24xx_process_response_queue() - Process response queue entries.
- * @ha: SCSI driver HA context
+ * @vha: SCSI driver HA context
+ * @rsp: response queue
  */
 void qla24xx_process_response_queue(struct scsi_qla_host *vha,
 	struct rsp_que *rsp)
