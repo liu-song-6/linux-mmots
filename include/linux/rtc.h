@@ -145,7 +145,6 @@ struct rtc_device {
 
 	bool registered;
 
-	struct nvmem_config *nvmem_config;
 	struct nvmem_device *nvmem;
 	/* Old ABI support */
 	bool nvram_old_abi;
@@ -269,6 +268,19 @@ static inline bool rtc_tv_nsec_ok(s64 set_offset_nsec,
 extern int rtc_hctosys_ret;
 #else
 #define rtc_hctosys_ret -ENODEV
+#endif
+
+#ifdef CONFIG_RTC_NVMEM
+int rtc_nvmem_register(struct rtc_device *rtc,
+		       struct nvmem_config *nvmem_config);
+void rtc_nvmem_unregister(struct rtc_device *rtc);
+#else
+static inline int rtc_nvmem_register(struct rtc_device *rtc,
+				     struct nvmem_config *nvmem_config)
+{
+	return -ENODEV;
+}
+static inline void rtc_nvmem_unregister(struct rtc_device *rtc) {}
 #endif
 
 #endif /* _LINUX_RTC_H_ */
