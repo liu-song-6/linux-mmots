@@ -701,30 +701,6 @@ static int intel_breadcrumbs_signaler(void *arg)
 				dma_fence_signal(&request->fence);
 				GEM_BUG_ON(!i915_gem_request_completed(request));
 				local_bh_enable(); /* kick start the tasklets */
-<<<<<<< HEAD
-			}
-
-			spin_lock_irq(&b->rb_lock);
-
-			/* Wake up all other completed waiters and select the
-			 * next bottom-half for the next user interrupt.
-			 */
-			__intel_engine_remove_wait(engine,
-						   &request->signaling.wait);
-
-			/* Find the next oldest signal. Note that as we have
-			 * not been holding the lock, another client may
-			 * have installed an even older signal than the one
-			 * we just completed - so double check we are still
-			 * the oldest before picking the next one.
-			 */
-			if (request == rcu_access_pointer(b->first_signal)) {
-				struct rb_node *rb =
-					rb_next(&request->signaling.node);
-				rcu_assign_pointer(b->first_signal,
-						   rb ? to_signaler(rb) : NULL);
-=======
->>>>>>> linux-next/akpm-base
 			}
 
 			if (READ_ONCE(request->signaling.wait.seqno)) {

@@ -320,8 +320,6 @@ engine_event_status(struct intel_engine_cs *engine,
 		break;
 	case I915_SAMPLE_SEMA:
 		if (INTEL_GEN(engine->i915) < 6)
-<<<<<<< HEAD
-=======
 			return -ENODEV;
 		break;
 	default:
@@ -342,7 +340,6 @@ config_status(struct drm_i915_private *i915, u64 config)
 		/* Fall-through. */
 	case I915_PMU_REQUESTED_FREQUENCY:
 		if (INTEL_GEN(i915) < 6)
->>>>>>> linux-next/akpm-base
 			return -ENODEV;
 		break;
 	case I915_PMU_INTERRUPTS:
