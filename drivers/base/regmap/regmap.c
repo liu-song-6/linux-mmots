@@ -99,7 +99,7 @@ bool regmap_cached(struct regmap *map, unsigned int reg)
 	int ret;
 	unsigned int val;
 
-	if (map->cache == REGCACHE_NONE)
+	if (map->cache_type == REGCACHE_NONE)
 		return false;
 
 	if (!map->cache_ops)
@@ -174,7 +174,7 @@ static bool regmap_volatile_range(struct regmap *map, unsigned int reg,
 	unsigned int i;
 
 	for (i = 0; i < num; i++)
-		if (!regmap_volatile(map, reg + i))
+		if (!regmap_volatile(map, reg + regmap_get_offset(map, i)))
 			return false;
 
 	return true;
@@ -1831,7 +1831,7 @@ int regmap_raw_write(struct regmap *map, unsigned int reg,
 		return -EINVAL;
 	if (val_len % map->format.val_bytes)
 		return -EINVAL;
-	if (map->max_raw_write && map->max_raw_write > val_len)
+	if (map->max_raw_write && map->max_raw_write < val_len)
 		return -E2BIG;
 
 	map->lock(map->lock_arg);
@@ -1993,7 +1993,7 @@ out:
 				return -EINVAL;
 			}
 
-			ret = regmap_write(map, reg + (i * map->reg_stride),
+			ret = regmap_write(map, reg + regmap_get_offset(map, i),
 					   ival);
 			if (ret)
 				return ret;
@@ -2709,47 +2709,38 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 		for (i = 0; i < val_count * val_bytes; i += val_bytes)
 			map->format.parse_inplace(val + i);
 	} else {
+#ifdef CONFIG_64BIT
+		u64 *u64 = val;
+#endif
+		u32 *u32 = val;
+		u16 *u16 = val;
+		u8 *u8 = val;
+
 		for (i = 0; i < val_count; i++) {
 			unsigned int ival;
+
 			ret = regmap_read(map, reg + regmap_get_offset(map, i),
 					  &ival);
 			if (ret != 0)
 				return ret;
 
-			if (map->format.format_val) {
-				map->format.format_val(val + (i * val_bytes), ival, 0);
-			} else {
-				/* Devices providing read and write
-				 * operations can use the bulk I/O
-				 * functions if they define a val_bytes,
-				 * we assume that the values are native
-				 * endian.
-				 */
+			switch (map->format.val_bytes) {
 #ifdef CONFIG_64BIT
-				u64 *u64 = val;
+			case 8:
+				u64[i] = ival;
+				break;
 #endif
-				u32 *u32 = val;
-				u16 *u16 = val;
-				u8 *u8 = val;
-
-				switch (map->format.val_bytes) {
-#ifdef CONFIG_64BIT
-				case 8:
-					u64[i] = ival;
-					break;
-#endif
-				case 4:
-					u32[i] = ival;
-					break;
-				case 2:
-					u16[i] = ival;
-					break;
-				case 1:
-					u8[i] = ival;
-					break;
-				default:
-					return -EINVAL;
-				}
+			case 4:
+				u32[i] = ival;
+				break;
+			case 2:
+				u16[i] = ival;
+				break;
+			case 1:
+				u8[i] = ival;
+				break;
+			default:
+				return -EINVAL;
 			}
 		}
 	}

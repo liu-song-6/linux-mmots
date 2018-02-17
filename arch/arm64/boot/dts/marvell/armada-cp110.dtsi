@@ -1,9 +1,7 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR X11)
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
  * Copyright (C) 2016 Marvell Technology Group Ltd.
- */
-
-/*
+ *
  * Device Tree file for Marvell Armada CP110.
  */
 
@@ -257,7 +255,9 @@
 			reg = <0x700600 0x50>;
 			#address-cells = <0x1>;
 			#size-cells = <0x0>;
-			clocks = <&CP110_LABEL(clk) 1 21>;
+			clock-names = "core", "axi";
+			clocks = <&CP110_LABEL(clk) 1 21>,
+				 <&CP110_LABEL(clk) 1 17>;
 			status = "disabled";
 		};
 
@@ -266,7 +266,9 @@
 			reg = <0x700680 0x50>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			clocks = <&CP110_LABEL(clk) 1 21>;
+			clock-names = "core", "axi";
+			clocks = <&CP110_LABEL(clk) 1 21>,
+				 <&CP110_LABEL(clk) 1 17>;
 			status = "disabled";
 		};
 
@@ -276,7 +278,9 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <ICU_GRP_NSR 120 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&CP110_LABEL(clk) 1 21>;
+			clock-names = "core", "reg";
+			clocks = <&CP110_LABEL(clk) 1 21>,
+				 <&CP110_LABEL(clk) 1 17>;
 			status = "disabled";
 		};
 
@@ -286,6 +290,48 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <ICU_GRP_NSR 121 IRQ_TYPE_LEVEL_HIGH>;
+			clock-names = "core", "reg";
+			clocks = <&CP110_LABEL(clk) 1 21>,
+				 <&CP110_LABEL(clk) 1 17>;
+			status = "disabled";
+		};
+
+		CP110_LABEL(uart0): serial@702000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x702000 0x100>;
+			reg-shift = <2>;
+			interrupts = <ICU_GRP_NSR 122 IRQ_TYPE_LEVEL_HIGH>;
+			reg-io-width = <1>;
+			clocks = <&CP110_LABEL(clk) 1 21>;
+			status = "disabled";
+		};
+
+		CP110_LABEL(uart1): serial@702100 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x702100 0x100>;
+			reg-shift = <2>;
+			interrupts = <ICU_GRP_NSR 123 IRQ_TYPE_LEVEL_HIGH>;
+			reg-io-width = <1>;
+			clocks = <&CP110_LABEL(clk) 1 21>;
+			status = "disabled";
+		};
+
+		CP110_LABEL(uart2): serial@702200 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x702200 0x100>;
+			reg-shift = <2>;
+			interrupts = <ICU_GRP_NSR 124 IRQ_TYPE_LEVEL_HIGH>;
+			reg-io-width = <1>;
+			clocks = <&CP110_LABEL(clk) 1 21>;
+			status = "disabled";
+		};
+
+		CP110_LABEL(uart3): serial@702300 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x702300 0x100>;
+			reg-shift = <2>;
+			interrupts = <ICU_GRP_NSR 125 IRQ_TYPE_LEVEL_HIGH>;
+			reg-io-width = <1>;
 			clocks = <&CP110_LABEL(clk) 1 21>;
 			status = "disabled";
 		};

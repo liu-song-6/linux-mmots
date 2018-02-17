@@ -38,7 +38,8 @@
  *	  6) Support low-overhead kernel-based filtering to minimize the
  *	     information that must be passed to user-space.
  *
- * Example user-space utilities: http://people.redhat.com/sgrubb/audit/
+ * Audit userspace, documentation, tests, and bug/issue trackers:
+ * 	https://github.com/linux-audit
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -1526,6 +1527,7 @@ static struct pernet_operations audit_net_ops __net_initdata = {
 	.exit = audit_net_exit,
 	.id = &audit_net_id,
 	.size = sizeof(struct audit_net),
+	.async = true,
 };
 
 /* Initialize audit support at boot time. */
