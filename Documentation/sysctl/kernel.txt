@@ -967,31 +967,31 @@ tainted:
 Non-zero if the kernel has been tainted. Numeric values, which can be
 ORed together. The letters are seen in "Tainted" line of Oops reports.
 
-     1 (P):  A module with a non-GPL license has been loaded, this
-             includes modules with no license.
-             Set by modutils >= 2.4.9 and module-init-tools.
-     2 (F): A module was force loaded by insmod -f.
-            Set by modutils >= 2.4.9 and module-init-tools.
-     4 (S): Unsafe SMP processors: SMP with CPUs not designed for SMP.
-     8 (R): A module was forcibly unloaded from the system by rmmod -f.
-    16 (M): A hardware machine check error occurred on the system.
-    32 (B): A bad page was discovered on the system.
-    64 (U): The user has asked that the system be marked "tainted". This
-            could be because they are running software that directly modifies
-            the hardware, or for other reasons.
-   128 (D): The system has died.
-   256 (A): The ACPI DSDT has been overridden with one supplied by the user
-            instead of using the one provided by the hardware.
-   512 (W): A kernel warning has occurred.
-  1024 (C): A module from drivers/staging was loaded.
-  2048 (I): The system is working around a severe firmware bug.
-  4096 (O): An out-of-tree module has been loaded.
-  8192 (E): An unsigned module has been loaded in a kernel supporting module
-            signature.
- 16384 (L): A soft lockup has previously occurred on the system.
- 32768 (K): The kernel has been live patched.
- 65536 (X): Auxiliary taint, defined and used by for distros.
-131072 (T): The kernel was built with the struct randomization plugin.
+0x00000001 (P):  A module with a non-GPL license has been loaded, this
+                 includes modules with no license.
+                 Set by modutils >= 2.4.9 and module-init-tools.
+0x00000002 (F): A module was force loaded by insmod -f.
+                Set by modutils >= 2.4.9 and module-init-tools.
+0x00000004 (S): Unsafe SMP processors: SMP with CPUs not designed for SMP.
+0x00000008 (R): A module was forcibly unloaded from the system by rmmod -f.
+0x00000010 (M): A hardware machine check error occurred on the system.
+0x00000020 (B): A bad page was discovered on the system.
+0x00000040 (U): The user has asked that the system be marked "tainted". This
+                could be because they are running software that directly
+                modifies the hardware, or for other reasons.
+0x00000080 (D): The system has died.
+0x00000100 (A): The ACPI DSDT has been overridden with one supplied by the user
+                instead of using the one provided by the hardware.
+0x00000200 (W): A kernel warning has occurred.
+0x00000400 (C): A module from drivers/staging was loaded.
+0x00000400 (I): The system is working around a severe firmware bug.
+0x00000800 (O): An out-of-tree module has been loaded.
+0x00020000 (E): An unsigned module has been loaded in a kernel supporting module
+                signature.
+0x00040000 (L): A soft lockup has previously occurred on the system.
+0x00080000 (K): The kernel has been live patched.
+0x00100000 (X): Auxiliary taint, defined and used by for distros.
+0x00200000 (T): The kernel was built with the struct randomization plugin.
 
 ==============================================================
 
