@@ -265,9 +265,9 @@ static struct wilc_vif *join_req_vif;
 #define FLUSHED_JOIN_REQ 1
 #define FLUSHED_BYTE_POS 79
 
-static void *host_int_ParseJoinBssParam(struct network_info *ptstrNetworkInfo);
+static void *host_int_parse_join_bss_param(struct network_info *info);
 static int host_int_get_ipaddress(struct wilc_vif *vif, u8 *ip_addr, u8 idx);
-static s32 Handle_ScanDone(struct wilc_vif *vif, enum scan_event enuEvent);
+static s32 handle_scan_done(struct wilc_vif *vif, enum scan_event enuEvent);
 static void host_if_work(struct work_struct *work);
 
 /*!
@@ -847,7 +847,7 @@ static s32 handle_scan(struct wilc_vif *vif, struct scan_attr *scan_info)
 ERRORHANDLER:
 	if (result) {
 		del_timer(&hif_drv->scan_timer);
-		Handle_ScanDone(vif, SCAN_EVENT_ABORTED);
+		handle_scan_done(vif, SCAN_EVENT_ABORTED);
 	}
 
 	kfree(scan_info->ch_freq_list);
@@ -863,8 +863,8 @@ ERRORHANDLER:
 	return result;
 }
 
-static s32 Handle_ScanDone(struct wilc_vif *vif,
-			   enum scan_event enuEvent)
+static s32 handle_scan_done(struct wilc_vif *vif,
+			    enum scan_event enuEvent)
 {
 	s32 result = 0;
 	u8 u8abort_running_scan;
@@ -906,9 +906,9 @@ static s32 Handle_Connect(struct wilc_vif *vif,
 			  struct connect_attr *pstrHostIFconnectAttr)
 {
 	s32 result = 0;
-	struct wid strWIDList[8];
-	u32 u32WidsCount = 0, dummyval = 0;
-	u8 *pu8CurrByte = NULL;
+	struct wid wid_list[8];
+	u32 wid_cnt = 0, dummyval = 0;
+	u8 *cur_byte = NULL;
 	struct join_bss_param *ptstrJoinBssParam;
 	struct host_if_drv *hif_drv = vif->hif_drv;
 
@@ -952,30 +952,30 @@ static s32 Handle_Connect(struct wilc_vif *vif,
 	hif_drv->usr_conn_req.conn_result = pstrHostIFconnectAttr->result;
 	hif_drv->usr_conn_req.arg = pstrHostIFconnectAttr->arg;
 
-	strWIDList[u32WidsCount].id = WID_SUCCESS_FRAME_COUNT;
-	strWIDList[u32WidsCount].type = WID_INT;
-	strWIDList[u32WidsCount].size = sizeof(u32);
-	strWIDList[u32WidsCount].val = (s8 *)(&(dummyval));
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_SUCCESS_FRAME_COUNT;
+	wid_list[wid_cnt].type = WID_INT;
+	wid_list[wid_cnt].size = sizeof(u32);
+	wid_list[wid_cnt].val = (s8 *)(&(dummyval));
+	wid_cnt++;
 
-	strWIDList[u32WidsCount].id = WID_RECEIVED_FRAGMENT_COUNT;
-	strWIDList[u32WidsCount].type = WID_INT;
-	strWIDList[u32WidsCount].size = sizeof(u32);
-	strWIDList[u32WidsCount].val = (s8 *)(&(dummyval));
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_RECEIVED_FRAGMENT_COUNT;
+	wid_list[wid_cnt].type = WID_INT;
+	wid_list[wid_cnt].size = sizeof(u32);
+	wid_list[wid_cnt].val = (s8 *)(&(dummyval));
+	wid_cnt++;
 
-	strWIDList[u32WidsCount].id = WID_FAILED_COUNT;
-	strWIDList[u32WidsCount].type = WID_INT;
-	strWIDList[u32WidsCount].size = sizeof(u32);
-	strWIDList[u32WidsCount].val = (s8 *)(&(dummyval));
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_FAILED_COUNT;
+	wid_list[wid_cnt].type = WID_INT;
+	wid_list[wid_cnt].size = sizeof(u32);
+	wid_list[wid_cnt].val = (s8 *)(&(dummyval));
+	wid_cnt++;
 
 	{
-		strWIDList[u32WidsCount].id = WID_INFO_ELEMENT_ASSOCIATE;
-		strWIDList[u32WidsCount].type = WID_BIN_DATA;
-		strWIDList[u32WidsCount].val = hif_drv->usr_conn_req.ies;
-		strWIDList[u32WidsCount].size = hif_drv->usr_conn_req.ies_len;
-		u32WidsCount++;
+		wid_list[wid_cnt].id = WID_INFO_ELEMENT_ASSOCIATE;
+		wid_list[wid_cnt].type = WID_BIN_DATA;
+		wid_list[wid_cnt].val = hif_drv->usr_conn_req.ies;
+		wid_list[wid_cnt].size = hif_drv->usr_conn_req.ies_len;
+		wid_cnt++;
 
 		if (memcmp("DIRECT-", pstrHostIFconnectAttr->ssid, 7)) {
 			info_element_size = hif_drv->usr_conn_req.ies_len;
@@ -984,122 +984,122 @@ static s32 Handle_Connect(struct wilc_vif *vif,
 			       info_element_size);
 		}
 	}
-	strWIDList[u32WidsCount].id = (u16)WID_11I_MODE;
-	strWIDList[u32WidsCount].type = WID_CHAR;
-	strWIDList[u32WidsCount].size = sizeof(char);
-	strWIDList[u32WidsCount].val = (s8 *)&hif_drv->usr_conn_req.security;
-	u32WidsCount++;
+	wid_list[wid_cnt].id = (u16)WID_11I_MODE;
+	wid_list[wid_cnt].type = WID_CHAR;
+	wid_list[wid_cnt].size = sizeof(char);
+	wid_list[wid_cnt].val = (s8 *)&hif_drv->usr_conn_req.security;
+	wid_cnt++;
 
 	if (memcmp("DIRECT-", pstrHostIFconnectAttr->ssid, 7))
 		mode_11i = hif_drv->usr_conn_req.security;
 
-	strWIDList[u32WidsCount].id = (u16)WID_AUTH_TYPE;
-	strWIDList[u32WidsCount].type = WID_CHAR;
-	strWIDList[u32WidsCount].size = sizeof(char);
-	strWIDList[u32WidsCount].val = (s8 *)&hif_drv->usr_conn_req.auth_type;
-	u32WidsCount++;
+	wid_list[wid_cnt].id = (u16)WID_AUTH_TYPE;
+	wid_list[wid_cnt].type = WID_CHAR;
+	wid_list[wid_cnt].size = sizeof(char);
+	wid_list[wid_cnt].val = (s8 *)&hif_drv->usr_conn_req.auth_type;
+	wid_cnt++;
 
 	if (memcmp("DIRECT-", pstrHostIFconnectAttr->ssid, 7))
 		auth_type = (u8)hif_drv->usr_conn_req.auth_type;
 
-	strWIDList[u32WidsCount].id = (u16)WID_JOIN_REQ_EXTENDED;
-	strWIDList[u32WidsCount].type = WID_STR;
-	strWIDList[u32WidsCount].size = 112;
-	strWIDList[u32WidsCount].val = kmalloc(strWIDList[u32WidsCount].size, GFP_KERNEL);
+	wid_list[wid_cnt].id = (u16)WID_JOIN_REQ_EXTENDED;
+	wid_list[wid_cnt].type = WID_STR;
+	wid_list[wid_cnt].size = 112;
+	wid_list[wid_cnt].val = kmalloc(wid_list[wid_cnt].size, GFP_KERNEL);
 
 	if (memcmp("DIRECT-", pstrHostIFconnectAttr->ssid, 7)) {
-		join_req_size = strWIDList[u32WidsCount].size;
+		join_req_size = wid_list[wid_cnt].size;
 		join_req = kmalloc(join_req_size, GFP_KERNEL);
 	}
-	if (!strWIDList[u32WidsCount].val) {
+	if (!wid_list[wid_cnt].val) {
 		result = -EFAULT;
 		goto ERRORHANDLER;
 	}
 
-	pu8CurrByte = strWIDList[u32WidsCount].val;
+	cur_byte = wid_list[wid_cnt].val;
 
 	if (pstrHostIFconnectAttr->ssid) {
-		memcpy(pu8CurrByte, pstrHostIFconnectAttr->ssid, pstrHostIFconnectAttr->ssid_len);
-		pu8CurrByte[pstrHostIFconnectAttr->ssid_len] = '\0';
+		memcpy(cur_byte, pstrHostIFconnectAttr->ssid, pstrHostIFconnectAttr->ssid_len);
+		cur_byte[pstrHostIFconnectAttr->ssid_len] = '\0';
 	}
-	pu8CurrByte += MAX_SSID_LEN;
-	*(pu8CurrByte++) = INFRASTRUCTURE;
+	cur_byte += MAX_SSID_LEN;
+	*(cur_byte++) = INFRASTRUCTURE;
 
 	if (pstrHostIFconnectAttr->ch >= 1 && pstrHostIFconnectAttr->ch <= 14) {
-		*(pu8CurrByte++) = pstrHostIFconnectAttr->ch;
+		*(cur_byte++) = pstrHostIFconnectAttr->ch;
 	} else {
 		netdev_err(vif->ndev, "Channel out of range\n");
-		*(pu8CurrByte++) = 0xFF;
+		*(cur_byte++) = 0xFF;
 	}
-	*(pu8CurrByte++)  = (ptstrJoinBssParam->cap_info) & 0xFF;
-	*(pu8CurrByte++)  = ((ptstrJoinBssParam->cap_info) >> 8) & 0xFF;
+	*(cur_byte++)  = (ptstrJoinBssParam->cap_info) & 0xFF;
+	*(cur_byte++)  = ((ptstrJoinBssParam->cap_info) >> 8) & 0xFF;
 
 	if (pstrHostIFconnectAttr->bssid)
-		memcpy(pu8CurrByte, pstrHostIFconnectAttr->bssid, 6);
-	pu8CurrByte += 6;
+		memcpy(cur_byte, pstrHostIFconnectAttr->bssid, 6);
+	cur_byte += 6;
 
 	if (pstrHostIFconnectAttr->bssid)
-		memcpy(pu8CurrByte, pstrHostIFconnectAttr->bssid, 6);
-	pu8CurrByte += 6;
+		memcpy(cur_byte, pstrHostIFconnectAttr->bssid, 6);
+	cur_byte += 6;
 
-	*(pu8CurrByte++)  = (ptstrJoinBssParam->beacon_period) & 0xFF;
-	*(pu8CurrByte++)  = ((ptstrJoinBssParam->beacon_period) >> 8) & 0xFF;
-	*(pu8CurrByte++)  =  ptstrJoinBssParam->dtim_period;
+	*(cur_byte++)  = (ptstrJoinBssParam->beacon_period) & 0xFF;
+	*(cur_byte++)  = ((ptstrJoinBssParam->beacon_period) >> 8) & 0xFF;
+	*(cur_byte++)  =  ptstrJoinBssParam->dtim_period;
 
-	memcpy(pu8CurrByte, ptstrJoinBssParam->supp_rates, MAX_RATES_SUPPORTED + 1);
-	pu8CurrByte += (MAX_RATES_SUPPORTED + 1);
+	memcpy(cur_byte, ptstrJoinBssParam->supp_rates, MAX_RATES_SUPPORTED + 1);
+	cur_byte += (MAX_RATES_SUPPORTED + 1);
 
-	*(pu8CurrByte++)  =  ptstrJoinBssParam->wmm_cap;
-	*(pu8CurrByte++)  = ptstrJoinBssParam->uapsd_cap;
+	*(cur_byte++)  =  ptstrJoinBssParam->wmm_cap;
+	*(cur_byte++)  = ptstrJoinBssParam->uapsd_cap;
 
-	*(pu8CurrByte++)  = ptstrJoinBssParam->ht_capable;
+	*(cur_byte++)  = ptstrJoinBssParam->ht_capable;
 	hif_drv->usr_conn_req.ht_capable = ptstrJoinBssParam->ht_capable;
 
-	*(pu8CurrByte++)  =  ptstrJoinBssParam->rsn_found;
-	*(pu8CurrByte++)  =  ptstrJoinBssParam->rsn_grp_policy;
-	*(pu8CurrByte++) =  ptstrJoinBssParam->mode_802_11i;
+	*(cur_byte++)  =  ptstrJoinBssParam->rsn_found;
+	*(cur_byte++)  =  ptstrJoinBssParam->rsn_grp_policy;
+	*(cur_byte++) =  ptstrJoinBssParam->mode_802_11i;
 
-	memcpy(pu8CurrByte, ptstrJoinBssParam->rsn_pcip_policy, sizeof(ptstrJoinBssParam->rsn_pcip_policy));
-	pu8CurrByte += sizeof(ptstrJoinBssParam->rsn_pcip_policy);
+	memcpy(cur_byte, ptstrJoinBssParam->rsn_pcip_policy, sizeof(ptstrJoinBssParam->rsn_pcip_policy));
+	cur_byte += sizeof(ptstrJoinBssParam->rsn_pcip_policy);
 
-	memcpy(pu8CurrByte, ptstrJoinBssParam->rsn_auth_policy, sizeof(ptstrJoinBssParam->rsn_auth_policy));
-	pu8CurrByte += sizeof(ptstrJoinBssParam->rsn_auth_policy);
+	memcpy(cur_byte, ptstrJoinBssParam->rsn_auth_policy, sizeof(ptstrJoinBssParam->rsn_auth_policy));
+	cur_byte += sizeof(ptstrJoinBssParam->rsn_auth_policy);
 
-	memcpy(pu8CurrByte, ptstrJoinBssParam->rsn_cap, sizeof(ptstrJoinBssParam->rsn_cap));
-	pu8CurrByte += sizeof(ptstrJoinBssParam->rsn_cap);
+	memcpy(cur_byte, ptstrJoinBssParam->rsn_cap, sizeof(ptstrJoinBssParam->rsn_cap));
+	cur_byte += sizeof(ptstrJoinBssParam->rsn_cap);
 
-	*(pu8CurrByte++) = REAL_JOIN_REQ;
-	*(pu8CurrByte++) = ptstrJoinBssParam->noa_enabled;
+	*(cur_byte++) = REAL_JOIN_REQ;
+	*(cur_byte++) = ptstrJoinBssParam->noa_enabled;
 
 	if (ptstrJoinBssParam->noa_enabled) {
-		*(pu8CurrByte++) = (ptstrJoinBssParam->tsf) & 0xFF;
-		*(pu8CurrByte++) = ((ptstrJoinBssParam->tsf) >> 8) & 0xFF;
-		*(pu8CurrByte++) = ((ptstrJoinBssParam->tsf) >> 16) & 0xFF;
-		*(pu8CurrByte++) = ((ptstrJoinBssParam->tsf) >> 24) & 0xFF;
+		*(cur_byte++) = (ptstrJoinBssParam->tsf) & 0xFF;
+		*(cur_byte++) = ((ptstrJoinBssParam->tsf) >> 8) & 0xFF;
+		*(cur_byte++) = ((ptstrJoinBssParam->tsf) >> 16) & 0xFF;
+		*(cur_byte++) = ((ptstrJoinBssParam->tsf) >> 24) & 0xFF;
 
-		*(pu8CurrByte++) = ptstrJoinBssParam->opp_enabled;
-		*(pu8CurrByte++) = ptstrJoinBssParam->idx;
+		*(cur_byte++) = ptstrJoinBssParam->opp_enabled;
+		*(cur_byte++) = ptstrJoinBssParam->idx;
 
 		if (ptstrJoinBssParam->opp_enabled)
-			*(pu8CurrByte++) = ptstrJoinBssParam->ct_window;
+			*(cur_byte++) = ptstrJoinBssParam->ct_window;
 
-		*(pu8CurrByte++) = ptstrJoinBssParam->cnt;
+		*(cur_byte++) = ptstrJoinBssParam->cnt;
 
-		memcpy(pu8CurrByte, ptstrJoinBssParam->duration, sizeof(ptstrJoinBssParam->duration));
-		pu8CurrByte += sizeof(ptstrJoinBssParam->duration);
+		memcpy(cur_byte, ptstrJoinBssParam->duration, sizeof(ptstrJoinBssParam->duration));
+		cur_byte += sizeof(ptstrJoinBssParam->duration);
 
-		memcpy(pu8CurrByte, ptstrJoinBssParam->interval, sizeof(ptstrJoinBssParam->interval));
-		pu8CurrByte += sizeof(ptstrJoinBssParam->interval);
+		memcpy(cur_byte, ptstrJoinBssParam->interval, sizeof(ptstrJoinBssParam->interval));
+		cur_byte += sizeof(ptstrJoinBssParam->interval);
 
-		memcpy(pu8CurrByte, ptstrJoinBssParam->start_time, sizeof(ptstrJoinBssParam->start_time));
-		pu8CurrByte += sizeof(ptstrJoinBssParam->start_time);
+		memcpy(cur_byte, ptstrJoinBssParam->start_time, sizeof(ptstrJoinBssParam->start_time));
+		cur_byte += sizeof(ptstrJoinBssParam->start_time);
 	}
 
-	pu8CurrByte = strWIDList[u32WidsCount].val;
-	u32WidsCount++;
+	cur_byte = wid_list[wid_cnt].val;
+	wid_cnt++;
 
 	if (memcmp("DIRECT-", pstrHostIFconnectAttr->ssid, 7)) {
-		memcpy(join_req, pu8CurrByte, join_req_size);
+		memcpy(join_req, cur_byte, join_req_size);
 		join_req_vif = vif;
 	}
 
@@ -1107,8 +1107,8 @@ static s32 Handle_Connect(struct wilc_vif *vif,
 		memcpy(wilc_connected_ssid,
 		       pstrHostIFconnectAttr->bssid, ETH_ALEN);
 
-	result = wilc_send_config_pkt(vif, SET_CFG, strWIDList,
-				      u32WidsCount,
+	result = wilc_send_config_pkt(vif, SET_CFG, wid_list,
+				      wid_cnt,
 				      wilc_get_vif_idx(vif));
 	if (result) {
 		netdev_err(vif->ndev, "failed to send config packet\n");
@@ -1161,11 +1161,11 @@ ERRORHANDLER:
 	kfree(pstrHostIFconnectAttr->ies);
 	pstrHostIFconnectAttr->ies = NULL;
 
-	kfree(pu8CurrByte);
+	kfree(cur_byte);
 	return result;
 }
 
-static s32 Handle_ConnectTimeout(struct wilc_vif *vif)
+static s32 handle_connect_timeout(struct wilc_vif *vif)
 {
 	s32 result = 0;
 	struct connect_info strConnectInfo;
@@ -1288,7 +1288,7 @@ static s32 Handle_RcvdNtwrkInfo(struct wilc_vif *vif,
 				hif_drv->usr_scan_req.rcvd_ch_cnt++;
 
 				pstrNetworkInfo->new_network = true;
-				pJoinParams = host_int_ParseJoinBssParam(pstrNetworkInfo);
+				pJoinParams = host_int_parse_join_bss_param(pstrNetworkInfo);
 
 				hif_drv->usr_scan_req.scan_result(SCAN_EVENT_NETWORK_FOUND, pstrNetworkInfo,
 								  hif_drv->usr_scan_req.arg,
@@ -1467,7 +1467,7 @@ static s32 Handle_RcvdGnrlAsyncInfo(struct wilc_vif *vif,
 
 			if (hif_drv->usr_scan_req.scan_result) {
 				del_timer(&hif_drv->scan_timer);
-				Handle_ScanDone(vif, SCAN_EVENT_ABORTED);
+				handle_scan_done(vif, SCAN_EVENT_ABORTED);
 			}
 
 			strDisconnectNotifInfo.reason = 0;
@@ -1515,7 +1515,7 @@ static s32 Handle_RcvdGnrlAsyncInfo(struct wilc_vif *vif,
 			   (hif_drv->usr_scan_req.scan_result)) {
 			del_timer(&hif_drv->scan_timer);
 			if (hif_drv->usr_scan_req.scan_result)
-				Handle_ScanDone(vif, SCAN_EVENT_ABORTED);
+				handle_scan_done(vif, SCAN_EVENT_ABORTED);
 		}
 	}
 
@@ -1525,12 +1525,12 @@ static s32 Handle_RcvdGnrlAsyncInfo(struct wilc_vif *vif,
 	return result;
 }
 
-static int Handle_Key(struct wilc_vif *vif,
+static int handle_key(struct wilc_vif *vif,
 		      struct key_attr *pstrHostIFkeyAttr)
 {
 	s32 result = 0;
 	struct wid wid;
-	struct wid strWIDList[5];
+	struct wid wid_list[5];
 	u8 i;
 	u8 *pu8keybuf;
 	s8 s8idxarray[1];
@@ -1541,15 +1541,15 @@ static int Handle_Key(struct wilc_vif *vif,
 	case WEP:
 
 		if (pstrHostIFkeyAttr->action & ADDKEY_AP) {
-			strWIDList[0].id = (u16)WID_11I_MODE;
-			strWIDList[0].type = WID_CHAR;
-			strWIDList[0].size = sizeof(char);
-			strWIDList[0].val = (s8 *)&pstrHostIFkeyAttr->attr.wep.mode;
+			wid_list[0].id = (u16)WID_11I_MODE;
+			wid_list[0].type = WID_CHAR;
+			wid_list[0].size = sizeof(char);
+			wid_list[0].val = (s8 *)&pstrHostIFkeyAttr->attr.wep.mode;
 
-			strWIDList[1].id = WID_AUTH_TYPE;
-			strWIDList[1].type = WID_CHAR;
-			strWIDList[1].size = sizeof(char);
-			strWIDList[1].val = (s8 *)&pstrHostIFkeyAttr->attr.wep.auth_type;
+			wid_list[1].id = WID_AUTH_TYPE;
+			wid_list[1].type = WID_CHAR;
+			wid_list[1].size = sizeof(char);
+			wid_list[1].val = (s8 *)&pstrHostIFkeyAttr->attr.wep.auth_type;
 
 			pu8keybuf = kmalloc(pstrHostIFkeyAttr->attr.wep.key_len + 2,
 					    GFP_KERNEL);
@@ -1564,13 +1564,13 @@ static int Handle_Key(struct wilc_vif *vif,
 
 			kfree(pstrHostIFkeyAttr->attr.wep.key);
 
-			strWIDList[2].id = (u16)WID_WEP_KEY_VALUE;
-			strWIDList[2].type = WID_STR;
-			strWIDList[2].size = pstrHostIFkeyAttr->attr.wep.key_len + 2;
-			strWIDList[2].val = (s8 *)pu8keybuf;
+			wid_list[2].id = (u16)WID_WEP_KEY_VALUE;
+			wid_list[2].type = WID_STR;
+			wid_list[2].size = pstrHostIFkeyAttr->attr.wep.key_len + 2;
+			wid_list[2].val = (s8 *)pu8keybuf;
 
 			result = wilc_send_config_pkt(vif, SET_CFG,
-						      strWIDList, 3,
+						      wid_list, 3,
 						      wilc_get_vif_idx(vif));
 			kfree(pu8keybuf);
 		} else if (pstrHostIFkeyAttr->action & ADDKEY) {
@@ -1632,18 +1632,18 @@ static int Handle_Key(struct wilc_vif *vif,
 			memcpy(pu8keybuf + 16, pstrHostIFkeyAttr->attr.wpa.key,
 			       pstrHostIFkeyAttr->attr.wpa.key_len);
 
-			strWIDList[0].id = (u16)WID_11I_MODE;
-			strWIDList[0].type = WID_CHAR;
-			strWIDList[0].size = sizeof(char);
-			strWIDList[0].val = (s8 *)&pstrHostIFkeyAttr->attr.wpa.mode;
+			wid_list[0].id = (u16)WID_11I_MODE;
+			wid_list[0].type = WID_CHAR;
+			wid_list[0].size = sizeof(char);
+			wid_list[0].val = (s8 *)&pstrHostIFkeyAttr->attr.wpa.mode;
 
-			strWIDList[1].id = (u16)WID_ADD_RX_GTK;
-			strWIDList[1].type = WID_STR;
-			strWIDList[1].val = (s8 *)pu8keybuf;
-			strWIDList[1].size = RX_MIC_KEY_MSG_LEN;
+			wid_list[1].id = (u16)WID_ADD_RX_GTK;
+			wid_list[1].type = WID_STR;
+			wid_list[1].val = (s8 *)pu8keybuf;
+			wid_list[1].size = RX_MIC_KEY_MSG_LEN;
 
 			result = wilc_send_config_pkt(vif, SET_CFG,
-						      strWIDList, 2,
+						      wid_list, 2,
 						      wilc_get_vif_idx(vif));
 
 			kfree(pu8keybuf);
@@ -1700,18 +1700,18 @@ _WPARxGtk_end_case_:
 			memcpy(pu8keybuf + 8, pstrHostIFkeyAttr->attr.wpa.key,
 			       pstrHostIFkeyAttr->attr.wpa.key_len);
 
-			strWIDList[0].id = (u16)WID_11I_MODE;
-			strWIDList[0].type = WID_CHAR;
-			strWIDList[0].size = sizeof(char);
-			strWIDList[0].val = (s8 *)&pstrHostIFkeyAttr->attr.wpa.mode;
+			wid_list[0].id = (u16)WID_11I_MODE;
+			wid_list[0].type = WID_CHAR;
+			wid_list[0].size = sizeof(char);
+			wid_list[0].val = (s8 *)&pstrHostIFkeyAttr->attr.wpa.mode;
 
-			strWIDList[1].id = (u16)WID_ADD_PTK;
-			strWIDList[1].type = WID_STR;
-			strWIDList[1].val = (s8 *)pu8keybuf;
-			strWIDList[1].size = PTK_KEY_MSG_LEN + 1;
+			wid_list[1].id = (u16)WID_ADD_PTK;
+			wid_list[1].type = WID_STR;
+			wid_list[1].val = (s8 *)pu8keybuf;
+			wid_list[1].size = PTK_KEY_MSG_LEN + 1;
 
 			result = wilc_send_config_pkt(vif, SET_CFG,
-						      strWIDList, 2,
+						      wid_list, 2,
 						      wilc_get_vif_idx(vif));
 			kfree(pu8keybuf);
 			complete(&hif_drv->comp_test_key_block);
@@ -1892,41 +1892,41 @@ static void Handle_GetRssi(struct wilc_vif *vif)
 static s32 Handle_GetStatistics(struct wilc_vif *vif,
 				struct rf_info *pstrStatistics)
 {
-	struct wid strWIDList[5];
-	u32 u32WidsCount = 0, result = 0;
+	struct wid wid_list[5];
+	u32 wid_cnt = 0, result = 0;
 
-	strWIDList[u32WidsCount].id = WID_LINKSPEED;
-	strWIDList[u32WidsCount].type = WID_CHAR;
-	strWIDList[u32WidsCount].size = sizeof(char);
-	strWIDList[u32WidsCount].val = (s8 *)&pstrStatistics->link_speed;
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_LINKSPEED;
+	wid_list[wid_cnt].type = WID_CHAR;
+	wid_list[wid_cnt].size = sizeof(char);
+	wid_list[wid_cnt].val = (s8 *)&pstrStatistics->link_speed;
+	wid_cnt++;
 
-	strWIDList[u32WidsCount].id = WID_RSSI;
-	strWIDList[u32WidsCount].type = WID_CHAR;
-	strWIDList[u32WidsCount].size = sizeof(char);
-	strWIDList[u32WidsCount].val = (s8 *)&pstrStatistics->rssi;
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_RSSI;
+	wid_list[wid_cnt].type = WID_CHAR;
+	wid_list[wid_cnt].size = sizeof(char);
+	wid_list[wid_cnt].val = (s8 *)&pstrStatistics->rssi;
+	wid_cnt++;
 
-	strWIDList[u32WidsCount].id = WID_SUCCESS_FRAME_COUNT;
-	strWIDList[u32WidsCount].type = WID_INT;
-	strWIDList[u32WidsCount].size = sizeof(u32);
-	strWIDList[u32WidsCount].val = (s8 *)&pstrStatistics->tx_cnt;
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_SUCCESS_FRAME_COUNT;
+	wid_list[wid_cnt].type = WID_INT;
+	wid_list[wid_cnt].size = sizeof(u32);
+	wid_list[wid_cnt].val = (s8 *)&pstrStatistics->tx_cnt;
+	wid_cnt++;
 
-	strWIDList[u32WidsCount].id = WID_RECEIVED_FRAGMENT_COUNT;
-	strWIDList[u32WidsCount].type = WID_INT;
-	strWIDList[u32WidsCount].size = sizeof(u32);
-	strWIDList[u32WidsCount].val = (s8 *)&pstrStatistics->rx_cnt;
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_RECEIVED_FRAGMENT_COUNT;
+	wid_list[wid_cnt].type = WID_INT;
+	wid_list[wid_cnt].size = sizeof(u32);
+	wid_list[wid_cnt].val = (s8 *)&pstrStatistics->rx_cnt;
+	wid_cnt++;
 
-	strWIDList[u32WidsCount].id = WID_FAILED_COUNT;
-	strWIDList[u32WidsCount].type = WID_INT;
-	strWIDList[u32WidsCount].size = sizeof(u32);
-	strWIDList[u32WidsCount].val = (s8 *)&pstrStatistics->tx_fail_cnt;
-	u32WidsCount++;
+	wid_list[wid_cnt].id = WID_FAILED_COUNT;
+	wid_list[wid_cnt].type = WID_INT;
+	wid_list[wid_cnt].size = sizeof(u32);
+	wid_list[wid_cnt].val = (s8 *)&pstrStatistics->tx_fail_cnt;
+	wid_cnt++;
 
-	result = wilc_send_config_pkt(vif, GET_CFG, strWIDList,
-				      u32WidsCount,
+	result = wilc_send_config_pkt(vif, GET_CFG, wid_list,
+				      wid_cnt,
 				      wilc_get_vif_idx(vif));
 
 	if (result)
@@ -1992,7 +1992,7 @@ static void Handle_AddBeacon(struct wilc_vif *vif,
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
 	wid.id = (u16)WID_ADD_BEACON;
 	wid.type = WID_BIN;
@@ -2001,33 +2001,33 @@ static void Handle_AddBeacon(struct wilc_vif *vif,
 	if (!wid.val)
 		goto ERRORHANDLER;
 
-	pu8CurrByte = wid.val;
-	*pu8CurrByte++ = (pstrSetBeaconParam->interval & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->interval >> 8) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->interval >> 16) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->interval >> 24) & 0xFF);
+	cur_byte = wid.val;
+	*cur_byte++ = (pstrSetBeaconParam->interval & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->interval >> 8) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->interval >> 16) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->interval >> 24) & 0xFF);
 
-	*pu8CurrByte++ = (pstrSetBeaconParam->dtim_period & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->dtim_period >> 8) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->dtim_period >> 16) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->dtim_period >> 24) & 0xFF);
+	*cur_byte++ = (pstrSetBeaconParam->dtim_period & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->dtim_period >> 8) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->dtim_period >> 16) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->dtim_period >> 24) & 0xFF);
 
-	*pu8CurrByte++ = (pstrSetBeaconParam->head_len & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->head_len >> 8) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->head_len >> 16) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->head_len >> 24) & 0xFF);
+	*cur_byte++ = (pstrSetBeaconParam->head_len & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->head_len >> 8) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->head_len >> 16) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->head_len >> 24) & 0xFF);
 
-	memcpy(pu8CurrByte, pstrSetBeaconParam->head, pstrSetBeaconParam->head_len);
-	pu8CurrByte += pstrSetBeaconParam->head_len;
+	memcpy(cur_byte, pstrSetBeaconParam->head, pstrSetBeaconParam->head_len);
+	cur_byte += pstrSetBeaconParam->head_len;
 
-	*pu8CurrByte++ = (pstrSetBeaconParam->tail_len & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->tail_len >> 8) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->tail_len >> 16) & 0xFF);
-	*pu8CurrByte++ = ((pstrSetBeaconParam->tail_len >> 24) & 0xFF);
+	*cur_byte++ = (pstrSetBeaconParam->tail_len & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->tail_len >> 8) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->tail_len >> 16) & 0xFF);
+	*cur_byte++ = ((pstrSetBeaconParam->tail_len >> 24) & 0xFF);
 
 	if (pstrSetBeaconParam->tail)
-		memcpy(pu8CurrByte, pstrSetBeaconParam->tail, pstrSetBeaconParam->tail_len);
-	pu8CurrByte += pstrSetBeaconParam->tail_len;
+		memcpy(cur_byte, pstrSetBeaconParam->tail, pstrSetBeaconParam->tail_len);
+	cur_byte += pstrSetBeaconParam->tail_len;
 
 	result = wilc_send_config_pkt(vif, SET_CFG, &wid, 1,
 				      wilc_get_vif_idx(vif));
@@ -2044,7 +2044,7 @@ static void Handle_DelBeacon(struct wilc_vif *vif)
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
 	wid.id = (u16)WID_DEL_BEACON;
 	wid.type = WID_CHAR;
@@ -2054,7 +2054,7 @@ static void Handle_DelBeacon(struct wilc_vif *vif)
 	if (!wid.val)
 		return;
 
-	pu8CurrByte = wid.val;
+	cur_byte = wid.val;
 
 	result = wilc_send_config_pkt(vif, SET_CFG, &wid, 1,
 				      wilc_get_vif_idx(vif));
@@ -2065,34 +2065,34 @@ static void Handle_DelBeacon(struct wilc_vif *vif)
 static u32 WILC_HostIf_PackStaParam(u8 *pu8Buffer,
 				    struct add_sta_param *pstrStationParam)
 {
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
-	pu8CurrByte = pu8Buffer;
+	cur_byte = pu8Buffer;
 
-	memcpy(pu8CurrByte, pstrStationParam->bssid, ETH_ALEN);
-	pu8CurrByte +=  ETH_ALEN;
+	memcpy(cur_byte, pstrStationParam->bssid, ETH_ALEN);
+	cur_byte +=  ETH_ALEN;
 
-	*pu8CurrByte++ = pstrStationParam->aid & 0xFF;
-	*pu8CurrByte++ = (pstrStationParam->aid >> 8) & 0xFF;
+	*cur_byte++ = pstrStationParam->aid & 0xFF;
+	*cur_byte++ = (pstrStationParam->aid >> 8) & 0xFF;
 
-	*pu8CurrByte++ = pstrStationParam->rates_len;
+	*cur_byte++ = pstrStationParam->rates_len;
 	if (pstrStationParam->rates_len > 0)
-		memcpy(pu8CurrByte, pstrStationParam->rates,
+		memcpy(cur_byte, pstrStationParam->rates,
 		       pstrStationParam->rates_len);
-	pu8CurrByte += pstrStationParam->rates_len;
+	cur_byte += pstrStationParam->rates_len;
 
-	*pu8CurrByte++ = pstrStationParam->ht_supported;
-	memcpy(pu8CurrByte, &pstrStationParam->ht_capa,
+	*cur_byte++ = pstrStationParam->ht_supported;
+	memcpy(cur_byte, &pstrStationParam->ht_capa,
 	       sizeof(struct ieee80211_ht_cap));
-	pu8CurrByte += sizeof(struct ieee80211_ht_cap);
+	cur_byte += sizeof(struct ieee80211_ht_cap);
 
-	*pu8CurrByte++ = pstrStationParam->flags_mask & 0xFF;
-	*pu8CurrByte++ = (pstrStationParam->flags_mask >> 8) & 0xFF;
+	*cur_byte++ = pstrStationParam->flags_mask & 0xFF;
+	*cur_byte++ = (pstrStationParam->flags_mask >> 8) & 0xFF;
 
-	*pu8CurrByte++ = pstrStationParam->flags_set & 0xFF;
-	*pu8CurrByte++ = (pstrStationParam->flags_set >> 8) & 0xFF;
+	*cur_byte++ = pstrStationParam->flags_set & 0xFF;
+	*cur_byte++ = (pstrStationParam->flags_set >> 8) & 0xFF;
 
-	return pu8CurrByte - pu8Buffer;
+	return cur_byte - pu8Buffer;
 }
 
 static void Handle_AddStation(struct wilc_vif *vif,
@@ -2100,7 +2100,7 @@ static void Handle_AddStation(struct wilc_vif *vif,
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
 	wid.id = (u16)WID_ADD_STA;
 	wid.type = WID_BIN;
@@ -2110,8 +2110,8 @@ static void Handle_AddStation(struct wilc_vif *vif,
 	if (!wid.val)
 		goto ERRORHANDLER;
 
-	pu8CurrByte = wid.val;
-	pu8CurrByte += WILC_HostIf_PackStaParam(pu8CurrByte, pstrStationParam);
+	cur_byte = wid.val;
+	cur_byte += WILC_HostIf_PackStaParam(cur_byte, pstrStationParam);
 
 	result = wilc_send_config_pkt(vif, SET_CFG, &wid, 1,
 				      wilc_get_vif_idx(vif));
@@ -2123,34 +2123,34 @@ ERRORHANDLER:
 	kfree(wid.val);
 }
 
-static void Handle_DelAllSta(struct wilc_vif *vif,
-			     struct del_all_sta *pstrDelAllStaParam)
+static void handle_del_all_sta(struct wilc_vif *vif,
+			       struct del_all_sta *param)
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *curr_byte;
 	u8 i;
-	u8 au8Zero_Buff[6] = {0};
+	u8 zero_buff[6] = {0};
 
 	wid.id = (u16)WID_DEL_ALL_STA;
 	wid.type = WID_STR;
-	wid.size = (pstrDelAllStaParam->assoc_sta * ETH_ALEN) + 1;
+	wid.size = (param->assoc_sta * ETH_ALEN) + 1;
 
-	wid.val = kmalloc((pstrDelAllStaParam->assoc_sta * ETH_ALEN) + 1, GFP_KERNEL);
+	wid.val = kmalloc((param->assoc_sta * ETH_ALEN) + 1, GFP_KERNEL);
 	if (!wid.val)
 		goto ERRORHANDLER;
 
-	pu8CurrByte = wid.val;
+	curr_byte = wid.val;
 
-	*(pu8CurrByte++) = pstrDelAllStaParam->assoc_sta;
+	*(curr_byte++) = param->assoc_sta;
 
 	for (i = 0; i < MAX_NUM_STA; i++) {
-		if (memcmp(pstrDelAllStaParam->del_all_sta[i], au8Zero_Buff, ETH_ALEN))
-			memcpy(pu8CurrByte, pstrDelAllStaParam->del_all_sta[i], ETH_ALEN);
+		if (memcmp(param->del_all_sta[i], zero_buff, ETH_ALEN))
+			memcpy(curr_byte, param->del_all_sta[i], ETH_ALEN);
 		else
 			continue;
 
-		pu8CurrByte += ETH_ALEN;
+		curr_byte += ETH_ALEN;
 	}
 
 	result = wilc_send_config_pkt(vif, SET_CFG, &wid, 1,
@@ -2169,7 +2169,7 @@ static void Handle_DelStation(struct wilc_vif *vif,
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
 	wid.id = (u16)WID_REMOVE_STA;
 	wid.type = WID_BIN;
@@ -2179,9 +2179,9 @@ static void Handle_DelStation(struct wilc_vif *vif,
 	if (!wid.val)
 		goto ERRORHANDLER;
 
-	pu8CurrByte = wid.val;
+	cur_byte = wid.val;
 
-	ether_addr_copy(pu8CurrByte, pstrDelStaParam->mac_addr);
+	ether_addr_copy(cur_byte, pstrDelStaParam->mac_addr);
 
 	result = wilc_send_config_pkt(vif, SET_CFG, &wid, 1,
 				      wilc_get_vif_idx(vif));
@@ -2197,7 +2197,7 @@ static void Handle_EditStation(struct wilc_vif *vif,
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
 	wid.id = (u16)WID_EDIT_STA;
 	wid.type = WID_BIN;
@@ -2207,8 +2207,8 @@ static void Handle_EditStation(struct wilc_vif *vif,
 	if (!wid.val)
 		goto ERRORHANDLER;
 
-	pu8CurrByte = wid.val;
-	pu8CurrByte += WILC_HostIf_PackStaParam(pu8CurrByte, pstrStationParam);
+	cur_byte = wid.val;
+	cur_byte += WILC_HostIf_PackStaParam(cur_byte, pstrStationParam);
 
 	result = wilc_send_config_pkt(vif, SET_CFG, &wid, 1,
 				      wilc_get_vif_idx(vif));
@@ -2294,7 +2294,7 @@ static int Handle_RegisterFrame(struct wilc_vif *vif,
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
 	wid.id = (u16)WID_REGISTER_FRAME;
 	wid.type = WID_STR;
@@ -2302,11 +2302,11 @@ static int Handle_RegisterFrame(struct wilc_vif *vif,
 	if (!wid.val)
 		return -ENOMEM;
 
-	pu8CurrByte = wid.val;
+	cur_byte = wid.val;
 
-	*pu8CurrByte++ = pstrHostIfRegisterFrame->reg;
-	*pu8CurrByte++ = pstrHostIfRegisterFrame->reg_id;
-	memcpy(pu8CurrByte, &pstrHostIfRegisterFrame->frame_type, sizeof(u16));
+	*cur_byte++ = pstrHostIfRegisterFrame->reg;
+	*cur_byte++ = pstrHostIfRegisterFrame->reg_id;
+	memcpy(cur_byte, &pstrHostIfRegisterFrame->frame_type, sizeof(u16));
 
 	wid.size = sizeof(u16) + 2;
 
@@ -2410,7 +2410,7 @@ static void Handle_SetMulticastFilter(struct wilc_vif *vif,
 {
 	s32 result = 0;
 	struct wid wid;
-	u8 *pu8CurrByte;
+	u8 *cur_byte;
 
 	wid.id = (u16)WID_SETUP_MULTICAST_FILTER;
 	wid.type = WID_BIN;
@@ -2419,19 +2419,19 @@ static void Handle_SetMulticastFilter(struct wilc_vif *vif,
 	if (!wid.val)
 		goto ERRORHANDLER;
 
-	pu8CurrByte = wid.val;
-	*pu8CurrByte++ = (strHostIfSetMulti->enabled & 0xFF);
-	*pu8CurrByte++ = 0;
-	*pu8CurrByte++ = 0;
-	*pu8CurrByte++ = 0;
+	cur_byte = wid.val;
+	*cur_byte++ = (strHostIfSetMulti->enabled & 0xFF);
+	*cur_byte++ = 0;
+	*cur_byte++ = 0;
+	*cur_byte++ = 0;
 
-	*pu8CurrByte++ = (strHostIfSetMulti->cnt & 0xFF);
-	*pu8CurrByte++ = ((strHostIfSetMulti->cnt >> 8) & 0xFF);
-	*pu8CurrByte++ = ((strHostIfSetMulti->cnt >> 16) & 0xFF);
-	*pu8CurrByte++ = ((strHostIfSetMulti->cnt >> 24) & 0xFF);
+	*cur_byte++ = (strHostIfSetMulti->cnt & 0xFF);
+	*cur_byte++ = ((strHostIfSetMulti->cnt >> 8) & 0xFF);
+	*cur_byte++ = ((strHostIfSetMulti->cnt >> 16) & 0xFF);
+	*cur_byte++ = ((strHostIfSetMulti->cnt >> 24) & 0xFF);
 
 	if ((strHostIfSetMulti->cnt) > 0)
-		memcpy(pu8CurrByte, wilc_multicast_mac_addr_list,
+		memcpy(cur_byte, wilc_multicast_mac_addr_list,
 		       ((strHostIfSetMulti->cnt) * ETH_ALEN));
 
 	result = wilc_send_config_pkt(vif, SET_CFG, &wid, 1,
@@ -2511,7 +2511,7 @@ static void host_if_work(struct work_struct *work)
 		break;
 
 	case HOST_IF_MSG_KEY:
-		Handle_Key(msg->vif, &msg->body.key_info);
+		handle_key(msg->vif, &msg->body.key_info);
 		break;
 
 	case HOST_IF_MSG_CFG_PARAMS:
@@ -2532,7 +2532,7 @@ static void host_if_work(struct work_struct *work)
 		if (!wilc_wlan_get_num_conn_ifcs(wilc))
 			wilc_chip_sleep_manually(wilc);
 
-		Handle_ScanDone(msg->vif, SCAN_EVENT_DONE);
+		handle_scan_done(msg->vif, SCAN_EVENT_DONE);
 
 		if (msg->vif->hif_drv->remain_on_ch_pending)
 			Handle_RemainOnChan(msg->vif,
@@ -2574,11 +2574,11 @@ static void host_if_work(struct work_struct *work)
 		break;
 
 	case HOST_IF_MSG_SCAN_TIMER_FIRED:
-		Handle_ScanDone(msg->vif, SCAN_EVENT_ABORTED);
+		handle_scan_done(msg->vif, SCAN_EVENT_ABORTED);
 		break;
 
 	case HOST_IF_MSG_CONNECT_TIMER_FIRED:
-		Handle_ConnectTimeout(msg->vif);
+		handle_connect_timeout(msg->vif);
 		break;
 
 	case HOST_IF_MSG_POWER_MGMT:
@@ -2626,7 +2626,7 @@ static void host_if_work(struct work_struct *work)
 		break;
 
 	case HOST_IF_MSG_DEL_ALL_STA:
-		Handle_DelAllSta(msg->vif, &msg->body.del_all_sta_info);
+		handle_del_all_sta(msg->vif, &msg->body.del_all_sta_info);
 		break;
 
 	case HOST_IF_MSG_SET_TX_POWER:
@@ -3870,152 +3870,152 @@ int wilc_setup_multicast_filter(struct wilc_vif *vif, bool enabled,
 	return result;
 }
 
-static void *host_int_ParseJoinBssParam(struct network_info *ptstrNetworkInfo)
+static void *host_int_parse_join_bss_param(struct network_info *info)
 {
-	struct join_bss_param *pNewJoinBssParam = NULL;
-	u8 *pu8IEs;
-	u16 u16IEsLen;
+	struct join_bss_param *param = NULL;
+	u8 *ies;
+	u16 ies_len;
 	u16 index = 0;
-	u8 suppRatesNo = 0;
-	u8 extSuppRatesNo;
-	u16 jumpOffset;
-	u8 pcipherCount;
-	u8 authCount;
-	u8 pcipherTotalCount = 0;
-	u8 authTotalCount = 0;
+	u8 rates_no = 0;
+	u8 ext_rates_no;
+	u16 offset;
+	u8 pcipher_cnt;
+	u8 auth_cnt;
+	u8 pcipher_total_cnt = 0;
+	u8 auth_total_cnt = 0;
 	u8 i, j;
 
-	pu8IEs = ptstrNetworkInfo->ies;
-	u16IEsLen = ptstrNetworkInfo->ies_len;
+	ies = info->ies;
+	ies_len = info->ies_len;
 
-	pNewJoinBssParam = kzalloc(sizeof(*pNewJoinBssParam), GFP_KERNEL);
-	if (pNewJoinBssParam) {
-		pNewJoinBssParam->dtim_period = ptstrNetworkInfo->dtim_period;
-		pNewJoinBssParam->beacon_period = ptstrNetworkInfo->beacon_period;
-		pNewJoinBssParam->cap_info = ptstrNetworkInfo->cap_info;
-		memcpy(pNewJoinBssParam->bssid, ptstrNetworkInfo->bssid, 6);
-		memcpy((u8 *)pNewJoinBssParam->ssid, ptstrNetworkInfo->ssid,
-		       ptstrNetworkInfo->ssid_len + 1);
-		pNewJoinBssParam->ssid_len = ptstrNetworkInfo->ssid_len;
-		memset(pNewJoinBssParam->rsn_pcip_policy, 0xFF, 3);
-		memset(pNewJoinBssParam->rsn_auth_policy, 0xFF, 3);
+	param = kzalloc(sizeof(*param), GFP_KERNEL);
+	if (param) {
+		param->dtim_period = info->dtim_period;
+		param->beacon_period = info->beacon_period;
+		param->cap_info = info->cap_info;
+		memcpy(param->bssid, info->bssid, 6);
+		memcpy((u8 *)param->ssid, info->ssid,
+		       info->ssid_len + 1);
+		param->ssid_len = info->ssid_len;
+		memset(param->rsn_pcip_policy, 0xFF, 3);
+		memset(param->rsn_auth_policy, 0xFF, 3);
 
-		while (index < u16IEsLen) {
-			if (pu8IEs[index] == SUPP_RATES_IE) {
-				suppRatesNo = pu8IEs[index + 1];
-				pNewJoinBssParam->supp_rates[0] = suppRatesNo;
+		while (index < ies_len) {
+			if (ies[index] == SUPP_RATES_IE) {
+				rates_no = ies[index + 1];
+				param->supp_rates[0] = rates_no;
 				index += 2;
 
-				for (i = 0; i < suppRatesNo; i++)
-					pNewJoinBssParam->supp_rates[i + 1] = pu8IEs[index + i];
+				for (i = 0; i < rates_no; i++)
+					param->supp_rates[i + 1] = ies[index + i];
 
-				index += suppRatesNo;
-			} else if (pu8IEs[index] == EXT_SUPP_RATES_IE) {
-				extSuppRatesNo = pu8IEs[index + 1];
-				if (extSuppRatesNo > (MAX_RATES_SUPPORTED - suppRatesNo))
-					pNewJoinBssParam->supp_rates[0] = MAX_RATES_SUPPORTED;
+				index += rates_no;
+			} else if (ies[index] == EXT_SUPP_RATES_IE) {
+				ext_rates_no = ies[index + 1];
+				if (ext_rates_no > (MAX_RATES_SUPPORTED - rates_no))
+					param->supp_rates[0] = MAX_RATES_SUPPORTED;
 				else
-					pNewJoinBssParam->supp_rates[0] += extSuppRatesNo;
+					param->supp_rates[0] += ext_rates_no;
 				index += 2;
-				for (i = 0; i < (pNewJoinBssParam->supp_rates[0] - suppRatesNo); i++)
-					pNewJoinBssParam->supp_rates[suppRatesNo + i + 1] = pu8IEs[index + i];
+				for (i = 0; i < (param->supp_rates[0] - rates_no); i++)
+					param->supp_rates[rates_no + i + 1] = ies[index + i];
 
-				index += extSuppRatesNo;
-			} else if (pu8IEs[index] == HT_CAPABILITY_IE) {
-				pNewJoinBssParam->ht_capable = true;
-				index += pu8IEs[index + 1] + 2;
-			} else if ((pu8IEs[index] == WMM_IE) &&
-				   (pu8IEs[index + 2] == 0x00) && (pu8IEs[index + 3] == 0x50) &&
-				   (pu8IEs[index + 4] == 0xF2) &&
-				   (pu8IEs[index + 5] == 0x02) &&
-				   ((pu8IEs[index + 6] == 0x00) || (pu8IEs[index + 6] == 0x01)) &&
-				   (pu8IEs[index + 7] == 0x01)) {
-				pNewJoinBssParam->wmm_cap = true;
+				index += ext_rates_no;
+			} else if (ies[index] == HT_CAPABILITY_IE) {
+				param->ht_capable = true;
+				index += ies[index + 1] + 2;
+			} else if ((ies[index] == WMM_IE) &&
+				   (ies[index + 2] == 0x00) && (ies[index + 3] == 0x50) &&
+				   (ies[index + 4] == 0xF2) &&
+				   (ies[index + 5] == 0x02) &&
+				   ((ies[index + 6] == 0x00) || (ies[index + 6] == 0x01)) &&
+				   (ies[index + 7] == 0x01)) {
+				param->wmm_cap = true;
 
-				if (pu8IEs[index + 8] & BIT(7))
-					pNewJoinBssParam->uapsd_cap = true;
-				index += pu8IEs[index + 1] + 2;
-			} else if ((pu8IEs[index] == P2P_IE) &&
-				 (pu8IEs[index + 2] == 0x50) && (pu8IEs[index + 3] == 0x6f) &&
-				 (pu8IEs[index + 4] == 0x9a) &&
-				 (pu8IEs[index + 5] == 0x09) && (pu8IEs[index + 6] == 0x0c)) {
-				u16 u16P2P_count;
+				if (ies[index + 8] & BIT(7))
+					param->uapsd_cap = true;
+				index += ies[index + 1] + 2;
+			} else if ((ies[index] == P2P_IE) &&
+				 (ies[index + 2] == 0x50) && (ies[index + 3] == 0x6f) &&
+				 (ies[index + 4] == 0x9a) &&
+				 (ies[index + 5] == 0x09) && (ies[index + 6] == 0x0c)) {
+				u16 p2p_cnt;
 
-				pNewJoinBssParam->tsf = ptstrNetworkInfo->tsf_lo;
-				pNewJoinBssParam->noa_enabled = 1;
-				pNewJoinBssParam->idx = pu8IEs[index + 9];
+				param->tsf = info->tsf_lo;
+				param->noa_enabled = 1;
+				param->idx = ies[index + 9];
 
-				if (pu8IEs[index + 10] & BIT(7)) {
-					pNewJoinBssParam->opp_enabled = 1;
-					pNewJoinBssParam->ct_window = pu8IEs[index + 10];
+				if (ies[index + 10] & BIT(7)) {
+					param->opp_enabled = 1;
+					param->ct_window = ies[index + 10];
 				} else {
-					pNewJoinBssParam->opp_enabled = 0;
+					param->opp_enabled = 0;
 				}
 
-				pNewJoinBssParam->cnt = pu8IEs[index + 11];
-				u16P2P_count = index + 12;
+				param->cnt = ies[index + 11];
+				p2p_cnt = index + 12;
 
-				memcpy(pNewJoinBssParam->duration, pu8IEs + u16P2P_count, 4);
-				u16P2P_count += 4;
+				memcpy(param->duration, ies + p2p_cnt, 4);
+				p2p_cnt += 4;
 
-				memcpy(pNewJoinBssParam->interval, pu8IEs + u16P2P_count, 4);
-				u16P2P_count += 4;
+				memcpy(param->interval, ies + p2p_cnt, 4);
+				p2p_cnt += 4;
 
-				memcpy(pNewJoinBssParam->start_time, pu8IEs + u16P2P_count, 4);
+				memcpy(param->start_time, ies + p2p_cnt, 4);
 
-				index += pu8IEs[index + 1] + 2;
-			} else if ((pu8IEs[index] == RSN_IE) ||
-				 ((pu8IEs[index] == WPA_IE) && (pu8IEs[index + 2] == 0x00) &&
-				  (pu8IEs[index + 3] == 0x50) && (pu8IEs[index + 4] == 0xF2) &&
-				  (pu8IEs[index + 5] == 0x01)))	{
-				u16 rsnIndex = index;
+				index += ies[index + 1] + 2;
+			} else if ((ies[index] == RSN_IE) ||
+				 ((ies[index] == WPA_IE) && (ies[index + 2] == 0x00) &&
+				  (ies[index + 3] == 0x50) && (ies[index + 4] == 0xF2) &&
+				  (ies[index + 5] == 0x01)))	{
+				u16 rsn_idx = index;
 
-				if (pu8IEs[rsnIndex] == RSN_IE)	{
-					pNewJoinBssParam->mode_802_11i = 2;
+				if (ies[rsn_idx] == RSN_IE)	{
+					param->mode_802_11i = 2;
 				} else {
-					if (pNewJoinBssParam->mode_802_11i == 0)
-						pNewJoinBssParam->mode_802_11i = 1;
-					rsnIndex += 4;
+					if (param->mode_802_11i == 0)
+						param->mode_802_11i = 1;
+					rsn_idx += 4;
 				}
 
-				rsnIndex += 7;
-				pNewJoinBssParam->rsn_grp_policy = pu8IEs[rsnIndex];
-				rsnIndex++;
-				jumpOffset = pu8IEs[rsnIndex] * 4;
-				pcipherCount = (pu8IEs[rsnIndex] > 3) ? 3 : pu8IEs[rsnIndex];
-				rsnIndex += 2;
+				rsn_idx += 7;
+				param->rsn_grp_policy = ies[rsn_idx];
+				rsn_idx++;
+				offset = ies[rsn_idx] * 4;
+				pcipher_cnt = (ies[rsn_idx] > 3) ? 3 : ies[rsn_idx];
+				rsn_idx += 2;
 
-				for (i = pcipherTotalCount, j = 0; i < pcipherCount + pcipherTotalCount && i < 3; i++, j++)
-					pNewJoinBssParam->rsn_pcip_policy[i] = pu8IEs[rsnIndex + ((j + 1) * 4) - 1];
+				for (i = pcipher_total_cnt, j = 0; i < pcipher_cnt + pcipher_total_cnt && i < 3; i++, j++)
+					param->rsn_pcip_policy[i] = ies[rsn_idx + ((j + 1) * 4) - 1];
 
-				pcipherTotalCount += pcipherCount;
-				rsnIndex += jumpOffset;
+				pcipher_total_cnt += pcipher_cnt;
+				rsn_idx += offset;
 
-				jumpOffset = pu8IEs[rsnIndex] * 4;
+				offset = ies[rsn_idx] * 4;
 
-				authCount = (pu8IEs[rsnIndex] > 3) ? 3 : pu8IEs[rsnIndex];
-				rsnIndex += 2;
+				auth_cnt = (ies[rsn_idx] > 3) ? 3 : ies[rsn_idx];
+				rsn_idx += 2;
 
-				for (i = authTotalCount, j = 0; i < authTotalCount + authCount; i++, j++)
-					pNewJoinBssParam->rsn_auth_policy[i] = pu8IEs[rsnIndex + ((j + 1) * 4) - 1];
+				for (i = auth_total_cnt, j = 0; i < auth_total_cnt + auth_cnt; i++, j++)
+					param->rsn_auth_policy[i] = ies[rsn_idx + ((j + 1) * 4) - 1];
 
-				authTotalCount += authCount;
-				rsnIndex += jumpOffset;
+				auth_total_cnt += auth_cnt;
+				rsn_idx += offset;
 
-				if (pu8IEs[index] == RSN_IE) {
-					pNewJoinBssParam->rsn_cap[0] = pu8IEs[rsnIndex];
-					pNewJoinBssParam->rsn_cap[1] = pu8IEs[rsnIndex + 1];
-					rsnIndex += 2;
+				if (ies[index] == RSN_IE) {
+					param->rsn_cap[0] = ies[rsn_idx];
+					param->rsn_cap[1] = ies[rsn_idx + 1];
+					rsn_idx += 2;
 				}
-				pNewJoinBssParam->rsn_found = true;
-				index += pu8IEs[index + 1] + 2;
+				param->rsn_found = true;
+				index += ies[index + 1] + 2;
 			} else {
-				index += pu8IEs[index + 1] + 2;
+				index += ies[index + 1] + 2;
 			}
 		}
 	}
 
-	return (void *)pNewJoinBssParam;
+	return (void *)param;
 }
 
 int wilc_setup_ipaddress(struct wilc_vif *vif, u8 *ip_addr, u8 idx)

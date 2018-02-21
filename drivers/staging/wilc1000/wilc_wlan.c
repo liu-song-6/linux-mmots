@@ -173,11 +173,13 @@ static inline int update_tcp_session(u32 index, u32 ack)
 static inline int add_tcp_pending_ack(u32 ack, u32 session_index,
 				      struct txq_entry_t *txqe)
 {
-	if (pending_base + pending_acks < MAX_PENDING_ACKS) {
-		pending_acks_info[pending_base + pending_acks].ack_num = ack;
-		pending_acks_info[pending_base + pending_acks].txqe = txqe;
-		pending_acks_info[pending_base + pending_acks].session_index = session_index;
-		txqe->tcp_pending_ack_idx = pending_base + pending_acks;
+	u32 i = pending_base + pending_acks;
+
+	if (i < MAX_PENDING_ACKS) {
+		pending_acks_info[i].ack_num = ack;
+		pending_acks_info[i].txqe = txqe;
+		pending_acks_info[i].session_index = session_index;
+		txqe->tcp_pending_ack_idx = i;
 		pending_acks++;
 	}
 	return 0;
@@ -230,8 +232,10 @@ static inline void tcp_process(struct net_device *dev, struct txq_entry_t *tqe)
 					 (u32)tcp_hdr_ptr[11];
 
 				for (i = 0; i < tcp_session; i++) {
+					u32 j = ack_session_info[i].seq_num;
+
 					if (i < 2 * MAX_TCP_SESSION &&
-					    ack_session_info[i].seq_num == seq_no) {
+					    j == seq_no) {
 						update_tcp_session(i, ack_no);
 						break;
 					}
@@ -258,10 +262,20 @@ static int wilc_wlan_txq_filter_dup_tcp_ack(struct net_device *dev)
 
 	spin_lock_irqsave(&wilc->txq_spinlock, wilc->txq_spinlock_flags);
 	for (i = pending_base; i < (pending_base + pending_acks); i++) {
-		if (i >= MAX_PENDING_ACKS ||
-		    pending_acks_info[i].session_index >= 2 * MAX_TCP_SESSION)
+		u32 session_index;
+		u32 bigger_ack_num;
+
+		if (i >= MAX_PENDING_ACKS)
 			break;
-		if (pending_acks_info[i].ack_num < ack_session_info[pending_acks_info[i].session_index].bigger_ack_num) {
+
+		session_index = pending_acks_info[i].session_index;
+
+		if (session_index >= 2 * MAX_TCP_SESSION)
+			break;
+
+		bigger_ack_num = ack_session_info[session_index].bigger_ack_num;
+
+		if (pending_acks_info[i].ack_num < bigger_ack_num) {
 			struct txq_entry_t *tqe;
 
 			tqe = pending_acks_info[i].txqe;
@@ -562,6 +576,7 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 	u32 vmm_table[WILC_VMM_TBL_SIZE];
 	struct wilc_vif *vif;
 	struct wilc *wilc;
+	const struct wilc_hif_func *func;
 
 	vif = netdev_priv(dev);
 	wilc = vif->wilc;
@@ -615,10 +630,9 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 
 		acquire_bus(wilc, ACQUIRE_AND_WAKEUP);
 		counter = 0;
+		func = wilc->hif_func;
 		do {
-			ret = wilc->hif_func->hif_read_reg(wilc,
-							   WILC_HOST_TX_CTRL,
-							   &reg);
+			ret = func->hif_read_reg(wilc, WILC_HOST_TX_CTRL, &reg);
 			if (!ret)
 				break;
 
@@ -628,7 +642,8 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 			counter++;
 			if (counter > 200) {
 				counter = 0;
-				ret = wilc->hif_func->hif_write_reg(wilc, WILC_HOST_TX_CTRL, 0);
+				ret = func->hif_write_reg(wilc,
+							  WILC_HOST_TX_CTRL, 0);
 				break;
 			}
 		} while (!wilc->quit);
@@ -638,18 +653,21 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 
 		timeout = 200;
 		do {
-			ret = wilc->hif_func->hif_block_tx(wilc, WILC_VMM_TBL_RX_SHADOW_BASE, (u8 *)vmm_table, ((i + 1) * 4));
+			ret = func->hif_block_tx(wilc,
+						 WILC_VMM_TBL_RX_SHADOW_BASE,
+						 (u8 *)vmm_table,
+						 ((i + 1) * 4));
 			if (!ret)
 				break;
 
-			ret = wilc->hif_func->hif_write_reg(wilc,
-							    WILC_HOST_VMM_CTL,
-							    0x2);
+			ret = func->hif_write_reg(wilc, WILC_HOST_VMM_CTL, 0x2);
 			if (!ret)
 				break;
 
 			do {
-				ret = wilc->hif_func->hif_read_reg(wilc, WILC_HOST_VMM_CTL, &reg);
+				ret = func->hif_read_reg(wilc,
+							 WILC_HOST_VMM_CTL,
+							 &reg);
 				if (!ret)
 					break;
 				if ((reg >> 2) & 0x1) {
@@ -659,7 +677,9 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 				release_bus(wilc, RELEASE_ALLOW_SLEEP);
 			} while (--timeout);
 			if (timeout <= 0) {
-				ret = wilc->hif_func->hif_write_reg(wilc, WILC_HOST_VMM_CTL, 0x0);
+				ret = func->hif_write_reg(wilc,
+							  WILC_HOST_VMM_CTL,
+							  0x0);
 				break;
 			}
 
@@ -667,11 +687,15 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 				break;
 
 			if (entries == 0) {
-				ret = wilc->hif_func->hif_read_reg(wilc, WILC_HOST_TX_CTRL, &reg);
+				ret = func->hif_read_reg(wilc,
+							 WILC_HOST_TX_CTRL,
+							 &reg);
 				if (!ret)
 					break;
 				reg &= ~BIT(0);
-				ret = wilc->hif_func->hif_write_reg(wilc, WILC_HOST_TX_CTRL, reg);
+				ret = func->hif_write_reg(wilc,
+							  WILC_HOST_TX_CTRL,
+							  reg);
 				if (!ret)
 					break;
 				break;
@@ -739,11 +763,11 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 
 		acquire_bus(wilc, ACQUIRE_AND_WAKEUP);
 
-		ret = wilc->hif_func->hif_clear_int_ext(wilc, ENABLE_TX_VMM);
+		ret = func->hif_clear_int_ext(wilc, ENABLE_TX_VMM);
 		if (!ret)
 			goto _end_;
 
-		ret = wilc->hif_func->hif_block_tx_ext(wilc, 0, txb, offset);
+		ret = func->hif_block_tx_ext(wilc, 0, txb, offset);
 		if (!ret)
 			goto _end_;
 

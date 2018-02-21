@@ -265,7 +265,6 @@ void ptlrpc_invalidate_import(struct obd_import *imp)
 {
 	struct list_head *tmp, *n;
 	struct ptlrpc_request *req;
-	struct l_wait_info lwi;
 	unsigned int timeout;
 	int rc;
 
@@ -306,19 +305,15 @@ void ptlrpc_invalidate_import(struct obd_import *imp)
 		 * callbacks. Cap it at obd_timeout -- these should all
 		 * have been locally cancelled by ptlrpc_abort_inflight.
 		 */
-		lwi = LWI_TIMEOUT_INTERVAL(
-			cfs_timeout_cap(cfs_time_seconds(timeout)),
-			(timeout > 1) ? cfs_time_seconds(1) :
-			cfs_time_seconds(1) / 2,
-			NULL, NULL);
-		rc = l_wait_event(imp->imp_recovery_waitq,
-				  (atomic_read(&imp->imp_inflight) == 0),
-				  &lwi);
-		if (rc) {
+		rc = wait_event_idle_timeout(imp->imp_recovery_waitq,
+					     atomic_read(&imp->imp_inflight) == 0,
+					     obd_timeout * HZ);
+
+		if (rc == 0) {
 			const char *cli_tgt = obd2cli_tgt(imp->imp_obd);
 
-			CERROR("%s: rc = %d waiting for callback (%d != 0)\n",
-			       cli_tgt, rc,
+			CERROR("%s: timeout waiting for callback (%d != 0)\n",
+			       cli_tgt,
 			       atomic_read(&imp->imp_inflight));
 
 			spin_lock(&imp->imp_lock);
@@ -365,7 +360,7 @@ void ptlrpc_invalidate_import(struct obd_import *imp)
 			}
 			spin_unlock(&imp->imp_lock);
 		}
-	} while (rc != 0);
+	} while (rc == 0);
 
 	/*
 	 * Let's additionally check that no new rpcs added to import in
@@ -430,21 +425,19 @@ void ptlrpc_fail_import(struct obd_import *imp, __u32 conn_cnt)
 
 int ptlrpc_reconnect_import(struct obd_import *imp)
 {
-	struct l_wait_info lwi;
-	int secs = cfs_time_seconds(obd_timeout);
 	int rc;
 
 	ptlrpc_pinger_force(imp);
 
 	CDEBUG(D_HA, "%s: recovery started, waiting %u seconds\n",
-	       obd2cli_tgt(imp->imp_obd), secs);
+	       obd2cli_tgt(imp->imp_obd), obd_timeout);
 
-	lwi = LWI_TIMEOUT(secs, NULL, NULL);
-	rc = l_wait_event(imp->imp_recovery_waitq,
-			  !ptlrpc_import_in_recovery(imp), &lwi);
+	rc = wait_event_idle_timeout(imp->imp_recovery_waitq,
+				     !ptlrpc_import_in_recovery(imp),
+				     obd_timeout * HZ);
 	CDEBUG(D_HA, "%s: recovery finished s:%s\n", obd2cli_tgt(imp->imp_obd),
 	       ptlrpc_import_state_name(imp->imp_state));
-	return rc;
+	return rc == 0 ? -ETIMEDOUT : 0;
 }
 EXPORT_SYMBOL(ptlrpc_reconnect_import);
 
@@ -1503,25 +1496,25 @@ int ptlrpc_disconnect_import(struct obd_import *imp, int noclose)
 	}
 
 	if (ptlrpc_import_in_recovery(imp)) {
-		struct l_wait_info lwi;
 		long timeout;
 
 		if (AT_OFF) {
 			if (imp->imp_server_timeout)
-				timeout = cfs_time_seconds(obd_timeout / 2);
+				timeout = obd_timeout * HZ / 2;
 			else
-				timeout = cfs_time_seconds(obd_timeout);
+				timeout = obd_timeout * HZ;
 		} else {
 			int idx = import_at_get_index(imp,
 				imp->imp_client->cli_request_portal);
-			timeout = cfs_time_seconds(
-				at_get(&imp->imp_at.iat_service_estimate[idx]));
+			timeout = at_get(&imp->imp_at.iat_service_estimate[idx]) * HZ;
 		}
 
-		lwi = LWI_TIMEOUT_INTR(cfs_timeout_cap(timeout),
-				       back_to_sleep, LWI_ON_SIGNAL_NOOP, NULL);
-		rc = l_wait_event(imp->imp_recovery_waitq,
-				  !ptlrpc_import_in_recovery(imp), &lwi);
+		if (wait_event_idle_timeout(imp->imp_recovery_waitq,
+					    !ptlrpc_import_in_recovery(imp),
+					    cfs_timeout_cap(timeout)) == 0)
+			l_wait_event_abortable(
+				imp->imp_recovery_waitq,
+				!ptlrpc_import_in_recovery(imp));
 	}
 
 	spin_lock(&imp->imp_lock);

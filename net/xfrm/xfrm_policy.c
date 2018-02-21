@@ -1891,7 +1891,7 @@ static void xfrm_policy_queue_process(struct timer_list *t)
 	spin_unlock(&pq->hold_queue.lock);
 
 	dst_hold(xfrm_dst_path(dst));
-	dst = xfrm_lookup(net, xfrm_dst_path(dst), &fl, sk, 0);
+	dst = xfrm_lookup(net, xfrm_dst_path(dst), &fl, sk, XFRM_LOOKUP_QUEUE);
 	if (IS_ERR(dst))
 		goto purge_queue;
 
@@ -2982,6 +2982,7 @@ static void __net_exit xfrm_net_exit(struct net *net)
 static struct pernet_operations __net_initdata xfrm_net_ops = {
 	.init = xfrm_net_init,
 	.exit = xfrm_net_exit,
+	.async = true,
 };
 
 void __init xfrm_init(void)

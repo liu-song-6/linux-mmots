@@ -113,6 +113,9 @@ static const struct edid_quirk {
 	/* AEO model 0 reports 8 bpc, but is a 6 bpc panel */
 	{ "AEO", 0, EDID_QUIRK_FORCE_6BPC },
 
+	/* CPT panel of Asus UX303LA reports 8 bpc, but is a 6 bpc panel */
+	{ "CPT", 0x17df, EDID_QUIRK_FORCE_6BPC },
+
 	/* Belinea 10 15 55 */
 	{ "MAX", 1516, EDID_QUIRK_PREFER_LARGE_60 },
 	{ "MAX", 0x77e, EDID_QUIRK_PREFER_LARGE_60 },
@@ -2767,7 +2770,7 @@ do_detailed_mode(struct detailed_timing *timing, void *c)
 
 		drm_mode_probed_add(closure->connector, newmode);
 		closure->modes++;
-		closure->preferred = 0;
+		closure->preferred = false;
 	}
 }
 
@@ -2784,7 +2787,7 @@ add_detailed_modes(struct drm_connector *connector, struct edid *edid,
 	struct detailed_mode_closure closure = {
 		.connector = connector,
 		.edid = edid,
-		.preferred = 1,
+		.preferred = true,
 		.quirks = quirks,
 	};
 
