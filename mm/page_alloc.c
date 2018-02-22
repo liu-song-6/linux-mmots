@@ -4348,7 +4348,7 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order, int preferred_nid,
 
 out:
 	if (memcg_kmem_enabled() && (gfp_mask & __GFP_ACCOUNT) && page &&
-	    unlikely(memcg_kmem_charge(page, gfp_mask, order) != 0)) {
+	    unlikely(memcg_kmem_charge(page, gfp_mask, order, NULL) != 0)) {
 		__free_pages(page, order);
 		page = NULL;
 	}

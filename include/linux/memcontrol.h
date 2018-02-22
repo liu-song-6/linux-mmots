@@ -1145,7 +1145,8 @@ struct kmem_cache *memcg_kmem_get_cache(struct kmem_cache *cachep,
 void memcg_kmem_put_cache(struct kmem_cache *cachep);
 int memcg_kmem_charge_memcg(struct page *page, gfp_t gfp, int order,
 			    struct mem_cgroup *memcg);
-int memcg_kmem_charge(struct page *page, gfp_t gfp, int order);
+int memcg_kmem_charge(struct page *page, gfp_t gfp, int order,
+		      struct mem_cgroup *memcg);
 void memcg_kmem_uncharge(struct page *page, int order);
 
 #if defined(CONFIG_MEMCG) && !defined(CONFIG_SLOB)

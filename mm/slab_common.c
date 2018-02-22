@@ -1155,19 +1155,48 @@ void __init create_kmalloc_caches(slab_flags_t flags)
  * directly to the page allocator. We use __GFP_COMP, because we will need to
  * know the allocation order to free the pages properly in kfree.
  */
-void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
+static __always_inline void *__kmalloc_order_memcg(size_t size, gfp_t flags,
+						   unsigned int order,
+						   struct mem_cgroup *memcg)
 {
 	void *ret;
 	struct page *page;
 
 	flags |= __GFP_COMP;
+
+	/*
+	 * Do explicit targeted memcg charging instead of
+	 * __alloc_pages_nodemask charging current memcg.
+	 */
+	if (memcg && (flags & __GFP_ACCOUNT))
+		flags &= ~__GFP_ACCOUNT;
+
 	page = alloc_pages(flags, order);
+
+	if (memcg && page && memcg_kmem_enabled() &&
+	    memcg_kmem_charge(page, flags, order, memcg)) {
+		__free_pages(page, order);
+		page = NULL;
+	}
+
 	ret = page ? page_address(page) : NULL;
 	kmemleak_alloc(ret, size, 1, flags);
 	kasan_kmalloc_large(ret, size, flags);
 	return ret;
 }
+
+void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
+{
+	return __kmalloc_order_memcg(size, flags, order, NULL);
+}
 EXPORT_SYMBOL(kmalloc_order);
+
+void *kmalloc_order_memcg(size_t size, gfp_t flags, unsigned int order,
+			  struct mem_cgroup *memcg)
+{
+	return __kmalloc_order_memcg(size, flags, order, memcg);
+}
+EXPORT_SYMBOL(kmalloc_order_memcg);
 
 #ifdef CONFIG_TRACING
 void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order)
@@ -1177,6 +1206,16 @@ void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order)
 	return ret;
 }
 EXPORT_SYMBOL(kmalloc_order_trace);
+
+void *kmalloc_order_memcg_trace(size_t size, gfp_t flags, unsigned int order,
+				struct mem_cgroup *memcg)
+{
+	void *ret = kmalloc_order_memcg(size, flags, order, memcg);
+
+	trace_kmalloc(_RET_IP_, ret, size, PAGE_SIZE << order, flags);
+	return ret;
+}
+EXPORT_SYMBOL(kmalloc_order_memcg_trace);
 #endif
 
 #ifdef CONFIG_SLAB_FREELIST_RANDOM

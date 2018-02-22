@@ -470,6 +470,12 @@ void *__kmalloc(size_t size, gfp_t gfp)
 }
 EXPORT_SYMBOL(__kmalloc);
 
+void *__kmalloc_memcg(size_t size, gfp_t gfp, struct mem_cgroup *memcg)
+{
+	return __do_kmalloc_node(size, gfp, NUMA_NO_NODE, _RET_IP_);
+}
+EXPORT_SYMBOL(__kmalloc_memcg);
+
 void *__kmalloc_track_caller(size_t size, gfp_t gfp, unsigned long caller)
 {
 	return __do_kmalloc_node(size, gfp, NUMA_NO_NODE, caller);

@@ -2349,15 +2349,18 @@ int memcg_kmem_charge_memcg(struct page *page, gfp_t gfp, int order,
  *
  * Returns 0 on success, an error code on failure.
  */
-int memcg_kmem_charge(struct page *page, gfp_t gfp, int order)
+int memcg_kmem_charge(struct page *page, gfp_t gfp, int order,
+		      struct mem_cgroup *memcg)
 {
-	struct mem_cgroup *memcg;
 	int ret = 0;
 
 	if (memcg_kmem_bypass())
 		return 0;
 
-	memcg = get_mem_cgroup_from_mm(current->mm);
+	if (memcg)
+		memcg = get_mem_cgroup(memcg);
+	if (!memcg)
+		memcg = get_mem_cgroup_from_mm(current->mm);
 	if (!mem_cgroup_is_root(memcg)) {
 		ret = memcg_kmem_charge_memcg(page, gfp, order, memcg);
 		if (!ret)
