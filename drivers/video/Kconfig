@@ -3,7 +3,6 @@
 #
 
 menu "Graphics support"
-	depends on HAS_IOMEM
 
 config HAVE_FB_ATMEL
 	bool
@@ -11,20 +10,22 @@ config HAVE_FB_ATMEL
 config SH_LCD_MIPI_DSI
 	bool
 
-source "drivers/char/agp/Kconfig"
+if HAS_IOMEM
+	source "drivers/char/agp/Kconfig"
 
-source "drivers/gpu/vga/Kconfig"
+	source "drivers/gpu/vga/Kconfig"
 
-source "drivers/gpu/host1x/Kconfig"
-source "drivers/gpu/ipu-v3/Kconfig"
+	source "drivers/gpu/host1x/Kconfig"
+	source "drivers/gpu/ipu-v3/Kconfig"
 
-source "drivers/gpu/drm/Kconfig"
+	source "drivers/gpu/drm/Kconfig"
 
-menu "Frame buffer Devices"
-source "drivers/video/fbdev/Kconfig"
-endmenu
+	menu "Frame buffer Devices"
+	source "drivers/video/fbdev/Kconfig"
+	endmenu
 
-source "drivers/video/backlight/Kconfig"
+        source "drivers/video/backlight/Kconfig"
+endif
 
 config VGASTATE
        tristate

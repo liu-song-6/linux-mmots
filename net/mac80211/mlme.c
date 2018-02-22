@@ -7,6 +7,7 @@
  * Copyright 2007, Michael Wu <flamingice@sourmilk.net>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
  * Copyright (C) 2015 - 2017 Intel Deutschland GmbH
+ * Copyright (C) 2018        Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2008,9 +2009,22 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 		ieee80211_flush_queues(local, sdata, true);
 
 	/* deauthenticate/disassociate now */
-	if (tx || frame_buf)
+	if (tx || frame_buf) {
+		struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
+
+		/*
+		 * In multi channel scenarios guarantee that the virtual
+		 * interface is granted immediate airtime to transmit the
+		 * deauthentication frame by calling mgd_prepare_tx, if the
+		 * driver requested so.
+		 */
+		if (ieee80211_hw_check(&local->hw, DEAUTH_NEED_MGD_TX_PREP) &&
+		    !ifmgd->have_beacon)
+			drv_mgd_prepare_tx(sdata->local, sdata);
+
 		ieee80211_send_deauth_disassoc(sdata, ifmgd->bssid, stype,
 					       reason, tx, frame_buf);
+	}
 
 	/* flush out frame - make sure the deauth was actually sent */
 	if (tx)
@@ -2151,7 +2165,7 @@ static void ieee80211_sta_tx_wmm_ac_notify(struct ieee80211_sub_if_data *sdata,
 					   u16 tx_time)
 {
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
-	u16 tid = *ieee80211_get_qos_ctl(hdr) & IEEE80211_QOS_CTL_TID_MASK;
+	u16 tid = ieee80211_get_tid(hdr);
 	int ac = ieee80211_ac_from_tid(tid);
 	struct ieee80211_sta_tx_tspec *tx_tspec = &ifmgd->tx_tspec[ac];
 	unsigned long now = jiffies;
@@ -3368,6 +3382,8 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 	bssid = ifmgd->associated->bssid;
 
 	/* Track average RSSI from the Beacon frames of the current AP */
+	if (rx_status->flag & RX_FLAG_NO_SIGNAL_VAL)
+		goto skip_signal_processing;
 	if (ifmgd->flags & IEEE80211_STA_RESET_SIGNAL_AVE) {
 		ifmgd->flags &= ~IEEE80211_STA_RESET_SIGNAL_AVE;
 		ewma_beacon_signal_init(&ifmgd->ave_beacon_signal);
@@ -3454,6 +3470,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 				sig, GFP_KERNEL);
 		}
 	}
+skip_signal_processing:
 
 	if (ifmgd->flags & IEEE80211_STA_CONNECTION_POLL) {
 		mlme_dbg_ratelimited(sdata,
