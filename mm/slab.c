@@ -3715,7 +3715,8 @@ EXPORT_SYMBOL(kmem_cache_alloc_node_memcg_trace);
 #endif
 
 static __always_inline void *
-__do_kmalloc_node(size_t size, gfp_t flags, int node, unsigned long caller)
+__do_kmalloc_node(size_t size, gfp_t flags, int node, struct mem_cgroup *memcg,
+		  unsigned long caller)
 {
 	struct kmem_cache *cachep;
 	void *ret;
@@ -3723,7 +3724,8 @@ __do_kmalloc_node(size_t size, gfp_t flags, int node, unsigned long caller)
 	cachep = kmalloc_slab(size, flags);
 	if (unlikely(ZERO_OR_NULL_PTR(cachep)))
 		return cachep;
-	ret = kmem_cache_alloc_node_trace(cachep, flags, node, size);
+	ret = kmem_cache_alloc_node_memcg_trace(cachep, flags, node, size,
+						memcg);
 	kasan_kmalloc(cachep, ret, size, flags);
 
 	return ret;
@@ -3731,14 +3733,21 @@ __do_kmalloc_node(size_t size, gfp_t flags, int node, unsigned long caller)
 
 void *__kmalloc_node(size_t size, gfp_t flags, int node)
 {
-	return __do_kmalloc_node(size, flags, node, _RET_IP_);
+	return __do_kmalloc_node(size, flags, node, NULL, _RET_IP_);
 }
 EXPORT_SYMBOL(__kmalloc_node);
+
+void *__kmalloc_node_memcg(size_t size, gfp_t flags, int node,
+			   struct mem_cgroup *memcg)
+{
+	return __do_kmalloc_node(size, flags, node, memcg, _RET_IP_);
+}
+EXPORT_SYMBOL(__kmalloc_node_memcg);
 
 void *__kmalloc_node_track_caller(size_t size, gfp_t flags,
 		int node, unsigned long caller)
 {
-	return __do_kmalloc_node(size, flags, node, caller);
+	return __do_kmalloc_node(size, flags, node, NULL, caller);
 }
 EXPORT_SYMBOL(__kmalloc_node_track_caller);
 #endif /* CONFIG_NUMA */
@@ -3750,7 +3759,7 @@ EXPORT_SYMBOL(__kmalloc_node_track_caller);
  * @caller: function caller for debug tracking of the caller
  */
 static __always_inline void *__do_kmalloc(size_t size, gfp_t flags,
-					  unsigned long caller)
+				struct mem_cgroup *memcg, unsigned long caller)
 {
 	struct kmem_cache *cachep;
 	void *ret;
@@ -3758,7 +3767,7 @@ static __always_inline void *__do_kmalloc(size_t size, gfp_t flags,
 	cachep = kmalloc_slab(size, flags);
 	if (unlikely(ZERO_OR_NULL_PTR(cachep)))
 		return cachep;
-	ret = slab_alloc(cachep, flags, NULL, caller);
+	ret = slab_alloc(cachep, flags, memcg, caller);
 
 	kasan_kmalloc(cachep, ret, size, flags);
 	trace_kmalloc(caller, ret,
@@ -3769,13 +3778,19 @@ static __always_inline void *__do_kmalloc(size_t size, gfp_t flags,
 
 void *__kmalloc(size_t size, gfp_t flags)
 {
-	return __do_kmalloc(size, flags, _RET_IP_);
+	return __do_kmalloc(size, flags, NULL, _RET_IP_);
 }
 EXPORT_SYMBOL(__kmalloc);
 
+void *__kmalloc_memcg(size_t size, gfp_t flags, struct mem_cgroup *memcg)
+{
+	return __do_kmalloc(size, flags, memcg, _RET_IP_);
+}
+EXPORT_SYMBOL(__kmalloc_memcg);
+
 void *__kmalloc_track_caller(size_t size, gfp_t flags, unsigned long caller)
 {
-	return __do_kmalloc(size, flags, caller);
+	return __do_kmalloc(size, flags, NULL, caller);
 }
 EXPORT_SYMBOL(__kmalloc_track_caller);
 
