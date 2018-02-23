@@ -353,6 +353,8 @@ static __always_inline int kmalloc_index(size_t size)
 
 void *__kmalloc(size_t size, gfp_t flags) __assume_kmalloc_alignment __malloc;
 void *kmem_cache_alloc(struct kmem_cache *, gfp_t flags) __assume_slab_alignment __malloc;
+void *kmem_cache_alloc_memcg(struct kmem_cache *, gfp_t flags,
+		struct mem_cgroup *memcg) __assume_slab_alignment __malloc;
 void kmem_cache_free(struct kmem_cache *, void *);
 
 /*
@@ -377,6 +379,8 @@ static __always_inline void kfree_bulk(size_t size, void **p)
 #ifdef CONFIG_NUMA
 void *__kmalloc_node(size_t size, gfp_t flags, int node) __assume_kmalloc_alignment __malloc;
 void *kmem_cache_alloc_node(struct kmem_cache *, gfp_t flags, int node) __assume_slab_alignment __malloc;
+void *kmem_cache_alloc_node_memcg(struct kmem_cache *, gfp_t flags, int node,
+		struct mem_cgroup *memcg) __assume_slab_alignment __malloc;
 #else
 static __always_inline void *__kmalloc_node(size_t size, gfp_t flags, int node)
 {
@@ -387,15 +391,26 @@ static __always_inline void *kmem_cache_alloc_node(struct kmem_cache *s, gfp_t f
 {
 	return kmem_cache_alloc(s, flags);
 }
+
+static __always_inline void *kmem_cache_alloc_node_memcg(struct kmem_cache *s,
+				gfp_t flags, int node, struct mem_cgroup *memcg)
+{
+	return kmem_cache_alloc_memcg(s, flags, memcg);
+}
 #endif
 
 #ifdef CONFIG_TRACING
 extern void *kmem_cache_alloc_trace(struct kmem_cache *, gfp_t, size_t) __assume_slab_alignment __malloc;
+extern void *kmem_cache_alloc_memcg_trace(struct kmem_cache *, gfp_t, size_t,
+		struct mem_cgroup *memcg) __assume_slab_alignment __malloc;
 
 #ifdef CONFIG_NUMA
 extern void *kmem_cache_alloc_node_trace(struct kmem_cache *s,
 					   gfp_t gfpflags,
 					   int node, size_t size) __assume_slab_alignment __malloc;
+extern void *kmem_cache_alloc_node_memcg_trace(struct kmem_cache *s,
+		gfp_t gfpflags, int node, size_t size,
+		struct mem_cgroup *memcg) __assume_slab_alignment __malloc;
 #else
 static __always_inline void *
 kmem_cache_alloc_node_trace(struct kmem_cache *s,
@@ -403,6 +418,13 @@ kmem_cache_alloc_node_trace(struct kmem_cache *s,
 			      int node, size_t size)
 {
 	return kmem_cache_alloc_trace(s, gfpflags, size);
+}
+
+static __always_inline void *
+kmem_cache_alloc_node_memcg_trace(struct kmem_cache *s, gfp_t gfpflags,
+				int node, size_t size, struct mem_cgroup *memcg)
+{
+	return kmem_cache_alloc_memcg_trace(s, gfpflags, size, memcg);
 }
 #endif /* CONFIG_NUMA */
 
@@ -416,12 +438,31 @@ static __always_inline void *kmem_cache_alloc_trace(struct kmem_cache *s,
 	return ret;
 }
 
+static __always_inline void *kmem_cache_alloc_memcg_trace(struct kmem_cache *s,
+		gfp_t flags, size_t size, struct mem_cgroup *memcg)
+{
+	void *ret = kmem_cache_alloc_memcg(s, flags, memcg);
+
+	kasan_kmalloc(s, ret, size, flags);
+	return ret;
+}
+
 static __always_inline void *
 kmem_cache_alloc_node_trace(struct kmem_cache *s,
 			      gfp_t gfpflags,
 			      int node, size_t size)
 {
 	void *ret = kmem_cache_alloc_node(s, gfpflags, node);
+
+	kasan_kmalloc(s, ret, size, gfpflags);
+	return ret;
+}
+
+static __always_inline void *
+kmem_cache_alloc_node_memcg_trace(struct kmem_cache *s, gfp_t gfpflags,
+				int node, size_t size, struct mem_cgroup *memcg)
+{
+	void *ret = kmem_cache_alloc_node_memcg(s, gfpflags, node, memcg);
 
 	kasan_kmalloc(s, ret, size, gfpflags);
 	return ret;

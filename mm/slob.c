@@ -568,6 +568,13 @@ void *kmem_cache_alloc(struct kmem_cache *cachep, gfp_t flags)
 }
 EXPORT_SYMBOL(kmem_cache_alloc);
 
+void *kmem_cache_alloc_memcg(struct kmem_cache *cachep, gfp_t flags,
+			     struct mem_cgroup *memcg)
+{
+	return kmem_cache_alloc(cachep, flags);
+}
+EXPORT_SYMBOL(kmem_cache_alloc_memcg);
+
 #ifdef CONFIG_NUMA
 void *__kmalloc_node(size_t size, gfp_t gfp, int node)
 {
