@@ -432,7 +432,8 @@ int fsnotify_compare_groups(struct fsnotify_group *a, struct fsnotify_group *b)
 static int fsnotify_attach_connector_to_object(
 				struct fsnotify_mark_connector __rcu **connp,
 				struct inode *inode,
-				struct vfsmount *mnt)
+				struct vfsmount *mnt,
+				struct fsnotify_group *group)
 {
 	struct fsnotify_mark_connector *conn;
 
@@ -517,7 +518,8 @@ restart:
 	conn = fsnotify_grab_connector(connp);
 	if (!conn) {
 		spin_unlock(&mark->lock);
-		err = fsnotify_attach_connector_to_object(connp, inode, mnt);
+		err = fsnotify_attach_connector_to_object(connp, inode, mnt,
+							  mark->group);
 		if (err)
 			return err;
 		goto restart;
