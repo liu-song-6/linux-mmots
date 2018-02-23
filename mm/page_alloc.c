@@ -5445,8 +5445,9 @@ void __meminit memmap_init_zone(unsigned long size, int nid, unsigned long zone,
 			 * end_pfn), such that we hit a valid pfn (or end_pfn)
 			 * on our next iteration of the loop.
 			 */
-			if (IS_ENABLED(CONFIG_HAVE_MEMBLOCK))
-				pfn = memblock_next_valid_pfn(pfn, end_pfn) - 1;
+#ifdef CONFIG_HAVE_MEMBLOCK
+			pfn = memblock_next_valid_pfn(pfn, end_pfn) - 1;
+#endif
 			continue;
 		}
 		if (!early_pfn_in_nid(pfn, nid))
