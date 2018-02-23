@@ -134,6 +134,15 @@ struct drm_crtc_commit {
 	 * &drm_pending_vblank_event pointer to clean up private events.
 	 */
 	struct drm_pending_vblank_event *event;
+
+	/**
+	 * @abort_completion:
+	 *
+	 * A flag that's set after drm_atomic_helper_setup_commit takes a second
+	 * reference for the completion of $drm_crtc_state.event. It's used by
+	 * the free code to remove the second reference if commit fails.
+	 */
+	bool abort_completion;
 };
 
 struct __drm_planes_state {
@@ -145,7 +154,7 @@ struct __drm_crtcs_state {
 	struct drm_crtc *ptr;
 	struct drm_crtc_state *state, *old_state, *new_state;
 	s32 __user *out_fence_ptr;
-	unsigned last_vblank_count;
+	u64 last_vblank_count;
 };
 
 struct __drm_connnectors_state {

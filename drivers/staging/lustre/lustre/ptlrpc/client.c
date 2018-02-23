@@ -766,7 +766,7 @@ int ptlrpc_request_bufs_pack(struct ptlrpc_request *request,
 			 * fail_loc
 			 */
 			set_current_state(TASK_UNINTERRUPTIBLE);
-			schedule_timeout(cfs_time_seconds(2));
+			schedule_timeout(2 * HZ);
 			set_current_state(TASK_RUNNING);
 		}
 	}
@@ -1588,7 +1588,8 @@ static int ptlrpc_send_new_req(struct ptlrpc_request *req)
 		spin_lock(&imp->imp_lock);
 		if (!list_empty(&req->rq_list)) {
 			list_del_init(&req->rq_list);
-			atomic_dec(&req->rq_import->imp_inflight);
+			if (atomic_dec_and_test(&req->rq_import->imp_inflight))
+				wake_up_all(&req->rq_import->imp_recovery_waitq);
 		}
 		spin_unlock(&imp->imp_lock);
 		ptlrpc_rqphase_move(req, RQ_PHASE_NEW);
@@ -1773,7 +1774,7 @@ int ptlrpc_check_set(const struct lu_env *env, struct ptlrpc_request_set *set)
 		}
 
 		/*
-		 * ptlrpc_set_wait->l_wait_event sets lwi_allow_intr
+		 * ptlrpc_set_wait allow signal to abort the timeout
 		 * so it sets rq_intr regardless of individual rpc
 		 * timeouts. The synchronous IO waiting path sets
 		 * rq_intr irrespective of whether ptlrpcd
@@ -2121,12 +2122,10 @@ int ptlrpc_expire_one_request(struct ptlrpc_request *req, int async_unlink)
 
 /**
  * Time out all uncompleted requests in request set pointed by \a data
- * Callback used when waiting on sets with l_wait_event.
- * Always returns 1.
+ * Called when wait_event_idle_timeout times out.
  */
-int ptlrpc_expired_set(void *data)
+void ptlrpc_expired_set(struct ptlrpc_request_set *set)
 {
-	struct ptlrpc_request_set *set = data;
 	struct list_head *tmp;
 	time64_t now = ktime_get_real_seconds();
 
@@ -2155,13 +2154,6 @@ int ptlrpc_expired_set(void *data)
 		 */
 		ptlrpc_expire_one_request(req, 1);
 	}
-
-	/*
-	 * When waiting for a whole set, we always break out of the
-	 * sleep so we can recalculate the timeout, or enable interrupts
-	 * if everyone's timed out.
-	 */
-	return 1;
 }
 
 /**
@@ -2177,11 +2169,10 @@ EXPORT_SYMBOL(ptlrpc_mark_interrupted);
 
 /**
  * Interrupts (sets interrupted flag) all uncompleted requests in
- * a set \a data. Callback for l_wait_event for interruptible waits.
+ * a set \a data. Called when l_wait_event_abortable_timeout receives signal.
  */
-static void ptlrpc_interrupted_set(void *data)
+static void ptlrpc_interrupted_set(struct ptlrpc_request_set *set)
 {
-	struct ptlrpc_request_set *set = data;
 	struct list_head *tmp;
 
 	CDEBUG(D_RPCTRACE, "INTERRUPTED SET %p\n", set);
@@ -2251,7 +2242,6 @@ int ptlrpc_set_wait(struct ptlrpc_request_set *set)
 {
 	struct list_head *tmp;
 	struct ptlrpc_request *req;
-	struct l_wait_info lwi;
 	int rc, timeout;
 
 	if (set->set_producer)
@@ -2277,46 +2267,47 @@ int ptlrpc_set_wait(struct ptlrpc_request_set *set)
 		CDEBUG(D_RPCTRACE, "set %p going to sleep for %d seconds\n",
 		       set, timeout);
 
-		if (timeout == 0 && !signal_pending(current))
+		if (timeout == 0 && !signal_pending(current)) {
 			/*
 			 * No requests are in-flight (ether timed out
 			 * or delayed), so we can allow interrupts.
 			 * We still want to block for a limited time,
 			 * so we allow interrupts during the timeout.
 			 */
-			lwi = LWI_TIMEOUT_INTR_ALL(cfs_time_seconds(1),
-						   ptlrpc_expired_set,
-						   ptlrpc_interrupted_set, set);
-		else
+			rc = l_wait_event_abortable_timeout(set->set_waitq,
+							    ptlrpc_check_set(NULL, set),
+							    HZ);
+			if (rc == 0) {
+				rc = -ETIMEDOUT;
+				ptlrpc_expired_set(set);
+			} else if (rc < 0) {
+				rc = -EINTR;
+				ptlrpc_interrupted_set(set);
+			} else
+				rc = 0;
+		} else {
 			/*
 			 * At least one request is in flight, so no
 			 * interrupts are allowed. Wait until all
 			 * complete, or an in-flight req times out.
 			 */
-			lwi = LWI_TIMEOUT(cfs_time_seconds(timeout ? timeout : 1),
-					  ptlrpc_expired_set, set);
-
-		rc = l_wait_event(set->set_waitq, ptlrpc_check_set(NULL, set), &lwi);
-
-		/*
-		 * LU-769 - if we ignored the signal because it was already
-		 * pending when we started, we need to handle it now or we risk
-		 * it being ignored forever
-		 */
-		if (rc == -ETIMEDOUT && !lwi.lwi_allow_intr &&
-		    signal_pending(current)) {
-			sigset_t blocked_sigs =
-					   cfs_block_sigsinv(LUSTRE_FATAL_SIGS);
-
-			/*
-			 * In fact we only interrupt for the "fatal" signals
-			 * like SIGINT or SIGKILL. We still ignore less
-			 * important signals since ptlrpc set is not easily
-			 * reentrant from userspace again
-			 */
-			if (signal_pending(current))
-				ptlrpc_interrupted_set(set);
-			cfs_restore_sigs(blocked_sigs);
+			rc = wait_event_idle_timeout(set->set_waitq,
+						     ptlrpc_check_set(NULL, set),
+						     (timeout ? timeout : 1) * HZ);
+			if (rc == 0) {
+				ptlrpc_expired_set(set);
+				rc = -ETIMEDOUT;
+				/*
+				 * LU-769 - if we ignored the signal
+				 * because it was already pending when
+				 * we started, we need to handle it
+				 * now or we risk it being ignored
+				 * forever
+				 */
+				if (l_fatal_signal_pending(current))
+					ptlrpc_interrupted_set(set);
+			} else
+				rc = 0;
 		}
 
 		LASSERT(rc == 0 || rc == -EINTR || rc == -ETIMEDOUT);
@@ -2495,7 +2486,6 @@ static int ptlrpc_unregister_reply(struct ptlrpc_request *request, int async)
 {
 	int rc;
 	wait_queue_head_t *wq;
-	struct l_wait_info lwi;
 
 	/* Might sleep. */
 	LASSERT(!in_interrupt());
@@ -2524,7 +2514,7 @@ static int ptlrpc_unregister_reply(struct ptlrpc_request *request, int async)
 		return 0;
 
 	/*
-	 * We have to l_wait_event() whatever the result, to give liblustre
+	 * We have to wait_event_idle_timeout() whatever the result, to give liblustre
 	 * a chance to run reply_in_callback(), and to make sure we've
 	 * unlinked before returning a req to the pool.
 	 */
@@ -2538,16 +2528,17 @@ static int ptlrpc_unregister_reply(struct ptlrpc_request *request, int async)
 		 * Network access will complete in finite time but the HUGE
 		 * timeout lets us CWARN for visibility of sluggish NALs
 		 */
-		lwi = LWI_TIMEOUT_INTERVAL(cfs_time_seconds(LONG_UNLINK),
-					   cfs_time_seconds(1), NULL, NULL);
-		rc = l_wait_event(*wq, !ptlrpc_client_recv_or_unlink(request),
-				  &lwi);
-		if (rc == 0) {
+		int cnt = 0;
+		while (cnt < LONG_UNLINK &&
+		       (rc = wait_event_idle_timeout(*wq,
+						     !ptlrpc_client_recv_or_unlink(request),
+						     HZ)) == 0)
+			cnt += 1;
+		if (rc > 0) {
 			ptlrpc_rqphase_move(request, request->rq_next_phase);
 			return 1;
 		}
 
-		LASSERT(rc == -ETIMEDOUT);
 		DEBUG_REQ(D_WARNING, request,
 			  "Unexpectedly long timeout receiving_reply=%d req_ulinked=%d reply_unlinked=%d",
 			  request->rq_receiving_reply,

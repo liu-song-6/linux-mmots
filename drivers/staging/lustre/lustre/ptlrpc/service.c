@@ -1897,15 +1897,6 @@ ptlrpc_check_rqbd_pool(struct ptlrpc_service_part *svcpt)
 	}
 }
 
-static int
-ptlrpc_retry_rqbds(void *arg)
-{
-	struct ptlrpc_service_part *svcpt = arg;
-
-	svcpt->scp_rqbd_timeout = 0;
-	return -ETIMEDOUT;
-}
-
 static inline int
 ptlrpc_threads_enough(struct ptlrpc_service_part *svcpt)
 {
@@ -1968,13 +1959,17 @@ ptlrpc_server_request_incoming(struct ptlrpc_service_part *svcpt)
 	return !list_empty(&svcpt->scp_req_incoming);
 }
 
+/* We perfer lifo queuing, but kernel doesn't provide that yet. */
+#ifndef wait_event_idle_exclusive_lifo
+#define wait_event_idle_exclusive_lifo wait_event_idle_exclusive
+#define wait_event_idle_exclusive_lifo_timeout wait_event_idle_exclusive_timeout
+#endif
+
 static __attribute__((__noinline__)) int
 ptlrpc_wait_event(struct ptlrpc_service_part *svcpt,
 		  struct ptlrpc_thread *thread)
 {
 	/* Don't exit while there are replies to be handled */
-	struct l_wait_info lwi = LWI_TIMEOUT(svcpt->scp_rqbd_timeout,
-					     ptlrpc_retry_rqbds, svcpt);
 
 	/* XXX: Add this back when libcfs watchdog is merged upstream
 	lc_watchdog_disable(thread->t_watchdog);
@@ -1982,13 +1977,25 @@ ptlrpc_wait_event(struct ptlrpc_service_part *svcpt,
 
 	cond_resched();
 
-	l_wait_event_exclusive_head(svcpt->scp_waitq,
-				    ptlrpc_thread_stopping(thread) ||
-				    ptlrpc_server_request_incoming(svcpt) ||
-				    ptlrpc_server_request_pending(svcpt,
-								  false) ||
-				    ptlrpc_rqbd_pending(svcpt) ||
-				    ptlrpc_at_check(svcpt), &lwi);
+	if (svcpt->scp_rqbd_timeout == 0)
+		wait_event_idle_exclusive_lifo(
+			svcpt->scp_waitq,
+			ptlrpc_thread_stopping(thread) ||
+			ptlrpc_server_request_incoming(svcpt) ||
+			ptlrpc_server_request_pending(svcpt,
+						      false) ||
+			ptlrpc_rqbd_pending(svcpt) ||
+			ptlrpc_at_check(svcpt));
+	else if (0 == wait_event_idle_exclusive_lifo_timeout(
+			 svcpt->scp_waitq,
+			 ptlrpc_thread_stopping(thread) ||
+			 ptlrpc_server_request_incoming(svcpt) ||
+			 ptlrpc_server_request_pending(svcpt,
+						       false) ||
+			 ptlrpc_rqbd_pending(svcpt) ||
+			 ptlrpc_at_check(svcpt),
+			 svcpt->scp_rqbd_timeout))
+		svcpt->scp_rqbd_timeout = 0;
 
 	if (ptlrpc_thread_stopping(thread))
 		return -EINTR;
@@ -2149,7 +2156,7 @@ static int ptlrpc_main(void *arg)
 			 * Wait for a timeout (unless something else
 			 * happens) before I try again
 			 */
-			svcpt->scp_rqbd_timeout = cfs_time_seconds(1) / 10;
+			svcpt->scp_rqbd_timeout = HZ / 10;
 			CDEBUG(D_RPCTRACE, "Posted buffers: %d\n",
 			       svcpt->scp_nrqbds_posted);
 		}
@@ -2233,7 +2240,7 @@ static int ptlrpc_hr_main(void *arg)
 	wake_up(&ptlrpc_hr.hr_waitq);
 
 	while (!ptlrpc_hr.hr_stopping) {
-		l_wait_condition(hrt->hrt_waitq, hrt_dont_sleep(hrt, &replies));
+		wait_event_idle(hrt->hrt_waitq, hrt_dont_sleep(hrt, &replies));
 
 		while (!list_empty(&replies)) {
 			struct ptlrpc_reply_state *rs;
@@ -2312,7 +2319,6 @@ static int ptlrpc_start_hr_threads(void)
 
 static void ptlrpc_svcpt_stop_threads(struct ptlrpc_service_part *svcpt)
 {
-	struct l_wait_info lwi = { 0 };
 	struct ptlrpc_thread *thread;
 	LIST_HEAD(zombie);
 
@@ -2341,8 +2347,8 @@ static void ptlrpc_svcpt_stop_threads(struct ptlrpc_service_part *svcpt)
 
 		CDEBUG(D_INFO, "waiting for stopping-thread %s #%u\n",
 		       svcpt->scp_service->srv_thread_name, thread->t_id);
-		l_wait_event(thread->t_ctl_waitq,
-			     thread_is_stopped(thread), &lwi);
+		wait_event_idle(thread->t_ctl_waitq,
+				thread_is_stopped(thread));
 
 		spin_lock(&svcpt->scp_lock);
 	}
@@ -2403,7 +2409,6 @@ int ptlrpc_start_threads(struct ptlrpc_service *svc)
 
 int ptlrpc_start_thread(struct ptlrpc_service_part *svcpt, int wait)
 {
-	struct l_wait_info lwi = { 0 };
 	struct ptlrpc_thread *thread;
 	struct ptlrpc_service *svc;
 	struct task_struct *task;
@@ -2499,9 +2504,8 @@ int ptlrpc_start_thread(struct ptlrpc_service_part *svcpt, int wait)
 	if (!wait)
 		return 0;
 
-	l_wait_event(thread->t_ctl_waitq,
-		     thread_is_running(thread) || thread_is_stopped(thread),
-		     &lwi);
+	wait_event_idle(thread->t_ctl_waitq,
+			thread_is_running(thread) || thread_is_stopped(thread));
 
 	rc = thread_is_stopped(thread) ? thread->t_id : 0;
 	return rc;
@@ -2591,13 +2595,12 @@ static void ptlrpc_wait_replies(struct ptlrpc_service_part *svcpt)
 {
 	while (1) {
 		int rc;
-		struct l_wait_info lwi = LWI_TIMEOUT(cfs_time_seconds(10),
-						     NULL, NULL);
 
-		rc = l_wait_event(svcpt->scp_waitq,
-				  atomic_read(&svcpt->scp_nreps_difficult) == 0,
-				  &lwi);
-		if (rc == 0)
+		rc = wait_event_idle_timeout(
+			svcpt->scp_waitq,
+			atomic_read(&svcpt->scp_nreps_difficult) == 0,
+			10 * HZ);
+		if (rc > 0)
 			break;
 		CWARN("Unexpectedly long timeout %s %p\n",
 		      svcpt->scp_service->srv_name, svcpt->scp_service);
@@ -2622,7 +2625,7 @@ ptlrpc_service_unlink_rqbd(struct ptlrpc_service *svc)
 {
 	struct ptlrpc_service_part *svcpt;
 	struct ptlrpc_request_buffer_desc *rqbd;
-	struct l_wait_info lwi;
+	int cnt;
 	int rc;
 	int i;
 
@@ -2662,12 +2665,13 @@ ptlrpc_service_unlink_rqbd(struct ptlrpc_service *svc)
 			 * the HUGE timeout lets us CWARN for visibility
 			 * of sluggish LNDs
 			 */
-			lwi = LWI_TIMEOUT_INTERVAL(
-					cfs_time_seconds(LONG_UNLINK),
-					cfs_time_seconds(1), NULL, NULL);
-			rc = l_wait_event(svcpt->scp_waitq,
-					  svcpt->scp_nrqbds_posted == 0, &lwi);
-			if (rc == -ETIMEDOUT) {
+			cnt = 0;
+			while (cnt < LONG_UNLINK &&
+			       (rc = wait_event_idle_timeout(svcpt->scp_waitq,
+							     svcpt->scp_nrqbds_posted == 0,
+							     HZ)) == 0)
+				cnt ++;
+			if (rc == 0) {
 				CWARN("Service %s waiting for request buffers\n",
 				      svcpt->scp_service->srv_name);
 			}

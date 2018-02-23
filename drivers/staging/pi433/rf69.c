@@ -151,11 +151,11 @@ int rf69_set_modulation(struct spi_device *spi, enum modulation modulation)
 
 static enum modulation rf69_get_modulation(struct spi_device *spi)
 {
-	u8 currentValue;
+	u8 modulation_reg;
 
-	currentValue = rf69_read_reg(spi, REG_DATAMODUL);
+	modulation_reg = rf69_read_reg(spi, REG_DATAMODUL);
 
-	switch (currentValue & MASK_DATAMODUL_MODULATION_TYPE) {
+	switch (modulation_reg & MASK_DATAMODUL_MODULATION_TYPE) {
 	case DATAMODUL_MODULATION_TYPE_OOK:
 		return OOK;
 	case DATAMODUL_MODULATION_TYPE_FSK:
@@ -330,19 +330,19 @@ int rf69_disable_amplifier(struct spi_device *spi, u8 amplifier_mask)
 	return rf69_clear_bit(spi, REG_PALEVEL, amplifier_mask);
 }
 
-int rf69_set_output_power_level(struct spi_device *spi, u8 powerLevel)
+int rf69_set_output_power_level(struct spi_device *spi, u8 power_level)
 {
 	// TODO: Dependency to PA0,1,2 setting
-	powerLevel += 18;
+	power_level += 18;
 
 	// check input value
-	if (powerLevel > 0x1f) {
+	if (power_level > 0x1f) {
 		dev_dbg(&spi->dev, "set: illegal input param");
 		return -EINVAL;
 	}
 
 	// write value
-	return rf69_read_mod_write(spi, REG_PALEVEL, MASK_PALEVEL_OUTPUT_POWER, powerLevel);
+	return rf69_read_mod_write(spi, REG_PALEVEL, MASK_PALEVEL_OUTPUT_POWER, power_level);
 }
 
 int rf69_set_pa_ramp(struct spi_device *spi, enum paRamp paRamp)
@@ -386,12 +386,12 @@ int rf69_set_pa_ramp(struct spi_device *spi, enum paRamp paRamp)
 	}
 }
 
-int rf69_set_antenna_impedance(struct spi_device *spi, enum antennaImpedance antennaImpedance)
+int rf69_set_antenna_impedance(struct spi_device *spi, enum antenna_impedance antenna_impedance)
 {
-	switch (antennaImpedance) {
-	case fiftyOhm:
+	switch (antenna_impedance) {
+	case fifty_ohm:
 		return rf69_clear_bit(spi, REG_LNA, MASK_LNA_ZIN);
-	case twohundretOhm:
+	case two_hundred_ohm:
 		return rf69_set_bit(spi, REG_LNA, MASK_LNA_ZIN);
 	default:
 		dev_dbg(&spi->dev, "set: illegal input param");
@@ -425,7 +425,7 @@ int rf69_set_lna_gain(struct spi_device *spi, enum lnaGain lnaGain)
 static int rf69_set_bandwidth_intern(struct spi_device *spi, u8 reg,
 				     enum mantisse mantisse, u8 exponent)
 {
-	u8 newValue;
+	u8 bandwidth;
 
 	// check value for mantisse and exponent
 	if (exponent > 7) {
@@ -441,29 +441,29 @@ static int rf69_set_bandwidth_intern(struct spi_device *spi, u8 reg,
 	}
 
 	// read old value
-	newValue = rf69_read_reg(spi, reg);
+	bandwidth = rf69_read_reg(spi, reg);
 
 	// "delete" mantisse and exponent = just keep the DCC setting
-	newValue = newValue & MASK_BW_DCC_FREQ;
+	bandwidth = bandwidth & MASK_BW_DCC_FREQ;
 
 	// add new mantisse
 	switch (mantisse) {
 	case mantisse16:
-		newValue = newValue | BW_MANT_16;
+		bandwidth = bandwidth | BW_MANT_16;
 		break;
 	case mantisse20:
-		newValue = newValue | BW_MANT_20;
+		bandwidth = bandwidth | BW_MANT_20;
 		break;
 	case mantisse24:
-		newValue = newValue | BW_MANT_24;
+		bandwidth = bandwidth | BW_MANT_24;
 		break;
 	}
 
 	// add new exponent
-	newValue = newValue | exponent;
+	bandwidth = bandwidth | exponent;
 
 	// write back
-	return rf69_write_reg(spi, reg, newValue);
+	return rf69_write_reg(spi, reg, bandwidth);
 }
 
 int rf69_set_bandwidth(struct spi_device *spi, enum mantisse mantisse, u8 exponent)
@@ -505,27 +505,27 @@ int rf69_set_dio_mapping(struct spi_device *spi, u8 DIONumber, u8 value)
 {
 	u8 mask;
 	u8 shift;
-	u8 regaddr;
-	u8 regValue;
+	u8 dio_addr;
+	u8 dio_value;
 
 	switch (DIONumber) {
 	case 0:
-		mask = MASK_DIO0; shift = SHIFT_DIO0; regaddr = REG_DIOMAPPING1;
+		mask = MASK_DIO0; shift = SHIFT_DIO0; dio_addr = REG_DIOMAPPING1;
 		break;
 	case 1:
-		mask = MASK_DIO1; shift = SHIFT_DIO1; regaddr = REG_DIOMAPPING1;
+		mask = MASK_DIO1; shift = SHIFT_DIO1; dio_addr = REG_DIOMAPPING1;
 		break;
 	case 2:
-		mask = MASK_DIO2; shift = SHIFT_DIO2; regaddr = REG_DIOMAPPING1;
+		mask = MASK_DIO2; shift = SHIFT_DIO2; dio_addr = REG_DIOMAPPING1;
 		break;
 	case 3:
-		mask = MASK_DIO3; shift = SHIFT_DIO3; regaddr = REG_DIOMAPPING1;
+		mask = MASK_DIO3; shift = SHIFT_DIO3; dio_addr = REG_DIOMAPPING1;
 		break;
 	case 4:
-		mask = MASK_DIO4; shift = SHIFT_DIO4; regaddr = REG_DIOMAPPING2;
+		mask = MASK_DIO4; shift = SHIFT_DIO4; dio_addr = REG_DIOMAPPING2;
 		break;
 	case 5:
-		mask = MASK_DIO5; shift = SHIFT_DIO5; regaddr = REG_DIOMAPPING2;
+		mask = MASK_DIO5; shift = SHIFT_DIO5; dio_addr = REG_DIOMAPPING2;
 		break;
 	default:
 	dev_dbg(&spi->dev, "set: illegal input param");
@@ -533,13 +533,13 @@ int rf69_set_dio_mapping(struct spi_device *spi, u8 DIONumber, u8 value)
 	}
 
 	// read reg
-	regValue = rf69_read_reg(spi, regaddr);
+	dio_value = rf69_read_reg(spi, dio_addr);
 	// delete old value
-	regValue = regValue & ~mask;
+	dio_value = dio_value & ~mask;
 	// add new value
-	regValue = regValue | value << shift;
+	dio_value = dio_value | value << shift;
 	// write back
-	return rf69_write_reg(spi, regaddr, regValue);
+	return rf69_write_reg(spi, dio_addr, dio_value);
 }
 
 bool rf69_get_flag(struct spi_device *spi, enum flag flag)
@@ -645,18 +645,18 @@ int rf69_set_sync_size(struct spi_device *spi, u8 syncSize)
 	return rf69_read_mod_write(spi, REG_SYNC_CONFIG, MASK_SYNC_CONFIG_SYNC_SIZE, (syncSize << 3));
 }
 
-int rf69_set_sync_values(struct spi_device *spi, u8 syncValues[8])
+int rf69_set_sync_values(struct spi_device *spi, u8 sync_values[8])
 {
 	int retval = 0;
 
-	retval += rf69_write_reg(spi, REG_SYNCVALUE1, syncValues[0]);
-	retval += rf69_write_reg(spi, REG_SYNCVALUE2, syncValues[1]);
-	retval += rf69_write_reg(spi, REG_SYNCVALUE3, syncValues[2]);
-	retval += rf69_write_reg(spi, REG_SYNCVALUE4, syncValues[3]);
-	retval += rf69_write_reg(spi, REG_SYNCVALUE5, syncValues[4]);
-	retval += rf69_write_reg(spi, REG_SYNCVALUE6, syncValues[5]);
-	retval += rf69_write_reg(spi, REG_SYNCVALUE7, syncValues[6]);
-	retval += rf69_write_reg(spi, REG_SYNCVALUE8, syncValues[7]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE1, sync_values[0]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE2, sync_values[1]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE3, sync_values[2]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE4, sync_values[3]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE5, sync_values[4]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE6, sync_values[5]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE7, sync_values[6]);
+	retval += rf69_write_reg(spi, REG_SYNCVALUE8, sync_values[7]);
 
 	return retval;
 }

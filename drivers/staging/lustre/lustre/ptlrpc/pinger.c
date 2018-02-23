@@ -141,7 +141,7 @@ static long pinger_check_timeout(unsigned long time)
 	}
 	mutex_unlock(&pinger_mutex);
 
-	return cfs_time_sub(cfs_time_add(time, cfs_time_seconds(timeout)),
+	return cfs_time_sub(cfs_time_add(time, timeout * HZ),
 					 cfs_time_current());
 }
 
@@ -228,7 +228,6 @@ static int ptlrpc_pinger_main(void *arg)
 	/* And now, loop forever, pinging as needed. */
 	while (1) {
 		unsigned long this_ping = cfs_time_current();
-		struct l_wait_info lwi;
 		long time_to_next_wake;
 		struct timeout_item *item;
 		struct list_head *iter;
@@ -247,7 +246,7 @@ static int ptlrpc_pinger_main(void *arg)
 			if (imp->imp_pingable && imp->imp_next_ping &&
 			    cfs_time_after(imp->imp_next_ping,
 					   cfs_time_add(this_ping,
-							cfs_time_seconds(PING_INTERVAL))))
+							PING_INTERVAL * HZ)))
 				ptlrpc_update_next_ping(imp, 0);
 		}
 		mutex_unlock(&pinger_mutex);
@@ -264,15 +263,12 @@ static int ptlrpc_pinger_main(void *arg)
 		CDEBUG(D_INFO, "next wakeup in " CFS_DURATION_T " (%ld)\n",
 		       time_to_next_wake,
 		       cfs_time_add(this_ping,
-				    cfs_time_seconds(PING_INTERVAL)));
+				    PING_INTERVAL * HZ));
 		if (time_to_next_wake > 0) {
-			lwi = LWI_TIMEOUT(max_t(long, time_to_next_wake,
-						cfs_time_seconds(1)),
-					  NULL, NULL);
-			l_wait_event(thread->t_ctl_waitq,
-				     thread_is_stopping(thread) ||
-				     thread_is_event(thread),
-				     &lwi);
+			wait_event_idle_timeout(thread->t_ctl_waitq,
+						thread_is_stopping(thread) ||
+						thread_is_event(thread),
+						max_t(long, time_to_next_wake, HZ));
 			if (thread_test_and_clear_flags(thread, SVC_STOPPING))
 				break;
 			/* woken after adding import to reset timer */
@@ -291,7 +287,6 @@ static struct ptlrpc_thread pinger_thread;
 
 int ptlrpc_start_pinger(void)
 {
-	struct l_wait_info lwi = { 0 };
 	struct task_struct *task;
 	int rc;
 
@@ -310,8 +305,8 @@ int ptlrpc_start_pinger(void)
 		CERROR("cannot start pinger thread: rc = %d\n", rc);
 		return rc;
 	}
-	l_wait_event(pinger_thread.t_ctl_waitq,
-		     thread_is_running(&pinger_thread), &lwi);
+	wait_event_idle(pinger_thread.t_ctl_waitq,
+			thread_is_running(&pinger_thread));
 
 	return 0;
 }
@@ -320,7 +315,6 @@ static int ptlrpc_pinger_remove_timeouts(void);
 
 int ptlrpc_stop_pinger(void)
 {
-	struct l_wait_info lwi = { 0 };
 	int rc = 0;
 
 	if (thread_is_init(&pinger_thread) ||
@@ -331,8 +325,8 @@ int ptlrpc_stop_pinger(void)
 	thread_set_flags(&pinger_thread, SVC_STOPPING);
 	wake_up(&pinger_thread.t_ctl_waitq);
 
-	l_wait_event(pinger_thread.t_ctl_waitq,
-		     thread_is_stopped(&pinger_thread), &lwi);
+	wait_event_idle(pinger_thread.t_ctl_waitq,
+			thread_is_stopped(&pinger_thread));
 
 	return rc;
 }
