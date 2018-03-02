@@ -539,13 +539,10 @@ void flush_cache_mm(struct mm_struct *mm)
 	struct vm_area_struct *vma;
 	pgd_t *pgd;
 
-	/* Flush the TLB to avoid speculation if coherency is required. */
-	if (parisc_requires_coherency())
-		flush_tlb_all();
-
 	/* Flushing the whole cache on each cpu takes forever on
 	   rp3440, etc.  So, avoid it if the mm isn't too big.  */
 	if (mm_total_size(mm) >= parisc_cache_flush_threshold) {
+		flush_tlb_all();
 		flush_cache_all();
 		return;
 	}
@@ -553,9 +550,9 @@ void flush_cache_mm(struct mm_struct *mm)
 	if (mm->context == mfsp(3)) {
 		for (vma = mm->mmap; vma; vma = vma->vm_next) {
 			flush_user_dcache_range_asm(vma->vm_start, vma->vm_end);
-			if ((vma->vm_flags & VM_EXEC) == 0)
-				continue;
-			flush_user_icache_range_asm(vma->vm_start, vma->vm_end);
+			if (vma->vm_flags & VM_EXEC)
+				flush_user_icache_range_asm(vma->vm_start, vma->vm_end);
+			flush_tlb_range(vma, vma->vm_start, vma->vm_end);
 		}
 		return;
 	}
@@ -581,21 +578,18 @@ void flush_cache_mm(struct mm_struct *mm)
 void flush_cache_range(struct vm_area_struct *vma,
 		unsigned long start, unsigned long end)
 {
-	BUG_ON(!vma->vm_mm->context);
-
-	/* Flush the TLB to avoid speculation if coherency is required. */
-	if (parisc_requires_coherency())
+	if ((end - start) >= parisc_cache_flush_threshold) {
 		flush_tlb_range(vma, start, end);
-
-	if ((end - start) >= parisc_cache_flush_threshold
-	    || vma->vm_mm->context != mfsp(3)) {
 		flush_cache_all();
 		return;
 	}
 
+	BUG_ON(vma->vm_mm->context != mfsp(3));
+
 	flush_user_dcache_range_asm(start, end);
 	if (vma->vm_flags & VM_EXEC)
 		flush_user_icache_range_asm(start, end);
+	flush_tlb_range(vma, start, end);
 }
 
 void
@@ -604,8 +598,7 @@ flush_cache_page(struct vm_area_struct *vma, unsigned long vmaddr, unsigned long
 	BUG_ON(!vma->vm_mm->context);
 
 	if (pfn_valid(pfn)) {
-		if (parisc_requires_coherency())
-			flush_tlb_page(vma, vmaddr);
+		flush_tlb_page(vma, vmaddr);
 		__flush_cache_page(vma, vmaddr, PFN_PHYS(pfn));
 	}
 }
@@ -613,21 +606,35 @@ flush_cache_page(struct vm_area_struct *vma, unsigned long vmaddr, unsigned long
 void flush_kernel_vmap_range(void *vaddr, int size)
 {
 	unsigned long start = (unsigned long)vaddr;
+	unsigned long end = start + size;
 
-	if ((unsigned long)size > parisc_cache_flush_threshold)
+#if defined(CONFIG_PA20) || !defined(CONFIG_SMP)
+	/* The IPI interrupts used by flush_data_cache() cause a stall
+	   in the PA 1.1 dynamic DMA mapping code in SMP kernels. */
+	if ((unsigned long)size >= parisc_cache_flush_threshold) {
+		flush_tlb_kernel_range (start, end);
 		flush_data_cache();
-	else
-		flush_kernel_dcache_range_asm(start, start + size);
+		return;
+	}
+#endif
+
+	flush_kernel_dcache_range_asm(start, end);
+	flush_tlb_kernel_range (start, end);
 }
 EXPORT_SYMBOL(flush_kernel_vmap_range);
 
 void invalidate_kernel_vmap_range(void *vaddr, int size)
 {
 	unsigned long start = (unsigned long)vaddr;
+	unsigned long end = start + size;
 
-	if ((unsigned long)size > parisc_cache_flush_threshold)
+	if ((unsigned long)size >= parisc_cache_flush_threshold) {
+		flush_tlb_kernel_range (start, end);
 		flush_data_cache();
-	else
-		flush_kernel_dcache_range_asm(start, start + size);
+		return;
+	}
+
+	purge_kernel_dcache_range_asm(start, end);
+	flush_tlb_kernel_range (start, end);
 }
 EXPORT_SYMBOL(invalidate_kernel_vmap_range);

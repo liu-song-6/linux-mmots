@@ -180,7 +180,7 @@ static void rcu_preempt_ctxt_queue(struct rcu_node *rnp, struct rcu_data *rdp)
 			 (rnp->expmask & rdp->grpmask ? RCU_EXP_BLKD : 0);
 	struct task_struct *t = current;
 
-	lockdep_assert_held(&rnp->lock);
+	raw_lockdep_assert_held_rcu_node(rnp);
 	WARN_ON_ONCE(rdp->mynode != rnp);
 	WARN_ON_ONCE(rnp->level != rcu_num_lvls - 1);
 
@@ -560,8 +560,14 @@ static void rcu_print_detail_task_stall_rnp(struct rcu_node *rnp)
 	}
 	t = list_entry(rnp->gp_tasks->prev,
 		       struct task_struct, rcu_node_entry);
-	list_for_each_entry_continue(t, &rnp->blkd_tasks, rcu_node_entry)
+	list_for_each_entry_continue(t, &rnp->blkd_tasks, rcu_node_entry) {
+		/*
+		 * We could be printing a lot while holding a spinlock.
+		 * Avoid triggering hard lockup.
+		 */
+		touch_nmi_watchdog();
 		sched_show_task(t);
+	}
 	raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 }
 
@@ -647,7 +653,8 @@ static void rcu_preempt_check_blocked_tasks(struct rcu_node *rnp)
 	struct task_struct *t;
 
 	RCU_LOCKDEP_WARN(preemptible(), "rcu_preempt_check_blocked_tasks() invoked with preemption enabled!!!\n");
-	WARN_ON_ONCE(rcu_preempt_blocked_readers_cgp(rnp));
+	if (WARN_ON_ONCE(rcu_preempt_blocked_readers_cgp(rnp)))
+		dump_blkd_tasks(rnp, 10);
 	if (rcu_preempt_has_tasks(rnp)) {
 		rnp->gp_tasks = rnp->blkd_tasks.next;
 		t = container_of(rnp->gp_tasks, struct task_struct,
@@ -678,15 +685,6 @@ static void rcu_preempt_check_callbacks(void)
 	    __this_cpu_read(rcu_data_p->cpu_no_qs.b.norm))
 		t->rcu_read_unlock_special.b.need_qs = true;
 }
-
-#ifdef CONFIG_RCU_BOOST
-
-static void rcu_preempt_do_callbacks(void)
-{
-	rcu_do_batch(rcu_state_p, this_cpu_ptr(rcu_data_p));
-}
-
-#endif /* #ifdef CONFIG_RCU_BOOST */
 
 /**
  * call_rcu() - Queue an RCU callback for invocation after a grace period.
@@ -800,6 +798,27 @@ void exit_rcu(void)
 	__rcu_read_unlock();
 }
 
+/*
+ * Dump the blocked-tasks state, but limit the list dump to the
+ * specified number of elements.
+ */
+static void dump_blkd_tasks(struct rcu_node *rnp, int ncheck)
+{
+	int i;
+	struct list_head *lhp;
+
+	lockdep_assert_held(&rnp->lock);
+	pr_info("%s: grp: %d-%d level: %d ->qamask %#lx ->gp_tasks %p ->boost_tasks %p ->exp_tasks %p &->blkd_tasks: %p offset: %u\n", __func__, rnp->grplo, rnp->grphi, rnp->level, rnp->qsmask, rnp->gp_tasks, rnp->boost_tasks, rnp->exp_tasks, &rnp->blkd_tasks, (unsigned int)offsetof(typeof(*rnp), blkd_tasks));
+	pr_cont("\t->blkd_tasks");
+	i = 0;
+	list_for_each(lhp, &rnp->blkd_tasks) {
+		pr_cont(" %p", lhp);
+		if (++i >= 10)
+			break;
+	}
+	pr_cont("\n");
+}
+
 #else /* #ifdef CONFIG_PREEMPT_RCU */
 
 static struct rcu_state *const rcu_state_p = &rcu_sched_state;
@@ -908,6 +927,14 @@ void exit_rcu(void)
 {
 }
 
+/*
+ * Dump the guaranteed-empty blocked-tasks state.  Trust but verify.
+ */
+static void dump_blkd_tasks(struct rcu_node *rnp, int ncheck)
+{
+	WARN_ON_ONCE(!list_empty(&rnp->blkd_tasks));
+}
+
 #endif /* #else #ifdef CONFIG_PREEMPT_RCU */
 
 #ifdef CONFIG_RCU_BOOST
@@ -957,14 +984,10 @@ static int rcu_boost(struct rcu_node *rnp)
 	 * expedited grace period must boost all blocked tasks, including
 	 * those blocking the pre-existing normal grace period.
 	 */
-	if (rnp->exp_tasks != NULL) {
+	if (rnp->exp_tasks != NULL)
 		tb = rnp->exp_tasks;
-		rnp->n_exp_boosts++;
-	} else {
+	else
 		tb = rnp->boost_tasks;
-		rnp->n_normal_boosts++;
-	}
-	rnp->n_tasks_boosted++;
 
 	/*
 	 * We boost task t by manufacturing an rt_mutex that appears to
@@ -1042,7 +1065,7 @@ static void rcu_initiate_boost(struct rcu_node *rnp, unsigned long flags)
 {
 	struct task_struct *t;
 
-	lockdep_assert_held(&rnp->lock);
+	raw_lockdep_assert_held_rcu_node(rnp);
 	if (!rcu_preempt_blocked_readers_cgp(rnp) && rnp->exp_tasks == NULL) {
 		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 		return;
@@ -1138,7 +1161,7 @@ static void rcu_kthread_do_work(void)
 {
 	rcu_do_batch(&rcu_sched_state, this_cpu_ptr(&rcu_sched_data));
 	rcu_do_batch(&rcu_bh_state, this_cpu_ptr(&rcu_bh_data));
-	rcu_preempt_do_callbacks();
+	rcu_do_batch(&rcu_preempt_state, this_cpu_ptr(&rcu_preempt_data));
 }
 
 static void rcu_cpu_kthread_setup(unsigned int cpu)
@@ -1676,6 +1699,12 @@ static void print_cpu_stall_info(struct rcu_state *rsp, int cpu)
 	struct rcu_dynticks *rdtp = rdp->dynticks;
 	char *ticks_title;
 	unsigned long ticks_value;
+
+	/*
+	 * We could be printing a lot while holding a spinlock.  Avoid
+	 * triggering hard lockup.
+	 */
+	touch_nmi_watchdog();
 
 	if (rsp->gpnum == rdp->gpnum) {
 		ticks_title = "ticks this GP";
@@ -2235,7 +2264,6 @@ static int rcu_nocb_kthread(void *arg)
 		smp_mb__before_atomic();  /* _add after CB invocation. */
 		atomic_long_add(-c, &rdp->nocb_q_count);
 		atomic_long_add(-cl, &rdp->nocb_q_count_lazy);
-		rdp->n_nocbs_invoked += c;
 	}
 	return 0;
 }
@@ -2285,7 +2313,7 @@ static void do_nocb_deferred_wakeup(struct rcu_data *rdp)
 void __init rcu_init_nohz(void)
 {
 	int cpu;
-	bool need_rcu_nocb_mask = true;
+	bool need_rcu_nocb_mask = false;
 	struct rcu_state *rsp;
 
 #if defined(CONFIG_NO_HZ_FULL)
@@ -2308,12 +2336,15 @@ void __init rcu_init_nohz(void)
 #endif /* #if defined(CONFIG_NO_HZ_FULL) */
 
 	if (!cpumask_subset(rcu_nocb_mask, cpu_possible_mask)) {
-		pr_info("\tNote: kernel parameter 'rcu_nocbs=' contains nonexistent CPUs.\n");
+		pr_info("\tNote: kernel parameter 'rcu_nocbs=', 'nohz_full', or 'isolcpus=' contains nonexistent CPUs.\n");
 		cpumask_and(rcu_nocb_mask, cpu_possible_mask,
 			    rcu_nocb_mask);
 	}
-	pr_info("\tOffload RCU callbacks from CPUs: %*pbl.\n",
-		cpumask_pr_args(rcu_nocb_mask));
+	if (cpumask_empty(rcu_nocb_mask))
+		pr_info("\tOffload RCU callbacks from CPUs: (none).\n");
+	else
+		pr_info("\tOffload RCU callbacks from CPUs: %*pbl.\n",
+			cpumask_pr_args(rcu_nocb_mask));
 	if (rcu_nocb_poll)
 		pr_info("\tPoll for callbacks from no-CBs CPUs.\n");
 

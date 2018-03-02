@@ -1414,7 +1414,7 @@ static void lapic_setup_esr(void)
  * Used to setup local APIC while initializing BSP or bringing up APs.
  * Always called with preemption disabled.
  */
-void setup_local_APIC(void)
+static void setup_local_APIC(void)
 {
 	int cpu = smp_processor_id();
 	unsigned int value, queued;
@@ -1570,7 +1570,7 @@ void setup_local_APIC(void)
 	 * TODO: set up through-local-APIC from through-I/O-APIC? --macro
 	 */
 	value = apic_read(APIC_LVT0) & APIC_LVT_MASKED;
-	if (!cpu && (pic_mode || !value)) {
+	if (!cpu && (pic_mode || !value || skip_ioapic_setup)) {
 		value = APIC_DM_EXTINT;
 		apic_printk(APIC_VERBOSE, "enabled ExtINT on CPU#%d\n", cpu);
 	} else {

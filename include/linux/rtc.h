@@ -145,7 +145,6 @@ struct rtc_device {
 
 	bool registered;
 
-	struct nvmem_config *nvmem_config;
 	struct nvmem_device *nvmem;
 	/* Old ABI support */
 	bool nvram_old_abi;
@@ -212,10 +211,6 @@ void rtc_aie_update_irq(void *private);
 void rtc_uie_update_irq(void *private);
 enum hrtimer_restart rtc_pie_update_irq(struct hrtimer *timer);
 
-int rtc_register(rtc_task_t *task);
-int rtc_unregister(rtc_task_t *task);
-int rtc_control(rtc_task_t *t, unsigned int cmd, unsigned long arg);
-
 void rtc_timer_init(struct rtc_timer *timer, void (*f)(void *p), void *data);
 int rtc_timer_start(struct rtc_device *rtc, struct rtc_timer *timer,
 		    ktime_t expires, ktime_t period);
@@ -269,6 +264,19 @@ static inline bool rtc_tv_nsec_ok(s64 set_offset_nsec,
 extern int rtc_hctosys_ret;
 #else
 #define rtc_hctosys_ret -ENODEV
+#endif
+
+#ifdef CONFIG_RTC_NVMEM
+int rtc_nvmem_register(struct rtc_device *rtc,
+		       struct nvmem_config *nvmem_config);
+void rtc_nvmem_unregister(struct rtc_device *rtc);
+#else
+static inline int rtc_nvmem_register(struct rtc_device *rtc,
+				     struct nvmem_config *nvmem_config)
+{
+	return -ENODEV;
+}
+static inline void rtc_nvmem_unregister(struct rtc_device *rtc) {}
 #endif
 
 #endif /* _LINUX_RTC_H_ */

@@ -39,7 +39,7 @@
 #include <linux/kthread.h>
 #include <linux/iommu.h>
 
-#include "../../fsl-mc/include/mc.h"
+#include <linux/fsl/mc.h>
 #include "dpaa2-eth.h"
 
 /* CREATE_TRACE_POINTS only needs to be defined once. Other dpa files
@@ -1863,7 +1863,6 @@ static int setup_dpni(struct fsl_mc_device *ls_dev)
 	err = set_buffer_layout(priv);
 	if (err)
 		goto close;
-
 
 	return 0;
 

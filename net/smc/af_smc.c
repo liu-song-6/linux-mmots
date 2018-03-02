@@ -281,7 +281,6 @@ int smc_netinfo_by_tcpsk(struct socket *clcsock,
 	struct in_device *in_dev;
 	struct sockaddr_in addr;
 	int rc = -ENOENT;
-	int len;
 
 	if (!dst) {
 		rc = -ENOTCONN;
@@ -293,7 +292,7 @@ int smc_netinfo_by_tcpsk(struct socket *clcsock,
 	}
 
 	/* get address to which the internal TCP socket is bound */
-	kernel_getsockname(clcsock, (struct sockaddr *)&addr, &len);
+	kernel_getsockname(clcsock, (struct sockaddr *)&addr);
 	/* analyze IPv4 specific data of net_device belonging to TCP socket */
 	rcu_read_lock();
 	in_dev = __in_dev_get_rcu(dst->dev);
@@ -771,7 +770,7 @@ static void smc_listen_work(struct work_struct *work)
 	u8 buf[SMC_CLC_MAX_LEN];
 	struct smc_link *link;
 	int reason_code = 0;
-	int rc = 0, len;
+	int rc = 0;
 	__be32 subnet;
 	u8 prefix_len;
 	u8 ibport;
@@ -824,7 +823,7 @@ static void smc_listen_work(struct work_struct *work)
 	}
 
 	/* get address of the peer connected to the internal TCP socket */
-	kernel_getpeername(newclcsock, (struct sockaddr *)&peeraddr, &len);
+	kernel_getpeername(newclcsock, (struct sockaddr *)&peeraddr);
 
 	/* allocate connection / link group */
 	mutex_lock(&smc_create_lgr_pending);
@@ -1075,7 +1074,7 @@ out:
 }
 
 static int smc_getname(struct socket *sock, struct sockaddr *addr,
-		       int *len, int peer)
+		       int peer)
 {
 	struct smc_sock *smc;
 
@@ -1085,7 +1084,7 @@ static int smc_getname(struct socket *sock, struct sockaddr *addr,
 
 	smc = smc_sk(sock->sk);
 
-	return smc->clcsock->ops->getname(smc->clcsock, addr, len, peer);
+	return smc->clcsock->ops->getname(smc->clcsock, addr, peer);
 }
 
 static int smc_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
@@ -1406,8 +1405,10 @@ static int smc_create(struct net *net, struct socket *sock, int protocol,
 	smc->use_fallback = false; /* assume rdma capability first */
 	rc = sock_create_kern(net, PF_INET, SOCK_STREAM,
 			      IPPROTO_TCP, &smc->clcsock);
-	if (rc)
+	if (rc) {
 		sk_common_release(sk);
+		goto out;
+	}
 	smc->sk.sk_sndbuf = max(smc->clcsock->sk->sk_sndbuf, SMC_BUF_MIN_SIZE);
 	smc->sk.sk_rcvbuf = max(smc->clcsock->sk->sk_rcvbuf, SMC_BUF_MIN_SIZE);
 

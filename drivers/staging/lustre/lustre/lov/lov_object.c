@@ -242,7 +242,7 @@ static int lov_init_raid0(const struct lu_env *env, struct lov_device *dev,
 	r0->lo_nr  = lsm->lsm_stripe_count;
 	LASSERT(r0->lo_nr <= lov_targets_nr(dev));
 
-	r0->lo_sub = libcfs_kvzalloc(r0->lo_nr * sizeof(r0->lo_sub[0]),
+	r0->lo_sub = kvzalloc(r0->lo_nr * sizeof(r0->lo_sub[0]),
 				     GFP_NOFS);
 	if (r0->lo_sub) {
 		int psz = 0;
@@ -723,15 +723,13 @@ static void lov_conf_unlock(struct lov_object *lov)
 
 static int lov_layout_wait(const struct lu_env *env, struct lov_object *lov)
 {
-	struct l_wait_info lwi = { 0 };
-
 	while (atomic_read(&lov->lo_active_ios) > 0) {
 		CDEBUG(D_INODE, "file:" DFID " wait for active IO, now: %d.\n",
 		       PFID(lu_object_fid(lov2lu(lov))),
 		       atomic_read(&lov->lo_active_ios));
 
-		l_wait_event(lov->lo_waitq,
-			     atomic_read(&lov->lo_active_ios) == 0, &lwi);
+		wait_event_idle(lov->lo_waitq,
+				atomic_read(&lov->lo_active_ios) == 0);
 	}
 	return 0;
 }
@@ -1377,7 +1375,7 @@ static int lov_object_fiemap(const struct lu_env *env, struct cl_object *obj,
 	if (fiemap_count_to_size(fiemap->fm_extent_count) < buffer_size)
 		buffer_size = fiemap_count_to_size(fiemap->fm_extent_count);
 
-	fm_local = libcfs_kvzalloc(buffer_size, GFP_NOFS);
+	fm_local = kvzalloc(buffer_size, GFP_NOFS);
 	if (!fm_local) {
 		rc = -ENOMEM;
 		goto out;
