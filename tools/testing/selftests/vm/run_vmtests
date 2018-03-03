@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: GPL-2.0
 #please run as root
 
-#we need 256M, below is the size in kB
-needmem=262144
 mnt=./huge
 exitcode=0
 
@@ -16,6 +14,13 @@ while read name size unit; do
 		pgsize=$size
 	fi
 done < /proc/meminfo
+
+nr_cpus=$(nproc)
+pgsize_MB=$((pgsize/1024))
+# rule: nr_cpus * pgsize_MB <= hugetlb_size(round to 128M for testing)
+hugetlb_size=$((((nr_cpus*pgsize_MB+127)/128)*128))
+# needmem depends on the nr_cpus, below is the size in kB
+needmem=$((hugetlb_size*2*1024))
 
 #set proper nr_hugepages
 if [ -n "$freepgs" ] && [ -n "$pgsize" ]; then
@@ -107,8 +112,8 @@ fi
 echo "---------------------------"
 echo "running userfaultfd_hugetlb"
 echo "---------------------------"
-# 256MB total huge pages == 128MB src and 128MB dst
-./userfaultfd hugetlb 128 32 $mnt/ufd_test_file
+# 256MB total huge pages == 128MB src and 128MB dst when nr_cpus <= 64
+./userfaultfd hugetlb $hugetlb_size 32 $mnt/ufd_test_file
 if [ $? -ne 0 ]; then
 	echo "[FAIL]"
 	exitcode=1
