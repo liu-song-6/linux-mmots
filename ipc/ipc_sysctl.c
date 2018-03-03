@@ -41,12 +41,21 @@ static int proc_ipc_dointvec(struct ctl_table *table, int write,
 static int proc_ipc_dointvec_minmax(struct ctl_table *table, int write,
 	void __user *buffer, size_t *lenp, loff_t *ppos)
 {
+	int ret;
 	struct ctl_table ipc_table;
 
 	memcpy(&ipc_table, table, sizeof(ipc_table));
 	ipc_table.data = get_ipc(table);
 
-	return proc_dointvec_minmax(&ipc_table, write, buffer, lenp, ppos);
+	ret = proc_dointvec_minmax(&ipc_table, write, buffer, lenp, ppos);
+
+	/*
+	 * Copy back the CTL_FLAGS_OOR_WARNED flag which may be set in
+	 * the temporary ctl_table entry.
+	 */
+	table->flags |= (ipc_table.flags & CTL_FLAGS_OOR_WARNED);
+
+	return ret;
 }
 
 static int proc_ipc_dointvec_minmax_orphans(struct ctl_table *table, int write,
@@ -99,6 +108,7 @@ static int proc_ipc_auto_msgmni(struct ctl_table *table, int write,
 static int zero;
 static int one = 1;
 static int int_max = INT_MAX;
+static int ipc_mni = IPCMNI;
 
 static struct ctl_table ipc_kern_table[] = {
 	{
@@ -120,7 +130,10 @@ static struct ctl_table ipc_kern_table[] = {
 		.data		= &init_ipc_ns.shm_ctlmni,
 		.maxlen		= sizeof(init_ipc_ns.shm_ctlmni),
 		.mode		= 0644,
-		.proc_handler	= proc_ipc_dointvec,
+		.proc_handler	= proc_ipc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &ipc_mni,
+		.flags		= CTL_FLAGS_CLAMP_RANGE,
 	},
 	{
 		.procname	= "shm_rmid_forced",
@@ -147,7 +160,8 @@ static struct ctl_table ipc_kern_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_ipc_dointvec_minmax,
 		.extra1		= &zero,
-		.extra2		= &int_max,
+		.extra2		= &ipc_mni,
+		.flags		= CTL_FLAGS_CLAMP_RANGE,
 	},
 	{
 		.procname	= "auto_msgmni",
