@@ -226,6 +226,7 @@ config ZIIRAVE_WATCHDOG
 config RAVE_SP_WATCHDOG
 	tristate "RAVE SP Watchdog timer"
 	depends on RAVE_SP_CORE
+	depends on NVMEM || !NVMEM
 	select WATCHDOG_CORE
 	help
 	  Support for the watchdog on RAVE SP device.
@@ -882,7 +883,8 @@ config ALIM7101_WDT
 
 config EBC_C384_WDT
 	tristate "WinSystems EBC-C384 Watchdog Timer"
-	depends on X86 && ISA_BUS_API
+	depends on X86
+	select ISA_BUS_API
 	select WATCHDOG_CORE
 	help
 	  Enables watchdog timer support for the watchdog timer on the
@@ -903,6 +905,7 @@ config F71808E_WDT
 config SP5100_TCO
 	tristate "AMD/ATI SP5100 TCO Timer/Watchdog"
 	depends on X86 && PCI
+	select WATCHDOG_CORE
 	---help---
 	  Hardware watchdog driver for the AMD/ATI SP5100 chipset. The TCO
 	  (Total Cost of Ownership) timer is a watchdog timer that will reboot
@@ -1008,6 +1011,7 @@ config WAFER_WDT
 config I6300ESB_WDT
 	tristate "Intel 6300ESB Timer/Watchdog"
 	depends on PCI
+	select WATCHDOG_CORE
 	---help---
 	  Hardware driver for the watchdog timer built into the Intel
 	  6300ESB controller hub.
@@ -1602,7 +1606,7 @@ config BCM7038_WDT
 config IMGPDC_WDT
 	tristate "Imagination Technologies PDC Watchdog Timer"
 	depends on HAS_IOMEM
-	depends on METAG || MIPS || COMPILE_TEST
+	depends on MIPS || COMPILE_TEST
 	select WATCHDOG_CORE
 	help
 	  Driver for Imagination Technologies PowerDown Controller
@@ -1837,6 +1841,7 @@ config WATCHDOG_SUN4V
 config XEN_WDT
 	tristate "Xen Watchdog support"
 	depends on XEN
+	select WATCHDOG_CORE
 	help
 	  Say Y here to support the hypervisor watchdog capability provided
 	  by Xen 4.0 and newer.  The watchdog timeout period is normally one

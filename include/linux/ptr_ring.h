@@ -31,11 +31,18 @@
 #include <asm/errno.h>
 #endif
 
+/* entries must start with the following structure */
+struct plist {
+	struct plist *next;
+	struct plist *last; /* only valid in the 1st entry */
+};
+
 struct ptr_ring {
 	int producer ____cacheline_aligned_in_smp;
 	spinlock_t producer_lock;
 	int consumer_head ____cacheline_aligned_in_smp; /* next valid entry */
 	int consumer_tail; /* next entry to invalidate */
+	struct plist *consumer_list;
 	spinlock_t consumer_lock;
 	/* Shared consumer/producer data */
 	/* Read-only by both the producer and the consumer */
@@ -121,10 +128,40 @@ static inline int __ptr_ring_produce(struct ptr_ring *r, void *ptr)
 }
 
 /*
- * Note: resize (below) nests producer lock within consumer lock, so if you
- * consume in interrupt or BH context, you must disable interrupts/BH when
- * calling this.
+ * Note: resize API with the _fallback should be used when calling this.
  */
+static inline int ptr_ring_produce_fallback(struct ptr_ring *r, void *ptr)
+{
+	int ret;
+	unsigned long flags;
+	struct plist *p = ptr;
+
+	p->next = NULL;
+	p->last = p;
+
+	spin_lock_irqsave(&r->producer_lock, flags);
+	ret = __ptr_ring_produce(r, ptr);
+	if (ret) {
+		spin_lock(&r->consumer_lock);
+		ret = __ptr_ring_produce(r, ptr);
+		if (ret) {
+			int producer = r->producer ? r->producer - 1 :
+				r->size - 1;
+			struct plist *first = r->queue[producer];
+
+			BUG_ON(!first);
+
+			first->last->next = p;
+			first->last = p;
+		}
+		spin_unlock(&r->consumer_lock);
+	}
+
+	spin_unlock_irqrestore(&r->producer_lock, flags);
+
+	return ret;
+}
+
 static inline int ptr_ring_produce(struct ptr_ring *r, void *ptr)
 {
 	int ret;
@@ -135,6 +172,7 @@ static inline int ptr_ring_produce(struct ptr_ring *r, void *ptr)
 
 	return ret;
 }
+
 
 static inline int ptr_ring_produce_irq(struct ptr_ring *r, void *ptr)
 {
@@ -296,13 +334,14 @@ static inline void *__ptr_ring_consume(struct ptr_ring *r)
 {
 	void *ptr;
 
+	/* The READ_ONCE in __ptr_ring_peek guarantees that anyone
+	 * accessing data through the pointer is up to date. Pairs
+	 * with smp_wmb in __ptr_ring_produce.
+	 */
 	ptr = __ptr_ring_peek(r);
 	if (ptr)
 		__ptr_ring_discard_one(r);
 
-	/* Make sure anyone accessing data through the pointer is up to date. */
-	/* Pairs with smp_wmb in __ptr_ring_produce. */
-	smp_read_barrier_depends();
 	return ptr;
 }
 
@@ -368,6 +407,26 @@ static inline void *ptr_ring_consume_bh(struct ptr_ring *r)
 	spin_lock_bh(&r->consumer_lock);
 	ptr = __ptr_ring_consume(r);
 	spin_unlock_bh(&r->consumer_lock);
+
+	return ptr;
+}
+
+static inline void *ptr_ring_consume_fallback(struct ptr_ring *r)
+{
+	unsigned long flags;
+	struct plist *ptr;
+
+	spin_lock_irqsave(&r->consumer_lock, flags);
+	if (r->consumer_list) {
+		ptr = r->consumer_list;
+		r->consumer_list = ptr->next;
+	} else {
+		ptr = __ptr_ring_consume(r);
+		if (ptr) {
+			r->consumer_list = ptr->next;
+		}
+	}
+	spin_unlock_irqrestore(&r->consumer_lock, flags);
 
 	return ptr;
 }

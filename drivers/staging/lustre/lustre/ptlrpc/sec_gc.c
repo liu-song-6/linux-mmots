@@ -142,7 +142,6 @@ static void sec_do_gc(struct ptlrpc_sec *sec)
 static int sec_gc_main(void *arg)
 {
 	struct ptlrpc_thread *thread = arg;
-	struct l_wait_info lwi;
 
 	unshare_fs_struct();
 
@@ -153,7 +152,6 @@ static int sec_gc_main(void *arg)
 	while (1) {
 		struct ptlrpc_sec *sec;
 
-		thread_clear_flags(thread, SVC_SIGNAL);
 		sec_process_ctx_list();
 again:
 		/* go through sec list do gc.
@@ -180,13 +178,9 @@ again:
 
 		/* check ctx list again before sleep */
 		sec_process_ctx_list();
-
-		lwi = LWI_TIMEOUT(msecs_to_jiffies(SEC_GC_INTERVAL * MSEC_PER_SEC),
-				  NULL, NULL);
-		l_wait_event(thread->t_ctl_waitq,
-			     thread_is_stopping(thread) ||
-			     thread_is_signal(thread),
-			     &lwi);
+		wait_event_idle_timeout(thread->t_ctl_waitq,
+					thread_is_stopping(thread),
+					SEC_GC_INTERVAL * HZ);
 
 		if (thread_test_and_clear_flags(thread, SVC_STOPPING))
 			break;
@@ -199,7 +193,6 @@ again:
 
 int sptlrpc_gc_init(void)
 {
-	struct l_wait_info lwi = { 0 };
 	struct task_struct *task;
 
 	mutex_init(&sec_gc_mutex);
@@ -216,18 +209,16 @@ int sptlrpc_gc_init(void)
 		return PTR_ERR(task);
 	}
 
-	l_wait_event(sec_gc_thread.t_ctl_waitq,
-		     thread_is_running(&sec_gc_thread), &lwi);
+	wait_event_idle(sec_gc_thread.t_ctl_waitq,
+			thread_is_running(&sec_gc_thread));
 	return 0;
 }
 
 void sptlrpc_gc_fini(void)
 {
-	struct l_wait_info lwi = { 0 };
-
 	thread_set_flags(&sec_gc_thread, SVC_STOPPING);
 	wake_up(&sec_gc_thread.t_ctl_waitq);
 
-	l_wait_event(sec_gc_thread.t_ctl_waitq,
-		     thread_is_stopped(&sec_gc_thread), &lwi);
+	wait_event_idle(sec_gc_thread.t_ctl_waitq,
+			thread_is_stopped(&sec_gc_thread));
 }

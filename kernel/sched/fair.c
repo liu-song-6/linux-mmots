@@ -1869,6 +1869,7 @@ static int task_numa_migrate(struct task_struct *p)
 static void numa_migrate_preferred(struct task_struct *p)
 {
 	unsigned long interval = HZ;
+	unsigned long numa_migrate_retry;
 
 	/* This task has no NUMA fault statistics yet */
 	if (unlikely(p->numa_preferred_nid == -1 || !p->numa_faults))
@@ -1876,7 +1877,18 @@ static void numa_migrate_preferred(struct task_struct *p)
 
 	/* Periodically retry migrating the task to the preferred node */
 	interval = min(interval, msecs_to_jiffies(p->numa_scan_period) / 16);
-	p->numa_migrate_retry = jiffies + interval;
+	numa_migrate_retry = jiffies + interval;
+
+	/*
+	 * Check that the new retry threshold is after the current one. If
+	 * the retry is in the future, it implies that wake_affine has
+	 * temporarily asked NUMA balancing to backoff from placement.
+	 */
+	if (numa_migrate_retry > p->numa_migrate_retry)
+		return;
+
+	/* Safe to try placing the task on the preferred node */
+	p->numa_migrate_retry = numa_migrate_retry;
 
 	/* Success if task is already running on preferred CPU */
 	if (task_node(p) == p->numa_preferred_nid)
@@ -2823,7 +2835,7 @@ void reweight_task(struct task_struct *p, int prio)
 }
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
-# ifdef CONFIG_SMP
+#ifdef CONFIG_SMP
 /*
  * All this does is approximate the hierarchical proportion which includes that
  * global sum we all love to hate.
@@ -2974,7 +2986,7 @@ static long calc_group_runnable(struct cfs_rq *cfs_rq, long shares)
 
 	return clamp_t(long, runnable, MIN_SHARES, shares);
 }
-# endif /* CONFIG_SMP */
+#endif /* CONFIG_SMP */
 
 static inline int throttled_hierarchy(struct cfs_rq *cfs_rq);
 
@@ -5724,7 +5736,6 @@ wake_affine_weight(struct sched_domain *sd, struct task_struct *p,
 	unsigned long task_load;
 
 	this_eff_load = target_load(this_cpu, sd->wake_idx);
-	prev_eff_load = source_load(prev_cpu, sd->wake_idx);
 
 	if (sync) {
 		unsigned long current_load = task_h_load(current);
@@ -5742,18 +5753,69 @@ wake_affine_weight(struct sched_domain *sd, struct task_struct *p,
 		this_eff_load *= 100;
 	this_eff_load *= capacity_of(prev_cpu);
 
+	prev_eff_load = source_load(prev_cpu, sd->wake_idx);
 	prev_eff_load -= task_load;
 	if (sched_feat(WA_BIAS))
 		prev_eff_load *= 100 + (sd->imbalance_pct - 100) / 2;
 	prev_eff_load *= capacity_of(this_cpu);
 
-	return this_eff_load <= prev_eff_load ? this_cpu : nr_cpumask_bits;
+	/*
+	 * If sync, adjust the weight of prev_eff_load such that if
+	 * prev_eff == this_eff that select_idle_sibling() will consider
+	 * stacking the wakee on top of the waker if no other CPU is
+	 * idle.
+	 */
+	if (sync)
+		prev_eff_load += 1;
+
+	return this_eff_load < prev_eff_load ? this_cpu : nr_cpumask_bits;
 }
 
-static int wake_affine(struct sched_domain *sd, struct task_struct *p,
-		       int prev_cpu, int sync)
+#ifdef CONFIG_NUMA_BALANCING
+static void
+update_wa_numa_placement(struct task_struct *p, int prev_cpu, int target)
 {
-	int this_cpu = smp_processor_id();
+	unsigned long interval;
+
+	if (!static_branch_likely(&sched_numa_balancing))
+		return;
+
+	/* If balancing has no preference then continue gathering data */
+	if (p->numa_preferred_nid == -1)
+		return;
+
+	/*
+	 * If the wakeup is not affecting locality then it is neutral from
+	 * the perspective of NUMA balacing so continue gathering data.
+	 */
+	if (cpu_to_node(prev_cpu) == cpu_to_node(target))
+		return;
+
+	/*
+	 * Temporarily prevent NUMA balancing trying to place waker/wakee after
+	 * wakee has been moved by wake_affine. This will potentially allow
+	 * related tasks to converge and update their data placement. The
+	 * 4 * numa_scan_period is to allow the two-pass filter to migrate
+	 * hot data to the wakers node.
+	 */
+	interval = max(sysctl_numa_balancing_scan_delay,
+			 p->numa_scan_period << 2);
+	p->numa_migrate_retry = jiffies + msecs_to_jiffies(interval);
+
+	interval = max(sysctl_numa_balancing_scan_delay,
+			 current->numa_scan_period << 2);
+	current->numa_migrate_retry = jiffies + msecs_to_jiffies(interval);
+}
+#else
+static void
+update_wa_numa_placement(struct task_struct *p, int prev_cpu, int target)
+{
+}
+#endif
+
+static int wake_affine(struct sched_domain *sd, struct task_struct *p,
+		       int this_cpu, int prev_cpu, int sync)
+{
 	int target = nr_cpumask_bits;
 
 	if (sched_feat(WA_IDLE))
@@ -5766,6 +5828,7 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 	if (target == nr_cpumask_bits)
 		return prev_cpu;
 
+	update_wa_numa_placement(p, prev_cpu, target);
 	schedstat_inc(sd->ttwu_move_affine);
 	schedstat_inc(p->se.statistics.nr_wakeups_affine);
 	return target;
@@ -5901,6 +5964,18 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 
 skip_spare:
 	if (!idlest)
+		return NULL;
+
+	/*
+	 * When comparing groups across NUMA domains, it's possible for the
+	 * local domain to be very lightly loaded relative to the remote
+	 * domains but "imbalance" skews the comparison making remote CPUs
+	 * look much more favourable. When considering cross-domain, add
+	 * imbalance to the runnable load on the remote node and consider
+	 * staying local.
+	 */
+	if ((sd->flags & SD_NUMA) &&
+	    min_runnable_load + imbalance >= this_runnable_load)
 		return NULL;
 
 	if (min_runnable_load > (this_runnable_load + imbalance))
@@ -6342,7 +6417,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	int cpu = smp_processor_id();
 	int new_cpu = prev_cpu;
 	int want_affine = 0;
-	int sync = wake_flags & WF_SYNC;
+	int sync = (wake_flags & WF_SYNC) && !(current->flags & PF_EXITING);
 
 	if (sd_flag & SD_BALANCE_WAKE) {
 		record_wakee(p);
@@ -6376,7 +6451,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		if (cpu == prev_cpu)
 			goto pick_cpu;
 
-		new_cpu = wake_affine(affine_sd, p, prev_cpu, sync);
+		new_cpu = wake_affine(affine_sd, p, cpu, prev_cpu, sync);
 	}
 
 	if (sd && !(sd_flag & SD_BALANCE_FORK)) {
@@ -9440,7 +9515,12 @@ static void rq_offline_fair(struct rq *rq)
 #endif /* CONFIG_SMP */
 
 /*
- * scheduler tick hitting a task of our scheduling class:
+ * scheduler tick hitting a task of our scheduling class.
+ *
+ * NOTE: This function can be called remotely by the tick offload that
+ * goes along full dynticks. Therefore no local assumption can be made
+ * and everything must be accessed through the @rq and @curr passed in
+ * parameters.
  */
 static void task_tick_fair(struct rq *rq, struct task_struct *curr, int queued)
 {

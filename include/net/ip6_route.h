@@ -127,7 +127,8 @@ static inline int ip6_route_get_saddr(struct net *net, struct rt6_info *rt,
 
 struct rt6_info *rt6_lookup(struct net *net, const struct in6_addr *daddr,
 			    const struct in6_addr *saddr, int oif, int flags);
-u32 rt6_multipath_hash(const struct flowi6 *fl6, const struct sk_buff *skb);
+u32 rt6_multipath_hash(const struct flowi6 *fl6, const struct sk_buff *skb,
+		       struct flow_keys *hkeys);
 
 struct dst_entry *icmp6_dst_alloc(struct net_device *dev, struct flowi6 *fl6);
 
@@ -178,6 +179,9 @@ void rt6_sync_up(struct net_device *dev, unsigned int nh_flags);
 void rt6_disable_ip(struct net_device *dev, unsigned long event);
 void rt6_sync_down_dev(struct net_device *dev, unsigned long event);
 void rt6_multipath_rebalance(struct rt6_info *rt);
+
+void rt6_uncached_list_add(struct rt6_info *rt);
+void rt6_uncached_list_del(struct rt6_info *rt);
 
 static inline const struct rt6_info *skb_rt6_info(const struct sk_buff *skb)
 {
@@ -266,4 +270,5 @@ static inline bool rt6_duplicate_nexthop(struct rt6_info *a, struct rt6_info *b)
 	       ipv6_addr_equal(&a->rt6i_gateway, &b->rt6i_gateway) &&
 	       !lwtunnel_cmp_encap(a->dst.lwtstate, b->dst.lwtstate);
 }
+
 #endif

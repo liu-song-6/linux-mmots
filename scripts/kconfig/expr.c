@@ -1179,7 +1179,9 @@ struct expr *expr_simplify_unmet_dep(struct expr *e1, struct expr *e2)
 	return expr_get_leftmost_symbol(ret);
 }
 
-static void __expr_print(struct expr *e, void (*fn)(void *, struct symbol *, const char *), void *data, int prevtoken, bool revdep)
+void expr_print(struct expr *e,
+		void (*fn)(void *, struct symbol *, const char *),
+		void *data, int prevtoken)
 {
 	if (!e) {
 		fn(data, NULL, "y");
@@ -1234,14 +1236,9 @@ static void __expr_print(struct expr *e, void (*fn)(void *, struct symbol *, con
 		fn(data, e->right.sym, e->right.sym->name);
 		break;
 	case E_OR:
-		if (revdep && e->left.expr->type != E_OR)
-			fn(data, NULL, "\n  - ");
-		__expr_print(e->left.expr, fn, data, E_OR, revdep);
-		if (revdep)
-			fn(data, NULL, "\n  - ");
-		else
-			fn(data, NULL, " || ");
-		__expr_print(e->right.expr, fn, data, E_OR, revdep);
+		expr_print(e->left.expr, fn, data, E_OR);
+		fn(data, NULL, " || ");
+		expr_print(e->right.expr, fn, data, E_OR);
 		break;
 	case E_AND:
 		expr_print(e->left.expr, fn, data, E_AND);
@@ -1272,11 +1269,6 @@ static void __expr_print(struct expr *e, void (*fn)(void *, struct symbol *, con
 	}
 	if (expr_compare_type(prevtoken, e->type) > 0)
 		fn(data, NULL, ")");
-}
-
-void expr_print(struct expr *e, void (*fn)(void *, struct symbol *, const char *), void *data, int prevtoken)
-{
-	__expr_print(e, fn, data, prevtoken, false);
 }
 
 static void expr_print_file_helper(void *data, struct symbol *sym, const char *str)
@@ -1329,7 +1321,27 @@ void expr_gstr_print(struct expr *e, struct gstr *gs)
  * line with a minus. This makes expressions much easier to read.
  * Suitable for reverse dependency expressions.
  */
-void expr_gstr_print_revdep(struct expr *e, struct gstr *gs)
+static void expr_print_revdep(struct expr *e,
+			      void (*fn)(void *, struct symbol *, const char *),
+			      void *data, tristate pr_type, const char **title)
 {
-	__expr_print(e, expr_print_gstr_helper, gs, E_NONE, true);
+	if (e->type == E_OR) {
+		expr_print_revdep(e->left.expr, fn, data, pr_type, title);
+		expr_print_revdep(e->right.expr, fn, data, pr_type, title);
+	} else if (expr_calc_value(e) == pr_type) {
+		if (*title) {
+			fn(data, NULL, *title);
+			*title = NULL;
+		}
+
+		fn(data, NULL, "  - ");
+		expr_print(e, fn, data, E_NONE);
+		fn(data, NULL, "\n");
+	}
+}
+
+void expr_gstr_print_revdep(struct expr *e, struct gstr *gs,
+			    tristate pr_type, const char *title)
+{
+	expr_print_revdep(e, expr_print_gstr_helper, gs, pr_type, &title);
 }
