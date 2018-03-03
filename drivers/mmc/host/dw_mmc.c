@@ -163,12 +163,6 @@ static int dw_mci_regs_show(struct seq_file *s, void *v)
 	seq_printf(s, "CLKENA:\t0x%08x\n", mci_readl(host, CLKENA));
 
 	pm_runtime_put_autosuspend(host->dev);
-<<<<<<< HEAD
-
-	return 0;
-}
-=======
->>>>>>> linux-next/akpm-base
 
 	return 0;
 }

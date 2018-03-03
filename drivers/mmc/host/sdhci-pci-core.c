@@ -667,7 +667,6 @@ static void byt_read_dsm(struct sdhci_pci_slot *slot)
 }
 
 static int intel_execute_tuning(struct mmc_host *mmc, u32 opcode)
-<<<<<<< HEAD
 {
 	int err = sdhci_execute_tuning(mmc, opcode);
 	struct sdhci_host *host = mmc_priv(mmc);
@@ -687,27 +686,6 @@ static int intel_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 static void byt_probe_slot(struct sdhci_pci_slot *slot)
 {
-=======
-{
-	int err = sdhci_execute_tuning(mmc, opcode);
-	struct sdhci_host *host = mmc_priv(mmc);
-
-	if (err)
-		return err;
-
-	/*
-	 * Tuning can leave the IP in an active state (Buffer Read Enable bit
-	 * set) which prevents the entry to low power states (i.e. S0i3). Data
-	 * reset will clear it.
-	 */
-	sdhci_reset(host, SDHCI_RESET_DATA);
-
-	return 0;
-}
-
-static void byt_probe_slot(struct sdhci_pci_slot *slot)
-{
->>>>>>> linux-next/akpm-base
 	struct mmc_host_ops *ops = &slot->host->mmc_host_ops;
 
 	byt_read_dsm(slot);
