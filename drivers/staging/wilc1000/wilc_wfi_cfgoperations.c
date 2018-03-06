@@ -85,9 +85,6 @@ static const struct wiphy_wowlan_support wowlan_support = {
 #define TCP_ACK_FILTER_LINK_SPEED_THRESH	54
 #define DEFAULT_LINK_SPEED			72
 
-#define IS_MANAGMEMENT				0x100
-#define IS_MANAGMEMENT_CALLBACK			0x080
-#define IS_MGMT_STATUS_SUCCES			0x040
 #define GET_PKT_OFFSET(a) (((a) >> 22) & 0x1ff)
 
 static struct network_info last_scanned_shadow[MAX_NUM_SCANNED_NETWORKS_SHADOW];
@@ -959,18 +956,14 @@ static int add_key(struct wiphy *wiphy, struct net_device *netdev, u8 key_index,
 				}
 
 				kfree(priv->wilc_ptk[key_index]->key);
-
 				priv->wilc_ptk[key_index]->key = kmalloc(params->key_len, GFP_KERNEL);
-
-				kfree(priv->wilc_ptk[key_index]->seq);
-
-				if (params->seq_len > 0)
-					priv->wilc_ptk[key_index]->seq = kmalloc(params->seq_len, GFP_KERNEL);
-
 				memcpy(priv->wilc_ptk[key_index]->key, params->key, params->key_len);
 
-				if (params->seq_len > 0)
+				kfree(priv->wilc_ptk[key_index]->seq);
+				if (params->seq_len > 0) {
+					priv->wilc_ptk[key_index]->seq = kmalloc(params->seq_len, GFP_KERNEL);
 					memcpy(priv->wilc_ptk[key_index]->seq, params->seq, params->seq_len);
+				}
 
 				priv->wilc_ptk[key_index]->cipher = params->cipher;
 				priv->wilc_ptk[key_index]->key_len = params->key_len;

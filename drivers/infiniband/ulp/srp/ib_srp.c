@@ -327,29 +327,10 @@ static int srp_new_ib_cm_id(struct srp_rdma_ch *ch)
 	return 0;
 }
 
-static const char *inet_ntop(const void *sa, char *dst, unsigned int size)
-{
-	switch (((struct sockaddr *)sa)->sa_family) {
-	case AF_INET:
-		snprintf(dst, size, "%pI4",
-			 &((struct sockaddr_in *)sa)->sin_addr);
-		break;
-	case AF_INET6:
-		snprintf(dst, size, "%pI6",
-			 &((struct sockaddr_in6 *)sa)->sin6_addr);
-		break;
-	default:
-		snprintf(dst, size, "???");
-		break;
-	}
-	return dst;
-}
-
 static int srp_new_rdma_cm_id(struct srp_rdma_ch *ch)
 {
 	struct srp_target_port *target = ch->target;
 	struct rdma_cm_id *new_cm_id;
-	char src_addr[64], dst_addr[64];
 	int ret;
 
 	new_cm_id = rdma_create_id(target->net, srp_rdma_cm_handler, ch,
@@ -366,13 +347,8 @@ static int srp_new_rdma_cm_id(struct srp_rdma_ch *ch)
 				(struct sockaddr *)&target->rdma_cm.dst,
 				SRP_PATH_REC_TIMEOUT_MS);
 	if (ret) {
-		pr_err("No route available from %s to %s (%d)\n",
-		       target->rdma_cm.src_specified ?
-		       inet_ntop(&target->rdma_cm.src, src_addr,
-				 sizeof(src_addr)) : "(any)",
-		       inet_ntop(&target->rdma_cm.dst, dst_addr,
-				 sizeof(dst_addr)),
-		       ret);
+		pr_err("No route available from %pIS to %pIS (%d)\n",
+		       &target->rdma_cm.src, &target->rdma_cm.dst, ret);
 		goto out;
 	}
 	ret = wait_for_completion_interruptible(&ch->done);
@@ -381,10 +357,8 @@ static int srp_new_rdma_cm_id(struct srp_rdma_ch *ch)
 
 	ret = ch->status;
 	if (ret) {
-		pr_err("Resolving address %s failed (%d)\n",
-		       inet_ntop(&target->rdma_cm.dst, dst_addr,
-				 sizeof(dst_addr)),
-		       ret);
+		pr_err("Resolving address %pIS failed (%d)\n",
+		       &target->rdma_cm.dst, ret);
 		goto out;
 	}
 
@@ -765,18 +739,11 @@ static void srp_path_rec_completion(int status,
 static int srp_ib_lookup_path(struct srp_rdma_ch *ch)
 {
 	struct srp_target_port *target = ch->target;
-	int ret = -ENODEV;
+	int ret;
 
 	ch->ib_cm.path.numb_path = 1;
 
 	init_completion(&ch->done);
-
-	/*
-	 * Avoid that the SCSI host can be removed by srp_remove_target()
-	 * before srp_path_rec_completion() is called.
-	 */
-	if (!scsi_host_get(target->scsi_host))
-		goto out;
 
 	ch->ib_cm.path_query_id = ib_sa_path_rec_get(&srp_sa_client,
 					       target->srp_host->srp_dev->dev,
@@ -791,27 +758,21 @@ static int srp_ib_lookup_path(struct srp_rdma_ch *ch)
 					       GFP_KERNEL,
 					       srp_path_rec_completion,
 					       ch, &ch->ib_cm.path_query);
-	ret = ch->ib_cm.path_query_id;
-	if (ret < 0)
-		goto put;
+	if (ch->ib_cm.path_query_id < 0)
+		return ch->ib_cm.path_query_id;
 
 	ret = wait_for_completion_interruptible(&ch->done);
 	if (ret < 0)
-		goto put;
+		return ret;
 
-	ret = ch->status;
-	if (ret < 0)
+	if (ch->status < 0)
 		shost_printk(KERN_WARNING, target->scsi_host,
 			     PFX "Path record query failed: sgid %pI6, dgid %pI6, pkey %#04x, service_id %#16llx\n",
 			     ch->ib_cm.path.sgid.raw, ch->ib_cm.path.dgid.raw,
 			     be16_to_cpu(target->ib_cm.pkey),
 			     be64_to_cpu(target->ib_cm.service_id));
 
-put:
-	scsi_host_put(target->scsi_host);
-
-out:
-	return ret;
+	return ch->status;
 }
 
 static int srp_rdma_lookup_path(struct srp_rdma_ch *ch)
@@ -2974,9 +2935,11 @@ static int srp_abort(struct scsi_cmnd *scmnd)
 		ret = FAST_IO_FAIL;
 	else
 		ret = FAILED;
-	srp_free_req(ch, req, scmnd, 0);
-	scmnd->result = DID_ABORT << 16;
-	scmnd->scsi_done(scmnd);
+	if (ret == SUCCESS) {
+		srp_free_req(ch, req, scmnd, 0);
+		scmnd->result = DID_ABORT << 16;
+		scmnd->scsi_done(scmnd);
+	}
 
 	return ret;
 }
@@ -3789,14 +3752,11 @@ static ssize_t srp_create_target(struct device *dev,
 
 	if (!srp_conn_unique(target->srp_host, target)) {
 		if (target->using_rdma_cm) {
-			char dst_addr[64];
-
 			shost_printk(KERN_INFO, target->scsi_host,
-				     PFX "Already connected to target port with id_ext=%016llx;ioc_guid=%016llx;dest=%s\n",
+				     PFX "Already connected to target port with id_ext=%016llx;ioc_guid=%016llx;dest=%pIS\n",
 				     be64_to_cpu(target->id_ext),
 				     be64_to_cpu(target->ioc_guid),
-				     inet_ntop(&target->rdma_cm.dst, dst_addr,
-					       sizeof(dst_addr)));
+				     &target->rdma_cm.dst);
 		} else {
 			shost_printk(KERN_INFO, target->scsi_host,
 				     PFX "Already connected to target port with id_ext=%016llx;ioc_guid=%016llx;initiator_ext=%016llx\n",
@@ -3871,12 +3831,10 @@ static ssize_t srp_create_target(struct device *dev,
 				      num_online_nodes());
 		const int ch_end = ((node_idx + 1) * target->ch_count /
 				    num_online_nodes());
-		const int cv_start = (node_idx * ibdev->num_comp_vectors /
-				      num_online_nodes() + target->comp_vector)
-				     % ibdev->num_comp_vectors;
-		const int cv_end = ((node_idx + 1) * ibdev->num_comp_vectors /
-				    num_online_nodes() + target->comp_vector)
-				   % ibdev->num_comp_vectors;
+		const int cv_start = node_idx * ibdev->num_comp_vectors /
+				     num_online_nodes();
+		const int cv_end = (node_idx + 1) * ibdev->num_comp_vectors /
+				   num_online_nodes();
 		int cpu_idx = 0;
 
 		for_each_online_cpu(cpu) {
@@ -3907,8 +3865,8 @@ static ssize_t srp_create_target(struct device *dev,
 				char dst[64];
 
 				if (target->using_rdma_cm)
-					inet_ntop(&target->rdma_cm.dst, dst,
-						  sizeof(dst));
+					snprintf(dst, sizeof(dst), "%pIS",
+						 &target->rdma_cm.dst);
 				else
 					snprintf(dst, sizeof(dst), "%pI6",
 						 target->ib_cm.orig_dgid.raw);
@@ -3941,14 +3899,11 @@ connected:
 
 	if (target->state != SRP_TARGET_REMOVED) {
 		if (target->using_rdma_cm) {
-			char dst[64];
-
-			inet_ntop(&target->rdma_cm.dst, dst, sizeof(dst));
 			shost_printk(KERN_DEBUG, target->scsi_host, PFX
-				     "new target: id_ext %016llx ioc_guid %016llx sgid %pI6 dest %s\n",
+				     "new target: id_ext %016llx ioc_guid %016llx sgid %pI6 dest %pIS\n",
 				     be64_to_cpu(target->id_ext),
 				     be64_to_cpu(target->ioc_guid),
-				     target->sgid.raw, dst);
+				     target->sgid.raw, &target->rdma_cm.dst);
 		} else {
 			shost_printk(KERN_DEBUG, target->scsi_host, PFX
 				     "new target: id_ext %016llx ioc_guid %016llx pkey %04x service_id %016llx sgid %pI6 dgid %pI6\n",

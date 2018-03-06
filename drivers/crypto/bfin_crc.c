@@ -450,6 +450,16 @@ static int bfin_crypto_crc_digest(struct ahash_request *req)
 	return bfin_crypto_crc_finup(req);
 }
 
+static int bfin_crypto_crc_noimport(struct ahash_request *req, const void *in)
+{
+	return -ENOSYS;
+}
+
+static int bfin_crypto_crc_noexport(struct ahash_request *req, void *out)
+{
+	return -ENOSYS;
+}
+
 static int bfin_crypto_crc_setkey(struct crypto_ahash *tfm, const u8 *key,
 			unsigned int keylen)
 {
@@ -487,6 +497,8 @@ static struct ahash_alg algs = {
 	.final		= bfin_crypto_crc_final,
 	.finup		= bfin_crypto_crc_finup,
 	.digest		= bfin_crypto_crc_digest,
+	.export		= bfin_crypto_crc_noexport,
+	.import		= bfin_crypto_crc_noimport,
 	.setkey		= bfin_crypto_crc_setkey,
 	.halg.digestsize	= CHKSUM_DIGEST_SIZE,
 	.halg.base	= {
@@ -576,10 +588,8 @@ static int bfin_crypto_crc_probe(struct platform_device *pdev)
 	int ret;
 
 	crc = devm_kzalloc(dev, sizeof(*crc), GFP_KERNEL);
-	if (!crc) {
-		dev_err(&pdev->dev, "fail to malloc bfin_crypto_crc\n");
+	if (!crc)
 		return -ENOMEM;
-	}
 
 	crc->dev = dev;
 

@@ -2227,10 +2227,13 @@ static int bnxt_re_build_inv_wqe(struct ib_send_wr *wr,
 	wqe->type = BNXT_QPLIB_SWQE_TYPE_LOCAL_INV;
 	wqe->local_inv.inv_l_key = wr->ex.invalidate_rkey;
 
+	/* Need unconditional fence for local invalidate
+	 * opcode to work as expected.
+	 */
+	wqe->flags |= BNXT_QPLIB_SWQE_FLAGS_UC_FENCE;
+
 	if (wr->send_flags & IB_SEND_SIGNALED)
 		wqe->flags |= BNXT_QPLIB_SWQE_FLAGS_SIGNAL_COMP;
-	if (wr->send_flags & IB_SEND_FENCE)
-		wqe->flags |= BNXT_QPLIB_SWQE_FLAGS_UC_FENCE;
 	if (wr->send_flags & IB_SEND_SOLICITED)
 		wqe->flags |= BNXT_QPLIB_SWQE_FLAGS_SOLICIT_EVENT;
 
@@ -2251,8 +2254,12 @@ static int bnxt_re_build_reg_wqe(struct ib_reg_wr *wr,
 	wqe->frmr.levels = qplib_frpl->hwq.level + 1;
 	wqe->type = BNXT_QPLIB_SWQE_TYPE_REG_MR;
 
-	if (wr->wr.send_flags & IB_SEND_FENCE)
-		wqe->flags |= BNXT_QPLIB_SWQE_FLAGS_UC_FENCE;
+	/* Need unconditional fence for reg_mr
+	 * opcode to function as expected.
+	 */
+
+	wqe->flags |= BNXT_QPLIB_SWQE_FLAGS_UC_FENCE;
+
 	if (wr->wr.send_flags & IB_SEND_SIGNALED)
 		wqe->flags |= BNXT_QPLIB_SWQE_FLAGS_SIGNAL_COMP;
 
@@ -3586,7 +3593,7 @@ struct ib_mr *bnxt_re_reg_user_mr(struct ib_pd *ib_pd, u64 start, u64 length,
 	int umem_pgs, page_shift, rc;
 
 	if (length > BNXT_RE_MAX_MR_SIZE) {
-		dev_err(rdev_to_dev(rdev), "MR Size: %lld > Max supported:%ld\n",
+		dev_err(rdev_to_dev(rdev), "MR Size: %lld > Max supported:%lld\n",
 			length, BNXT_RE_MAX_MR_SIZE);
 		return ERR_PTR(-ENOMEM);
 	}

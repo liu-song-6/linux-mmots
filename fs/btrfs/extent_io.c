@@ -76,8 +76,8 @@ void btrfs_leak_debug_check(void)
 
 	while (!list_empty(&buffers)) {
 		eb = list_entry(buffers.next, struct extent_buffer, leak_list);
-		pr_err("BTRFS: buffer leak start %llu len %lu refs %d\n",
-		       eb->start, eb->len, atomic_read(&eb->refs));
+		pr_err("BTRFS: buffer leak start %llu len %lu refs %d bflags %lu\n",
+		       eb->start, eb->len, atomic_read(&eb->refs), eb->bflags);
 		list_del(&eb->leak_list);
 		kmem_cache_free(extent_buffer_cache, eb);
 	}
@@ -187,7 +187,7 @@ free_state_cache:
 	return -ENOMEM;
 }
 
-void extent_io_exit(void)
+void __cold extent_io_exit(void)
 {
 	btrfs_leak_debug_check();
 
@@ -5228,11 +5228,6 @@ void set_extent_buffer_uptodate(struct extent_buffer *eb)
 		page = eb->pages[i];
 		SetPageUptodate(page);
 	}
-}
-
-int extent_buffer_uptodate(struct extent_buffer *eb)
-{
-	return test_bit(EXTENT_BUFFER_UPTODATE, &eb->bflags);
 }
 
 int read_extent_buffer_pages(struct extent_io_tree *tree,
