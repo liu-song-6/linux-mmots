@@ -25,6 +25,7 @@ struct regmap_debugfs_node {
 	struct list_head link;
 };
 
+static unsigned int dummy_index;
 static struct dentry *regmap_debugfs_root;
 static LIST_HEAD(regmap_debugfs_early_list);
 static DEFINE_MUTEX(regmap_debugfs_early_lock);
@@ -40,6 +41,7 @@ static ssize_t regmap_name_read_file(struct file *file,
 				     loff_t *ppos)
 {
 	struct regmap *map = file->private_data;
+	const char *name = "nodev";
 	int ret;
 	char *buf;
 
@@ -47,7 +49,10 @@ static ssize_t regmap_name_read_file(struct file *file,
 	if (!buf)
 		return -ENOMEM;
 
-	ret = snprintf(buf, PAGE_SIZE, "%s\n", map->dev->driver->name);
+	if (map->dev && map->dev->driver)
+		name = map->dev->driver->name;
+
+	ret = snprintf(buf, PAGE_SIZE, "%s\n", name);
 	if (ret < 0) {
 		kfree(buf);
 		return ret;
@@ -567,6 +572,11 @@ void regmap_debugfs_init(struct regmap *map, const char *name)
 		name = map->debugfs_name;
 	} else {
 		name = devname;
+	}
+
+	if (!strcmp(name, "dummy")) {
+		name = kasprintf(GFP_KERNEL, "dummy%d", dummy_index);
+		dummy_index++;
 	}
 
 	map->debugfs = debugfs_create_dir(name, regmap_debugfs_root);

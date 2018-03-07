@@ -2581,8 +2581,6 @@ int dasd_cancel_req(struct dasd_ccw_req *cqr)
 	case DASD_CQR_QUEUED:
 		/* request was not started - just set to cleared */
 		cqr->status = DASD_CQR_CLEARED;
-		if (cqr->callback_data == DASD_SLEEPON_START_TAG)
-			cqr->callback_data = DASD_SLEEPON_END_TAG;
 		break;
 	case DASD_CQR_IN_IO:
 		/* request in IO - terminate IO and release again */
@@ -3902,9 +3900,12 @@ static int dasd_generic_requeue_all_requests(struct dasd_device *device)
 		wait_event(dasd_flush_wq,
 			   (cqr->status != DASD_CQR_CLEAR_PENDING));
 
-		/* mark sleepon requests as ended */
-		if (cqr->callback_data == DASD_SLEEPON_START_TAG)
-			cqr->callback_data = DASD_SLEEPON_END_TAG;
+		/*
+		 * requeue requests to blocklayer will only work
+		 * for block device requests
+		 */
+		if (_dasd_requeue_request(cqr))
+			continue;
 
 		/* remove requests from device and block queue */
 		list_del_init(&cqr->devlist);
@@ -3918,14 +3919,12 @@ static int dasd_generic_requeue_all_requests(struct dasd_device *device)
 		}
 
 		/*
-		 * requeue requests to blocklayer will only work
-		 * for block device requests
+		 * _dasd_requeue_request already checked for a valid
+		 * blockdevice, no need to check again
+		 * all erp requests (cqr->refers) have a cqr->block
+		 * pointer copy from the original cqr
 		 */
-		if (_dasd_requeue_request(cqr))
-			continue;
-
-		if (cqr->block)
-			list_del_init(&cqr->blocklist);
+		list_del_init(&cqr->blocklist);
 		cqr->block->base->discipline->free_cp(
 			cqr, (struct request *) cqr->callback_data);
 	}
@@ -3940,8 +3939,7 @@ static int dasd_generic_requeue_all_requests(struct dasd_device *device)
 		list_splice_tail(&requeue_queue, &device->ccw_queue);
 		spin_unlock_irq(get_ccwdev_lock(device->cdev));
 	}
-	/* wake up generic waitqueue for eventually ended sleepon requests */
-	wake_up(&generic_waitq);
+	dasd_schedule_device_bh(device);
 	return rc;
 }
 

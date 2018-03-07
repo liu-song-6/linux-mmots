@@ -477,6 +477,12 @@ struct scsi_host_template {
 	struct device_attribute **sdev_attrs;
 
 	/*
+	 * Pointer to the SCSI device attribute groups for this host,
+	 * NULL terminated.
+	 */
+	const struct attribute_group **sdev_groups;
+
+	/*
 	 * List of hosts per template.
 	 *
 	 * This is only for use by scsi_module.c for legacy templates.
@@ -570,8 +576,6 @@ struct Scsi_Host {
 		struct blk_queue_tag	*bqt;
 		struct blk_mq_tag_set	tag_set;
 	};
-
-	struct rcu_head rcu;
 
 	atomic_t host_busy;		   /* commands actually active on low-level */
 	atomic_t host_blocked;

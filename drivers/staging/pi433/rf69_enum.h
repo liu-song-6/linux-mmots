@@ -60,9 +60,9 @@ enum paRamp {
 	ramp10
 };
 
-enum antennaImpedance {
-	fiftyOhm,
-	twohundretOhm
+enum antenna_impedance {
+	fifty_ohm,
+	two_hundred_ohm
 };
 
 enum lnaGain {
@@ -82,7 +82,7 @@ enum mantisse {
 	mantisse24
 };
 
-enum thresholdDecrement {
+enum threshold_decrement {
 	dec_every8th,
 	dec_every4th,
 	dec_every2nd,
@@ -123,12 +123,12 @@ enum packetFormat {
 	packetLengthVar
 };
 
-enum txStartCondition {
+enum tx_start_condition {
 	fifo_level,
 	fifo_not_empty
 };
 
-enum addressFiltering {
+enum address_filtering {
 	filteringOff,
 	nodeAddress,
 	nodeOrBroadcastAddress

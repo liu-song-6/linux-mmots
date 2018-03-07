@@ -64,6 +64,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/ctype.h>
 #include <linux/uaccess.h>
+#include <linux/security.h>
 
 #include <linux/percpu.h>
 #include <linux/crash_dump.h>
@@ -189,9 +190,7 @@ struct ist_info ist_info;
 #endif
 
 #else
-struct cpuinfo_x86 boot_cpu_data __read_mostly = {
-	.x86_phys_bits = MAX_PHYSMEM_BITS,
-};
+struct cpuinfo_x86 boot_cpu_data __read_mostly;
 EXPORT_SYMBOL(boot_cpu_data);
 #endif
 
@@ -851,6 +850,7 @@ void __init setup_arch(char **cmdline_p)
 	__flush_tlb_all();
 #else
 	printk(KERN_INFO "Command line: %s\n", boot_command_line);
+	boot_cpu_data.x86_phys_bits = MAX_PHYSMEM_BITS;
 #endif
 
 	/*
@@ -996,6 +996,9 @@ void __init setup_arch(char **cmdline_p)
 
 	if (efi_enabled(EFI_BOOT))
 		efi_init();
+
+	efi_set_secure_boot(boot_params.secure_boot);
+	init_lockdown();
 
 	dmi_scan_machine();
 	dmi_memdev_walk();
@@ -1149,20 +1152,6 @@ void __init setup_arch(char **cmdline_p)
 #endif
 	/* Allocate bigger log buffer */
 	setup_log_buf(1);
-
-	if (efi_enabled(EFI_BOOT)) {
-		switch (boot_params.secure_boot) {
-		case efi_secureboot_mode_disabled:
-			pr_info("Secure boot disabled\n");
-			break;
-		case efi_secureboot_mode_enabled:
-			pr_info("Secure boot enabled\n");
-			break;
-		default:
-			pr_info("Secure boot could not be determined\n");
-			break;
-		}
-	}
 
 	reserve_initrd();
 

@@ -497,7 +497,7 @@ void qbman_pull_desc_set_storage(struct qbman_pull_desc *d,
 				 int stash)
 {
 	/* save the virtual address */
-	d->rsp_addr_virt = (u64)storage;
+	d->rsp_addr_virt = (u64)(uintptr_t)storage;
 
 	if (!storage) {
 		d->verb &= ~(1 << QB_VDQCR_VERB_RLS_SHIFT);
@@ -522,7 +522,7 @@ void qbman_pull_desc_set_numframes(struct qbman_pull_desc *d, u8 numframes)
 	d->numf = numframes - 1;
 }
 
-void qbman_pull_desc_set_token(struct qbman_pull_desc *d, u8 token)
+static void qbman_pull_desc_set_token(struct qbman_pull_desc *d, u8 token)
 {
 	d->tok = token;
 }
@@ -590,7 +590,7 @@ int qbman_swp_pull(struct qbman_swp *s, struct qbman_pull_desc *d)
 		atomic_inc(&s->vdq.available);
 		return -EBUSY;
 	}
-	s->vdq.storage = (void *)d->rsp_addr_virt;
+	s->vdq.storage = (void *)(uintptr_t)d->rsp_addr_virt;
 	p = qbman_get_cmd(s, QBMAN_CENA_SWP_VDQCR);
 	p->numf = d->numf;
 	p->tok = QMAN_DQ_TOKEN_VALID;
