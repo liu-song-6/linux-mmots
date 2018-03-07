@@ -177,10 +177,7 @@ static int smc_lgr_create(struct smc_sock *smc,
 	lnk = &lgr->lnk[SMC_SINGLE_LINK];
 	/* initialize link */
 	lnk->link_id = SMC_SINGLE_LINK;
-<<<<<<< HEAD
-=======
 	lnk->state = SMC_LNK_ACTIVATING;
->>>>>>> linux-next/akpm-base
 	lnk->smcibdev = smcibdev;
 	lnk->ibport = ibport;
 	lnk->path_mtu = smcibdev->pattr[ibport - 1].active_mtu;

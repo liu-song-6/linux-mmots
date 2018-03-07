@@ -11281,8 +11281,6 @@ static struct bpf_test tests[] = {
 		.errstr = "BPF_XADD stores into R2 packet",
 		.prog_type = BPF_PROG_TYPE_XDP,
 	},
-<<<<<<< HEAD
-=======
 	{
 		"jit: lsh, rsh, arsh by 1",
 		.insns = {
@@ -11372,7 +11370,6 @@ static struct bpf_test tests[] = {
 		.retval = 2,
 	},
 
->>>>>>> linux-next/akpm-base
 };
 
 static int probe_filter_length(const struct bpf_insn *fp)

@@ -3822,17 +3822,6 @@ static struct devlink_resource_ops mlxsw_sp_resource_kvd_linear_ops = {
 	.occ_get = mlxsw_sp_resource_kvd_linear_occ_get,
 };
 
-<<<<<<< HEAD
-static struct devlink_resource_ops mlxsw_sp_resource_kvd_hash_single_ops = {
-	.size_validate = mlxsw_sp_resource_kvd_hash_single_size_validate,
-};
-
-static struct devlink_resource_ops mlxsw_sp_resource_kvd_hash_double_ops = {
-	.size_validate = mlxsw_sp_resource_kvd_hash_double_size_validate,
-};
-
-=======
->>>>>>> linux-next/akpm-base
 static void
 mlxsw_sp_resource_size_params_prepare(struct mlxsw_core *mlxsw_core,
 				      struct devlink_resource_size_params *kvd_size_params,
@@ -3895,11 +3884,7 @@ static int mlxsw_sp_resources_register(struct mlxsw_core *mlxsw_core)
 					MLXSW_SP_RESOURCE_KVD,
 					DEVLINK_RESOURCE_ID_PARENT_TOP,
 					&kvd_size_params,
-<<<<<<< HEAD
-					&mlxsw_sp_resource_kvd_ops);
-=======
 					NULL);
->>>>>>> linux-next/akpm-base
 	if (err)
 		return err;
 
@@ -3927,11 +3912,7 @@ static int mlxsw_sp_resources_register(struct mlxsw_core *mlxsw_core)
 					MLXSW_SP_RESOURCE_KVD_HASH_DOUBLE,
 					MLXSW_SP_RESOURCE_KVD,
 					&hash_double_size_params,
-<<<<<<< HEAD
-					&mlxsw_sp_resource_kvd_hash_double_ops);
-=======
 					NULL);
->>>>>>> linux-next/akpm-base
 	if (err)
 		return err;
 
@@ -3941,11 +3922,7 @@ static int mlxsw_sp_resources_register(struct mlxsw_core *mlxsw_core)
 					MLXSW_SP_RESOURCE_KVD_HASH_SINGLE,
 					MLXSW_SP_RESOURCE_KVD,
 					&hash_single_size_params,
-<<<<<<< HEAD
-					&mlxsw_sp_resource_kvd_hash_single_ops);
-=======
 					NULL);
->>>>>>> linux-next/akpm-base
 	if (err)
 		return err;
 
