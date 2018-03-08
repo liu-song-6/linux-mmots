@@ -294,6 +294,7 @@ struct kvm_vcpu_stat {
 	u64 exit_userspace;
 	u64 exit_null;
 	u64 exit_external_request;
+	u64 exit_io_request;
 	u64 exit_external_interrupt;
 	u64 exit_stop_request;
 	u64 exit_validity;
@@ -319,6 +320,7 @@ struct kvm_vcpu_stat {
 	u64 deliver_restart_signal;
 	u64 deliver_program_int;
 	u64 deliver_io_int;
+	u64 deliver_machine_check;
 	u64 exit_wait_state;
 	u64 instruction_epsw;
 	u64 instruction_gs;
@@ -792,6 +794,7 @@ struct kvm_arch{
 	int css_support;
 	int use_irqchip;
 	int use_cmma;
+	int use_pfmfi;
 	int user_cpu_state_ctrl;
 	int user_sigp;
 	int user_stsi;

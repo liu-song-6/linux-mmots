@@ -23,6 +23,8 @@
 
 #include <sys/sysinfo.h>
 #include <unistd.h>
+#include <stdio.h>
+#include "../kselftest.h"
 
 #define STDOUT_FILENO 1
 
@@ -77,7 +79,7 @@ void _start(void)
 	unsigned long used;
 	static const char *test_name = " get runtime memory use\n";
 
-	print("TAP version 13\n");
+	ksft_print_header();
 	print("# Testing system size.\n");
 
 	ccode = sysinfo(&info);
