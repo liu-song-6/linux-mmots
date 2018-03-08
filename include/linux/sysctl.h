@@ -116,7 +116,7 @@ struct ctl_table
 	void *data;
 	int maxlen;
 	umode_t mode;
-	uint16_t flags;
+	uint16_t flags;			/* enum ctl_table_flags */
 	struct ctl_table *child;	/* Deprecated */
 	proc_handler *proc_handler;	/* Callback for text formatting */
 	struct ctl_table_poll *poll;
@@ -125,7 +125,7 @@ struct ctl_table
 } __randomize_layout;
 
 /**
- * enum ctl_table_flags - flags for the ctl table
+ * enum ctl_table_flags - flags for the ctl table (struct ctl_table.flags)
  *
  * @CTL_FLAGS_CLAMP_RANGE: Set to indicate that the entry should be
  *	flexibly clamped to min/max range in case the user provided
