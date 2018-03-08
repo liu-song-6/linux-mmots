@@ -3918,10 +3918,6 @@ static int dasd_generic_requeue_all_requests(struct dasd_device *device)
 			cqr = refers;
 		}
 
-<<<<<<< HEAD
-		if (cqr->block)
-			list_del_init(&cqr->blocklist);
-=======
 		/*
 		 * _dasd_requeue_request already checked for a valid
 		 * blockdevice, no need to check again
@@ -3929,7 +3925,6 @@ static int dasd_generic_requeue_all_requests(struct dasd_device *device)
 		 * pointer copy from the original cqr
 		 */
 		list_del_init(&cqr->blocklist);
->>>>>>> linux-next/akpm-base
 		cqr->block->base->discipline->free_cp(
 			cqr, (struct request *) cqr->callback_data);
 	}
