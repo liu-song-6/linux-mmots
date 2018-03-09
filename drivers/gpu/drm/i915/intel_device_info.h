@@ -69,6 +69,8 @@ enum intel_platform {
 	INTEL_COFFEELAKE,
 	/* gen10 */
 	INTEL_CANNONLAKE,
+	/* gen11 */
+	INTEL_ICELAKE,
 	INTEL_MAX_PLATFORMS
 };
 
@@ -94,6 +96,7 @@ enum intel_platform {
 	func(has_l3_dpf); \
 	func(has_llc); \
 	func(has_logical_ring_contexts); \
+	func(has_logical_ring_elsq); \
 	func(has_logical_ring_preemption); \
 	func(has_overlay); \
 	func(has_pooled_eu); \
@@ -123,6 +126,8 @@ struct sseu_dev_info {
 	u8 has_eu_pg:1;
 };
 
+typedef u8 intel_ring_mask_t;
+
 struct intel_device_info {
 	u16 device_id;
 	u16 gen_mask;
@@ -130,18 +135,18 @@ struct intel_device_info {
 	u8 gen;
 	u8 gt; /* GT number, 0 if undefined */
 	u8 num_rings;
-	u8 ring_mask; /* Rings supported by the HW */
+	intel_ring_mask_t ring_mask; /* Rings supported by the HW */
 
 	enum intel_platform platform;
 	u32 platform_mask;
+
+	unsigned int page_sizes; /* page sizes supported by the HW */
 
 	u32 display_mmio_offset;
 
 	u8 num_pipes;
 	u8 num_sprites[I915_MAX_PIPES];
 	u8 num_scalers[I915_MAX_PIPES];
-
-	unsigned int page_sizes; /* page sizes supported by the HW */
 
 #define DEFINE_FLAG(name) u8 name:1
 	DEV_INFO_FOR_EACH_FLAG(DEFINE_FLAG);
@@ -165,6 +170,10 @@ struct intel_device_info {
 	} color;
 };
 
+struct intel_driver_caps {
+	unsigned int scheduler;
+};
+
 static inline unsigned int sseu_subslice_total(const struct sseu_dev_info *sseu)
 {
 	return hweight8(sseu->slice_mask) * hweight8(sseu->subslice_mask);
@@ -179,5 +188,8 @@ void intel_device_info_dump_flags(const struct intel_device_info *info,
 				  struct drm_printer *p);
 void intel_device_info_dump_runtime(const struct intel_device_info *info,
 				    struct drm_printer *p);
+
+void intel_driver_caps_print(const struct intel_driver_caps *caps,
+			     struct drm_printer *p);
 
 #endif

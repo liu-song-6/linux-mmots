@@ -43,6 +43,7 @@
 #include <asm/system_misc.h>
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
+#include <asm/traps.h>
 
 #include <acpi/ghes.h>
 
@@ -289,58 +290,31 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 	do_exit(SIGKILL);
 }
 
-static void __do_user_fault(struct task_struct *tsk, unsigned long addr,
-			    unsigned int esr, unsigned int sig, int code,
-			    struct pt_regs *regs, int fault)
+static void __do_user_fault(struct siginfo *info, unsigned int esr)
 {
-	struct siginfo si;
-	const struct fault_info *inf;
-	unsigned int lsb = 0;
-
-	if (unhandled_signal(tsk, sig) && show_unhandled_signals_ratelimited()) {
-		inf = esr_to_fault_info(esr);
-		pr_info("%s[%d]: unhandled %s (%d) at 0x%08lx, esr 0x%03x",
-			tsk->comm, task_pid_nr(tsk), inf->name, sig,
-			addr, esr);
-		print_vma_addr(KERN_CONT ", in ", regs->pc);
-		pr_cont("\n");
-		__show_regs(regs);
-	}
-
-	tsk->thread.fault_address = addr;
-	tsk->thread.fault_code = esr;
-	si.si_signo = sig;
-	si.si_errno = 0;
-	si.si_code = code;
-	si.si_addr = (void __user *)addr;
-	/*
-	 * Either small page or large page may be poisoned.
-	 * In other words, VM_FAULT_HWPOISON_LARGE and
-	 * VM_FAULT_HWPOISON are mutually exclusive.
-	 */
-	if (fault & VM_FAULT_HWPOISON_LARGE)
-		lsb = hstate_index_to_shift(VM_FAULT_GET_HINDEX(fault));
-	else if (fault & VM_FAULT_HWPOISON)
-		lsb = PAGE_SHIFT;
-	si.si_addr_lsb = lsb;
-
-	force_sig_info(sig, &si, tsk);
+	current->thread.fault_address = (unsigned long)info->si_addr;
+	current->thread.fault_code = esr;
+	arm64_force_sig_info(info, esr_to_fault_info(esr)->name, current);
 }
 
 static void do_bad_area(unsigned long addr, unsigned int esr, struct pt_regs *regs)
 {
-	struct task_struct *tsk = current;
-	const struct fault_info *inf;
-
 	/*
 	 * If we are in kernel mode at this point, we have no context to
 	 * handle this fault with.
 	 */
 	if (user_mode(regs)) {
-		inf = esr_to_fault_info(esr);
-		__do_user_fault(tsk, addr, esr, inf->sig, inf->code, regs, 0);
-	} else
+		const struct fault_info *inf = esr_to_fault_info(esr);
+		struct siginfo si = {
+			.si_signo	= inf->sig,
+			.si_code	= inf->code,
+			.si_addr	= (void __user *)addr,
+		};
+
+		__do_user_fault(&si, esr);
+	} else {
 		__do_kernel_fault(addr, esr, regs);
+	}
 }
 
 #define VM_FAULT_BADMAP		0x010000
@@ -393,7 +367,8 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 {
 	struct task_struct *tsk;
 	struct mm_struct *mm;
-	int fault, sig, code, major = 0;
+	struct siginfo si;
+	int fault, major = 0;
 	unsigned long vm_flags = VM_READ | VM_WRITE;
 	unsigned int mm_flags = FAULT_FLAG_ALLOW_RETRY | FAULT_FLAG_KILLABLE;
 
@@ -525,27 +500,37 @@ retry:
 		return 0;
 	}
 
+	clear_siginfo(&si);
+	si.si_addr = (void __user *)addr;
+
 	if (fault & VM_FAULT_SIGBUS) {
 		/*
 		 * We had some memory, but were unable to successfully fix up
 		 * this page fault.
 		 */
-		sig = SIGBUS;
-		code = BUS_ADRERR;
-	} else if (fault & (VM_FAULT_HWPOISON | VM_FAULT_HWPOISON_LARGE)) {
-		sig = SIGBUS;
-		code = BUS_MCEERR_AR;
+		si.si_signo	= SIGBUS;
+		si.si_code	= BUS_ADRERR;
+	} else if (fault & VM_FAULT_HWPOISON_LARGE) {
+		unsigned int hindex = VM_FAULT_GET_HINDEX(fault);
+
+		si.si_signo	= SIGBUS;
+		si.si_code	= BUS_MCEERR_AR;
+		si.si_addr_lsb	= hstate_index_to_shift(hindex);
+	} else if (fault & VM_FAULT_HWPOISON) {
+		si.si_signo	= SIGBUS;
+		si.si_code	= BUS_MCEERR_AR;
+		si.si_addr_lsb	= PAGE_SHIFT;
 	} else {
 		/*
 		 * Something tried to access memory that isn't in our memory
 		 * map.
 		 */
-		sig = SIGSEGV;
-		code = fault == VM_FAULT_BADACCESS ?
-			SEGV_ACCERR : SEGV_MAPERR;
+		si.si_signo	= SIGSEGV;
+		si.si_code	= fault == VM_FAULT_BADACCESS ?
+				  SEGV_ACCERR : SEGV_MAPERR;
 	}
 
-	__do_user_fault(tsk, addr, esr, sig, code, regs, fault);
+	__do_user_fault(&si, esr);
 	return 0;
 
 no_context:
@@ -582,8 +567,6 @@ static int do_sea(unsigned long addr, unsigned int esr, struct pt_regs *regs)
 	const struct fault_info *inf;
 
 	inf = esr_to_fault_info(esr);
-	pr_err("Synchronous External Abort: %s (0x%08x) at 0x%016lx\n",
-		inf->name, esr, addr);
 
 	/*
 	 * Synchronous aborts may interrupt code which had interrupts masked.
@@ -607,7 +590,7 @@ static int do_sea(unsigned long addr, unsigned int esr, struct pt_regs *regs)
 		info.si_addr = NULL;
 	else
 		info.si_addr  = (void __user *)addr;
-	arm64_notify_die("", regs, &info, esr);
+	arm64_notify_die(inf->name, regs, &info, esr);
 
 	return 0;
 }
@@ -698,19 +681,17 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 	if (!inf->fn(addr, esr, regs))
 		return;
 
-	pr_alert("Unhandled fault: %s at 0x%016lx\n",
-		 inf->name, addr);
-
-	mem_abort_decode(esr);
-
-	if (!user_mode(regs))
+	if (!user_mode(regs)) {
+		pr_alert("Unhandled fault at 0x%016lx\n", addr);
+		mem_abort_decode(esr);
 		show_pte(addr);
+	}
 
 	info.si_signo = inf->sig;
 	info.si_errno = 0;
 	info.si_code  = inf->code;
 	info.si_addr  = (void __user *)addr;
-	arm64_notify_die("", regs, &info, esr);
+	arm64_notify_die(inf->name, regs, &info, esr);
 }
 
 asmlinkage void __exception do_el0_irq_bp_hardening(void)
@@ -741,7 +722,6 @@ asmlinkage void __exception do_sp_pc_abort(unsigned long addr,
 					   struct pt_regs *regs)
 {
 	struct siginfo info;
-	struct task_struct *tsk = current;
 
 	if (user_mode(regs)) {
 		if (instruction_pointer(regs) > TASK_SIZE)
@@ -749,17 +729,11 @@ asmlinkage void __exception do_sp_pc_abort(unsigned long addr,
 		local_irq_enable();
 	}
 
-	if (show_unhandled_signals && unhandled_signal(tsk, SIGBUS))
-		pr_info_ratelimited("%s[%d]: %s exception: pc=%p sp=%p\n",
-				    tsk->comm, task_pid_nr(tsk),
-				    esr_get_class_string(esr), (void *)regs->pc,
-				    (void *)regs->sp);
-
 	info.si_signo = SIGBUS;
 	info.si_errno = 0;
 	info.si_code  = BUS_ADRALN;
 	info.si_addr  = (void __user *)addr;
-	arm64_notify_die("Oops - SP/PC alignment exception", regs, &info, esr);
+	arm64_notify_die("SP/PC alignment exception", regs, &info, esr);
 }
 
 int __init early_brk64(unsigned long addr, unsigned int esr,
@@ -814,14 +788,11 @@ asmlinkage int __exception do_debug_exception(unsigned long addr,
 	if (!inf->fn(addr, esr, regs)) {
 		rv = 1;
 	} else {
-		pr_alert("Unhandled debug exception: %s (0x%08x) at 0x%016lx\n",
-			 inf->name, esr, addr);
-
 		info.si_signo = inf->sig;
 		info.si_errno = 0;
 		info.si_code  = inf->code;
 		info.si_addr  = (void __user *)addr;
-		arm64_notify_die("", regs, &info, 0);
+		arm64_notify_die(inf->name, regs, &info, esr);
 		rv = 0;
 	}
 
