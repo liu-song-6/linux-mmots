@@ -184,7 +184,7 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
 	int i, queued, len, cache_len, extra, n_cdesc = 0, ret = 0;
 
 	queued = len = req->len - req->processed;
-	if (queued < crypto_ahash_blocksize(ahash))
+	if (queued <= crypto_ahash_blocksize(ahash))
 		cache_len = queued;
 	else
 		cache_len = queued - areq->nbytes;
@@ -198,7 +198,7 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
 			/* If this is not the last request and the queued data
 			 * is a multiple of a block, cache the last one for now.
 			 */
-			extra = queued - crypto_ahash_blocksize(ahash);
+			extra = crypto_ahash_blocksize(ahash);
 
 		if (extra) {
 			sg_pcopy_to_buffer(areq->src, sg_nents(areq->src),
@@ -303,7 +303,7 @@ send_command:
 				   req->state_sz);
 	if (IS_ERR(rdesc)) {
 		ret = PTR_ERR(rdesc);
-		goto cdesc_rollback;
+		goto unmap_result;
 	}
 
 	spin_unlock_bh(&priv->ring[ring].egress_lock);
@@ -315,6 +315,8 @@ send_command:
 	*results = 1;
 	return 0;
 
+unmap_result:
+	dma_unmap_sg(priv->dev, areq->src, req->nents, DMA_TO_DEVICE);
 cdesc_rollback:
 	for (i = 0; i < n_cdesc; i++)
 		safexcel_ring_rollback_wptr(priv, &priv->ring[ring].cdr);
@@ -493,7 +495,7 @@ static int safexcel_ahash_exit_inv(struct crypto_tfm *tfm)
 	queue_work(priv->ring[ring].workqueue,
 		   &priv->ring[ring].work_data.work);
 
-	wait_for_completion_interruptible(&result.completion);
+	wait_for_completion(&result.completion);
 
 	if (result.error) {
 		dev_warn(priv->dev, "hash: completion error (%d)\n",
