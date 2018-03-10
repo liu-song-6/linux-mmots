@@ -805,8 +805,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  */
 #define __min(t1, t2, x, y)						\
 	__builtin_choose_expr(__builtin_constant_p(x) &&		\
-			      __builtin_constant_p(y) &&		\
-			      __builtin_types_compatible_p(t1, t2),	\
+			      __builtin_constant_p(y),			\
 			      (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),	\
 			      __single_eval_min(t1, t2,			\
 						__UNIQUE_ID(min1_),	\
@@ -828,8 +827,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 
 #define __max(t1, t2, x, y)						\
 	__builtin_choose_expr(__builtin_constant_p(x) &&		\
-			      __builtin_constant_p(y) &&		\
-			      __builtin_types_compatible_p(t1, t2),	\
+			      __builtin_constant_p(y),			\
 			      (t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y),	\
 			      __single_eval_max(t1, t2,			\
 						__UNIQUE_ID(max1_),	\
