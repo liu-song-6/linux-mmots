@@ -790,37 +790,57 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  * strict type-checking.. See the
  * "unnecessary" pointer comparison.
  */
-#define __min(t1, t2, min1, min2, x, y) ({		\
+#define __single_eval_min(t1, t2, min1, min2, x, y) ({	\
 	t1 min1 = (x);					\
 	t2 min2 = (y);					\
 	(void) (&min1 == &min2);			\
 	min1 < min2 ? min1 : min2; })
+
+/*
+ * In the case of builtin constant values, there is no need to do the
+ * double-evaluation protection, so the raw comparison can be made.
+ * This allows min()/max() to be used in stack array allocations and
+ * avoid the compiler thinking it is a dynamic value leading to an
+ * accidental VLA.
+ */
+#define __min(t1, t2, x, y)						\
+	__builtin_choose_expr(__builtin_constant_p(x) &&		\
+			      __builtin_constant_p(y) &&		\
+			      __builtin_types_compatible_p(t1, t2),	\
+			      (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),	\
+			      __single_eval_min(t1, t2,			\
+						__UNIQUE_ID(max1_),	\
+						__UNIQUE_ID(max2_),	\
+						x, y))
 
 /**
  * min - return minimum of two values of the same or compatible types
  * @x: first value
  * @y: second value
  */
-#define min(x, y)					\
-	__min(typeof(x), typeof(y),			\
-	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
-	      x, y)
+#define min(x, y)	__min(typeof(x), typeof(y), x, y)
 
-#define __max(t1, t2, max1, max2, x, y) ({		\
+#define __single_eval_max(t1, t2, max1, max2, x, y) ({	\
 	t1 max1 = (x);					\
 	t2 max2 = (y);					\
 	(void) (&max1 == &max2);			\
 	max1 > max2 ? max1 : max2; })
 
+#define __max(t1, t2, x, y)						\
+	__builtin_choose_expr(__builtin_constant_p(x) &&		\
+			      __builtin_constant_p(y) &&		\
+			      __builtin_types_compatible_p(t1, t2),	\
+			      (t1)(x) > (t2)(y) ? (t1)(x) : (t2)(y),	\
+			      __single_eval_max(t1, t2,			\
+						__UNIQUE_ID(max1_),	\
+						__UNIQUE_ID(max2_),	\
+						x, y))
 /**
  * max - return maximum of two values of the same or compatible types
  * @x: first value
  * @y: second value
  */
-#define max(x, y)					\
-	__max(typeof(x), typeof(y),			\
-	      __UNIQUE_ID(max1_), __UNIQUE_ID(max2_),	\
-	      x, y)
+#define max(x, y)	__max(typeof(x), typeof(y), x, y)
 
 /**
  * min3 - return minimum of three values
@@ -874,7 +894,6 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  */
 #define min_t(type, x, y)				\
 	__min(type, type,				\
-	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
 	      x, y)
 
 /**
@@ -885,7 +904,6 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  */
 #define max_t(type, x, y)				\
 	__max(type, type,				\
-	      __UNIQUE_ID(min1_), __UNIQUE_ID(min2_),	\
 	      x, y)
 
 /**
