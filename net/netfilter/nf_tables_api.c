@@ -4328,9 +4328,9 @@ struct nft_object *nf_tables_obj_lookup(const struct nft_table *table,
 }
 EXPORT_SYMBOL_GPL(nf_tables_obj_lookup);
 
-struct nft_object *nf_tables_obj_lookup_byhandle(const struct nft_table *table,
-						 const struct nlattr *nla,
-						 u32 objtype, u8 genmask)
+static struct nft_object *nf_tables_obj_lookup_byhandle(const struct nft_table *table,
+							const struct nlattr *nla,
+							u32 objtype, u8 genmask)
 {
 	struct nft_object *obj;
 
@@ -4850,7 +4850,7 @@ struct nft_flowtable *nf_tables_flowtable_lookup(const struct nft_table *table,
 }
 EXPORT_SYMBOL_GPL(nf_tables_flowtable_lookup);
 
-struct nft_flowtable *
+static struct nft_flowtable *
 nf_tables_flowtable_lookup_byhandle(const struct nft_table *table,
 				    const struct nlattr *nla, u8 genmask)
 {
@@ -6596,6 +6596,7 @@ static void __net_exit nf_tables_exit_net(struct net *net)
 static struct pernet_operations nf_tables_net_ops = {
 	.init	= nf_tables_init_net,
 	.exit	= nf_tables_exit_net,
+	.async	= true,
 };
 
 static int __init nf_tables_module_init(void)

@@ -942,17 +942,12 @@ static int dm_table_determine_type(struct dm_table *t)
 
 	if (t->type != DM_TYPE_NONE) {
 		/* target already set the table's type */
-		if (t->type == DM_TYPE_BIO_BASED)
-			return 0;
-		else if (t->type == DM_TYPE_NVME_BIO_BASED) {
-			if (!dm_table_does_not_support_partial_completion(t)) {
-				DMERR("nvme bio-based is only possible with devices"
-				      " that don't support partial completion");
-				return -EINVAL;
-			}
-			/* Fallthru, also verify all devices are blk-mq */
+		if (t->type == DM_TYPE_BIO_BASED) {
+			/* possibly upgrade to a variant of bio-based */
+			goto verify_bio_based;
 		}
 		BUG_ON(t->type == DM_TYPE_DAX_BIO_BASED);
+		BUG_ON(t->type == DM_TYPE_NVME_BIO_BASED);
 		goto verify_rq_based;
 	}
 
@@ -985,6 +980,7 @@ static int dm_table_determine_type(struct dm_table *t)
 	}
 
 	if (bio_based) {
+verify_bio_based:
 		/* We must use this table as bio-based */
 		t->type = DM_TYPE_BIO_BASED;
 		if (dm_table_supports_dax(t) ||
@@ -1755,7 +1751,7 @@ static int device_no_partial_completion(struct dm_target *ti, struct dm_dev *dev
 	char b[BDEVNAME_SIZE];
 
 	/* For now, NVMe devices are the only devices of this class */
-	return (strncmp(bdevname(dev->bdev, b), "nvme", 3) == 0);
+	return (strncmp(bdevname(dev->bdev, b), "nvme", 4) == 0);
 }
 
 static bool dm_table_does_not_support_partial_completion(struct dm_table *t)
@@ -1861,7 +1857,7 @@ void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 	q->limits = *limits;
 
 	if (!dm_table_supports_discards(t)) {
-		queue_flag_clear_unlocked(QUEUE_FLAG_DISCARD, q);
+		blk_queue_flag_clear(QUEUE_FLAG_DISCARD, q);
 		/* Must also clear discard limits... */
 		q->limits.max_discard_sectors = 0;
 		q->limits.max_hw_discard_sectors = 0;
@@ -1869,7 +1865,7 @@ void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 		q->limits.discard_alignment = 0;
 		q->limits.discard_misaligned = 0;
 	} else
-		queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, q);
+		blk_queue_flag_set(QUEUE_FLAG_DISCARD, q);
 
 	if (dm_table_supports_flush(t, (1UL << QUEUE_FLAG_WC))) {
 		wc = true;
@@ -1879,15 +1875,15 @@ void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 	blk_queue_write_cache(q, wc, fua);
 
 	if (dm_table_supports_dax(t))
-		queue_flag_set_unlocked(QUEUE_FLAG_DAX, q);
+		blk_queue_flag_set(QUEUE_FLAG_DAX, q);
 	if (dm_table_supports_dax_write_cache(t))
 		dax_write_cache(t->md->dax_dev, true);
 
 	/* Ensure that all underlying devices are non-rotational. */
 	if (dm_table_all_devices_attribute(t, device_is_nonrot))
-		queue_flag_set_unlocked(QUEUE_FLAG_NONROT, q);
+		blk_queue_flag_set(QUEUE_FLAG_NONROT, q);
 	else
-		queue_flag_clear_unlocked(QUEUE_FLAG_NONROT, q);
+		blk_queue_flag_clear(QUEUE_FLAG_NONROT, q);
 
 	if (!dm_table_supports_write_same(t))
 		q->limits.max_write_same_sectors = 0;
@@ -1895,9 +1891,9 @@ void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 		q->limits.max_write_zeroes_sectors = 0;
 
 	if (dm_table_all_devices_attribute(t, queue_supports_sg_merge))
-		queue_flag_clear_unlocked(QUEUE_FLAG_NO_SG_MERGE, q);
+		blk_queue_flag_clear(QUEUE_FLAG_NO_SG_MERGE, q);
 	else
-		queue_flag_set_unlocked(QUEUE_FLAG_NO_SG_MERGE, q);
+		blk_queue_flag_set(QUEUE_FLAG_NO_SG_MERGE, q);
 
 	dm_table_verify_integrity(t);
 
@@ -1908,7 +1904,7 @@ void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 	 * have it set.
 	 */
 	if (blk_queue_add_random(q) && dm_table_all_devices_attribute(t, device_is_not_random))
-		queue_flag_clear_unlocked(QUEUE_FLAG_ADD_RANDOM, q);
+		blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, q);
 }
 
 unsigned int dm_table_get_num_targets(struct dm_table *t)

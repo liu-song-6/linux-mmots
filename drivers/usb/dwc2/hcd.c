@@ -91,6 +91,9 @@ static void dwc2_enable_common_interrupts(struct dwc2_hsotg *hsotg)
 	intmsk |= GINTSTS_WKUPINT | GINTSTS_USBSUSP |
 		  GINTSTS_SESSREQINT;
 
+	if (dwc2_is_device_mode(hsotg) && hsotg->params.lpm)
+		intmsk |= GINTSTS_LPMTRANRCVD;
+
 	dwc2_writel(intmsk, hsotg->regs + GINTMSK);
 }
 
@@ -308,22 +311,10 @@ static int dwc2_gahbcfg_init(struct dwc2_hsotg *hsotg)
 		break;
 	}
 
-	dev_dbg(hsotg->dev, "host_dma:%d dma_desc_enable:%d\n",
-		hsotg->params.host_dma,
-		hsotg->params.dma_desc_enable);
-
-	if (hsotg->params.host_dma) {
-		if (hsotg->params.dma_desc_enable)
-			dev_dbg(hsotg->dev, "Using Descriptor DMA mode\n");
-		else
-			dev_dbg(hsotg->dev, "Using Buffer DMA mode\n");
-	} else {
-		dev_dbg(hsotg->dev, "Using Slave mode\n");
-		hsotg->params.dma_desc_enable = false;
-	}
-
 	if (hsotg->params.host_dma)
 		ahbcfg |= GAHBCFG_DMA_EN;
+	else
+		hsotg->params.dma_desc_enable = false;
 
 	dwc2_writel(ahbcfg, hsotg->regs + GAHBCFG);
 
@@ -989,6 +980,24 @@ void dwc2_hc_halt(struct dwc2_hsotg *hsotg, struct dwc2_host_chan *chan,
 
 	if (dbg_hc(chan))
 		dev_vdbg(hsotg->dev, "%s()\n", __func__);
+
+	/*
+	 * In buffer DMA or external DMA mode channel can't be halted
+	 * for non-split periodic channels. At the end of the next
+	 * uframe/frame (in the worst case), the core generates a channel
+	 * halted and disables the channel automatically.
+	 */
+	if ((hsotg->params.g_dma && !hsotg->params.g_dma_desc) ||
+	    hsotg->hw_params.arch == GHWCFG2_EXT_DMA_ARCH) {
+		if (!chan->do_split &&
+		    (chan->ep_type == USB_ENDPOINT_XFER_ISOC ||
+		     chan->ep_type == USB_ENDPOINT_XFER_INT)) {
+			dev_err(hsotg->dev, "%s() Channel can't be halted\n",
+				__func__);
+			return;
+		}
+	}
+
 	if (halt_status == DWC2_HC_XFER_NO_HALT_STATUS)
 		dev_err(hsotg->dev, "!!! halt_status = %d !!!\n", halt_status);
 
@@ -2322,9 +2331,21 @@ static int dwc2_core_init(struct dwc2_hsotg *hsotg, bool initial_setup)
  */
 static void dwc2_core_host_init(struct dwc2_hsotg *hsotg)
 {
-	u32 hcfg, hfir, otgctl;
+	u32 hcfg, hfir, otgctl, usbcfg;
 
 	dev_dbg(hsotg->dev, "%s(%p)\n", __func__, hsotg);
+
+	/* Set HS/FS Timeout Calibration to 7 (max available value).
+	 * The number of PHY clocks that the application programs in
+	 * this field is added to the high/full speed interpacket timeout
+	 * duration in the core to account for any additional delays
+	 * introduced by the PHY. This can be required, because the delay
+	 * introduced by the PHY in generating the linestate condition
+	 * can vary from one PHY to another.
+	 */
+	usbcfg = dwc2_readl(hsotg->regs + GUSBCFG);
+	usbcfg |= GUSBCFG_TOUTCAL(7);
+	dwc2_writel(usbcfg, hsotg->regs + GUSBCFG);
 
 	/* Restart the Phy Clock */
 	dwc2_writel(0, hsotg->regs + PCGCTL);
@@ -2403,26 +2424,23 @@ static void dwc2_core_host_init(struct dwc2_hsotg *hsotg)
 
 		/* Halt all channels to put them into a known state */
 		for (i = 0; i < num_channels; i++) {
-			int count = 0;
-
 			hcchar = dwc2_readl(hsotg->regs + HCCHAR(i));
 			hcchar |= HCCHAR_CHENA | HCCHAR_CHDIS;
 			hcchar &= ~HCCHAR_EPDIR;
 			dwc2_writel(hcchar, hsotg->regs + HCCHAR(i));
 			dev_dbg(hsotg->dev, "%s: Halt channel %d\n",
 				__func__, i);
-			do {
-				hcchar = dwc2_readl(hsotg->regs + HCCHAR(i));
-				if (++count > 1000) {
-					dev_err(hsotg->dev,
-						"Unable to clear enable on channel %d\n",
-						i);
-					break;
-				}
-				udelay(1);
-			} while (hcchar & HCCHAR_CHENA);
+
+			if (dwc2_hsotg_wait_bit_clear(hsotg, HCCHAR(i),
+						      HCCHAR_CHENA, 1000)) {
+				dev_warn(hsotg->dev, "Unable to clear enable on channel %d\n",
+					 i);
+			}
 		}
 	}
+
+	/* Enable ACG feature in host mode, if supported */
+	dwc2_enable_acg(hsotg);
 
 	/* Turn on the vbus power */
 	dev_dbg(hsotg->dev, "Init: Port Power? op_state=%d\n", hsotg->op_state);
@@ -3290,6 +3308,8 @@ static void dwc2_conn_id_status_change(struct work_struct *work)
 		spin_lock_irqsave(&hsotg->lock, flags);
 		dwc2_hsotg_core_init_disconnected(hsotg, false);
 		spin_unlock_irqrestore(&hsotg->lock, flags);
+		/* Enable ACG feature in device mode,if supported */
+		dwc2_enable_acg(hsotg);
 		dwc2_hsotg_core_connect(hsotg);
 	} else {
 host:
@@ -4002,81 +4022,11 @@ void dwc2_hcd_dump_state(struct dwc2_hsotg *hsotg)
 		(p_tx_status & TXSTS_QSPCAVAIL_MASK) >> TXSTS_QSPCAVAIL_SHIFT);
 	dev_dbg(hsotg->dev, "  P Tx FIFO Space Avail: %d\n",
 		(p_tx_status & TXSTS_FSPCAVAIL_MASK) >> TXSTS_FSPCAVAIL_SHIFT);
-	dwc2_hcd_dump_frrem(hsotg);
 	dwc2_dump_global_registers(hsotg);
 	dwc2_dump_host_registers(hsotg);
 	dev_dbg(hsotg->dev,
 		"************************************************************\n");
 	dev_dbg(hsotg->dev, "\n");
-#endif
-}
-
-/*
- * NOTE: This function will be removed once the peripheral controller code
- * is integrated and the driver is stable
- */
-void dwc2_hcd_dump_frrem(struct dwc2_hsotg *hsotg)
-{
-#ifdef DWC2_DUMP_FRREM
-	dev_dbg(hsotg->dev, "Frame remaining at SOF:\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->frrem_samples, hsotg->frrem_accum,
-		hsotg->frrem_samples > 0 ?
-		hsotg->frrem_accum / hsotg->frrem_samples : 0);
-	dev_dbg(hsotg->dev, "\n");
-	dev_dbg(hsotg->dev, "Frame remaining at start_transfer (uframe 7):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_7_samples,
-		hsotg->hfnum_7_frrem_accum,
-		hsotg->hfnum_7_samples > 0 ?
-		hsotg->hfnum_7_frrem_accum / hsotg->hfnum_7_samples : 0);
-	dev_dbg(hsotg->dev, "Frame remaining at start_transfer (uframe 0):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_0_samples,
-		hsotg->hfnum_0_frrem_accum,
-		hsotg->hfnum_0_samples > 0 ?
-		hsotg->hfnum_0_frrem_accum / hsotg->hfnum_0_samples : 0);
-	dev_dbg(hsotg->dev, "Frame remaining at start_transfer (uframe 1-6):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_other_samples,
-		hsotg->hfnum_other_frrem_accum,
-		hsotg->hfnum_other_samples > 0 ?
-		hsotg->hfnum_other_frrem_accum / hsotg->hfnum_other_samples :
-		0);
-	dev_dbg(hsotg->dev, "\n");
-	dev_dbg(hsotg->dev, "Frame remaining at sample point A (uframe 7):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_7_samples_a, hsotg->hfnum_7_frrem_accum_a,
-		hsotg->hfnum_7_samples_a > 0 ?
-		hsotg->hfnum_7_frrem_accum_a / hsotg->hfnum_7_samples_a : 0);
-	dev_dbg(hsotg->dev, "Frame remaining at sample point A (uframe 0):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_0_samples_a, hsotg->hfnum_0_frrem_accum_a,
-		hsotg->hfnum_0_samples_a > 0 ?
-		hsotg->hfnum_0_frrem_accum_a / hsotg->hfnum_0_samples_a : 0);
-	dev_dbg(hsotg->dev, "Frame remaining at sample point A (uframe 1-6):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_other_samples_a, hsotg->hfnum_other_frrem_accum_a,
-		hsotg->hfnum_other_samples_a > 0 ?
-		hsotg->hfnum_other_frrem_accum_a / hsotg->hfnum_other_samples_a
-		: 0);
-	dev_dbg(hsotg->dev, "\n");
-	dev_dbg(hsotg->dev, "Frame remaining at sample point B (uframe 7):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_7_samples_b, hsotg->hfnum_7_frrem_accum_b,
-		hsotg->hfnum_7_samples_b > 0 ?
-		hsotg->hfnum_7_frrem_accum_b / hsotg->hfnum_7_samples_b : 0);
-	dev_dbg(hsotg->dev, "Frame remaining at sample point B (uframe 0):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_0_samples_b, hsotg->hfnum_0_frrem_accum_b,
-		(hsotg->hfnum_0_samples_b > 0) ?
-		hsotg->hfnum_0_frrem_accum_b / hsotg->hfnum_0_samples_b : 0);
-	dev_dbg(hsotg->dev, "Frame remaining at sample point B (uframe 1-6):\n");
-	dev_dbg(hsotg->dev, "  samples %u, accum %llu, avg %llu\n",
-		hsotg->hfnum_other_samples_b, hsotg->hfnum_other_frrem_accum_b,
-		(hsotg->hfnum_other_samples_b > 0) ?
-		hsotg->hfnum_other_frrem_accum_b / hsotg->hfnum_other_samples_b
-		: 0);
 #endif
 }
 

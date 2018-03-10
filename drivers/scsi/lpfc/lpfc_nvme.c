@@ -1,7 +1,7 @@
 /*******************************************************************
  * This file is part of the Emulex Linux Device Driver for         *
  * Fibre Channel Host Bus Adapters.                                *
- * Copyright (C) 2017 Broadcom. All Rights Reserved. The term      *
+ * Copyright (C) 2017-2018 Broadcom. All Rights Reserved. The term *
  * “Broadcom” refers to Broadcom Limited and/or its subsidiaries.  *
  * Copyright (C) 2004-2016 Emulex.  All rights reserved.           *
  * EMULEX and SLI are trademarks of Emulex.                        *
@@ -241,10 +241,11 @@ lpfc_nvme_cmpl_gen_req(struct lpfc_hba *phba, struct lpfc_iocbq *cmdwqe,
 	ndlp = (struct lpfc_nodelist *)cmdwqe->context1;
 	lpfc_printf_vlog(vport, KERN_INFO, LOG_NVME_DISC,
 			 "6047 nvme cmpl Enter "
-			 "Data %p DID %x Xri: %x status %x cmd:%p lsreg:%p "
-			 "bmp:%p ndlp:%p\n",
+			 "Data %p DID %x Xri: %x status %x reason x%x cmd:%p "
+			 "lsreg:%p bmp:%p ndlp:%p\n",
 			 pnvme_lsreq, ndlp ? ndlp->nlp_DID : 0,
 			 cmdwqe->sli4_xritag, status,
+			 (wcqe->parameter & 0xffff),
 			 cmdwqe, pnvme_lsreq, cmdwqe->context3, ndlp);
 
 	lpfc_nvmeio_data(phba, "NVME LS  CMPL: xri x%x stat x%x parm x%x\n",
@@ -419,6 +420,7 @@ lpfc_nvme_ls_req(struct nvme_fc_local_port *pnvme_lport,
 {
 	int ret = 0;
 	struct lpfc_nvme_lport *lport;
+	struct lpfc_nvme_rport *rport;
 	struct lpfc_vport *vport;
 	struct lpfc_nodelist *ndlp;
 	struct ulp_bde64 *bpl;
@@ -437,19 +439,18 @@ lpfc_nvme_ls_req(struct nvme_fc_local_port *pnvme_lport,
 	 */
 
 	lport = (struct lpfc_nvme_lport *)pnvme_lport->private;
+	rport = (struct lpfc_nvme_rport *)pnvme_rport->private;
 	vport = lport->vport;
 
 	if (vport->load_flag & FC_UNLOADING)
 		return -ENODEV;
 
-	if (vport->load_flag & FC_UNLOADING)
-		return -ENODEV;
-
-	ndlp = lpfc_findnode_did(vport, pnvme_rport->port_id);
+	/* Need the ndlp.  It is stored in the driver's rport. */
+	ndlp = rport->ndlp;
 	if (!ndlp || !NLP_CHK_NODE_ACT(ndlp)) {
 		lpfc_printf_vlog(vport, KERN_ERR, LOG_NODE | LOG_NVME_IOERR,
-				 "6051 DID x%06x not an active rport.\n",
-				 pnvme_rport->port_id);
+				 "6051 Remoteport %p, rport has invalid ndlp. "
+				 "Failing LS Req\n", pnvme_rport);
 		return -ENODEV;
 	}
 
@@ -500,8 +501,9 @@ lpfc_nvme_ls_req(struct nvme_fc_local_port *pnvme_lport,
 
 	/* Expand print to include key fields. */
 	lpfc_printf_vlog(vport, KERN_INFO, LOG_NVME_DISC,
-			 "6149 ENTER.  lport %p, rport %p lsreq%p rqstlen:%d "
-			 "rsplen:%d %pad %pad\n",
+			 "6149 Issue LS Req to DID 0x%06x lport %p, rport %p "
+			 "lsreq%p rqstlen:%d rsplen:%d %pad %pad\n",
+			 ndlp->nlp_DID,
 			 pnvme_lport, pnvme_rport,
 			 pnvme_lsreq, pnvme_lsreq->rqstlen,
 			 pnvme_lsreq->rsplen, &pnvme_lsreq->rqstdma,
@@ -517,7 +519,7 @@ lpfc_nvme_ls_req(struct nvme_fc_local_port *pnvme_lport,
 				ndlp, 2, 30, 0);
 	if (ret != WQE_SUCCESS) {
 		atomic_inc(&lport->xmt_ls_err);
-		lpfc_printf_vlog(vport, KERN_INFO, LOG_NVME_DISC,
+		lpfc_printf_vlog(vport, KERN_ERR, LOG_NVME_DISC,
 				 "6052 EXIT. issue ls wqe failed lport %p, "
 				 "rport %p lsreq%p Status %x DID %x\n",
 				 pnvme_lport, pnvme_rport, pnvme_lsreq,
@@ -615,9 +617,19 @@ lpfc_nvme_adj_fcp_sgls(struct lpfc_vport *vport,
 		       struct lpfc_nvme_buf *lpfc_ncmd,
 		       struct nvmefc_fcp_req *nCmd)
 {
+	struct lpfc_hba  *phba = vport->phba;
 	struct sli4_sge *sgl;
 	union lpfc_wqe128 *wqe;
 	uint32_t *wptr, *dptr;
+
+	/*
+	 * Get a local pointer to the built-in wqe and correct
+	 * the cmd size to match NVME's 96 bytes and fix
+	 * the dma address.
+	 */
+
+	/* 128 byte wqe support here */
+	wqe = (union lpfc_wqe128 *)&lpfc_ncmd->cur_iocbq.wqe;
 
 	/*
 	 * Adjust the FCP_CMD and FCP_RSP DMA data and sge_len to
@@ -628,6 +640,25 @@ lpfc_nvme_adj_fcp_sgls(struct lpfc_vport *vport,
 	 */
 	sgl = lpfc_ncmd->nvme_sgl;
 	sgl->sge_len = cpu_to_le32(nCmd->cmdlen);
+	if (phba->cfg_nvme_embed_cmd) {
+		sgl->addr_hi = 0;
+		sgl->addr_lo = 0;
+
+		/* Word 0-2 - NVME CMND IU (embedded payload) */
+		wqe->generic.bde.tus.f.bdeFlags = BUFF_TYPE_BDE_IMMED;
+		wqe->generic.bde.tus.f.bdeSize = 56;
+		wqe->generic.bde.addrHigh = 0;
+		wqe->generic.bde.addrLow =  64;  /* Word 16 */
+	} else {
+		sgl->addr_hi = cpu_to_le32(putPaddrHigh(nCmd->cmddma));
+		sgl->addr_lo = cpu_to_le32(putPaddrLow(nCmd->cmddma));
+
+		/* Word 0-2 - NVME CMND IU Inline BDE */
+		wqe->generic.bde.tus.f.bdeFlags =  BUFF_TYPE_BDE_64;
+		wqe->generic.bde.tus.f.bdeSize = nCmd->cmdlen;
+		wqe->generic.bde.addrHigh = sgl->addr_hi;
+		wqe->generic.bde.addrLow =  sgl->addr_lo;
+	}
 
 	sgl++;
 
@@ -642,27 +673,19 @@ lpfc_nvme_adj_fcp_sgls(struct lpfc_vport *vport,
 	sgl->word2 = cpu_to_le32(sgl->word2);
 	sgl->sge_len = cpu_to_le32(nCmd->rsplen);
 
-	/*
-	 * Get a local pointer to the built-in wqe and correct
-	 * the cmd size to match NVME's 96 bytes and fix
-	 * the dma address.
-	 */
-
-	/* 128 byte wqe support here */
-	wqe = (union lpfc_wqe128 *)&lpfc_ncmd->cur_iocbq.wqe;
-
-	/* Word 0-2 - NVME CMND IU (embedded payload) */
-	wqe->generic.bde.tus.f.bdeFlags = BUFF_TYPE_BDE_IMMED;
-	wqe->generic.bde.tus.f.bdeSize = 60;
-	wqe->generic.bde.addrHigh = 0;
-	wqe->generic.bde.addrLow =  64;  /* Word 16 */
-
 	/* Word 3 */
 	bf_set(payload_offset_len, &wqe->fcp_icmd,
 	       (nCmd->rsplen + nCmd->cmdlen));
 
 	/* Word 10 */
 	bf_set(wqe_nvme, &wqe->fcp_icmd.wqe_com, 1);
+
+	if (!phba->cfg_nvme_embed_cmd) {
+		bf_set(wqe_dbde, &wqe->generic.wqe_com, 1);
+		bf_set(wqe_wqes, &wqe->fcp_icmd.wqe_com, 0);
+		return;
+	}
+	bf_set(wqe_dbde, &wqe->generic.wqe_com, 0);
 	bf_set(wqe_wqes, &wqe->fcp_icmd.wqe_com, 1);
 
 	/*
@@ -980,14 +1003,14 @@ out_err:
 			phba->cpucheck_cmpl_io[lpfc_ncmd->cpu]++;
 	}
 #endif
-	freqpriv = nCmd->private;
-	freqpriv->nvme_buf = NULL;
 
 	/* NVME targets need completion held off until the abort exchange
 	 * completes unless the NVME Rport is getting unregistered.
 	 */
 
 	if (!(lpfc_ncmd->flags & LPFC_SBUF_XBUSY)) {
+		freqpriv = nCmd->private;
+		freqpriv->nvme_buf = NULL;
 		nCmd->done(nCmd);
 		lpfc_ncmd->nvmeCmd = NULL;
 	}
@@ -1168,6 +1191,7 @@ lpfc_nvme_prep_io_dma(struct lpfc_vport *vport,
 	struct sli4_sge *sgl = lpfc_ncmd->nvme_sgl;
 	struct scatterlist *data_sg;
 	struct sli4_sge *first_data_sgl;
+	struct ulp_bde64 *bde;
 	dma_addr_t physaddr;
 	uint32_t num_bde = 0;
 	uint32_t dma_len;
@@ -1235,7 +1259,24 @@ lpfc_nvme_prep_io_dma(struct lpfc_vport *vport,
 			data_sg = sg_next(data_sg);
 			sgl++;
 		}
+		if (phba->nvme_embed_pbde) {
+			/* Use PBDE support for first SGL only, offset == 0 */
+			/* Words 13-15 */
+			bde = (struct ulp_bde64 *)
+				&wqe->words[13];
+			bde->addrLow = first_data_sgl->addr_lo;
+			bde->addrHigh = first_data_sgl->addr_hi;
+			bde->tus.f.bdeSize =
+				le32_to_cpu(first_data_sgl->sge_len);
+			bde->tus.f.bdeFlags = BUFF_TYPE_BDE_64;
+			bde->tus.w = cpu_to_le32(bde->tus.w);
+			bf_set(wqe_pbde, &wqe->generic.wqe_com, 1);
+		} else
+			bf_set(wqe_pbde, &wqe->generic.wqe_com, 0);
+
 	} else {
+		bf_set(wqe_pbde, &wqe->generic.wqe_com, 0);
+
 		/* For this clause to be valid, the payload_length
 		 * and sg_cnt must zero.
 		 */
