@@ -1412,8 +1412,17 @@ nodatasum_case:
 		if (!page_bad->io_error && !sctx->is_dev_replace)
 			continue;
 
-		/* try to find no-io-error page in mirrors */
-		if (page_bad->io_error) {
+		if (scrub_is_page_on_raid56(sblock_bad->pagev[0])) {
+			/*
+			 * In case of dev replace, if raid56 rebuild process
+			 * didn't work out correct data, then copy the content
+			 * in sblock_bad to make sure target device is identical
+			 * to source device, instead of writing garbage data in
+			 * sblock_for_recheck array to target device.
+			 */
+			sblock_other = NULL;
+		} else if (page_bad->io_error) {
+			/* try to find no-io-error page in mirrors */
 			for (mirror_index = 0;
 			     mirror_index < BTRFS_MAX_MIRRORS &&
 			     sblocks_for_recheck[mirror_index].page_count > 0;
@@ -4480,7 +4489,8 @@ static int check_extent_to_block(struct btrfs_inode *inode, u64 start, u64 len,
 	 * move on to the next inode.
 	 */
 	if (em->block_start > logical ||
-	    em->block_start + em->block_len < logical + len) {
+	    em->block_start + em->block_len < logical + len ||
+	    test_bit(EXTENT_FLAG_PREALLOC, &em->flags)) {
 		free_extent_map(em);
 		ret = 1;
 		goto out_unlock;
@@ -4620,7 +4630,6 @@ static int write_page_nocow(struct scrub_ctx *sctx,
 {
 	struct bio *bio;
 	struct btrfs_device *dev;
-	int ret;
 
 	dev = sctx->wr_tgtdev;
 	if (!dev)
@@ -4635,16 +4644,14 @@ static int write_page_nocow(struct scrub_ctx *sctx,
 	bio->bi_iter.bi_sector = physical_for_dev_replace >> 9;
 	bio_set_dev(bio, dev->bdev);
 	bio->bi_opf = REQ_OP_WRITE | REQ_SYNC;
-	ret = bio_add_page(bio, page, PAGE_SIZE, 0);
-	if (ret != PAGE_SIZE) {
-leave_with_eio:
+	/* bio_add_page won't fail on a freshly allocated bio */
+	bio_add_page(bio, page, PAGE_SIZE, 0);
+
+	if (btrfsic_submit_bio_wait(bio)) {
 		bio_put(bio);
 		btrfs_dev_stat_inc_and_print(dev, BTRFS_DEV_STAT_WRITE_ERRS);
 		return -EIO;
 	}
-
-	if (btrfsic_submit_bio_wait(bio))
-		goto leave_with_eio;
 
 	bio_put(bio);
 	return 0;
