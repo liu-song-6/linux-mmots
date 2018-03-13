@@ -210,6 +210,9 @@ static void link_report(struct net_device *dev)
 		case 40000:
 			s = "40Gbps";
 			break;
+		case 50000:
+			s = "50Gbps";
+			break;
 		case 100000:
 			s = "100Gbps";
 			break;
@@ -2870,11 +2873,11 @@ static int cxgb_set_tx_maxrate(struct net_device *dev, int index, u32 rate)
 	/* Convert from Mbps to Kbps */
 	req_rate = rate << 10;
 
-	/* Max rate is 10 Gbps */
+	/* Max rate is 100 Gbps */
 	if (req_rate >= SCHED_MAX_RATE_KBPS) {
 		dev_err(adap->pdev_dev,
-			"Invalid rate %u Mbps, Max rate is %u Gbps\n",
-			rate, SCHED_MAX_RATE_KBPS);
+			"Invalid rate %u Mbps, Max rate is %u Mbps\n",
+			rate, SCHED_MAX_RATE_KBPS >> 10);
 		return -ERANGE;
 	}
 
@@ -4970,7 +4973,6 @@ static void cxgb4_mgmt_setup(struct net_device *dev)
 	/* Initialize the device structure. */
 	dev->netdev_ops = &cxgb4_mgmt_netdev_ops;
 	dev->ethtool_ops = &cxgb4_mgmt_ethtool_ops;
-	dev->needs_free_netdev = true;
 }
 
 static int cxgb4_iov_configure(struct pci_dev *pdev, int num_vfs)
@@ -5181,6 +5183,8 @@ static int init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	adapter->name = pci_name(pdev);
 	adapter->mbox = func;
 	adapter->pf = func;
+	adapter->params.chip = chip;
+	adapter->adap_idx = adap_idx;
 	adapter->msg_enable = DFLT_MSG_ENABLE;
 	adapter->mbox_log = kzalloc(sizeof(*adapter->mbox_log) +
 				    (sizeof(struct mbox_cmd) *
