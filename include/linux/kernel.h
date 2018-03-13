@@ -797,8 +797,8 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 	min1 < min2 ? min1 : min2; })
 
 /*
- * In the case of builtin constant values, there is no need to do the
- * double-evaluation protection, so the raw comparison can be made.
+ * In the case of compile-time constant values, there is no need to do
+ * the double-evaluation protection, so the raw comparison can be made.
  * This allows min()/max() to be used in stack array allocations and
  * avoid the compiler thinking it is a dynamic value leading to an
  * accidental VLA.
@@ -809,8 +809,8 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 			      __builtin_types_compatible_p(t1, t2),	\
 			      (t1)(x) < (t2)(y) ? (t1)(x) : (t2)(y),	\
 			      __single_eval_min(t1, t2,			\
-						__UNIQUE_ID(max1_),	\
-						__UNIQUE_ID(max2_),	\
+						__UNIQUE_ID(min1_),	\
+						__UNIQUE_ID(min2_),	\
 						x, y))
 
 /**
@@ -892,9 +892,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  * @x: first value
  * @y: second value
  */
-#define min_t(type, x, y)				\
-	__min(type, type,				\
-	      x, y)
+#define min_t(type, x, y)	 __min(type, type, x, y)
 
 /**
  * max_t - return maximum of two values, using the specified type
@@ -902,9 +900,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  * @x: first value
  * @y: second value
  */
-#define max_t(type, x, y)				\
-	__max(type, type,				\
-	      x, y)
+#define max_t(type, x, y)	__max(type, type, x, y)
 
 /**
  * clamp_t - return a value clamped to a given range using a given type
