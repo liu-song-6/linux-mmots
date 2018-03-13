@@ -749,9 +749,6 @@ static void execlists_cancel_requests(struct intel_engine_cs *engine)
 
 	GEM_TRACE("%s\n", engine->name);
 
-<<<<<<< HEAD
-	spin_lock_irqsave(&engine->timeline->lock, flags);
-=======
 	/*
 	 * Before we call engine->cancel_requests(), we should have exclusive
 	 * access to the submission state. This is arranged for us by the
@@ -767,7 +764,6 @@ static void execlists_cancel_requests(struct intel_engine_cs *engine)
 	 * it is irq state.)
 	 */
 	local_irq_save(flags);
->>>>>>> linux-next/akpm-base
 
 	/* Cancel the requests on the HW and clear the ELSP tracker. */
 	execlists_cancel_port_requests(execlists);
@@ -820,11 +816,7 @@ static void execlists_cancel_requests(struct intel_engine_cs *engine)
 	/* Mark all CS interrupts as complete */
 	execlists->active = 0;
 
-<<<<<<< HEAD
-	spin_unlock_irqrestore(&engine->timeline->lock, flags);
-=======
 	local_irq_restore(flags);
->>>>>>> linux-next/akpm-base
 }
 
 /*

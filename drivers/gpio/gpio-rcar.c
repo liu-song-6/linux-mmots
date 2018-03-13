@@ -49,10 +49,7 @@ struct gpio_rcar_priv {
 	unsigned int irq_parent;
 	atomic_t wakeup_path;
 	bool has_both_edge_trigger;
-<<<<<<< HEAD
-=======
 	struct gpio_rcar_bank_info bank_info;
->>>>>>> linux-next/akpm-base
 };
 
 #define IOINTSEL 0x00	/* General IO/Interrupt Switching Register */
@@ -526,12 +523,6 @@ static int gpio_rcar_remove(struct platform_device *pdev)
 	return 0;
 }
 
-<<<<<<< HEAD
-static int __maybe_unused gpio_rcar_suspend(struct device *dev)
-{
-	struct gpio_rcar_priv *p = dev_get_drvdata(dev);
-
-=======
 #ifdef CONFIG_PM_SLEEP
 static int gpio_rcar_suspend(struct device *dev)
 {
@@ -546,16 +537,12 @@ static int gpio_rcar_suspend(struct device *dev)
 	if (p->has_both_edge_trigger)
 		p->bank_info.bothedge = gpio_rcar_read(p, BOTHEDGE);
 
->>>>>>> linux-next/akpm-base
 	if (atomic_read(&p->wakeup_path))
 		device_set_wakeup_path(dev);
 
 	return 0;
 }
 
-<<<<<<< HEAD
-static SIMPLE_DEV_PM_OPS(gpio_rcar_pm_ops, gpio_rcar_suspend, NULL);
-=======
 static int gpio_rcar_resume(struct device *dev)
 {
 	struct gpio_rcar_priv *p = dev_get_drvdata(dev);
@@ -592,7 +579,6 @@ static int gpio_rcar_resume(struct device *dev)
 #endif /* CONFIG_PM_SLEEP*/
 
 static SIMPLE_DEV_PM_OPS(gpio_rcar_pm_ops, gpio_rcar_suspend, gpio_rcar_resume);
->>>>>>> linux-next/akpm-base
 
 static struct platform_driver gpio_rcar_device_driver = {
 	.probe		= gpio_rcar_probe,

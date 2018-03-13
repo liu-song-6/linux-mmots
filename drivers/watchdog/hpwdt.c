@@ -36,15 +36,7 @@
 static bool ilo5;
 static unsigned int soft_margin = DEFAULT_MARGIN;	/* in seconds */
 static bool nowayout = WATCHDOG_NOWAYOUT;
-<<<<<<< HEAD
-#ifdef CONFIG_HPWDT_NMI_DECODING
-static unsigned int allow_kdump = 1;
-#endif
-static char expect_release;
-static unsigned long hpwdt_is_open;
-=======
 static bool pretimeout = IS_ENABLED(CONFIG_HPWDT_NMI_DECODING);
->>>>>>> linux-next/akpm-base
 
 static void __iomem *pci_mem_addr;		/* the PCI-memory address */
 static unsigned long __iomem *hpwdt_nmistat;
@@ -58,8 +50,6 @@ static const struct pci_device_id hpwdt_devices[] = {
 };
 MODULE_DEVICE_TABLE(pci, hpwdt_devices);
 
-<<<<<<< HEAD
-=======
 
 /*
  *	Watchdog operations
@@ -103,7 +93,6 @@ static int hpwdt_ping(struct watchdog_device *wdd)
 
 	return 0;
 }
->>>>>>> linux-next/akpm-base
 
 static unsigned int hpwdt_gettimeleft(struct watchdog_device *wdd)
 {
@@ -161,21 +150,6 @@ static int hpwdt_my_nmi(void)
  */
 static int hpwdt_pretimeout(unsigned int ulReason, struct pt_regs *regs)
 {
-<<<<<<< HEAD
-	if ((ulReason == NMI_UNKNOWN) && !hpwdt_my_nmi())
-		return NMI_DONE;
-
-	if (allow_kdump)
-		hpwdt_stop();
-
-	nmi_panic(regs, "An NMI occurred. Depending on your system the reason "
-		"for the NMI is logged in any one of the following "
-		"resources:\n"
-		"1. Integrated Management Log (IML)\n"
-		"2. OA Syslog\n"
-		"3. OA Forward Progress Log\n"
-		"4. iLO Event Log");
-=======
 	unsigned int mynmi = hpwdt_my_nmi();
 	static char panic_msg[] =
 		"00: An NMI occurred. Depending on your system the reason "
@@ -195,7 +169,6 @@ static int hpwdt_pretimeout(unsigned int ulReason, struct pt_regs *regs)
 
 	hex_byte_pack(panic_msg, mynmi);
 	nmi_panic(regs, panic_msg);
->>>>>>> linux-next/akpm-base
 
 	return NMI_HANDLED;
 }
@@ -226,12 +199,6 @@ static const struct watchdog_ops hpwdt_ops = {
 #endif
 };
 
-<<<<<<< HEAD
-/*
- *	Init & Exit
- */
-
-=======
 static struct watchdog_device hpwdt_dev = {
 	.info		= &ident,
 	.ops		= &hpwdt_ops,
@@ -247,7 +214,6 @@ static struct watchdog_device hpwdt_dev = {
 /*
  *	Init & Exit
  */
->>>>>>> linux-next/akpm-base
 
 static int hpwdt_init_nmi_decoding(struct pci_dev *dev)
 {
@@ -403,14 +369,8 @@ MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default="
 		__MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
 
 #ifdef CONFIG_HPWDT_NMI_DECODING
-<<<<<<< HEAD
-module_param(allow_kdump, int, 0);
-MODULE_PARM_DESC(allow_kdump, "Start a kernel dump after NMI occurs");
-#endif /* CONFIG_HPWDT_NMI_DECODING */
-=======
 module_param(pretimeout, bool, 0);
 MODULE_PARM_DESC(pretimeout, "Watchdog pretimeout enabled");
 #endif
->>>>>>> linux-next/akpm-base
 
 module_pci_driver(hpwdt_driver);

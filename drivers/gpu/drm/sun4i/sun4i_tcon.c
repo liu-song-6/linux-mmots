@@ -1164,16 +1164,12 @@ static const struct sun4i_tcon_quirks sun8i_a33_quirks = {
 };
 
 static const struct sun4i_tcon_quirks sun8i_a83t_lcd_quirks = {
-<<<<<<< HEAD
-	.supports_lvds		= true,
-=======
 	.has_channel_0		= true,
 	.supports_lvds		= true,
 };
 
 static const struct sun4i_tcon_quirks sun8i_a83t_tv_quirks = {
 	.has_channel_1		= true,
->>>>>>> linux-next/akpm-base
 };
 
 static const struct sun4i_tcon_quirks sun8i_v3s_quirks = {

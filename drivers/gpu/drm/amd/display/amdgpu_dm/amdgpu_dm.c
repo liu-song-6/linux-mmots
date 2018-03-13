@@ -2520,12 +2520,7 @@ static const struct drm_crtc_funcs amdgpu_dm_crtc_funcs = {
 	.page_flip = drm_atomic_helper_page_flip,
 	.atomic_duplicate_state = dm_crtc_duplicate_state,
 	.atomic_destroy_state = dm_crtc_destroy_state,
-<<<<<<< HEAD
-	.enable_vblank = dm_enable_vblank,
-	.disable_vblank = dm_disable_vblank,
-=======
 	.set_crc_source = amdgpu_dm_crtc_set_crc_source,
->>>>>>> linux-next/akpm-base
 };
 
 static enum drm_connector_status
@@ -4778,16 +4773,6 @@ static int dm_update_planes_state(struct dc *dc,
 				return ret;
 			}
 
-<<<<<<< HEAD
-			/*
-			 * Any atomic check errors that occur after this will
-			 * not need a release. The plane state will be attached
-			 * to the stream, and therefore part of the atomic
-			 * state. It'll be released when the atomic state is
-			 * cleaned.
-			 */
-=======
->>>>>>> linux-next/akpm-base
 			if (!dc_add_plane_to_context(
 					dc,
 					dm_new_crtc_state->stream,
