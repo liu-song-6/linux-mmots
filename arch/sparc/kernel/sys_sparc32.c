@@ -65,7 +65,7 @@ asmlinkage long sys32_ftruncate64(unsigned int fd, unsigned long high, unsigned 
 	if ((int)high < 0)
 		return -EINVAL;
 	else
-		return sys_ftruncate(fd, (high << 32) | low);
+		return ksys_ftruncate(fd, (high << 32) | low);
 }
 
 static int cp_compat_stat64(struct kstat *stat,
@@ -241,7 +241,7 @@ long compat_sys_fadvise64_64(int fd,
 
 long sys32_sync_file_range(unsigned int fd, unsigned long off_high, unsigned long off_low, unsigned long nb_high, unsigned long nb_low, unsigned int flags)
 {
-	return sys_sync_file_range(fd,
+	return ksys_sync_file_range(fd,
 				   (off_high << 32) | off_low,
 				   (nb_high << 32) | nb_low,
 				   flags);

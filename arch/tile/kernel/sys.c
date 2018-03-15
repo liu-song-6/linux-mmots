@@ -88,8 +88,8 @@ SYSCALL_DEFINE6(mmap2, unsigned long, addr, unsigned long, len,
 #define PAGE_ADJUST (PAGE_SHIFT - 12)
 	if (off_4k & ((1 << PAGE_ADJUST) - 1))
 		return -EINVAL;
-	return sys_mmap_pgoff(addr, len, prot, flags, fd,
-			      off_4k >> PAGE_ADJUST);
+	return ksys_mmap_pgoff(addr, len, prot, flags, fd,
+			       off_4k >> PAGE_ADJUST);
 }
 
 #ifdef __tilegx__
@@ -99,8 +99,8 @@ SYSCALL_DEFINE6(mmap, unsigned long, addr, unsigned long, len,
 {
 	if (offset & ((1 << PAGE_SHIFT) - 1))
 		return -EINVAL;
-	return sys_mmap_pgoff(addr, len, prot, flags, fd,
-			      offset >> PAGE_SHIFT);
+	return ksys_mmap_pgoff(addr, len, prot, flags, fd,
+			       offset >> PAGE_SHIFT);
 }
 #endif
 

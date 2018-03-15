@@ -23,6 +23,7 @@
  */
 
 #include "intel_guc.h"
+#include "intel_guc_ads.h"
 #include "intel_guc_submission.h"
 #include "i915_drv.h"
 
@@ -63,6 +64,7 @@ void intel_guc_init_early(struct intel_guc *guc)
 {
 	intel_guc_fw_init_early(guc);
 	intel_guc_ct_init_early(&guc->ct);
+	intel_guc_log_init_early(guc);
 
 	mutex_init(&guc->send_mutex);
 	guc->send = intel_guc_send_nop;
@@ -86,8 +88,10 @@ int intel_guc_init_wq(struct intel_guc *guc)
 	 */
 	guc->log.runtime.flush_wq = alloc_ordered_workqueue("i915-guc_log",
 						WQ_HIGHPRI | WQ_FREEZABLE);
-	if (!guc->log.runtime.flush_wq)
+	if (!guc->log.runtime.flush_wq) {
+		DRM_ERROR("Couldn't allocate workqueue for GuC log\n");
 		return -ENOMEM;
+	}
 
 	/*
 	 * Even though both sending GuC action, and adding a new workitem to
@@ -108,6 +112,8 @@ int intel_guc_init_wq(struct intel_guc *guc)
 							  WQ_HIGHPRI);
 		if (!guc->preempt_wq) {
 			destroy_workqueue(guc->log.runtime.flush_wq);
+			DRM_ERROR("Couldn't allocate workqueue for GuC "
+				  "preemption\n");
 			return -ENOMEM;
 		}
 	}
@@ -163,10 +169,25 @@ int intel_guc_init(struct intel_guc *guc)
 		return ret;
 	GEM_BUG_ON(!guc->shared_data);
 
+	ret = intel_guc_log_create(guc);
+	if (ret)
+		goto err_shared;
+
+	ret = intel_guc_ads_create(guc);
+	if (ret)
+		goto err_log;
+	GEM_BUG_ON(!guc->ads_vma);
+
 	/* We need to notify the guc whenever we change the GGTT */
 	i915_ggtt_enable_guc(dev_priv);
 
 	return 0;
+
+err_log:
+	intel_guc_log_destroy(guc);
+err_shared:
+	guc_shared_data_destroy(guc);
+	return ret;
 }
 
 void intel_guc_fini(struct intel_guc *guc)
@@ -174,6 +195,8 @@ void intel_guc_fini(struct intel_guc *guc)
 	struct drm_i915_private *dev_priv = guc_to_i915(guc);
 
 	i915_ggtt_disable_guc(dev_priv);
+	intel_guc_ads_destroy(guc);
+	intel_guc_log_destroy(guc);
 	guc_shared_data_destroy(guc);
 }
 
@@ -195,6 +218,19 @@ static u32 get_core_family(struct drm_i915_private *dev_priv)
 		MISSING_CASE(gen);
 		return GUC_CORE_FAMILY_UNKNOWN;
 	}
+}
+
+static u32 get_log_verbosity_flags(void)
+{
+	if (i915_modparams.guc_log_level > 0) {
+		u32 verbosity = i915_modparams.guc_log_level - 1;
+
+		GEM_BUG_ON(verbosity > GUC_LOG_VERBOSITY_MAX);
+		return verbosity << GUC_LOG_VERBOSITY_SHIFT;
+	}
+
+	GEM_BUG_ON(i915_modparams.enable_guc < 0);
+	return GUC_LOG_DISABLED;
 }
 
 /*
@@ -229,12 +265,7 @@ void intel_guc_init_params(struct intel_guc *guc)
 
 	params[GUC_CTL_LOG_PARAMS] = guc->log.flags;
 
-	if (i915_modparams.guc_log_level >= 0) {
-		params[GUC_CTL_DEBUG] =
-			i915_modparams.guc_log_level << GUC_LOG_VERBOSITY_SHIFT;
-	} else {
-		params[GUC_CTL_DEBUG] = GUC_LOG_DISABLED;
-	}
+	params[GUC_CTL_DEBUG] = get_log_verbosity_flags();
 
 	/* If GuC submission is enabled, set up additional parameters here */
 	if (USES_GUC_SUBMISSION(dev_priv)) {
@@ -333,13 +364,50 @@ int intel_guc_send_mmio(struct intel_guc *guc, const u32 *action, u32 len)
 	return ret;
 }
 
+void intel_guc_to_host_event_handler(struct intel_guc *guc)
+{
+	struct drm_i915_private *dev_priv = guc_to_i915(guc);
+	u32 msg, flush;
+
+	/*
+	 * Sample the log buffer flush related bits & clear them out now
+	 * itself from the message identity register to minimize the
+	 * probability of losing a flush interrupt, when there are back
+	 * to back flush interrupts.
+	 * There can be a new flush interrupt, for different log buffer
+	 * type (like for ISR), whilst Host is handling one (for DPC).
+	 * Since same bit is used in message register for ISR & DPC, it
+	 * could happen that GuC sets the bit for 2nd interrupt but Host
+	 * clears out the bit on handling the 1st interrupt.
+	 */
+
+	msg = I915_READ(SOFT_SCRATCH(15));
+	flush = msg & (INTEL_GUC_RECV_MSG_CRASH_DUMP_POSTED |
+		       INTEL_GUC_RECV_MSG_FLUSH_LOG_BUFFER);
+	if (flush) {
+		/* Clear the message bits that are handled */
+		I915_WRITE(SOFT_SCRATCH(15), msg & ~flush);
+
+		/* Handle flush interrupt in bottom half */
+		queue_work(guc->log.runtime.flush_wq,
+			   &guc->log.runtime.flush_work);
+
+		guc->log.flush_interrupt_count++;
+	} else {
+		/*
+		 * Not clearing of unhandled event bits won't result in
+		 * re-triggering of the interrupt.
+		 */
+	}
+}
+
 int intel_guc_sample_forcewake(struct intel_guc *guc)
 {
 	struct drm_i915_private *dev_priv = guc_to_i915(guc);
 	u32 action[2];
 
 	action[0] = INTEL_GUC_ACTION_SAMPLE_FORCEWAKE;
-	/* WaRsDisableCoarsePowerGating:skl,bxt */
+	/* WaRsDisableCoarsePowerGating:skl,cnl */
 	if (!HAS_RC6(dev_priv) || NEEDS_WaRsDisableCoarsePowerGating(dev_priv))
 		action[1] = 0;
 	else
@@ -372,22 +440,15 @@ int intel_guc_auth_huc(struct intel_guc *guc, u32 rsa_offset)
 
 /**
  * intel_guc_suspend() - notify GuC entering suspend state
- * @dev_priv:	i915 device private
+ * @guc:	the guc
  */
-int intel_guc_suspend(struct drm_i915_private *dev_priv)
+int intel_guc_suspend(struct intel_guc *guc)
 {
-	struct intel_guc *guc = &dev_priv->guc;
-	u32 data[3];
-
-	if (guc->fw.load_status != INTEL_UC_FIRMWARE_SUCCESS)
-		return 0;
-
-	gen9_disable_guc_interrupts(dev_priv);
-
-	data[0] = INTEL_GUC_ACTION_ENTER_S_STATE;
-	/* any value greater than GUC_POWER_D0 */
-	data[1] = GUC_POWER_D1;
-	data[2] = guc_ggtt_offset(guc->shared_data);
+	u32 data[] = {
+		INTEL_GUC_ACTION_ENTER_S_STATE,
+		GUC_POWER_D1, /* any value greater than GUC_POWER_D0 */
+		guc_ggtt_offset(guc->shared_data)
+	};
 
 	return intel_guc_send(guc, data, ARRAY_SIZE(data));
 }
@@ -417,22 +478,15 @@ int intel_guc_reset_engine(struct intel_guc *guc,
 
 /**
  * intel_guc_resume() - notify GuC resuming from suspend state
- * @dev_priv:	i915 device private
+ * @guc:	the guc
  */
-int intel_guc_resume(struct drm_i915_private *dev_priv)
+int intel_guc_resume(struct intel_guc *guc)
 {
-	struct intel_guc *guc = &dev_priv->guc;
-	u32 data[3];
-
-	if (guc->fw.load_status != INTEL_UC_FIRMWARE_SUCCESS)
-		return 0;
-
-	if (i915_modparams.guc_log_level >= 0)
-		gen9_enable_guc_interrupts(dev_priv);
-
-	data[0] = INTEL_GUC_ACTION_EXIT_S_STATE;
-	data[1] = GUC_POWER_D0;
-	data[2] = guc_ggtt_offset(guc->shared_data);
+	u32 data[] = {
+		INTEL_GUC_ACTION_EXIT_S_STATE,
+		GUC_POWER_D0,
+		guc_ggtt_offset(guc->shared_data)
+	};
 
 	return intel_guc_send(guc, data, ARRAY_SIZE(data));
 }

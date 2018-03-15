@@ -48,7 +48,7 @@ COMPAT_SYSCALL_DEFINE4(truncate64, char __user *, filename, u32, dummy,
 COMPAT_SYSCALL_DEFINE4(ftruncate64, unsigned int, fd, u32, dummy,
 		       SYSCALL_PAIR(length))
 {
-	return sys_ftruncate(fd, ((loff_t)length_hi << 32) | length_lo);
+	return ksys_ftruncate(fd, ((loff_t)length_hi << 32) | length_lo);
 }
 
 COMPAT_SYSCALL_DEFINE6(pread64, unsigned int, fd, char __user *, ubuf,
@@ -68,7 +68,7 @@ COMPAT_SYSCALL_DEFINE6(pwrite64, unsigned int, fd, char __user *, ubuf,
 COMPAT_SYSCALL_DEFINE6(sync_file_range2, int, fd, unsigned int, flags,
 		       SYSCALL_PAIR(offset), SYSCALL_PAIR(nbytes))
 {
-	return sys_sync_file_range(fd, ((loff_t)offset_hi << 32) | offset_lo,
+	return ksys_sync_file_range(fd, ((loff_t)offset_hi << 32) | offset_lo,
 				   ((loff_t)nbytes_hi << 32) | nbytes_lo,
 				   flags);
 }

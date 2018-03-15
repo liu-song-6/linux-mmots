@@ -46,7 +46,7 @@
 
 /* Current ACPICA subsystem version in YYYYMMDD format */
 
-#define ACPI_CA_VERSION                 0x20180105
+#define ACPI_CA_VERSION                 0x20180209
 
 #include <acpi/acconfig.h>
 #include <acpi/actypes.h>
@@ -192,15 +192,19 @@ ACPI_INIT_GLOBAL(u8, acpi_gbl_do_not_use_xsdt, FALSE);
 
 /*
  * Optionally support group module level code.
+ * NOTE, this is essentially obsolete and will be removed soon
+ * (01/2018).
  */
-ACPI_INIT_GLOBAL(u8, acpi_gbl_group_module_level_code, TRUE);
+ACPI_INIT_GLOBAL(u8, acpi_gbl_group_module_level_code, FALSE);
 
 /*
  * Optionally support module level code by parsing the entire table as
  * a term_list. Default is FALSE, do not execute entire table until some
  * lock order issues are fixed.
+ * NOTE, this is essentially obsolete and will be removed soon
+ * (01/2018).
  */
-ACPI_INIT_GLOBAL(u8, acpi_gbl_parse_table_as_term_list, FALSE);
+ACPI_INIT_GLOBAL(u8, acpi_gbl_parse_table_as_term_list, TRUE);
 
 /*
  * Optionally use 32-bit FADT addresses if and when there is a conflict
