@@ -679,7 +679,7 @@ ip6ip6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 
 		/* Try to guess incoming interface */
 		rt = rt6_lookup(dev_net(skb->dev), &ipv6_hdr(skb2)->saddr,
-				NULL, 0, 0);
+				NULL, 0, skb2, 0);
 
 		if (rt && rt->dst.dev)
 			skb2->dev = rt->dst.dev;
@@ -1444,7 +1444,7 @@ static void ip6_tnl_link_config(struct ip6_tnl *t)
 
 		struct rt6_info *rt = rt6_lookup(t->net,
 						 &p->raddr, &p->laddr,
-						 p->link, strict);
+						 p->link, NULL, strict);
 
 		if (!rt)
 			return;
@@ -2205,6 +2205,8 @@ static int __net_init ip6_tnl_init_net(struct net *net)
 	ip6n->tnls[0] = ip6n->tnls_wc;
 	ip6n->tnls[1] = ip6n->tnls_r_l;
 
+	if (!net_has_fallback_tunnels(net))
+		return 0;
 	err = -ENOMEM;
 	ip6n->fb_tnl_dev = alloc_netdev(sizeof(struct ip6_tnl), "ip6tnl0",
 					NET_NAME_UNKNOWN, ip6_tnl_dev_setup);
@@ -2254,6 +2256,7 @@ static struct pernet_operations ip6_tnl_net_ops = {
 	.exit_batch = ip6_tnl_exit_batch_net,
 	.id   = &ip6_tnl_net_id,
 	.size = sizeof(struct ip6_tnl_net),
+	.async = true,
 };
 
 /**

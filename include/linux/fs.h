@@ -1314,12 +1314,13 @@ extern int send_sigurg(struct fown_struct *fown);
 #define UMOUNT_UNUSED	0x80000000	/* Flag guaranteed to be unused */
 
 /* sb->s_iflags */
-#define SB_I_CGROUPWB	0x00000001	/* cgroup-aware writeback enabled */
 #define SB_I_NOEXEC	0x00000002	/* Ignore executables on this fs */
 #define SB_I_NODEV	0x00000004	/* Ignore devices on this fs */
 
 /* sb->s_iflags to limit user namespace mounts */
 #define SB_I_USERNS_VISIBLE		0x00000010 /* fstype already mounted */
+#define SB_I_IMA_UNVERIFIABLE_SIGNATURE	0x00000020
+#define SB_I_UNTRUSTED_MOUNTER		0x00000040
 
 /* Possible states of 'frozen' field */
 enum {
@@ -1865,6 +1866,7 @@ struct super_operations {
 #define S_DAX		0	/* Make all the DAX code disappear */
 #endif
 #define S_ENCRYPTED	16384	/* Encrypted file (using fs/crypto/) */
+#define S_CGROUPWB	32768	/* Enable cgroup writeback for this inode */
 
 /*
  * Note that nosuid etc flags are inode-specific: setting some file-system
@@ -1905,6 +1907,7 @@ static inline bool sb_rdonly(const struct super_block *sb) { return sb->s_flags 
 #define IS_NOSEC(inode)		((inode)->i_flags & S_NOSEC)
 #define IS_DAX(inode)		((inode)->i_flags & S_DAX)
 #define IS_ENCRYPTED(inode)	((inode)->i_flags & S_ENCRYPTED)
+#define IS_CGROUPWB(inode)	((inode)->i_flags & S_CGROUPWB)
 
 #define IS_WHITEOUT(inode)	(S_ISCHR(inode->i_mode) && \
 				 (inode)->i_rdev == WHITEOUT_DEV)
@@ -2976,12 +2979,6 @@ enum {
 
 	/* filesystem does not support filling holes */
 	DIO_SKIP_HOLES	= 0x02,
-
-	/* filesystem can handle aio writes beyond i_size */
-	DIO_ASYNC_EXTEND = 0x04,
-
-	/* inode/fs/bdev does not need truncate protection */
-	DIO_SKIP_DIO_COUNT = 0x08,
 };
 
 void dio_end_io(struct bio *bio);

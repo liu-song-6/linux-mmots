@@ -181,10 +181,14 @@ static const struct kernel_param_ops param_ops_xint = {
 };
 #define param_check_xint param_check_int
 
-static int power_save = -1;
+static int power_save = CONFIG_SND_HDA_POWER_SAVE_DEFAULT;
 module_param(power_save, xint, 0644);
 MODULE_PARM_DESC(power_save, "Automatic power-saving timeout "
 		 "(in second, 0 = disable).");
+
+static bool pm_blacklist = true;
+module_param(pm_blacklist, bool, 0644);
+MODULE_PARM_DESC(pm_blacklist, "Enable power-management blacklist");
 
 /* reset the HD-audio controller in power save mode.
  * this may give more power-saving, but will take longer time to
@@ -1227,6 +1231,7 @@ static void azx_vs_set_state(struct pci_dev *pci,
 	struct snd_card *card = pci_get_drvdata(pci);
 	struct azx *chip = card->private_data;
 	struct hda_intel *hda = container_of(chip, struct hda_intel, chip);
+	struct hda_codec *codec;
 	bool disabled;
 
 	wait_for_completion(&hda->probe_wait);
@@ -1251,8 +1256,12 @@ static void azx_vs_set_state(struct pci_dev *pci,
 		dev_info(chip->card->dev, "%s via vga_switcheroo\n",
 			 disabled ? "Disabling" : "Enabling");
 		if (disabled) {
-			pm_runtime_put_sync_suspend(card->dev);
-			azx_suspend(card->dev);
+			list_for_each_codec(codec, &chip->bus) {
+				pm_runtime_suspend(hda_codec_dev(codec));
+				pm_runtime_disable(hda_codec_dev(codec));
+			}
+			pm_runtime_suspend(card->dev);
+			pm_runtime_disable(card->dev);
 			/* when we get suspended by vga_switcheroo we end up in D3cold,
 			 * however we have no ACPI handle, so pci/acpi can't put us there,
 			 * put ourselves there */
@@ -1263,9 +1272,12 @@ static void azx_vs_set_state(struct pci_dev *pci,
 					 "Cannot lock devices!\n");
 		} else {
 			snd_hda_unlock_devices(&chip->bus);
-			pm_runtime_get_noresume(card->dev);
 			chip->disabled = false;
-			azx_resume(card->dev);
+			pm_runtime_enable(card->dev);
+			list_for_each_codec(codec, &chip->bus) {
+				pm_runtime_enable(hda_codec_dev(codec));
+				pm_runtime_resume(hda_codec_dev(codec));
+			}
 		}
 	}
 }
@@ -1295,6 +1307,7 @@ static void init_vga_switcheroo(struct azx *chip)
 		dev_info(chip->card->dev,
 			 "Handle vga_switcheroo audio client\n");
 		hda->use_vga_switcheroo = 1;
+		chip->driver_caps |= AZX_DCAPS_PM_RUNTIME;
 		pci_dev_put(p);
 	}
 }
@@ -1320,9 +1333,6 @@ static int register_vga_switcheroo(struct azx *chip)
 		return err;
 	hda->vga_switcheroo_registered = 1;
 
-	/* register as an optimus hdmi audio power domain */
-	vga_switcheroo_init_domain_pm_optimus_hdmi_audio(chip->card->dev,
-							 &hda->hdmi_pm_domain);
 	return 0;
 }
 #else
@@ -1351,10 +1361,8 @@ static int azx_free(struct azx *chip)
 	if (use_vga_switcheroo(hda)) {
 		if (chip->disabled && hda->probe_continued)
 			snd_hda_unlock_devices(&chip->bus);
-		if (hda->vga_switcheroo_registered) {
+		if (hda->vga_switcheroo_registered)
 			vga_switcheroo_unregister_client(chip->pci);
-			vga_switcheroo_fini_domain_pm_ops(chip->card->dev);
-		}
 	}
 
 	if (bus->chip_init) {
@@ -2215,6 +2223,7 @@ static int azx_probe_continue(struct azx *chip)
 	struct hda_intel *hda = container_of(chip, struct hda_intel, chip);
 	struct hdac_bus *bus = azx_bus(chip);
 	struct pci_dev *pci = chip->pci;
+	struct hda_codec *codec;
 	int dev = chip->dev_index;
 	int val;
 	int err;
@@ -2300,10 +2309,9 @@ static int azx_probe_continue(struct azx *chip)
 
 	val = power_save;
 #ifdef CONFIG_PM
-	if (val == -1) {
+	if (pm_blacklist) {
 		const struct snd_pci_quirk *q;
 
-		val = CONFIG_SND_HDA_POWER_SAVE_DEFAULT;
 		q = snd_pci_quirk_lookup(chip->pci, power_save_blacklist);
 		if (q && val) {
 			dev_info(chip->card->dev, "device %04x:%04x is on the power_save blacklist, forcing power_save to 0\n",
@@ -2312,8 +2320,17 @@ static int azx_probe_continue(struct azx *chip)
 		}
 	}
 #endif /* CONFIG_PM */
+
+	/*
+	 * The discrete GPU cannot power down unless the HDA controller runtime
+	 * suspends, so activate runtime PM on codecs even if power_save == 0.
+	 */
+	if (use_vga_switcheroo(hda))
+		list_for_each_codec(codec, &chip->bus)
+			codec->auto_runtime_pm = 1;
+
 	snd_hda_set_power_save(&chip->bus, val * 1000);
-	if (azx_has_pm_runtime(chip) || hda->use_vga_switcheroo)
+	if (azx_has_pm_runtime(chip))
 		pm_runtime_put_autosuspend(&pci->dev);
 
 out_free:
@@ -2425,6 +2442,9 @@ static const struct pci_device_id azx_ids[] = {
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE},
 	/* Cannonlake */
 	{ PCI_DEVICE(0x8086, 0x9dc8),
+	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE},
+	/* Icelake */
+	{ PCI_DEVICE(0x8086, 0x34c8),
 	  .driver_data = AZX_DRIVER_SKL | AZX_DCAPS_INTEL_SKYLAKE},
 	/* Broxton-P(Apollolake) */
 	{ PCI_DEVICE(0x8086, 0x5a98),

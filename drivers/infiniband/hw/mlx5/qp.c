@@ -36,6 +36,7 @@
 #include <rdma/ib_user_verbs.h>
 #include <linux/mlx5/fs.h>
 #include "mlx5_ib.h"
+#include "ib_rep.h"
 
 /* not supported currently */
 static int wq_signature;
@@ -1082,6 +1083,13 @@ static void destroy_raw_packet_qp_tis(struct mlx5_ib_dev *dev,
 	mlx5_core_destroy_tis(dev->mdev, sq->tisn);
 }
 
+static void destroy_flow_rule_vport_sq(struct mlx5_ib_dev *dev,
+				       struct mlx5_ib_sq *sq)
+{
+	if (sq->flow_rule)
+		mlx5_del_flow_rules(sq->flow_rule);
+}
+
 static int create_raw_packet_qp_sq(struct mlx5_ib_dev *dev,
 				   struct mlx5_ib_sq *sq, void *qpin,
 				   struct ib_pd *pd)
@@ -1145,7 +1153,14 @@ static int create_raw_packet_qp_sq(struct mlx5_ib_dev *dev,
 	if (err)
 		goto err_umem;
 
+	err = create_flow_rule_vport_sq(dev, sq);
+	if (err)
+		goto err_flow;
+
 	return 0;
+
+err_flow:
+	mlx5_core_destroy_sq_tracked(dev->mdev, &sq->base.mqp);
 
 err_umem:
 	ib_umem_release(sq->ubuffer.umem);
@@ -1157,11 +1172,12 @@ err_umem:
 static void destroy_raw_packet_qp_sq(struct mlx5_ib_dev *dev,
 				     struct mlx5_ib_sq *sq)
 {
+	destroy_flow_rule_vport_sq(dev, sq);
 	mlx5_core_destroy_sq_tracked(dev->mdev, &sq->base.mqp);
 	ib_umem_release(sq->ubuffer.umem);
 }
 
-static int get_rq_pas_size(void *qpc)
+static size_t get_rq_pas_size(void *qpc)
 {
 	u32 log_page_size = MLX5_GET(qpc, qpc, log_page_size) + 12;
 	u32 log_rq_stride = MLX5_GET(qpc, qpc, log_rq_stride);
@@ -1177,7 +1193,8 @@ static int get_rq_pas_size(void *qpc)
 }
 
 static int create_raw_packet_qp_rq(struct mlx5_ib_dev *dev,
-				   struct mlx5_ib_rq *rq, void *qpin)
+				   struct mlx5_ib_rq *rq, void *qpin,
+				   size_t qpinlen)
 {
 	struct mlx5_ib_qp *mqp = rq->base.container_mibqp;
 	__be64 *pas;
@@ -1186,9 +1203,12 @@ static int create_raw_packet_qp_rq(struct mlx5_ib_dev *dev,
 	void *rqc;
 	void *wq;
 	void *qpc = MLX5_ADDR_OF(create_qp_in, qpin, qpc);
-	int inlen;
+	size_t rq_pas_size = get_rq_pas_size(qpc);
+	size_t inlen;
 	int err;
-	u32 rq_pas_size = get_rq_pas_size(qpc);
+
+	if (qpinlen < rq_pas_size + MLX5_BYTE_OFF(create_qp_in, pas))
+		return -EINVAL;
 
 	inlen = MLX5_ST_SZ_BYTES(create_rq_in) + rq_pas_size;
 	in = kvzalloc(inlen, GFP_KERNEL);
@@ -1263,6 +1283,10 @@ static int create_raw_packet_qp_tir(struct mlx5_ib_dev *dev,
 	if (tunnel_offload_en)
 		MLX5_SET(tirc, tirc, tunneled_offload_en, 1);
 
+	if (dev->rep)
+		MLX5_SET(tirc, tirc, self_lb_block,
+			 MLX5_TIRC_SELF_LB_BLOCK_BLOCK_UNICAST_);
+
 	err = mlx5_core_create_tir(dev->mdev, in, inlen, &rq->tirn);
 
 	kvfree(in);
@@ -1277,7 +1301,7 @@ static void destroy_raw_packet_qp_tir(struct mlx5_ib_dev *dev,
 }
 
 static int create_raw_packet_qp(struct mlx5_ib_dev *dev, struct mlx5_ib_qp *qp,
-				u32 *in,
+				u32 *in, size_t inlen,
 				struct ib_pd *pd)
 {
 	struct mlx5_ib_raw_packet_qp *raw_packet_qp = &qp->raw_packet_qp;
@@ -1309,7 +1333,7 @@ static int create_raw_packet_qp(struct mlx5_ib_dev *dev, struct mlx5_ib_qp *qp,
 			rq->flags |= MLX5_IB_RQ_CVLAN_STRIPPING;
 		if (qp->flags & MLX5_IB_QP_PCI_WRITE_END_PADDING)
 			rq->flags |= MLX5_IB_RQ_PCI_WRITE_END_PADDING;
-		err = create_raw_packet_qp_rq(dev, rq, in);
+		err = create_raw_packet_qp_rq(dev, rq, in, inlen);
 		if (err)
 			goto err_destroy_sq;
 
@@ -1554,6 +1578,10 @@ static int create_rss_raw_qp_tir(struct mlx5_ib_dev *dev, struct mlx5_ib_qp *qp,
 	MLX5_SET(rx_hash_field_select, hfso, selected_fields, selected_fields);
 
 create_tir:
+	if (dev->rep)
+		MLX5_SET(tirc, tirc, self_lb_block,
+			 MLX5_TIRC_SELF_LB_BLOCK_BLOCK_UNICAST_);
+
 	err = mlx5_core_create_tir(dev->mdev, in, inlen, &qp->rss_qp.tirn);
 
 	if (err)
@@ -1872,11 +1900,16 @@ static int create_qp_common(struct mlx5_ib_dev *dev, struct ib_pd *pd,
 		}
 	}
 
+	if (inlen < 0) {
+		err = -EINVAL;
+		goto err;
+	}
+
 	if (init_attr->qp_type == IB_QPT_RAW_PACKET ||
 	    qp->flags & MLX5_IB_QP_UNDERLAY) {
 		qp->raw_packet_qp.sq.ubuffer.buf_addr = ucmd.sq_buf_addr;
 		raw_packet_qp_copy_info(qp, &qp->raw_packet_qp);
-		err = create_raw_packet_qp(dev, qp, in, pd);
+		err = create_raw_packet_qp(dev, qp, in, inlen, pd);
 	} else {
 		err = mlx5_core_create_qp(dev->mdev, &base->mqp, in, inlen);
 	}
@@ -2134,7 +2167,6 @@ static struct ib_qp *mlx5_ib_create_dct(struct ib_pd *pd,
 					struct ib_qp_init_attr *attr,
 					struct mlx5_ib_create_qp *ucmd)
 {
-	struct mlx5_ib_dev *dev;
 	struct mlx5_ib_qp *qp;
 	int err = 0;
 	u32 uidx = MLX5_IB_DEFAULT_UIDX;
@@ -2142,8 +2174,6 @@ static struct ib_qp *mlx5_ib_create_dct(struct ib_pd *pd,
 
 	if (!attr->srq || !attr->recv_cq)
 		return ERR_PTR(-EINVAL);
-
-	dev = to_mdev(pd->device);
 
 	err = get_qp_user_index(to_mucontext(pd->uobject->context),
 				ucmd, sizeof(*ucmd), &uidx);
@@ -2929,18 +2959,16 @@ static int __mlx5_ib_modify_qp(struct ib_qp *ibqp,
 	u16 op;
 	u8 tx_affinity = 0;
 
+	mlx5_st = to_mlx5_st(ibqp->qp_type == IB_QPT_DRIVER ?
+			     qp->qp_sub_type : ibqp->qp_type);
+	if (mlx5_st < 0)
+		return -EINVAL;
+
 	context = kzalloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
 		return -ENOMEM;
 
-	err = to_mlx5_st(ibqp->qp_type == IB_QPT_DRIVER ?
-			 qp->qp_sub_type : ibqp->qp_type);
-	if (err < 0) {
-		mlx5_ib_dbg(dev, "unsupported qp type %d\n", ibqp->qp_type);
-		goto out;
-	}
-
-	context->flags = cpu_to_be32(err << 16);
+	context->flags = cpu_to_be32(mlx5_st << 16);
 
 	if (!(attr_mask & IB_QP_PATH_MIG_STATE)) {
 		context->flags |= cpu_to_be32(MLX5_QP_PM_MIGRATED << 11);
@@ -3094,10 +3122,6 @@ static int __mlx5_ib_modify_qp(struct ib_qp *ibqp,
 
 	mlx5_cur = to_mlx5_state(cur_state);
 	mlx5_new = to_mlx5_state(new_state);
-	mlx5_st = to_mlx5_st(ibqp->qp_type == IB_QPT_DRIVER ?
-			     qp->qp_sub_type : ibqp->qp_type);
-	if (mlx5_st < 0)
-		goto out;
 
 	if (mlx5_cur >= MLX5_QP_NUM_STATE || mlx5_new >= MLX5_QP_NUM_STATE ||
 	    !optab[mlx5_cur][mlx5_new]) {

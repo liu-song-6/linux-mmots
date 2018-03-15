@@ -170,7 +170,7 @@ int __init btrfs_prelim_ref_init(void)
 	return 0;
 }
 
-void btrfs_prelim_ref_exit(void)
+void __cold btrfs_prelim_ref_exit(void)
 {
 	kmem_cache_destroy(btrfs_prelim_ref_cache);
 }
@@ -1519,6 +1519,7 @@ int btrfs_check_shared(struct btrfs_root *root, u64 inum, u64 bytenr)
 		if (!node)
 			break;
 		bytenr = node->val;
+		shared.share_count = 0;
 		cond_resched();
 	}
 

@@ -227,7 +227,6 @@ static void rds_tcp_tc_info(struct socket *rds_sock, unsigned int len,
 	struct rds_tcp_connection *tc;
 	unsigned long flags;
 	struct sockaddr_in sin;
-	int sinlen;
 	struct socket *sock;
 
 	spin_lock_irqsave(&rds_tcp_tc_list_lock, flags);
@@ -239,12 +238,10 @@ static void rds_tcp_tc_info(struct socket *rds_sock, unsigned int len,
 
 		sock = tc->t_sock;
 		if (sock) {
-			sock->ops->getname(sock, (struct sockaddr *)&sin,
-					   &sinlen, 0);
+			sock->ops->getname(sock, (struct sockaddr *)&sin, 0);
 			tsinfo.local_addr = sin.sin_addr.s_addr;
 			tsinfo.local_port = sin.sin_port;
-			sock->ops->getname(sock, (struct sockaddr *)&sin,
-					   &sinlen, 1);
+			sock->ops->getname(sock, (struct sockaddr *)&sin, 1);
 			tsinfo.peer_addr = sin.sin_addr.s_addr;
 			tsinfo.peer_port = sin.sin_port;
 		}
@@ -518,6 +515,7 @@ static struct pernet_operations rds_tcp_net_ops = {
 	.exit = rds_tcp_exit_net,
 	.id = &rds_tcp_netid,
 	.size = sizeof(struct rds_tcp_net),
+	.async = true,
 };
 
 static void rds_tcp_kill_sock(struct net *net)
