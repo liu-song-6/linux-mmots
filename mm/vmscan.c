@@ -2578,10 +2578,10 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 			 * is exceeding the page laundering rate. Either the
 			 * global limits are not being effective at throttling
 			 * processes due to the page distribution throughout
-			 * zones or there is heavy usage of a slow backing device.
-			 * The only option is to throttle from reclaim context
-			 * which is not ideal as there is no guarantee the
-			 * dirtying process is throttled in the same way
+			 * zones or there is heavy usage of a slow backing
+			 * device.  The only option is to throttle from reclaim
+			 * context which is not ideal as there is no guarantee
+			 * the dirtying process is throttled in the same way
 			 * balance_dirty_pages() manages.
 			 *
 			 * Once a node is flagged PGDAT_WRITEBACK, kswapd will
@@ -2593,8 +2593,9 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 				set_bit(PGDAT_WRITEBACK, &pgdat->flags);
 
 			/*
-			 * Tag a node as congested if all the dirty pages scanned were
-			 * backed by a congested BDI and wait_iff_congested will stall.
+			 * Tag a node as congested if all the dirty pages
+			 * scanned were backed by a congested BDI and
+			 * wait_iff_congested will stall.
 			 */
 			if (stat.nr_dirty && stat.nr_dirty == stat.nr_congested)
 				set_bit(PGDAT_CONGESTED, &pgdat->flags);
@@ -2605,9 +2606,9 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 
 			/*
 			 * If kswapd scans pages marked marked for immediate
-			 * reclaim and under writeback (nr_immediate), it implies
-			 * that pages are cycling through the LRU faster than
-			 * they are written so also forcibly stall.
+			 * reclaim and under writeback (nr_immediate), it
+			 * implies that pages are cycling through the LRU faster
+			 * than they are written so also forcibly stall.
 			 */
 			if (stat.nr_immediate)
 				congestion_wait(BLK_RW_ASYNC, HZ/10);
@@ -2622,9 +2623,10 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 			set_memcg_bit(PGDAT_CONGESTED, root);
 
 		/*
-		 * Stall direct reclaim for IO completions if underlying BDIs and node
-		 * is congested. Allow kswapd to continue until it starts encountering
-		 * unqueued dirty pages or cycling through the LRU too quickly.
+		 * Stall direct reclaim for IO completions if underlying BDIs
+		 * and node is congested.  Allow kswapd to continue until it
+		 * starts encountering unqueued dirty pages or cycling through
+		 * the LRU too quickly.
 		 */
 		if (!sc->hibernation_mode && !current_is_kswapd() &&
 		    current_may_throttle() && pgdat_memcg_congested(pgdat, root))
