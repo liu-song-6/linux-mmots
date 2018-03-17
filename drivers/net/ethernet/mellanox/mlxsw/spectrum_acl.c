@@ -528,6 +528,11 @@ int mlxsw_sp_acl_rulei_act_jump(struct mlxsw_sp_acl_rule_info *rulei,
 	return mlxsw_afa_block_jump(rulei->act_block, group_id);
 }
 
+int mlxsw_sp_acl_rulei_act_terminate(struct mlxsw_sp_acl_rule_info *rulei)
+{
+	return mlxsw_afa_block_terminate(rulei->act_block);
+}
+
 int mlxsw_sp_acl_rulei_act_drop(struct mlxsw_sp_acl_rule_info *rulei)
 {
 	return mlxsw_afa_block_append_drop(rulei->act_block);
@@ -572,7 +577,6 @@ int mlxsw_sp_acl_rulei_act_mirror(struct mlxsw_sp *mlxsw_sp,
 				  struct net_device *out_dev)
 {
 	struct mlxsw_sp_acl_block_binding *binding;
-	struct mlxsw_sp_port *out_port;
 	struct mlxsw_sp_port *in_port;
 
 	if (!list_is_singular(&block->binding_list))
@@ -581,16 +585,10 @@ int mlxsw_sp_acl_rulei_act_mirror(struct mlxsw_sp *mlxsw_sp,
 	binding = list_first_entry(&block->binding_list,
 				   struct mlxsw_sp_acl_block_binding, list);
 	in_port = binding->mlxsw_sp_port;
-	if (!mlxsw_sp_port_dev_check(out_dev))
-		return -EINVAL;
-
-	out_port = netdev_priv(out_dev);
-	if (out_port->mlxsw_sp != mlxsw_sp)
-		return -EINVAL;
 
 	return mlxsw_afa_block_append_mirror(rulei->act_block,
 					     in_port->local_port,
-					     out_port->local_port,
+					     out_dev,
 					     binding->ingress);
 }
 
