@@ -374,11 +374,9 @@ static int hmm_vma_walk_pmd(pmd_t *pmdp,
 	hmm_pfn_t *pfns = range->pfns;
 	unsigned long addr = start, i;
 	bool write_fault;
-	hmm_pfn_t flag;
 	pte_t *ptep;
 
 	i = (addr - range->start) >> PAGE_SHIFT;
-	flag = vma->vm_flags & VM_READ ? HMM_PFN_READ : 0;
 	write_fault = hmm_vma_walk->fault & hmm_vma_walk->write;
 
 again:
@@ -390,6 +388,7 @@ again:
 
 	if (pmd_devmap(*pmdp) || pmd_trans_huge(*pmdp)) {
 		unsigned long pfn;
+		hmm_pfn_t flag = 0;
 		pmd_t pmd;
 
 		/*
@@ -454,7 +453,6 @@ again:
 				} else if (write_fault)
 					goto fault;
 				pfns[i] |= HMM_PFN_DEVICE_UNADDRESSABLE;
-				pfns[i] |= flag;
 			} else if (is_migration_entry(entry)) {
 				if (hmm_vma_walk->fault) {
 					pte_unmap(ptep);
@@ -474,7 +472,7 @@ again:
 		if (write_fault && !pte_write(pte))
 			goto fault;
 
-		pfns[i] = hmm_pfn_t_from_pfn(pte_pfn(pte)) | flag;
+		pfns[i] = hmm_pfn_t_from_pfn(pte_pfn(pte));
 		pfns[i] |= pte_write(pte) ? HMM_PFN_WRITE : 0;
 		continue;
 
@@ -535,6 +533,17 @@ int hmm_vma_get_pfns(struct hmm_range *range)
 	range->valid = true;
 	list_add_rcu(&range->list, &hmm->ranges);
 	spin_unlock(&hmm->lock);
+
+	if (!(vma->vm_flags & VM_READ)) {
+		/*
+		 * If vma do not allow read assume it does not allow write as
+		 * only peculiar architecture allow write without read and this
+		 * is not a case we care about (some operation like atomic no
+		 * longer make sense).
+		 */
+		hmm_pfns_clear(range->pfns, range->start, range->end);
+		return 0;
+	}
 
 	hmm_vma_walk.fault = false;
 	hmm_vma_walk.range = range;
@@ -689,6 +698,17 @@ int hmm_vma_fault(struct hmm_range *range, bool write, bool block)
 	range->valid = true;
 	list_add_rcu(&range->list, &hmm->ranges);
 	spin_unlock(&hmm->lock);
+
+	if (!(vma->vm_flags & VM_READ)) {
+		/*
+		 * If vma do not allow read assume it does not allow write as
+		 * only peculiar architecture allow write without read and this
+		 * is not a case we care about (some operation like atomic no
+		 * longer make sense).
+		 */
+		hmm_pfns_clear(range->pfns, range->start, range->end);
+		return 0;
+	}
 
 	/* FIXME support hugetlb fs */
 	if (is_vm_hugetlb_page(vma) || (vma->vm_flags & VM_SPECIAL)) {
