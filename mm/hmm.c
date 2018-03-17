@@ -305,34 +305,19 @@ static void hmm_pfns_clear(uint64_t *pfns,
 		*pfns = 0;
 }
 
+/*
+ * hmm_vma_walk_hole() - handle a range back by no pmd or no pte
+ * @start: range virtual start address (inclusive)
+ * @end: range virtual end address (exclusive)
+ * @walk: mm_walk structure
+ * Returns: 0 on success, -EAGAIN after page fault, or page fault error
+ *
+ * This is an helper call whenever pmd_none() or pte_none() returns true
+ * or when there is no directory covering the range.
+ */
 static int hmm_vma_walk_hole(unsigned long addr,
 			     unsigned long end,
 			     struct mm_walk *walk)
-{
-	struct hmm_vma_walk *hmm_vma_walk = walk->private;
-	struct hmm_range *range = hmm_vma_walk->range;
-	uint64_t *pfns = range->pfns;
-	unsigned long i;
-
-	hmm_vma_walk->last = addr;
-	i = (addr - range->start) >> PAGE_SHIFT;
-	for (; addr < end; addr += PAGE_SIZE, i++) {
-		pfns[i] = HMM_PFN_EMPTY;
-		if (hmm_vma_walk->fault) {
-			int ret;
-
-			ret = hmm_vma_do_fault(walk, addr, &pfns[i]);
-			if (ret != -EAGAIN)
-				return ret;
-		}
-	}
-
-	return hmm_vma_walk->fault ? -EAGAIN : 0;
-}
-
-static int hmm_vma_walk_clear(unsigned long addr,
-			      unsigned long end,
-			      struct mm_walk *walk)
 {
 	struct hmm_vma_walk *hmm_vma_walk = walk->private;
 	struct hmm_range *range = hmm_vma_walk->range;
@@ -397,10 +382,10 @@ again:
 		if (!pmd_devmap(pmd) && !pmd_trans_huge(pmd))
 			goto again;
 		if (pmd_protnone(pmd))
-			return hmm_vma_walk_clear(start, end, walk);
+			return hmm_vma_walk_hole(start, end, walk);
 
 		if (write_fault && !pmd_write(pmd))
-			return hmm_vma_walk_clear(start, end, walk);
+			return hmm_vma_walk_hole(start, end, walk);
 
 		pfn = pmd_pfn(pmd) + pte_index(addr);
 		flag |= pmd_write(pmd) ? HMM_PFN_WRITE : 0;
@@ -419,7 +404,7 @@ again:
 		pfns[i] = 0;
 
 		if (pte_none(pte)) {
-			pfns[i] = HMM_PFN_EMPTY;
+			pfns[i] = 0;
 			if (hmm_vma_walk->fault)
 				goto fault;
 			continue;
@@ -470,8 +455,8 @@ again:
 
 fault:
 		pte_unmap(ptep);
-		/* Fault all pages in range */
-		return hmm_vma_walk_clear(start, end, walk);
+		/* Fault all pages in range if ask for */
+		return hmm_vma_walk_hole(start, end, walk);
 	}
 	pte_unmap(ptep - 1);
 
