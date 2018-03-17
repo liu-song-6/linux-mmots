@@ -863,9 +863,6 @@ struct reclaim_stat {
 	unsigned nr_congested;
 	unsigned nr_writeback;
 	unsigned nr_immediate;
-	unsigned nr_activate;
-	unsigned nr_ref_keep;
-	unsigned nr_unmap_fail;
 };
 
 /*
@@ -1271,15 +1268,17 @@ keep:
 	list_splice(&ret_pages, page_list);
 	count_vm_events(PGACTIVATE, pgactivate);
 
+	trace_mm_vmscan_shrink_page_list(pgdat->node_id,
+			nr_reclaimed, nr_dirty, nr_writeback, nr_congested,
+			nr_immediate, pgactivate, nr_ref_keep, nr_unmap_fail,
+			sc->priority);
+
 	if (stat) {
 		stat->nr_dirty = nr_dirty;
 		stat->nr_congested = nr_congested;
 		stat->nr_unqueued_dirty = nr_unqueued_dirty;
 		stat->nr_writeback = nr_writeback;
 		stat->nr_immediate = nr_immediate;
-		stat->nr_activate = pgactivate;
-		stat->nr_ref_keep = nr_ref_keep;
-		stat->nr_unmap_fail = nr_unmap_fail;
 	}
 	return nr_reclaimed;
 }
@@ -1820,13 +1819,6 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	    current_may_throttle())
 		wait_iff_congested(pgdat, BLK_RW_ASYNC, HZ/10);
 
-	trace_mm_vmscan_lru_shrink_inactive(pgdat->node_id,
-			nr_scanned, nr_reclaimed,
-			stat.nr_dirty,  stat.nr_writeback,
-			stat.nr_congested, stat.nr_immediate,
-			stat.nr_activate, stat.nr_ref_keep,
-			stat.nr_unmap_fail,
-			sc->priority, file);
 	return nr_reclaimed;
 }
 
