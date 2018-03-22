@@ -244,10 +244,29 @@ EXPORT_SYMBOL(hmm_mirror_register);
 void hmm_mirror_unregister(struct hmm_mirror *mirror)
 {
 	struct hmm *hmm = mirror->hmm;
+	struct mm_struct *mm = NULL;
+	bool unregister = false;
 
 	down_write(&hmm->mirrors_sem);
 	list_del_init(&mirror->list);
+	unregister = list_empty(&hmm->mirrors);
 	up_write(&hmm->mirrors_sem);
+
+	if (!unregister)
+		return;
+
+	spin_lock(&hmm->mm->page_table_lock);
+	if (hmm->mm->hmm == hmm) {
+		mm = hmm->mm;
+		mm->hmm = NULL;
+	}
+	spin_unlock(&hmm->mm->page_table_lock);
+
+	if (mm == NULL)
+		return;
+
+	mmu_notifier_unregister_no_release(&hmm->mmu_notifier, mm);
+	kfree(hmm);
 }
 EXPORT_SYMBOL(hmm_mirror_unregister);
 
