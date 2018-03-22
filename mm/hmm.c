@@ -272,9 +272,8 @@ void hmm_mirror_unregister(struct hmm_mirror *mirror)
 		return;
 
 	spin_lock(&mm->page_table_lock);
-	if (mm->hmm == hmm) {
+	if (mm->hmm == hmm)
 		mm->hmm = NULL;
-	}
 	spin_unlock(&mm->page_table_lock);
 
 	mmu_notifier_unregister_no_release(&hmm->mmu_notifier, mm);
