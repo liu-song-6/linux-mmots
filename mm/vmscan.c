@@ -61,6 +61,15 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/vmscan.h>
 
+struct reclaim_stat {
+	unsigned int nr_dirty;
+	unsigned int nr_unqueued_dirty;
+	unsigned int nr_congested;
+	unsigned int nr_writeback;
+	unsigned int nr_immediate;
+	unsigned int nr_taken;
+};
+
 struct scan_control {
 	/* How many pages shrink_list() should reclaim */
 	unsigned long nr_to_reclaim;
@@ -116,6 +125,8 @@ struct scan_control {
 
 	/* Number of pages freed so far during a call to shrink_zones() */
 	unsigned long nr_reclaimed;
+
+	struct reclaim_stat *stat;
 };
 
 #ifdef ARCH_HAS_PREFETCH
@@ -856,14 +867,6 @@ static void page_check_dirty_writeback(struct page *page,
 	if (mapping && mapping->a_ops->is_dirty_writeback)
 		mapping->a_ops->is_dirty_writeback(page, dirty, writeback);
 }
-
-struct reclaim_stat {
-	unsigned nr_dirty;
-	unsigned nr_unqueued_dirty;
-	unsigned nr_congested;
-	unsigned nr_writeback;
-	unsigned nr_immediate;
-};
 
 /*
  * shrink_page_list() returns the number of reclaimed pages
@@ -1754,23 +1757,6 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	free_unref_page_list(&page_list);
 
 	/*
-	 * If reclaim is isolating dirty pages under writeback, it implies
-	 * that the long-lived page allocation rate is exceeding the page
-	 * laundering rate. Either the global limits are not being effective
-	 * at throttling processes due to the page distribution throughout
-	 * zones or there is heavy usage of a slow backing device. The
-	 * only option is to throttle from reclaim context which is not ideal
-	 * as there is no guarantee the dirtying process is throttled in the
-	 * same way balance_dirty_pages() manages.
-	 *
-	 * Once a node is flagged PGDAT_WRITEBACK, kswapd will count the number
-	 * of pages under pages flagged for immediate reclaim and stall if any
-	 * are encountered in the nr_immediate check below.
-	 */
-	if (stat.nr_writeback && stat.nr_writeback == nr_taken)
-		set_bit(PGDAT_WRITEBACK, &pgdat->flags);
-
-	/*
 	 * If dirty pages are scanned that are not queued for IO, it
 	 * implies that flushers are not doing their job. This can
 	 * happen when memory pressure pushes dirty pages to the end of
@@ -1784,40 +1770,14 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	if (stat.nr_unqueued_dirty == nr_taken)
 		wakeup_flusher_threads(WB_REASON_VMSCAN);
 
-	/*
-	 * Legacy memcg will stall in page writeback so avoid forcibly
-	 * stalling here.
-	 */
-	if (sane_reclaim(sc)) {
-		/*
-		 * Tag a node as congested if all the dirty pages scanned were
-		 * backed by a congested BDI and wait_iff_congested will stall.
-		 */
-		if (stat.nr_dirty && stat.nr_dirty == stat.nr_congested)
-			set_bit(PGDAT_CONGESTED, &pgdat->flags);
-
-		/* Allow kswapd to start writing pages during reclaim. */
-		if (stat.nr_unqueued_dirty == nr_taken)
-			set_bit(PGDAT_DIRTY, &pgdat->flags);
-
-		/*
-		 * If kswapd scans pages marked marked for immediate
-		 * reclaim and under writeback (nr_immediate), it implies
-		 * that pages are cycling through the LRU faster than
-		 * they are written so also forcibly stall.
-		 */
-		if (stat.nr_immediate)
-			congestion_wait(BLK_RW_ASYNC, HZ/10);
+	if (sc->stat) {
+		sc->stat->nr_dirty += stat.nr_dirty;
+		sc->stat->nr_congested += stat.nr_congested;
+		sc->stat->nr_unqueued_dirty += stat.nr_unqueued_dirty;
+		sc->stat->nr_writeback += stat.nr_writeback;
+		sc->stat->nr_immediate += stat.nr_immediate;
+		sc->stat->nr_taken += stat.nr_taken;
 	}
-
-	/*
-	 * Stall direct reclaim for IO completions if underlying BDIs and node
-	 * is congested. Allow kswapd to continue until it starts encountering
-	 * unqueued dirty pages or cycling through the LRU too quickly.
-	 */
-	if (!sc->hibernation_mode && !current_is_kswapd() &&
-	    current_may_throttle())
-		wait_iff_congested(pgdat, BLK_RW_ASYNC, HZ/10);
 
 	return nr_reclaimed;
 }
@@ -2513,6 +2473,9 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 		};
 		unsigned long node_lru_pages = 0;
 		struct mem_cgroup *memcg;
+		struct reclaim_stat stat = {};
+
+		sc->stat = &stat;
 
 		nr_reclaimed = sc->nr_reclaimed;
 		nr_scanned = sc->nr_scanned;
@@ -2578,6 +2541,58 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 
 		if (sc->nr_reclaimed - nr_reclaimed)
 			reclaimable = true;
+
+		/*
+		 * If reclaim is isolating dirty pages under writeback, it implies
+		 * that the long-lived page allocation rate is exceeding the page
+		 * laundering rate. Either the global limits are not being effective
+		 * at throttling processes due to the page distribution throughout
+		 * zones or there is heavy usage of a slow backing device. The
+		 * only option is to throttle from reclaim context which is not ideal
+		 * as there is no guarantee the dirtying process is throttled in the
+		 * same way balance_dirty_pages() manages.
+		 *
+		 * Once a node is flagged PGDAT_WRITEBACK, kswapd will count the number
+		 * of pages under pages flagged for immediate reclaim and stall if any
+		 * are encountered in the nr_immediate check below.
+		 */
+		if (stat.nr_writeback && stat.nr_writeback == stat.nr_taken)
+			set_bit(PGDAT_WRITEBACK, &pgdat->flags);
+
+		/*
+		 * Legacy memcg will stall in page writeback so avoid forcibly
+		 * stalling here.
+		 */
+		if (sane_reclaim(sc)) {
+			/*
+			 * Tag a node as congested if all the dirty pages scanned were
+			 * backed by a congested BDI and wait_iff_congested will stall.
+			 */
+			if (stat.nr_dirty && stat.nr_dirty == stat.nr_congested)
+				set_bit(PGDAT_CONGESTED, &pgdat->flags);
+
+			/* Allow kswapd to start writing pages during reclaim. */
+			if (stat.nr_unqueued_dirty == stat.nr_taken)
+				set_bit(PGDAT_DIRTY, &pgdat->flags);
+
+			/*
+			 * If kswapd scans pages marked marked for immediate
+			 * reclaim and under writeback (nr_immediate), it implies
+			 * that pages are cycling through the LRU faster than
+			 * they are written so also forcibly stall.
+			 */
+			if (stat.nr_immediate)
+				congestion_wait(BLK_RW_ASYNC, HZ/10);
+		}
+
+		/*
+		 * Stall direct reclaim for IO completions if underlying BDIs and node
+		 * is congested. Allow kswapd to continue until it starts encountering
+		 * unqueued dirty pages or cycling through the LRU too quickly.
+		 */
+		if (!sc->hibernation_mode && !current_is_kswapd() &&
+		    current_may_throttle())
+			wait_iff_congested(pgdat, BLK_RW_ASYNC, HZ/10);
 
 	} while (should_continue_reclaim(pgdat, sc->nr_reclaimed - nr_reclaimed,
 					 sc->nr_scanned - nr_scanned, sc));
