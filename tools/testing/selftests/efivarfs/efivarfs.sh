@@ -53,7 +53,7 @@ test_create()
 		exit 1
 	fi
 
-	if [ $(stat -c %s $file) -ne 5 ]; then
+	if [ "$(${CONFIG_SHELL} "${srctree}/scripts/file-size.sh" "$file")" -ne 5 ]; then
 		echo "$file has invalid size" >&2
 		exit 1
 	fi

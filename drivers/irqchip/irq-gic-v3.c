@@ -532,6 +532,7 @@ static void gic_cpu_sys_reg_init(void)
 	int i, cpu = smp_processor_id();
 	u64 mpidr = cpu_logical_map(cpu);
 	u64 need_rss = MPIDR_RS(mpidr);
+	u32 val;
 
 	/*
 	 * Need to check that the SRE bit has actually been set. If
@@ -562,6 +563,24 @@ static void gic_cpu_sys_reg_init(void)
 		gic_write_ctlr(ICC_CTLR_EL1_EOImode_drop_dir);
 	}
 
+	val = gic_read_ctlr();
+	val &= ICC_CTLR_EL1_PRI_BITS_MASK;
+	val >>= ICC_CTLR_EL1_PRI_BITS_SHIFT;
+
+	switch(val + 1) {
+	case 8:
+	case 7:
+		write_gicreg(0, ICC_AP1R3_EL1);
+		write_gicreg(0, ICC_AP1R2_EL1);
+	case 6:
+		write_gicreg(0, ICC_AP1R1_EL1);
+	case 5:
+	case 4:
+		write_gicreg(0, ICC_AP1R0_EL1);
+	}
+
+	isb();
+
 	/* ... and let's hit the road... */
 	gic_write_grpen1(1);
 
@@ -590,9 +609,17 @@ static void gic_cpu_sys_reg_init(void)
 		pr_crit_once("RSS is required but GICD doesn't support it\n");
 }
 
+static bool gicv3_nolpi;
+
+static int __init gicv3_nolpi_cfg(char *buf)
+{
+	return strtobool(buf, &gicv3_nolpi);
+}
+early_param("irqchip.gicv3_nolpi", gicv3_nolpi_cfg);
+
 static int gic_dist_supports_lpis(void)
 {
-	return !!(readl_relaxed(gic_data.dist_base + GICD_TYPER) & GICD_TYPER_LPIS);
+	return !!(readl_relaxed(gic_data.dist_base + GICD_TYPER) & GICD_TYPER_LPIS) && !gicv3_nolpi;
 }
 
 static void gic_cpu_init(void)
@@ -861,6 +888,8 @@ static int gic_irq_domain_map(struct irq_domain *d, unsigned int irq,
 	return 0;
 }
 
+#define GIC_IRQ_TYPE_PARTITION	(GIC_IRQ_TYPE_LPI + 1)
+
 static int gic_irq_domain_translate(struct irq_domain *d,
 				    struct irq_fwspec *fwspec,
 				    unsigned long *hwirq,
@@ -875,6 +904,7 @@ static int gic_irq_domain_translate(struct irq_domain *d,
 			*hwirq = fwspec->param[1] + 32;
 			break;
 		case 1:			/* PPI */
+		case GIC_IRQ_TYPE_PARTITION:
 			*hwirq = fwspec->param[1] + 16;
 			break;
 		case GIC_IRQ_TYPE_LPI:	/* LPI */
@@ -885,6 +915,13 @@ static int gic_irq_domain_translate(struct irq_domain *d,
 		}
 
 		*type = fwspec->param[2] & IRQ_TYPE_SENSE_MASK;
+
+		/*
+		 * Make it clear that broken DTs are... broken.
+		 * Partitionned PPIs are an unfortunate exception.
+		 */
+		WARN_ON(*type == IRQ_TYPE_NONE &&
+			fwspec->param[0] != GIC_IRQ_TYPE_PARTITION);
 		return 0;
 	}
 
@@ -894,6 +931,8 @@ static int gic_irq_domain_translate(struct irq_domain *d,
 
 		*hwirq = fwspec->param[0];
 		*type = fwspec->param[1];
+
+		WARN_ON(*type == IRQ_TYPE_NONE);
 		return 0;
 	}
 
@@ -1140,7 +1179,7 @@ static void __init gic_populate_ppi_partitions(struct device_node *gic_node)
 			.fwnode		= gic_data.fwnode,
 			.param_count	= 3,
 			.param		= {
-				[0]	= 1,
+				[0]	= GIC_IRQ_TYPE_PARTITION,
 				[1]	= i,
 				[2]	= IRQ_TYPE_NONE,
 			},

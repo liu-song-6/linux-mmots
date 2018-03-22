@@ -3532,7 +3532,7 @@ static int ocfs2_downconvert_lock(struct ocfs2_super *osb,
 	 * On DLM_LKF_VALBLK, fsdlm behaves differently with o2cb. It always
 	 * expects DLM_LKF_VALBLK being set if the LKB has LVB, so that
 	 * we can recover correctly from node failure. Otherwise, we may get
-	 * invalid LVB in LKB, but without DLM_SBF_VALNOTVALID being set.
+	 * invalid LVB in LKB, but without DLM_SBF_VALNOTVALID being set.
 	 */
 	if (ocfs2_userspace_stack(osb) &&
 	    lockres->l_ops->flags & LOCK_TYPE_USES_LVB)

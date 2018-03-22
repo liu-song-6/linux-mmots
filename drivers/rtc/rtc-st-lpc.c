@@ -254,21 +254,6 @@ static int st_rtc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rtc);
 
-	/*
-	 * The RTC-LPC is able to manage date.year > 2038
-	 * but currently the kernel can not manage this date!
-	 * If the RTC-LPC has a date.year > 2038 then
-	 * it's set to the epoch "Jan 1st 2000"
-	 */
-	st_rtc_read_time(&pdev->dev, &tm_check);
-
-	if (tm_check.tm_year >=  (2038 - 1900)) {
-		memset(&tm_check, 0, sizeof(tm_check));
-		tm_check.tm_year = 100;
-		tm_check.tm_mday = 1;
-		st_rtc_set_time(&pdev->dev, &tm_check);
-	}
-
 	rtc->rtc_dev = rtc_device_register("st-lpc-rtc", &pdev->dev,
 					   &st_rtc_ops, THIS_MODULE);
 	if (IS_ERR(rtc->rtc_dev)) {

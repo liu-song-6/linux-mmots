@@ -477,10 +477,17 @@ static ssize_t ucma_create_id(struct ucma_file *file, const char __user *inbuf,
 		return -ENOMEM;
 
 	ctx->uid = cmd.uid;
+<<<<<<< HEAD
 	cm_id = rdma_create_id(current->nsproxy->net_ns,
 			       ucma_event_handler, ctx, cmd.ps, qp_type);
 	if (IS_ERR(cm_id)) {
 		ret = PTR_ERR(cm_id);
+=======
+	ctx->cm_id = __rdma_create_id(current->nsproxy->net_ns,
+			      ucma_event_handler, ctx, cmd.ps, qp_type, NULL);
+	if (IS_ERR(ctx->cm_id)) {
+		ret = PTR_ERR(ctx->cm_id);
+>>>>>>> linux-next/akpm-base
 		goto err1;
 	}
 
@@ -1094,12 +1101,12 @@ static ssize_t ucma_accept(struct ucma_file *file, const char __user *inbuf,
 	if (cmd.conn_param.valid) {
 		ucma_copy_conn_param(ctx->cm_id, &conn_param, &cmd.conn_param);
 		mutex_lock(&file->mut);
-		ret = rdma_accept(ctx->cm_id, &conn_param);
+		ret = __rdma_accept(ctx->cm_id, &conn_param, NULL);
 		if (!ret)
 			ctx->uid = cmd.uid;
 		mutex_unlock(&file->mut);
 	} else
-		ret = rdma_accept(ctx->cm_id, NULL);
+		ret = __rdma_accept(ctx->cm_id, NULL, NULL);
 
 	ucma_put_ctx(ctx);
 	return ret;
