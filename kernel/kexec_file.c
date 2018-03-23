@@ -772,8 +772,8 @@ static int kexec_purgatory_setup_kbuf(struct purgatory_info *pi,
 	int i, ret;
 
 	sechdrs = (void *)pi->ehdr + pi->ehdr->e_shoff;
-	bss_align = 1;
-	bss_sz = 0;
+	kbuf->buf_align = bss_align = 1;
+	kbuf->bufsz = bss_sz = 0;
 
 	for (i = 0; i < pi->ehdr->e_shnum; i++) {
 		if (!(sechdrs[i].sh_flags & SHF_ALLOC))
@@ -805,7 +805,6 @@ static int kexec_purgatory_setup_kbuf(struct purgatory_info *pi,
 	ret = kexec_add_buffer(kbuf);
 	if (ret)
 		goto out;
-	pi->purgatory_load_addr = kbuf->mem;
 
 	return 0;
 out:
@@ -943,27 +942,32 @@ static int kexec_apply_relocations(struct kimage *image)
 	return 0;
 }
 
-/* Load relocatable purgatory object and relocate it appropriately */
-int kexec_load_purgatory(struct kimage *image, unsigned long min,
-			 unsigned long max, int top_down,
-			 unsigned long *load_addr)
+/*
+ * kexec_load_purgatory - Load and relocate the purgatory object.
+ * @image:	Image to add the purgatory to.
+ * @kbuf:	Memory parameters to use.
+ *
+ * Allocates the memory needed for image->purgatory_info.sechdrs and
+ * image->purgatory_info.purgatory_buf/kbuf->buffer. Caller is responsible
+ * to free the memory after use.
+ *
+ * Return: 0 on success, negative errno on error.
+ */
+int kexec_load_purgatory(struct kimage *image, struct kexec_buf *kbuf)
 {
 	struct purgatory_info *pi = &image->purgatory_info;
 	int ret;
-	struct kexec_buf kbuf = { .image = image, .bufsz = 0, .buf_align = 1,
-				  .buf_min = min, .buf_max = max,
-				  .top_down = top_down };
 
 	if (kexec_purgatory_size <= 0)
 		return -EINVAL;
 
 	pi->ehdr = (const Elf_Ehdr *)kexec_purgatory;
 
-	ret = kexec_purgatory_setup_kbuf(pi, &kbuf);
+	ret = kexec_purgatory_setup_kbuf(pi, kbuf);
 	if (ret)
 		return ret;
 
-	ret = kexec_purgatory_setup_sechdrs(pi, &kbuf);
+	ret = kexec_purgatory_setup_sechdrs(pi, kbuf);
 	if (ret)
 		goto out_free_kbuf;
 
@@ -971,7 +975,6 @@ int kexec_load_purgatory(struct kimage *image, unsigned long min,
 	if (ret)
 		goto out;
 
-	*load_addr = pi->purgatory_load_addr;
 	return 0;
 out:
 	vfree(pi->sechdrs);
