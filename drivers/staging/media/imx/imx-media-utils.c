@@ -93,7 +93,7 @@ static const struct imx_media_pixfmt rgb_formats[] = {
 		.bpp    = 32,
 		.ipufmt = true,
 	},
-	/*** raw bayer formats start here ***/
+	/*** raw bayer and grayscale formats start here ***/
 	{
 		.fourcc = V4L2_PIX_FMT_SBGGR8,
 		.codes  = {MEDIA_BUS_FMT_SBGGR8_1X8},
@@ -161,6 +161,12 @@ static const struct imx_media_pixfmt rgb_formats[] = {
 		},
 		.cs     = IPUV3_COLORSPACE_RGB,
 		.bpp    = 16,
+		.bayer  = true,
+	}, {
+		.fourcc = V4L2_PIX_FMT_GREY,
+		.codes = {MEDIA_BUS_FMT_Y8_1X8},
+		.cs     = IPUV3_COLORSPACE_RGB,
+		.bpp    = 8,
 		.bayer  = true,
 	},
 	/***
@@ -463,6 +469,35 @@ int imx_media_init_mbus_fmt(struct v4l2_mbus_framefmt *mbus,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(imx_media_init_mbus_fmt);
+
+/*
+ * Initializes the TRY format to the ACTIVE format on all pads
+ * of a subdev. Can be used as the .init_cfg pad operation.
+ */
+int imx_media_init_cfg(struct v4l2_subdev *sd,
+		       struct v4l2_subdev_pad_config *cfg)
+{
+	struct v4l2_mbus_framefmt *mf_try;
+	struct v4l2_subdev_format format;
+	unsigned int pad;
+	int ret;
+
+	for (pad = 0; pad < sd->entity.num_pads; pad++) {
+		memset(&format, 0, sizeof(format));
+
+		format.pad = pad;
+		format.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+		ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &format);
+		if (ret)
+			continue;
+
+		mf_try = v4l2_subdev_get_try_format(sd, cfg, pad);
+		*mf_try = format.format;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(imx_media_init_cfg);
 
 /*
  * Check whether the field and colorimetry parameters in tryfmt are

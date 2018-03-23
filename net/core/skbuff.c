@@ -77,8 +77,8 @@
 #include <linux/capability.h>
 #include <linux/user_namespace.h>
 
-struct kmem_cache *skbuff_head_cache __read_mostly;
-static struct kmem_cache *skbuff_fclone_cache __read_mostly;
+struct kmem_cache *skbuff_head_cache __ro_after_init;
+static struct kmem_cache *skbuff_fclone_cache __ro_after_init;
 int sysctl_max_skb_frags __read_mostly = MAX_SKB_FRAGS;
 EXPORT_SYMBOL(sysctl_max_skb_frags);
 
@@ -890,7 +890,7 @@ struct sk_buff *skb_morph(struct sk_buff *dst, struct sk_buff *src)
 }
 EXPORT_SYMBOL_GPL(skb_morph);
 
-static int mm_account_pinned_pages(struct mmpin *mmp, size_t size)
+int mm_account_pinned_pages(struct mmpin *mmp, size_t size)
 {
 	unsigned long max_pg, num_pg, new_pg, old_pg;
 	struct user_struct *user;
@@ -919,14 +919,16 @@ static int mm_account_pinned_pages(struct mmpin *mmp, size_t size)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(mm_account_pinned_pages);
 
-static void mm_unaccount_pinned_pages(struct mmpin *mmp)
+void mm_unaccount_pinned_pages(struct mmpin *mmp)
 {
 	if (mmp->user) {
 		atomic_long_sub(mmp->num_pg, &mmp->user->locked_vm);
 		free_uid(mmp->user);
 	}
 }
+EXPORT_SYMBOL_GPL(mm_unaccount_pinned_pages);
 
 struct ubuf_info *sock_zerocopy_alloc(struct sock *sk, size_t size)
 {
@@ -4179,7 +4181,7 @@ int sock_queue_err_skb(struct sock *sk, struct sk_buff *skb)
 
 	skb_queue_tail(&sk->sk_error_queue, skb);
 	if (!sock_flag(sk, SOCK_DEAD))
-		sk->sk_data_ready(sk);
+		sk->sk_error_report(sk);
 	return 0;
 }
 EXPORT_SYMBOL(sock_queue_err_skb);
@@ -4904,7 +4906,7 @@ static unsigned int skb_gso_transport_seglen(const struct sk_buff *skb)
 			thlen += inner_tcp_hdrlen(skb);
 	} else if (likely(shinfo->gso_type & (SKB_GSO_TCPV4 | SKB_GSO_TCPV6))) {
 		thlen = tcp_hdrlen(skb);
-	} else if (unlikely(shinfo->gso_type & SKB_GSO_SCTP)) {
+	} else if (unlikely(skb_is_gso_sctp(skb))) {
 		thlen = sizeof(struct sctphdr);
 	}
 	/* UFO sets gso_size to the size of the fragmentation
@@ -5020,13 +5022,16 @@ EXPORT_SYMBOL_GPL(skb_gso_validate_mac_len);
 
 static struct sk_buff *skb_reorder_vlan_header(struct sk_buff *skb)
 {
+	int mac_len;
+
 	if (skb_cow(skb, skb_headroom(skb)) < 0) {
 		kfree_skb(skb);
 		return NULL;
 	}
 
-	memmove(skb->data - ETH_HLEN, skb->data - skb->mac_len - VLAN_HLEN,
-		2 * ETH_ALEN);
+	mac_len = skb->data - skb_mac_header(skb);
+	memmove(skb_mac_header(skb) + VLAN_HLEN, skb_mac_header(skb),
+		mac_len - VLAN_HLEN - ETH_TLEN);
 	skb->mac_header += VLAN_HLEN;
 	return skb;
 }

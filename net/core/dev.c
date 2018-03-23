@@ -2378,7 +2378,7 @@ EXPORT_SYMBOL(netdev_set_num_tc);
 
 /*
  * Routine to help set real_num_tx_queues. To avoid skbs mapped to queues
- * greater then real_num_tx_queues stale skbs on the qdisc must be flushed.
+ * greater than real_num_tx_queues stale skbs on the qdisc must be flushed.
  */
 int netif_set_real_num_tx_queues(struct net_device *dev, unsigned int txq)
 {
@@ -3278,15 +3278,23 @@ static inline int __dev_xmit_skb(struct sk_buff *skb, struct Qdisc *q,
 #if IS_ENABLED(CONFIG_CGROUP_NET_PRIO)
 static void skb_update_prio(struct sk_buff *skb)
 {
-	struct netprio_map *map = rcu_dereference_bh(skb->dev->priomap);
+	const struct netprio_map *map;
+	const struct sock *sk;
+	unsigned int prioidx;
 
-	if (!skb->priority && skb->sk && map) {
-		unsigned int prioidx =
-			sock_cgroup_prioidx(&skb->sk->sk_cgrp_data);
+	if (skb->priority)
+		return;
+	map = rcu_dereference_bh(skb->dev->priomap);
+	if (!map)
+		return;
+	sk = skb_to_full_sk(skb);
+	if (!sk)
+		return;
 
-		if (prioidx < map->priomap_len)
-			skb->priority = map->priomap[prioidx];
-	}
+	prioidx = sock_cgroup_prioidx(&sk->sk_cgrp_data);
+
+	if (prioidx < map->priomap_len)
+		skb->priority = map->priomap[prioidx];
 }
 #else
 #define skb_update_prio(skb)
@@ -4350,6 +4358,9 @@ int netdev_rx_handler_register(struct net_device *dev,
 {
 	if (netdev_is_rx_handler_busy(dev))
 		return -EBUSY;
+
+	if (dev->priv_flags & IFF_NO_RX_HANDLER)
+		return -EINVAL;
 
 	/* Note: rx_handler_data must be set before rx_handler */
 	rcu_assign_pointer(dev->rx_handler_data, rx_handler_data);
@@ -7546,6 +7557,19 @@ static netdev_features_t netdev_fix_features(struct net_device *dev,
 		}
 	}
 
+	/* LRO/HW-GRO features cannot be combined with RX-FCS */
+	if (features & NETIF_F_RXFCS) {
+		if (features & NETIF_F_LRO) {
+			netdev_dbg(dev, "Dropping LRO feature since RX-FCS is requested.\n");
+			features &= ~NETIF_F_LRO;
+		}
+
+		if (features & NETIF_F_GRO_HW) {
+			netdev_dbg(dev, "Dropping HW-GRO feature since RX-FCS is requested.\n");
+			features &= ~NETIF_F_GRO_HW;
+		}
+	}
+
 	return features;
 }
 
@@ -8002,7 +8026,8 @@ int register_netdev(struct net_device *dev)
 {
 	int err;
 
-	rtnl_lock();
+	if (rtnl_lock_killable())
+		return -EINTR;
 	err = register_netdevice(dev);
 	rtnl_unlock();
 	return err;
@@ -8145,8 +8170,9 @@ void netdev_run_todo(void)
 		BUG_ON(!list_empty(&dev->ptype_specific));
 		WARN_ON(rcu_access_pointer(dev->ip_ptr));
 		WARN_ON(rcu_access_pointer(dev->ip6_ptr));
+#if IS_ENABLED(CONFIG_DECNET)
 		WARN_ON(dev->dn_ptr);
-
+#endif
 		if (dev->priv_destructor)
 			dev->priv_destructor(dev);
 		if (dev->needs_free_netdev)
@@ -8844,6 +8870,7 @@ static void __net_exit netdev_exit(struct net *net)
 static struct pernet_operations __net_initdata netdev_net_ops = {
 	.init = netdev_init,
 	.exit = netdev_exit,
+	.async = true,
 };
 
 static void __net_exit default_device_exit(struct net *net)
@@ -8944,6 +8971,7 @@ static void __net_exit default_device_exit_batch(struct list_head *net_list)
 static struct pernet_operations __net_initdata default_device_ops = {
 	.exit = default_device_exit,
 	.exit_batch = default_device_exit_batch,
+	.async = true,
 };
 
 /*

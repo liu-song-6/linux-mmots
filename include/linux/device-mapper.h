@@ -87,7 +87,8 @@ typedef void (*dm_resume_fn) (struct dm_target *ti);
 typedef void (*dm_status_fn) (struct dm_target *ti, status_type_t status_type,
 			      unsigned status_flags, char *result, unsigned maxlen);
 
-typedef int (*dm_message_fn) (struct dm_target *ti, unsigned argc, char **argv);
+typedef int (*dm_message_fn) (struct dm_target *ti, unsigned argc, char **argv,
+			      char *result, unsigned maxlen);
 
 typedef int (*dm_prepare_ioctl_fn) (struct dm_target *ti,
 			    struct block_device **bdev, fmode_t *mode);
@@ -541,8 +542,6 @@ do {									\
 
 #define DMEMIT(x...) sz += ((sz >= maxlen) ? \
 			  0 : scnprintf(result + sz, maxlen - sz, x))
-
-#define SECTOR_SHIFT 9
 
 /*
  * Definitions of return values from target end_io function.

@@ -389,15 +389,15 @@
 			Use software keyboard repeat
 
 	audit=		[KNL] Enable the audit sub-system
-			Format: { "0" | "1" } (0 = disabled, 1 = enabled)
-			0 - kernel audit is disabled and can not be enabled
-			    until the next reboot
+			Format: { "0" | "1" | "off" | "on" }
+			0 | off - kernel audit is disabled and can not be
+			    enabled until the next reboot
 			unset - kernel audit is initialized but disabled and
 			    will be fully enabled by the userspace auditd.
-			1 - kernel audit is initialized and partially enabled,
-			    storing at most audit_backlog_limit messages in
-			    RAM until it is fully enabled by the userspace
-			    auditd.
+			1 | on - kernel audit is initialized and partially
+			    enabled, storing at most audit_backlog_limit
+			    messages in RAM until it is fully enabled by the
+			    userspace auditd.
 			Default: unset
 
 	audit_backlog_limit= [KNL] Set the audit queue size limit.
@@ -1025,7 +1025,7 @@
 			address. The serial port must already be setup
 			and configured. Options are not yet supported.
 
-	earlyprintk=	[X86,SH,BLACKFIN,ARM,M68k,S390]
+	earlyprintk=	[X86,SH,ARM,M68k,S390]
 			earlyprintk=vga
 			earlyprintk=efi
 			earlyprintk=sclp
@@ -1347,10 +1347,6 @@
 			       If specified, z/VM IUCV HVC accepts connections
 			       from listed z/VM user IDs only.
 
-	hwthread_map=	[METAG] Comma-separated list of Linux cpu id to
-			        hardware thread id mappings.
-				Format: <cpu>:<hwthread>
-
 	keep_bootcon	[KNL]
 			Do not unregister boot console at start. This is only
 			useful for debugging when something happens in the window
@@ -1525,7 +1521,8 @@
 
 	ima_policy=	[IMA]
 			The builtin policies to load during IMA setup.
-			Format: "tcb | appraise_tcb | secure_boot"
+			Format: "tcb | appraise_tcb | secure_boot |
+				 fail_securely"
 
 			The "tcb" policy measures all programs exec'd, files
 			mmap'd for exec, and all files opened with the read
@@ -1539,6 +1536,11 @@
 			The "secure_boot" policy appraises the integrity
 			of files (eg. kexec kernel image, kernel modules,
 			firmware, policy, etc) based on file signatures.
+
+			The "fail_securely" policy forces file signature
+			verification failure also on privileged mounted
+			filesystems with the SB_I_UNVERIFIABLE_SIGNATURE
+			flag.
 
 	ima_tcb		[IMA] Deprecated.  Use ima_policy= instead.
 			Load a policy which meets the needs of the Trusted
@@ -1743,6 +1745,14 @@
 			of a GICv2 controller even if the memory range
 			exposed by the device tree is too small.
 
+	irqchip.gicv3_nolpi=
+			[ARM, ARM64]
+			Force the kernel to ignore the availability of
+			LPIs (and by consequence ITSs). Intended for system
+			that use the kernel as a bootloader, and thus want
+			to let secondary kernels in charge of setting up
+			LPIs.
+
 	irqfixup	[HW]
 			When an interrupt is not handled search all handlers
 			for it. Intended to get systems with badly broken
@@ -1766,6 +1776,17 @@
 
 			nohz
 			  Disable the tick when a single task runs.
+
+			  A residual 1Hz tick is offloaded to workqueues, which you
+			  need to affine to housekeeping through the global
+			  workqueue's affinity configured via the
+			  /sys/devices/virtual/workqueue/cpumask sysfs file, or
+			  by using the 'domain' flag described below.
+
+			  NOTE: by default the global workqueue runs on all CPUs,
+			  so to protect individual CPUs the 'cpumask' file has to
+			  be configured manually after bootup.
+
 			domain
 			  Isolate from the general SMP balancing and scheduling
 			  algorithms. Note that performing domain isolation this way
@@ -1885,6 +1906,9 @@
 
 	kvm.ignore_msrs=[KVM] Ignore guest accesses to unhandled MSRs.
 			Default is 0 (don't ignore, but inject #GP)
+
+	kvm.enable_vmware_backdoor=[KVM] Support VMware backdoor PV interface.
+				   Default is false (don't support).
 
 	kvm.mmu_audit=	[KVM] This is a R/W parameter which allows audit
 			KVM MMU at runtime.
@@ -2235,6 +2259,15 @@
 			Region of memory to be used, from ss to ss+nn.
 			The memory region may be marked as e820 type 12 (0xc)
 			and is NVDIMM or ADR memory.
+
+	memmap=<size>%<offset>-<oldtype>+<newtype>
+			[KNL,ACPI] Convert memory within the specified region
+			from <oldtype> to <newtype>. If "-<oldtype>" is left
+			out, the whole region will be marked as <newtype>,
+			even if previously unavailable. If "+<newtype>" is left
+			out, matching memory will be removed. Types are
+			specified as e820 types, e.g., 1 = RAM, 2 = reserved,
+			3 = ACPI, 12 = PRAM.
 
 	memory_corruption_check=0/1 [X86]
 			Some BIOSes seem to corrupt the first 64k of
@@ -4367,6 +4400,62 @@
 			(default 5000 = 5.0 seconds).
 
 	usbcore.nousb	[USB] Disable the USB subsystem
+
+	usbcore.quirks=
+			[USB] A list of quirk entries to augment the built-in
+			usb core quirk list. List entries are separated by
+			commas. Each entry has the form
+			VendorID:ProductID:Flags. The IDs are 4-digit hex
+			numbers and Flags is a set of letters. Each letter
+			will change the built-in quirk; setting it if it is
+			clear and clearing it if it is set. The letters have
+			the following meanings:
+				a = USB_QUIRK_STRING_FETCH_255 (string
+					descriptors must not be fetched using
+					a 255-byte read);
+				b = USB_QUIRK_RESET_RESUME (device can't resume
+					correctly so reset it instead);
+				c = USB_QUIRK_NO_SET_INTF (device can't handle
+					Set-Interface requests);
+				d = USB_QUIRK_CONFIG_INTF_STRINGS (device can't
+					handle its Configuration or Interface
+					strings);
+				e = USB_QUIRK_RESET (device can't be reset
+					(e.g morph devices), don't use reset);
+				f = USB_QUIRK_HONOR_BNUMINTERFACES (device has
+					more interface descriptions than the
+					bNumInterfaces count, and can't handle
+					talking to these interfaces);
+				g = USB_QUIRK_DELAY_INIT (device needs a pause
+					during initialization, after we read
+					the device descriptor);
+				h = USB_QUIRK_LINEAR_UFRAME_INTR_BINTERVAL (For
+					high speed and super speed interrupt
+					endpoints, the USB 2.0 and USB 3.0 spec
+					require the interval in microframes (1
+					microframe = 125 microseconds) to be
+					calculated as interval = 2 ^
+					(bInterval-1).
+					Devices with this quirk report their
+					bInterval as the result of this
+					calculation instead of the exponent
+					variable used in the calculation);
+				i = USB_QUIRK_DEVICE_QUALIFIER (device can't
+					handle device_qualifier descriptor
+					requests);
+				j = USB_QUIRK_IGNORE_REMOTE_WAKEUP (device
+					generates spurious wakeup, ignore
+					remote wakeup capability);
+				k = USB_QUIRK_NO_LPM (device can't handle Link
+					Power Management);
+				l = USB_QUIRK_LINEAR_FRAME_INTR_BINTERVAL
+					(Device reports its bInterval as linear
+					frames instead of the USB 2.0
+					calculation);
+				m = USB_QUIRK_DISCONNECT_SUSPEND (Device needs
+					to be disconnected before suspend to
+					prevent spurious wakeup)
+			Example: quirks=0781:5580:bk,0a5c:5834:gij
 
 	usbhid.mousepoll=
 			[USBHID] The interval which mice are to be polled at.

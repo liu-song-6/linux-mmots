@@ -21,13 +21,22 @@
 /* Include Wireless Extension definition and check version */
 #include <net/iw_handler.h>	/* New driver API */
 
-/* macro */
-#define inc_smeqhead(priv) \
-	(priv->sme_i.qhead = (priv->sme_i.qhead + 1) % SME_EVENT_BUFF_SIZE)
-#define inc_smeqtail(priv) \
-	(priv->sme_i.qtail = (priv->sme_i.qtail + 1) % SME_EVENT_BUFF_SIZE)
-#define cnt_smeqbody(priv) \
-	(((priv->sme_i.qtail + SME_EVENT_BUFF_SIZE) - (priv->sme_i.qhead)) % SME_EVENT_BUFF_SIZE)
+static inline void inc_smeqhead(struct ks_wlan_private *priv)
+{
+	priv->sme_i.qhead = (priv->sme_i.qhead + 1) % SME_EVENT_BUFF_SIZE;
+}
+
+static inline void inc_smeqtail(struct ks_wlan_private *priv)
+{
+	priv->sme_i.qtail = (priv->sme_i.qtail + 1) % SME_EVENT_BUFF_SIZE;
+}
+
+static inline unsigned int cnt_smeqbody(struct ks_wlan_private *priv)
+{
+	unsigned int sme_cnt = priv->sme_i.qtail - priv->sme_i.qhead;
+
+	return (sme_cnt + SME_EVENT_BUFF_SIZE) % SME_EVENT_BUFF_SIZE;
+}
 
 #define KS_WLAN_MEM_FLAG (GFP_ATOMIC)
 
@@ -79,26 +88,20 @@ static void ks_wlan_hw_wakeup_task(struct work_struct *work)
 				&priv->psstatus.wakeup_wait,
 				msecs_to_jiffies(20));
 		if (time_left <= 0) {
-			DPRINTK(1, "wake up timeout or interrupted !!!\n");
+			netdev_dbg(priv->net_dev, "wake up timeout or interrupted !!!\n");
 			schedule_work(&priv->wakeup_work);
 			return;
 		}
-	} else {
-		DPRINTK(1, "ps_status=%d\n", ps_status);
 	}
 
 	/* power save */
-	if (atomic_read(&priv->sme_task.count) > 0) {
-		DPRINTK(4, "sme task enable.\n");
+	if (atomic_read(&priv->sme_task.count) > 0)
 		tasklet_enable(&priv->sme_task);
-	}
 }
 
 static
 int ks_wlan_do_power_save(struct ks_wlan_private *priv)
 {
-	DPRINTK(4, "psstatus.status=%d\n", atomic_read(&priv->psstatus.status));
-
 	if (is_connect_status(priv->connect_status))
 		hostif_sme_enqueue(priv, SME_POW_MNGMT_REQUEST);
 	else
@@ -113,7 +116,6 @@ int get_current_ap(struct ks_wlan_private *priv, struct link_ap_info_t *ap_info)
 	union iwreq_data wrqu;
 	struct net_device *netdev = priv->net_dev;
 
-	DPRINTK(3, "\n");
 	ap = &priv->current_ap;
 
 	if (is_disconnect_status(priv->connect_status)) {
@@ -186,30 +188,30 @@ int get_current_ap(struct ks_wlan_private *priv, struct link_ap_info_t *ap_info)
 	if (is_connect_status(priv->connect_status)) {
 		memcpy(wrqu.ap_addr.sa_data,
 		       priv->current_ap.bssid, ETH_ALEN);
-		DPRINTK(3,
-			"IWEVENT: connect bssid=%pM\n", wrqu.ap_addr.sa_data);
+		netdev_dbg(priv->net_dev,
+			   "IWEVENT: connect bssid=%pM\n", wrqu.ap_addr.sa_data);
 		wireless_send_event(netdev, SIOCGIWAP, &wrqu, NULL);
 	}
-	DPRINTK(4, "\n    Link AP\n");
-	DPRINTK(4, "    bssid=%02X:%02X:%02X:%02X:%02X:%02X\n"
+	netdev_dbg(priv->net_dev, "    Link AP\n");
+	netdev_dbg(priv->net_dev, "    bssid=%02X:%02X:%02X:%02X:%02X:%02X\n"
 		   "    essid=%s\n"
 		   "    rate_set=%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X\n"
 		   "    channel=%d\n"
 		   "    rssi=%d\n"
 		   "    sq=%d\n"
 		   "    capability=%04X\n",
-		ap->bssid[0], ap->bssid[1], ap->bssid[2],
-		ap->bssid[3], ap->bssid[4], ap->bssid[5],
-		&(ap->ssid.body[0]),
-		ap->rate_set.body[0], ap->rate_set.body[1],
-		ap->rate_set.body[2], ap->rate_set.body[3],
-		ap->rate_set.body[4], ap->rate_set.body[5],
-		ap->rate_set.body[6], ap->rate_set.body[7],
-		ap->channel, ap->rssi, ap->sq, ap->capability);
-	DPRINTK(4, "\n    Link AP\n    rsn.mode=%d\n    rsn.size=%d\n",
-		ap_info->rsn_mode, ap_info->rsn.size);
-	DPRINTK(4, "\n    ext_rate_set_size=%d\n    rate_set_size=%d\n",
-		ap_info->ext_rate_set.size, ap_info->rate_set.size);
+		   ap->bssid[0], ap->bssid[1], ap->bssid[2],
+		   ap->bssid[3], ap->bssid[4], ap->bssid[5],
+		   &(ap->ssid.body[0]),
+		   ap->rate_set.body[0], ap->rate_set.body[1],
+		   ap->rate_set.body[2], ap->rate_set.body[3],
+		   ap->rate_set.body[4], ap->rate_set.body[5],
+		   ap->rate_set.body[6], ap->rate_set.body[7],
+		   ap->channel, ap->rssi, ap->sq, ap->capability);
+	netdev_dbg(priv->net_dev, "    Link AP\n    rsn.mode=%d\n    rsn.size=%d\n",
+		   ap_info->rsn_mode, ap_info->rsn.size);
+	netdev_dbg(priv->net_dev, "    ext_rate_set_size=%d\n    rate_set_size=%d\n",
+		   ap_info->ext_rate_set.size, ap_info->rate_set.size);
 
 	return 0;
 }
@@ -221,7 +223,6 @@ int get_ap_information(struct ks_wlan_private *priv, struct ap_info_t *ap_info,
 	unsigned char *bp;
 	int bsize, offset;
 
-	DPRINTK(3, "\n");
 	memset(ap, 0, sizeof(struct local_ap_t));
 
 	/* bssid */
@@ -242,28 +243,22 @@ int get_ap_information(struct ks_wlan_private *priv, struct ap_info_t *ap_info,
 	offset = 0;
 
 	while (bsize > offset) {
-		/* DPRINTK(4, "Element ID=%d\n",*bp); */
-		switch (*bp) {
-		case 0:	/* ssid */
-			if (*(bp + 1) <= SSID_MAX_SIZE) {
+		switch (*bp) { /* Information Element ID */
+		case WLAN_EID_SSID:
+			if (*(bp + 1) <= IEEE80211_MAX_SSID_LEN)
 				ap->ssid.size = *(bp + 1);
-			} else {
-				DPRINTK(1, "size over :: ssid size=%d\n",
-					*(bp + 1));
-				ap->ssid.size = SSID_MAX_SIZE;
-			}
+			else
+				ap->ssid.size = IEEE80211_MAX_SSID_LEN;
 			memcpy(ap->ssid.body, bp + 2, ap->ssid.size);
 			break;
-		case 1:	/* rate */
-		case 50:	/* ext rate */
+		case WLAN_EID_SUPP_RATES:
+		case WLAN_EID_EXT_SUPP_RATES:
 			if ((*(bp + 1) + ap->rate_set.size) <=
 			    RATE_SET_MAX_SIZE) {
 				memcpy(&ap->rate_set.body[ap->rate_set.size],
 				       bp + 2, *(bp + 1));
 				ap->rate_set.size += *(bp + 1);
 			} else {
-				DPRINTK(1, "size over :: rate size=%d\n",
-					(*(bp + 1) + ap->rate_set.size));
 				memcpy(&ap->rate_set.body[ap->rate_set.size],
 				       bp + 2,
 				       RATE_SET_MAX_SIZE - ap->rate_set.size);
@@ -271,47 +266,40 @@ int get_ap_information(struct ks_wlan_private *priv, struct ap_info_t *ap_info,
 				    (RATE_SET_MAX_SIZE - ap->rate_set.size);
 			}
 			break;
-		case 3:	/* DS parameter */
+		case WLAN_EID_DS_PARAMS:
 			break;
-		case 48:	/* RSN(WPA2) */
+		case WLAN_EID_RSN:
 			ap->rsn_ie.id = *bp;
-			if (*(bp + 1) <= RSN_IE_BODY_MAX) {
+			if (*(bp + 1) <= RSN_IE_BODY_MAX)
 				ap->rsn_ie.size = *(bp + 1);
-			} else {
-				DPRINTK(1, "size over :: rsn size=%d\n",
-					*(bp + 1));
+			else
 				ap->rsn_ie.size = RSN_IE_BODY_MAX;
-			}
 			memcpy(ap->rsn_ie.body, bp + 2, ap->rsn_ie.size);
 			break;
-		case 221:	/* WPA */
-			if (memcmp(bp + 2, "\x00\x50\xf2\x01", 4) == 0) {	/* WPA OUI check */
+		case WLAN_EID_VENDOR_SPECIFIC: /* WPA */
+			if (memcmp(bp + 2, CIPHER_ID_WPA_WEP40, 4) == 0) { /* WPA OUI check */
 				ap->wpa_ie.id = *bp;
-				if (*(bp + 1) <= RSN_IE_BODY_MAX) {
+				if (*(bp + 1) <= RSN_IE_BODY_MAX)
 					ap->wpa_ie.size = *(bp + 1);
-				} else {
-					DPRINTK(1,
-						"size over :: wpa size=%d\n",
-						*(bp + 1));
+				else
 					ap->wpa_ie.size = RSN_IE_BODY_MAX;
-				}
 				memcpy(ap->wpa_ie.body, bp + 2,
 				       ap->wpa_ie.size);
 			}
 			break;
 
-		case 2:	/* FH parameter */
-		case 4:	/* CF parameter */
-		case 5:	/* TIM */
-		case 6:	/* IBSS parameter */
-		case 7:	/* Country */
-		case 42:	/* ERP information */
-		case 47:	/* Reserve ID 47 Broadcom AP */
+		case WLAN_EID_FH_PARAMS:
+		case WLAN_EID_CF_PARAMS:
+		case WLAN_EID_TIM:
+		case WLAN_EID_IBSS_PARAMS:
+		case WLAN_EID_COUNTRY:
+		case WLAN_EID_ERP_INFO:
 			break;
 		default:
-			DPRINTK(4, "unknown Element ID=%d\n", *bp);
+			netdev_err(priv->net_dev, "unknown Element ID=%d\n", *bp);
 			break;
 		}
+
 		offset += 2;	/* id & size field */
 		offset += *(bp + 1);	/* +size offset */
 		bp += (*(bp + 1) + 2);	/* pointer update */
@@ -339,7 +327,7 @@ int hostif_data_indication_wpa(struct ks_wlan_private *priv,
 	eth_proto = ntohs(eth_hdr->h_proto);
 
 	if (eth_hdr->h_dest_snap != eth_hdr->h_source_snap) {
-		DPRINTK(1, "invalid data format\n");
+		netdev_err(priv->net_dev, "invalid data format\n");
 		priv->nstats.rx_errors++;
 		return -EINVAL;
 	}
@@ -350,8 +338,8 @@ int hostif_data_indication_wpa(struct ks_wlan_private *priv,
 	     (auth_type == TYPE_GMK2 &&
 	      priv->wpa.group_suite == IW_AUTH_CIPHER_TKIP)) &&
 	    key->key_len) {
-		DPRINTK(4, "TKIP: protocol=%04X: size=%u\n",
-			eth_proto, priv->rx_size);
+		netdev_dbg(priv->net_dev, "TKIP: protocol=%04X: size=%u\n",
+			   eth_proto, priv->rx_size);
 		/* MIC save */
 		memcpy(&recv_mic[0], (priv->rxp) + ((priv->rx_size) - 8), 8);
 		priv->rx_size = priv->rx_size - 8;
@@ -371,7 +359,7 @@ int hostif_data_indication_wpa(struct ks_wlan_private *priv,
 			    (now - mic_failure->last_failure_time) / HZ >= 60) {
 				mic_failure->failure = 0;
 			}
-			DPRINTK(4, "MIC FAILURE\n");
+			netdev_err(priv->net_dev, "MIC FAILURE\n");
 			if (mic_failure->failure == 0) {
 				mic_failure->failure = 1;
 				mic_failure->counter = 0;
@@ -392,7 +380,6 @@ int hostif_data_indication_wpa(struct ks_wlan_private *priv,
 				eth_hdr->h_source);
 			memset(&wrqu, 0, sizeof(wrqu));
 			wrqu.data.length = strlen(buf);
-			DPRINTK(4, "IWEVENT:MICHAELMICFAILURE\n");
 			wireless_send_event(priv->net_dev, IWEVCUSTOM, &wrqu,
 					    buf);
 			return -EINVAL;
@@ -414,11 +401,8 @@ void hostif_data_indication(struct ks_wlan_private *priv)
 	size_t size;
 	int ret;
 
-	DPRINTK(3, "\n");
-
 	/* min length check */
 	if (priv->rx_size <= ETH_HLEN) {
-		DPRINTK(3, "rx_size = %d\n", priv->rx_size);
 		priv->nstats.rx_errors++;
 		return;
 	}
@@ -428,16 +412,15 @@ void hostif_data_indication(struct ks_wlan_private *priv)
 
 	eth_hdr = (struct ether_hdr *)(priv->rxp);
 	eth_proto = ntohs(eth_hdr->h_proto);
-	DPRINTK(3, "ether protocol = %04X\n", eth_proto);
 
 	/* source address check */
 	if (memcmp(&priv->eth_addr[0], eth_hdr->h_source, ETH_ALEN) == 0) {
-		DPRINTK(1, "invalid : source is own mac address !!\n");
-		DPRINTK(1,
-			"eth_hdrernet->h_dest=%02X:%02X:%02X:%02X:%02X:%02X\n",
-			eth_hdr->h_source[0], eth_hdr->h_source[1],
-			eth_hdr->h_source[2], eth_hdr->h_source[3],
-			eth_hdr->h_source[4], eth_hdr->h_source[5]);
+		netdev_err(priv->net_dev, "invalid : source is own mac address !!\n");
+		netdev_err(priv->net_dev,
+			   "eth_hdrernet->h_dest=%02X:%02X:%02X:%02X:%02X:%02X\n",
+			   eth_hdr->h_source[0], eth_hdr->h_source[1],
+			   eth_hdr->h_source[2], eth_hdr->h_source[3],
+			   eth_hdr->h_source[4], eth_hdr->h_source[5]);
 		priv->nstats.rx_errors++;
 		return;
 	}
@@ -463,7 +446,8 @@ void hostif_data_indication(struct ks_wlan_private *priv)
 			priv->nstats.rx_dropped++;
 			return;
 		}
-		DPRINTK(4, "SNAP, rx_ind_size = %d\n", rx_ind_size);
+		netdev_dbg(priv->net_dev, "SNAP, rx_ind_size = %d\n",
+			   rx_ind_size);
 
 		size = ETH_ALEN * 2;
 		skb_put_data(skb, priv->rxp, size);
@@ -482,7 +466,8 @@ void hostif_data_indication(struct ks_wlan_private *priv)
 			priv->nstats.rx_dropped++;
 			return;
 		}
-		DPRINTK(3, "NETBEUI/NetBIOS rx_ind_size=%d\n", rx_ind_size);
+		netdev_dbg(priv->net_dev, "NETBEUI/NetBIOS rx_ind_size=%d\n",
+			   rx_ind_size);
 
 		skb_put_data(skb, priv->rxp, 12);	/* 8802/FDDI MAC copy */
 
@@ -495,7 +480,7 @@ void hostif_data_indication(struct ks_wlan_private *priv)
 		aa1x_hdr = (struct ieee802_1x_hdr *)(priv->rxp + 14);
 		break;
 	default:	/* other rx data */
-		DPRINTK(2, "invalid data format\n");
+		netdev_err(priv->net_dev, "invalid data format\n");
 		priv->nstats.rx_errors++;
 		return;
 	}
@@ -521,8 +506,6 @@ void hostif_mib_get_confirm(struct ks_wlan_private *priv)
 	u16 mib_val_size;
 	u16 mib_val_type;
 
-	DPRINTK(3, "\n");
-
 	mib_status = get_DWORD(priv);	/* MIB status */
 	mib_attribute = get_DWORD(priv);	/* MIB atttibute */
 	mib_val_size = get_WORD(priv);	/* MIB value size */
@@ -530,15 +513,14 @@ void hostif_mib_get_confirm(struct ks_wlan_private *priv)
 
 	if (mib_status) {
 		/* in case of error */
-		DPRINTK(1, "attribute=%08X, status=%08X\n", mib_attribute,
-			mib_status);
+		netdev_err(priv->net_dev, "attribute=%08X, status=%08X\n",
+			   mib_attribute, mib_status);
 		return;
 	}
 
 	switch (mib_attribute) {
 	case DOT11_MAC_ADDRESS:
 		/* MAC address */
-		DPRINTK(3, " mib_attribute=DOT11_MAC_ADDRESS\n");
 		hostif_sme_enqueue(priv, SME_GET_MAC_ADDRESS);
 		memcpy(priv->eth_addr, priv->rxp, ETH_ALEN);
 		priv->mac_address_valid = 1;
@@ -554,7 +536,6 @@ void hostif_mib_get_confirm(struct ks_wlan_private *priv)
 		break;
 	case DOT11_PRODUCT_VERSION:
 		/* firmware version */
-		DPRINTK(3, " mib_attribute=DOT11_PRODUCT_VERSION\n");
 		priv->version_size = priv->rx_size;
 		memcpy(priv->firmware_version, priv->rxp, priv->rx_size);
 		priv->firmware_version[priv->rx_size] = '\0';
@@ -566,14 +547,12 @@ void hostif_mib_get_confirm(struct ks_wlan_private *priv)
 		break;
 	case LOCAL_GAIN:
 		memcpy(&priv->gain, priv->rxp, sizeof(priv->gain));
-		DPRINTK(3, "tx_mode=%d, rx_mode=%d, tx_gain=%d, rx_gain=%d\n",
-			priv->gain.tx_mode, priv->gain.rx_mode,
-			priv->gain.tx_gain, priv->gain.rx_gain);
+		netdev_dbg(priv->net_dev, "tx_mode=%d, rx_mode=%d, tx_gain=%d, rx_gain=%d\n",
+			   priv->gain.tx_mode, priv->gain.rx_mode,
+			   priv->gain.tx_gain, priv->gain.rx_gain);
 		break;
 	case LOCAL_EEPROM_SUM:
 		memcpy(&priv->eeprom_sum, priv->rxp, sizeof(priv->eeprom_sum));
-		DPRINTK(1, "eeprom_sum.type=%x, eeprom_sum.result=%x\n",
-			priv->eeprom_sum.type, priv->eeprom_sum.result);
 		if (priv->eeprom_sum.type == 0) {
 			priv->eeprom_checksum = EEPROM_CHECKSUM_NONE;
 		} else if (priv->eeprom_sum.type == 1) {
@@ -588,7 +567,8 @@ void hostif_mib_get_confirm(struct ks_wlan_private *priv)
 		}
 		break;
 	default:
-		DPRINTK(1, "mib_attribute=%08x\n", (unsigned int)mib_attribute);
+		netdev_err(priv->net_dev, "mib_attribute=%08x\n",
+			   (unsigned int)mib_attribute);
 		break;
 	}
 }
@@ -599,15 +579,13 @@ void hostif_mib_set_confirm(struct ks_wlan_private *priv)
 	u32 mib_status;	/* +04 MIB Status */
 	u32 mib_attribute;	/* +08 MIB attribute */
 
-	DPRINTK(3, "\n");
-
 	mib_status = get_DWORD(priv);	/* MIB Status */
 	mib_attribute = get_DWORD(priv);	/* MIB attribute */
 
 	if (mib_status) {
 		/* in case of error */
-		DPRINTK(1, "error :: attribute=%08X, status=%08X\n",
-			mib_attribute, mib_status);
+		netdev_err(priv->net_dev, "error :: attribute=%08X, status=%08X\n",
+			   mib_attribute, mib_status);
 	}
 
 	switch (mib_attribute) {
@@ -622,32 +600,24 @@ void hostif_mib_set_confirm(struct ks_wlan_private *priv)
 			hostif_sme_enqueue(priv, SME_WEP_INDEX_CONFIRM);
 		break;
 	case DOT11_WEP_DEFAULT_KEY_VALUE1:
-		DPRINTK(2, "DOT11_WEP_DEFAULT_KEY_VALUE1:mib_status=%d\n",
-			(int)mib_status);
 		if (priv->wpa.rsn_enabled)
 			hostif_sme_enqueue(priv, SME_SET_PMK_TSC);
 		else
 			hostif_sme_enqueue(priv, SME_WEP_KEY1_CONFIRM);
 		break;
 	case DOT11_WEP_DEFAULT_KEY_VALUE2:
-		DPRINTK(2, "DOT11_WEP_DEFAULT_KEY_VALUE2:mib_status=%d\n",
-			(int)mib_status);
 		if (priv->wpa.rsn_enabled)
 			hostif_sme_enqueue(priv, SME_SET_GMK1_TSC);
 		else
 			hostif_sme_enqueue(priv, SME_WEP_KEY2_CONFIRM);
 		break;
 	case DOT11_WEP_DEFAULT_KEY_VALUE3:
-		DPRINTK(2, "DOT11_WEP_DEFAULT_KEY_VALUE3:mib_status=%d\n",
-			(int)mib_status);
 		if (priv->wpa.rsn_enabled)
 			hostif_sme_enqueue(priv, SME_SET_GMK2_TSC);
 		else
 			hostif_sme_enqueue(priv, SME_WEP_KEY3_CONFIRM);
 		break;
 	case DOT11_WEP_DEFAULT_KEY_VALUE4:
-		DPRINTK(2, "DOT11_WEP_DEFAULT_KEY_VALUE4:mib_status=%d\n",
-			(int)mib_status);
 		if (!priv->wpa.rsn_enabled)
 			hostif_sme_enqueue(priv, SME_WEP_KEY4_CONFIRM);
 		break;
@@ -656,8 +626,6 @@ void hostif_mib_set_confirm(struct ks_wlan_private *priv)
 			hostif_sme_enqueue(priv, SME_WEP_FLAG_CONFIRM);
 		break;
 	case DOT11_RSN_ENABLED:
-		DPRINTK(2, "DOT11_RSN_ENABLED:mib_status=%d\n",
-			(int)mib_status);
 		hostif_sme_enqueue(priv, SME_RSN_ENABLED_CONFIRM);
 		break;
 	case LOCAL_RSN_MODE:
@@ -673,50 +641,35 @@ void hostif_mib_set_confirm(struct ks_wlan_private *priv)
 		priv->mac_address_valid = 1;
 		break;
 	case DOT11_RSN_CONFIG_MULTICAST_CIPHER:
-		DPRINTK(2, "DOT11_RSN_CONFIG_MULTICAST_CIPHER:mib_status=%d\n",
-			(int)mib_status);
 		hostif_sme_enqueue(priv, SME_RSN_MCAST_CONFIRM);
 		break;
 	case DOT11_RSN_CONFIG_UNICAST_CIPHER:
-		DPRINTK(2, "DOT11_RSN_CONFIG_UNICAST_CIPHER:mib_status=%d\n",
-			(int)mib_status);
 		hostif_sme_enqueue(priv, SME_RSN_UCAST_CONFIRM);
 		break;
 	case DOT11_RSN_CONFIG_AUTH_SUITE:
-		DPRINTK(2, "DOT11_RSN_CONFIG_AUTH_SUITE:mib_status=%d\n",
-			(int)mib_status);
 		hostif_sme_enqueue(priv, SME_RSN_AUTH_CONFIRM);
 		break;
 	case DOT11_PMK_TSC:
-		DPRINTK(2, "DOT11_PMK_TSC:mib_status=%d\n", (int)mib_status);
 		break;
 	case DOT11_GMK1_TSC:
-		DPRINTK(2, "DOT11_GMK1_TSC:mib_status=%d\n", (int)mib_status);
 		if (atomic_read(&priv->psstatus.snooze_guard))
 			atomic_set(&priv->psstatus.snooze_guard, 0);
 		break;
 	case DOT11_GMK2_TSC:
-		DPRINTK(2, "DOT11_GMK2_TSC:mib_status=%d\n", (int)mib_status);
 		if (atomic_read(&priv->psstatus.snooze_guard))
 			atomic_set(&priv->psstatus.snooze_guard, 0);
 		break;
 	case LOCAL_PMK:
-		DPRINTK(2, "LOCAL_PMK:mib_status=%d\n", (int)mib_status);
 		break;
 	case LOCAL_GAIN:
-		DPRINTK(2, "LOCAL_GAIN:mib_status=%d\n", (int)mib_status);
 		break;
 #ifdef WPS
 	case LOCAL_WPS_ENABLE:
-		DPRINTK(2, "LOCAL_WPS_ENABLE:mib_status=%d\n", (int)mib_status);
 		break;
 	case LOCAL_WPS_PROBE_REQ:
-		DPRINTK(2, "LOCAL_WPS_PROBE_REQ:mib_status=%d\n",
-			(int)mib_status);
 		break;
 #endif /* WPS */
 	case LOCAL_REGION:
-		DPRINTK(2, "LOCAL_REGION:mib_status=%d\n", (int)mib_status);
 	default:
 		break;
 	}
@@ -725,8 +678,6 @@ void hostif_mib_set_confirm(struct ks_wlan_private *priv)
 static
 void hostif_power_mgmt_confirm(struct ks_wlan_private *priv)
 {
-	DPRINTK(3, "\n");
-
 	if (priv->reg.power_mgmt > POWER_MGMT_ACTIVE &&
 	    priv->reg.operation_mode == MODE_INFRASTRUCTURE) {
 		atomic_set(&priv->psstatus.confirm_wait, 0);
@@ -740,8 +691,6 @@ void hostif_power_mgmt_confirm(struct ks_wlan_private *priv)
 static
 void hostif_sleep_confirm(struct ks_wlan_private *priv)
 {
-	DPRINTK(3, "\n");
-
 	atomic_set(&priv->sleepstatus.doze_request, 1);
 	queue_delayed_work(priv->wq, &priv->rw_dwork, 1);
 }
@@ -757,11 +706,10 @@ void hostif_start_confirm(struct ks_wlan_private *priv)
 	wrqu.ap_addr.sa_family = ARPHRD_ETHER;
 	if (is_connect_status(priv->connect_status)) {
 		eth_zero_addr(wrqu.ap_addr.sa_data);
-		DPRINTK(3, "IWEVENT: disconnect\n");
 		wireless_send_event(priv->net_dev, SIOCGIWAP, &wrqu, NULL);
 	}
 #endif
-	DPRINTK(3, " scan_ind_count=%d\n", priv->scan_ind_count);
+	netdev_dbg(priv->net_dev, " scan_ind_count=%d\n", priv->scan_ind_count);
 	hostif_sme_enqueue(priv, SME_START_CONFIRM);
 }
 
@@ -778,23 +726,19 @@ void hostif_connect_indication(struct ks_wlan_private *priv)
 
 	switch (connect_code) {
 	case RESULT_CONNECT:	/* connect */
-		DPRINTK(3, "connect :: scan_ind_count=%d\n",
-			priv->scan_ind_count);
 		if (!(priv->connect_status & FORCE_DISCONNECT))
 			netif_carrier_on(netdev);
 		tmp = FORCE_DISCONNECT & priv->connect_status;
 		priv->connect_status = tmp + CONNECT_STATUS;
 		break;
-	case RESULT_DISCONNECT:	/* disconnect */
-		DPRINTK(3, "disconnect :: scan_ind_count=%d\n",
-			priv->scan_ind_count);
+	case RESULT_DISCONNECT: /* disconnect */
 		netif_carrier_off(netdev);
 		tmp = FORCE_DISCONNECT & priv->connect_status;
 		priv->connect_status = tmp + DISCONNECT_STATUS;
 		break;
 	default:
-		DPRINTK(1, "unknown connect_code=%d :: scan_ind_count=%d\n",
-			connect_code, priv->scan_ind_count);
+		netdev_dbg(priv->net_dev, "unknown connect_code=%d :: scan_ind_count=%d\n",
+			   connect_code, priv->scan_ind_count);
 		netif_carrier_off(netdev);
 		tmp = FORCE_DISCONNECT & priv->connect_status;
 		priv->connect_status = tmp + DISCONNECT_STATUS;
@@ -816,9 +760,8 @@ void hostif_connect_indication(struct ks_wlan_private *priv)
 	if (is_disconnect_status(priv->connect_status) &&
 	    is_connect_status(old_status)) {
 		eth_zero_addr(wrqu0.ap_addr.sa_data);
-		DPRINTK(3, "IWEVENT: disconnect\n");
-		DPRINTK(3, "disconnect :: scan_ind_count=%d\n",
-			priv->scan_ind_count);
+		netdev_dbg(priv->net_dev, "disconnect :: scan_ind_count=%d\n",
+			   priv->scan_ind_count);
 		wireless_send_event(netdev, SIOCGIWAP, &wrqu0, NULL);
 	}
 	priv->scan_ind_count = 0;
@@ -830,7 +773,7 @@ void hostif_scan_indication(struct ks_wlan_private *priv)
 	int i;
 	struct ap_info_t *ap_info;
 
-	DPRINTK(3, "scan_ind_count = %d\n", priv->scan_ind_count);
+	netdev_dbg(priv->net_dev, "scan_ind_count = %d\n", priv->scan_ind_count);
 	ap_info = (struct ap_info_t *)(priv->rxp);
 
 	if (priv->scan_ind_count) {
@@ -839,7 +782,7 @@ void hostif_scan_indication(struct ks_wlan_private *priv)
 				   priv->aplist.ap[i].bssid, ETH_ALEN) != 0)
 				continue;
 
-			if (ap_info->frame_type == FRAME_TYPE_PROBE_RESP)
+			if (ap_info->frame_type == IEEE80211_STYPE_PROBE_RESP)
 				get_ap_information(priv, ap_info,
 						   &priv->aplist.ap[i]);
 			return;
@@ -847,14 +790,14 @@ void hostif_scan_indication(struct ks_wlan_private *priv)
 	}
 	priv->scan_ind_count++;
 	if (priv->scan_ind_count < LOCAL_APLIST_MAX + 1) {
-		DPRINTK(4, " scan_ind_count=%d :: aplist.size=%d\n",
+		netdev_dbg(priv->net_dev, " scan_ind_count=%d :: aplist.size=%d\n",
 			priv->scan_ind_count, priv->aplist.size);
 		get_ap_information(priv, (struct ap_info_t *)(priv->rxp),
 				   &(priv->aplist.ap[priv->scan_ind_count - 1]));
 		priv->aplist.size = priv->scan_ind_count;
 	} else {
-		DPRINTK(4, " count over :: scan_ind_count=%d\n",
-			priv->scan_ind_count);
+		netdev_dbg(priv->net_dev, " count over :: scan_ind_count=%d\n",
+			   priv->scan_ind_count);
 	}
 }
 
@@ -866,7 +809,6 @@ void hostif_stop_confirm(struct ks_wlan_private *priv)
 	struct net_device *netdev = priv->net_dev;
 	union iwreq_data wrqu0;
 
-	DPRINTK(3, "\n");
 	if (priv->dev_state == DEVICE_STATE_SLEEP)
 		priv->dev_state = DEVICE_STATE_READY;
 
@@ -883,10 +825,7 @@ void hostif_stop_confirm(struct ks_wlan_private *priv)
 		if (is_disconnect_status(priv->connect_status) &&
 		    is_connect_status(old_status)) {
 			eth_zero_addr(wrqu0.ap_addr.sa_data);
-			DPRINTK(3, "IWEVENT: disconnect\n");
 			netdev_info(netdev, "IWEVENT: disconnect\n");
-			DPRINTK(3, "disconnect :: scan_ind_count=%d\n",
-				priv->scan_ind_count);
 			wireless_send_event(netdev, SIOCGIWAP, &wrqu0, NULL);
 		}
 		priv->scan_ind_count = 0;
@@ -898,7 +837,6 @@ void hostif_stop_confirm(struct ks_wlan_private *priv)
 static
 void hostif_ps_adhoc_set_confirm(struct ks_wlan_private *priv)
 {
-	DPRINTK(3, "\n");
 	priv->infra_status = 0;	/* infrastructure mode cancel */
 	hostif_sme_enqueue(priv, SME_MODE_SET_CONFIRM);
 }
@@ -908,9 +846,7 @@ void hostif_infrastructure_set_confirm(struct ks_wlan_private *priv)
 {
 	u16 result_code;
 
-	DPRINTK(3, "\n");
 	result_code = get_WORD(priv);
-	DPRINTK(3, "result code = %d\n", result_code);
 	priv->infra_status = 1;	/* infrastructure mode set */
 	hostif_sme_enqueue(priv, SME_MODE_SET_CONFIRM);
 }
@@ -918,7 +854,6 @@ void hostif_infrastructure_set_confirm(struct ks_wlan_private *priv)
 static
 void hostif_adhoc_set_confirm(struct ks_wlan_private *priv)
 {
-	DPRINTK(3, "\n");
 	priv->infra_status = 1;	/* infrastructure mode set */
 	hostif_sme_enqueue(priv, SME_MODE_SET_CONFIRM);
 }
@@ -937,7 +872,6 @@ void hostif_associate_indication(struct ks_wlan_private *priv)
 	static const char associnfo_leader0[] = "ASSOCINFO(ReqIEs=";
 	static const char associnfo_leader1[] = " RespIEs=";
 
-	DPRINTK(3, "\n");
 	assoc_req = (struct association_request_t *)(priv->rxp);
 	assoc_resp = (struct association_response_t *)(assoc_req + 1);
 	pb = (unsigned char *)(assoc_resp + 1);
@@ -963,7 +897,6 @@ void hostif_associate_indication(struct ks_wlan_private *priv)
 	pbuf += sprintf(pbuf, ")");
 	wrqu.data.length += 1;
 
-	DPRINTK(3, "IWEVENT:ASSOCINFO\n");
 	wireless_send_event(priv->net_dev, IWEVCUSTOM, &wrqu, buf);
 }
 
@@ -975,15 +908,14 @@ void hostif_bss_scan_confirm(struct ks_wlan_private *priv)
 	union iwreq_data wrqu;
 
 	result_code = get_DWORD(priv);
-	DPRINTK(2, "result=%d :: scan_ind_count=%d\n", result_code,
-		priv->scan_ind_count);
+	netdev_dbg(priv->net_dev, "result=%d :: scan_ind_count=%d\n", result_code,
+		   priv->scan_ind_count);
 
 	priv->sme_i.sme_flag &= ~SME_AP_SCAN;
 	hostif_sme_enqueue(priv, SME_BSS_SCAN_CONFIRM);
 
 	wrqu.data.length = 0;
 	wrqu.data.flags = 0;
-	DPRINTK(3, "IWEVENT: SCAN CONFIRM\n");
 	wireless_send_event(dev, SIOCGIWSCAN, &wrqu, NULL);
 	priv->scan_ind_count = 0;
 }
@@ -997,7 +929,6 @@ void hostif_phy_information_confirm(struct ks_wlan_private *priv)
 	unsigned int transmitted_frame_count, received_fragment_count;
 	unsigned int failed_count, fcs_error_count;
 
-	DPRINTK(3, "\n");
 	rssi = get_BYTE(priv);
 	signal = get_BYTE(priv);
 	noise = get_BYTE(priv);
@@ -1007,22 +938,23 @@ void hostif_phy_information_confirm(struct ks_wlan_private *priv)
 	failed_count = get_DWORD(priv);
 	fcs_error_count = get_DWORD(priv);
 
-	DPRINTK(4, "phyinfo confirm rssi=%d signal=%d\n", rssi, signal);
+	netdev_dbg(priv->net_dev, "phyinfo confirm rssi=%d signal=%d\n",
+		   rssi, signal);
 	priv->current_rate = (link_speed & RATE_MASK);
 	wstats->qual.qual = signal;
 	wstats->qual.level = 256 - rssi;
 	wstats->qual.noise = 0;	/* invalid noise value */
 	wstats->qual.updated = IW_QUAL_ALL_UPDATED | IW_QUAL_DBM;
 
-	DPRINTK(3, "\n    rssi=%u\n"
+	netdev_dbg(priv->net_dev, "\n    rssi=%u\n"
 		   "    signal=%u\n"
 		   "    link_speed=%ux500Kbps\n"
 		   "    transmitted_frame_count=%u\n"
 		   "    received_fragment_count=%u\n"
 		   "    failed_count=%u\n"
 		   "    fcs_error_count=%u\n",
-		rssi, signal, link_speed, transmitted_frame_count,
-		received_fragment_count, failed_count, fcs_error_count);
+		   rssi, signal, link_speed, transmitted_frame_count,
+		   received_fragment_count, failed_count, fcs_error_count);
 	/* wake_up_interruptible_all(&priv->confirm_wait); */
 	complete(&priv->confirm_wait);
 }
@@ -1030,7 +962,7 @@ void hostif_phy_information_confirm(struct ks_wlan_private *priv)
 static
 void hostif_mic_failure_confirm(struct ks_wlan_private *priv)
 {
-	DPRINTK(3, "mic_failure=%u\n", priv->wpa.mic_failure.failure);
+	netdev_dbg(priv->net_dev, "mic_failure=%u\n", priv->wpa.mic_failure.failure);
 	hostif_sme_enqueue(priv, SME_MIC_FAILURE_CONFIRM);
 }
 
@@ -1039,7 +971,6 @@ void hostif_event_check(struct ks_wlan_private *priv)
 {
 	unsigned short event;
 
-	DPRINTK(4, "\n");
 	event = get_WORD(priv);	/* get event */
 	switch (event) {
 	case HIF_DATA_IND:
@@ -1095,7 +1026,6 @@ void hostif_event_check(struct ks_wlan_private *priv)
 		break;
 	case HIF_AP_SET_CONF:
 	default:
-		//DPRINTK(1, "undefined event[%04X]\n", event);
 		netdev_err(priv->net_dev, "undefined event[%04X]\n", event);
 		/* wake_up_all(&priv->confirm_wait); */
 		complete(&priv->confirm_wait);
@@ -1143,7 +1073,7 @@ int hostif_data_request(struct ks_wlan_private *priv, struct sk_buff *skb)
 
 	skb_len = skb->len;
 	if (skb_len > ETH_FRAME_LEN) {
-		DPRINTK(1, "bad length skb_len=%d\n", skb_len);
+		netdev_err(priv->net_dev, "bad length skb_len=%d\n", skb_len);
 		ret = -EOVERFLOW;
 		goto err_kfree_skb;
 	}
@@ -1151,7 +1081,6 @@ int hostif_data_request(struct ks_wlan_private *priv, struct sk_buff *skb)
 	if (is_disconnect_status(priv->connect_status) ||
 	    (priv->connect_status & FORCE_DISCONNECT) ||
 	    priv->wpa.mic_failure.stop) {
-		DPRINTK(3, " DISCONNECT\n");
 		if (netif_queue_stopped(priv->net_dev))
 			netif_wake_queue(priv->net_dev);
 		if (skb)
@@ -1181,8 +1110,8 @@ int hostif_data_request(struct ks_wlan_private *priv, struct sk_buff *skb)
 	/* skb check */
 	eth = (struct ethhdr *)skb->data;
 	if (memcmp(&priv->eth_addr[0], eth->h_source, ETH_ALEN) != 0) {
-		DPRINTK(1, "invalid mac address !!\n");
-		DPRINTK(1, "ethernet->h_source=%pM\n", eth->h_source);
+		netdev_err(priv->net_dev, "invalid mac address !!\n");
+		netdev_err(priv->net_dev, "ethernet->h_source=%pM\n", eth->h_source);
 		ret = -ENXIO;
 		goto err_kfree;
 	}
@@ -1197,7 +1126,7 @@ int hostif_data_request(struct ks_wlan_private *priv, struct sk_buff *skb)
 	/* EtherType/Length check */
 	if (*(buffer + 1) + (*buffer << 8) > 1500) {
 		/* ProtocolEAP = *(buffer+1) + (*buffer << 8); */
-		/* DPRINTK(2, "Send [SNAP]Type %x\n",ProtocolEAP); */
+		/* netdev_dbg(priv->net_dev, "Send [SNAP]Type %x\n",ProtocolEAP); */
 		/* SAP/CTL/OUI(6 byte) add */
 		*p++ = 0xAA;	/* DSAP */
 		*p++ = 0xAA;	/* SSAP */
@@ -1207,7 +1136,6 @@ int hostif_data_request(struct ks_wlan_private *priv, struct sk_buff *skb)
 		*p++ = 0x00;	/* OUI ("000000") */
 		skb_len += 6;
 	} else {
-		DPRINTK(4, "DIX\n");
 		/* Length(2 byte) delete */
 		buffer += 2;
 		length -= 2;
@@ -1282,7 +1210,7 @@ int hostif_data_request(struct ks_wlan_private *priv, struct sk_buff *skb)
 	    priv->wpa.mic_failure.failure > 0) {
 		if (keyinfo & WPA_KEY_INFO_ERROR &&
 		    keyinfo & WPA_KEY_INFO_REQUEST) {
-			DPRINTK(3, " MIC ERROR Report SET : %04X\n", keyinfo);
+			netdev_err(priv->net_dev, " MIC ERROR Report SET : %04X\n", keyinfo);
 			hostif_sme_enqueue(priv, SME_MIC_FAILURE_REQUEST);
 		}
 		if (priv->wpa.mic_failure.failure == 2)
@@ -1299,19 +1227,17 @@ err_kfree_skb:
 	return ret;
 }
 
-#define ps_confirm_wait_inc(priv)					 \
-	do {								 \
-		if (atomic_read(&priv->psstatus.status) > PS_ACTIVE_SET) \
-			atomic_inc(&priv->psstatus.confirm_wait);	 \
-	} while (0)
+static inline void ps_confirm_wait_inc(struct ks_wlan_private *priv)
+{
+	if (atomic_read(&priv->psstatus.status) > PS_ACTIVE_SET)
+		atomic_inc(&priv->psstatus.confirm_wait);
+}
 
 static
 void hostif_mib_get_request(struct ks_wlan_private *priv,
 			    unsigned long mib_attribute)
 {
 	struct hostif_mib_get_request_t *pp;
-
-	DPRINTK(3, "\n");
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_MIB_GET_REQ);
 	if (!pp)
@@ -1331,12 +1257,8 @@ void hostif_mib_set_request(struct ks_wlan_private *priv,
 {
 	struct hostif_mib_set_request_t *pp;
 
-	DPRINTK(3, "\n");
-
-	if (priv->dev_state < DEVICE_STATE_BOOT) {
-		DPRINTK(3, "DeviceRemove\n");
+	if (priv->dev_state < DEVICE_STATE_BOOT)
 		return;
-	}
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_MIB_SET_REQ);
 	if (!pp)
@@ -1357,8 +1279,6 @@ void hostif_start_request(struct ks_wlan_private *priv, unsigned char mode)
 {
 	struct hostif_start_request_t *pp;
 
-	DPRINTK(3, "\n");
-
 	pp = hostif_generic_request(sizeof(*pp), HIF_START_REQ);
 	if (!pp)
 		return;
@@ -1373,13 +1293,27 @@ void hostif_start_request(struct ks_wlan_private *priv, unsigned char mode)
 	priv->scan_ind_count = 0;
 }
 
+static __le16 ks_wlan_cap(struct ks_wlan_private *priv)
+{
+	u16 capability = 0x0000;
+
+	if (priv->reg.preamble == SHORT_PREAMBLE)
+		capability |= WLAN_CAPABILITY_SHORT_PREAMBLE;
+
+	capability &= ~(WLAN_CAPABILITY_PBCC);	/* pbcc not support */
+
+	if (priv->reg.phy_type != D_11B_ONLY_MODE) {
+		capability |= WLAN_CAPABILITY_SHORT_SLOT_TIME;
+		capability &= ~(WLAN_CAPABILITY_DSSS_OFDM);
+	}
+
+	return cpu_to_le16((uint16_t)capability);
+}
+
 static
 void hostif_ps_adhoc_set_request(struct ks_wlan_private *priv)
 {
 	struct hostif_ps_adhoc_set_request_t *pp;
-	u16 capability;
-
-	DPRINTK(3, "\n");
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_PS_ADH_SET_REQ);
 	if (!pp)
@@ -1390,20 +1324,9 @@ void hostif_ps_adhoc_set_request(struct ks_wlan_private *priv)
 	pp->scan_type = cpu_to_le16((uint16_t)(priv->reg.scan_type));
 	pp->channel = cpu_to_le16((uint16_t)(priv->reg.channel));
 	pp->rate_set.size = priv->reg.rate_set.size;
+	pp->capability = ks_wlan_cap(priv);
 	memcpy(&pp->rate_set.body[0], &priv->reg.rate_set.body[0],
 	       priv->reg.rate_set.size);
-
-	capability = 0x0000;
-	if (priv->reg.preamble == SHORT_PREAMBLE) {
-		/* short preamble */
-		capability |= BSS_CAP_SHORT_PREAMBLE;
-	}
-	capability &= ~(BSS_CAP_PBCC);	/* pbcc not support */
-	if (priv->reg.phy_type != D_11B_ONLY_MODE) {
-		capability |= BSS_CAP_SHORT_SLOT_TIME;	/* ShortSlotTime support */
-		capability &= ~(BSS_CAP_DSSS_OFDM);	/* DSSS OFDM */
-	}
-	pp->capability = cpu_to_le16((uint16_t)capability);
 
 	/* send to device request */
 	ps_confirm_wait_inc(priv);
@@ -1414,9 +1337,6 @@ static
 void hostif_infrastructure_set_request(struct ks_wlan_private *priv)
 {
 	struct hostif_infrastructure_set_request_t *pp;
-	u16 capability;
-
-	DPRINTK(3, "ssid.size=%d\n", priv->reg.ssid.size);
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_INFRA_SET_REQ);
 	if (!pp)
@@ -1431,18 +1351,7 @@ void hostif_infrastructure_set_request(struct ks_wlan_private *priv)
 	       priv->reg.rate_set.size);
 	pp->ssid.size = priv->reg.ssid.size;
 	memcpy(&pp->ssid.body[0], &priv->reg.ssid.body[0], priv->reg.ssid.size);
-
-	capability = 0x0000;
-	if (priv->reg.preamble == SHORT_PREAMBLE) {
-		/* short preamble */
-		capability |= BSS_CAP_SHORT_PREAMBLE;
-	}
-	capability &= ~(BSS_CAP_PBCC);	/* pbcc not support */
-	if (priv->reg.phy_type != D_11B_ONLY_MODE) {
-		capability |= BSS_CAP_SHORT_SLOT_TIME;	/* ShortSlotTime support */
-		capability &= ~(BSS_CAP_DSSS_OFDM);	/* DSSS OFDM not support */
-	}
-	pp->capability = cpu_to_le16((uint16_t)capability);
+	pp->capability = ks_wlan_cap(priv);
 	pp->beacon_lost_count =
 	    cpu_to_le16((uint16_t)(priv->reg.beacon_lost_count));
 	pp->auth_type = cpu_to_le16((uint16_t)(priv->reg.authenticate_type));
@@ -1475,9 +1384,6 @@ void hostif_infrastructure_set_request(struct ks_wlan_private *priv)
 static void hostif_infrastructure_set2_request(struct ks_wlan_private *priv)
 {
 	struct hostif_infrastructure_set2_request_t *pp;
-	u16 capability;
-
-	DPRINTK(2, "ssid.size=%d\n", priv->reg.ssid.size);
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_INFRA_SET2_REQ);
 	if (!pp)
@@ -1492,18 +1398,7 @@ static void hostif_infrastructure_set2_request(struct ks_wlan_private *priv)
 	       priv->reg.rate_set.size);
 	pp->ssid.size = priv->reg.ssid.size;
 	memcpy(&pp->ssid.body[0], &priv->reg.ssid.body[0], priv->reg.ssid.size);
-
-	capability = 0x0000;
-	if (priv->reg.preamble == SHORT_PREAMBLE) {
-		/* short preamble */
-		capability |= BSS_CAP_SHORT_PREAMBLE;
-	}
-	capability &= ~(BSS_CAP_PBCC);	/* pbcc not support */
-	if (priv->reg.phy_type != D_11B_ONLY_MODE) {
-		capability |= BSS_CAP_SHORT_SLOT_TIME;	/* ShortSlotTime support */
-		capability &= ~(BSS_CAP_DSSS_OFDM);	/* DSSS OFDM not support */
-	}
-	pp->capability = cpu_to_le16((uint16_t)capability);
+	pp->capability = ks_wlan_cap(priv);
 	pp->beacon_lost_count =
 	    cpu_to_le16((uint16_t)(priv->reg.beacon_lost_count));
 	pp->auth_type = cpu_to_le16((uint16_t)(priv->reg.authenticate_type));
@@ -1539,9 +1434,6 @@ static
 void hostif_adhoc_set_request(struct ks_wlan_private *priv)
 {
 	struct hostif_adhoc_set_request_t *pp;
-	u16 capability;
-
-	DPRINTK(3, "\n");
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_ADH_SET_REQ);
 	if (!pp)
@@ -1556,18 +1448,7 @@ void hostif_adhoc_set_request(struct ks_wlan_private *priv)
 	       priv->reg.rate_set.size);
 	pp->ssid.size = priv->reg.ssid.size;
 	memcpy(&pp->ssid.body[0], &priv->reg.ssid.body[0], priv->reg.ssid.size);
-
-	capability = 0x0000;
-	if (priv->reg.preamble == SHORT_PREAMBLE) {
-		/* short preamble */
-		capability |= BSS_CAP_SHORT_PREAMBLE;
-	}
-	capability &= ~(BSS_CAP_PBCC);	/* pbcc not support */
-	if (priv->reg.phy_type != D_11B_ONLY_MODE) {
-		capability |= BSS_CAP_SHORT_SLOT_TIME;	/* ShortSlotTime support */
-		capability &= ~(BSS_CAP_DSSS_OFDM);	/* DSSS OFDM not support */
-	}
-	pp->capability = cpu_to_le16((uint16_t)capability);
+	pp->capability = ks_wlan_cap(priv);
 
 	/* send to device request */
 	ps_confirm_wait_inc(priv);
@@ -1578,9 +1459,6 @@ static
 void hostif_adhoc_set2_request(struct ks_wlan_private *priv)
 {
 	struct hostif_adhoc_set2_request_t *pp;
-	u16 capability;
-
-	DPRINTK(3, "\n");
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_ADH_SET_REQ);
 	if (!pp)
@@ -1594,18 +1472,7 @@ void hostif_adhoc_set2_request(struct ks_wlan_private *priv)
 	       priv->reg.rate_set.size);
 	pp->ssid.size = priv->reg.ssid.size;
 	memcpy(&pp->ssid.body[0], &priv->reg.ssid.body[0], priv->reg.ssid.size);
-
-	capability = 0x0000;
-	if (priv->reg.preamble == SHORT_PREAMBLE) {
-		/* short preamble */
-		capability |= BSS_CAP_SHORT_PREAMBLE;
-	}
-	capability &= ~(BSS_CAP_PBCC);	/* pbcc not support */
-	if (priv->reg.phy_type != D_11B_ONLY_MODE) {
-		capability |= BSS_CAP_SHORT_SLOT_TIME;	/* ShortSlotTime support */
-		capability &= ~(BSS_CAP_DSSS_OFDM);	/* DSSS OFDM not support */
-	}
-	pp->capability = cpu_to_le16((uint16_t)capability);
+	pp->capability = ks_wlan_cap(priv);
 
 	pp->channel_list.body[0] = priv->reg.channel;
 	pp->channel_list.size = 1;
@@ -1621,8 +1488,6 @@ void hostif_stop_request(struct ks_wlan_private *priv)
 {
 	struct hostif_stop_request_t *pp;
 
-	DPRINTK(3, "\n");
-
 	pp = hostif_generic_request(sizeof(*pp), HIF_STOP_REQ);
 	if (!pp)
 		return;
@@ -1636,8 +1501,6 @@ static
 void hostif_phy_information_request(struct ks_wlan_private *priv)
 {
 	struct hostif_phy_information_request_t *pp;
-
-	DPRINTK(3, "\n");
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_PHY_INFO_REQ);
 	if (!pp)
@@ -1663,9 +1526,6 @@ void hostif_power_mgmt_request(struct ks_wlan_private *priv,
 {
 	struct hostif_power_mgmt_request_t *pp;
 
-	DPRINTK(3, "mode=%lu wake_up=%lu receive_dtims=%lu\n", mode, wake_up,
-		receive_dtims);
-
 	pp = hostif_generic_request(sizeof(*pp), HIF_POWER_MGMT_REQ);
 	if (!pp)
 		return;
@@ -1685,8 +1545,6 @@ void hostif_sleep_request(struct ks_wlan_private *priv,
 {
 	struct hostif_sleep_request_t *pp;
 
-	DPRINTK(3, "mode=%lu\n", (long)mode);
-
 	if (mode == SLP_SLEEP) {
 		pp = hostif_generic_request(sizeof(*pp), HIF_SLEEP_REQ);
 		if (!pp)
@@ -1700,7 +1558,7 @@ void hostif_sleep_request(struct ks_wlan_private *priv,
 		atomic_set(&priv->sleepstatus.wakeup_request, 1);
 		queue_delayed_work(priv->wq, &priv->rw_dwork, 1);
 	} else {
-		DPRINTK(3, "invalid mode %ld\n", (long)mode);
+		netdev_err(priv->net_dev, "invalid mode %ld\n", (long)mode);
 		return;
 	}
 }
@@ -1711,8 +1569,6 @@ void hostif_bss_scan_request(struct ks_wlan_private *priv,
 			     uint8_t scan_ssid_len)
 {
 	struct hostif_bss_scan_request_t *pp;
-
-	DPRINTK(2, "\n");
 
 	pp = hostif_generic_request(sizeof(*pp), HIF_SCAN_REQ);
 	if (!pp)
@@ -1764,8 +1620,6 @@ void hostif_mic_failure_request(struct ks_wlan_private *priv,
 {
 	struct hostif_mic_failure_request_t *pp;
 
-	DPRINTK(3, "count=%d :: timer=%d\n", failure_count, timer);
-
 	pp = hostif_generic_request(sizeof(*pp), HIF_MIC_FAILURE_REQ);
 	if (!pp)
 		return;
@@ -1805,8 +1659,6 @@ static void devio_rec_ind(struct ks_wlan_private *priv, unsigned char *p,
 void hostif_receive(struct ks_wlan_private *priv, unsigned char *p,
 		    unsigned int size)
 {
-	DPRINTK(4, "\n");
-
 	devio_rec_ind(priv, p, size);
 
 	priv->rxp = p;
@@ -2140,8 +1992,8 @@ void hostif_sme_mode_setup(struct ks_wlan_private *priv)
 			hostif_infrastructure_set_request(priv);
 		} else {
 			hostif_infrastructure_set2_request(priv);
-			DPRINTK(2,
-				"Infra bssid = %pM\n", priv->reg.bssid);
+			netdev_dbg(priv->net_dev,
+				   "Infra bssid = %pM\n", priv->reg.bssid);
 		}
 		break;
 	case MODE_ADHOC:
@@ -2150,8 +2002,8 @@ void hostif_sme_mode_setup(struct ks_wlan_private *priv)
 			hostif_adhoc_set_request(priv);
 		} else {
 			hostif_adhoc_set2_request(priv);
-			DPRINTK(2,
-				"Adhoc bssid = %pM\n", priv->reg.bssid);
+			netdev_dbg(priv->net_dev,
+				   "Adhoc bssid = %pM\n", priv->reg.bssid);
 		}
 		break;
 	default:
@@ -2168,8 +2020,6 @@ void hostif_sme_multicast_set(struct ks_wlan_private *priv)
 	char set_address[NIC_MAX_MCAST_LIST * ETH_ALEN];
 	__le32 filter_type;
 	int i = 0;
-
-	DPRINTK(3, "\n");
 
 	spin_lock(&priv->multicast_spin);
 
@@ -2220,7 +2070,6 @@ void hostif_sme_power_mgmt_set(struct ks_wlan_private *priv)
 {
 	unsigned long mode, wake_up, receive_dtims;
 
-	DPRINTK(3, "\n");
 	switch (priv->reg.power_mgmt) {
 	case POWER_MGMT_ACTIVE:
 		mode = POWER_ACTIVE;
@@ -2261,7 +2110,6 @@ void hostif_sme_power_mgmt_set(struct ks_wlan_private *priv)
 static
 void hostif_sme_sleep_set(struct ks_wlan_private *priv)
 {
-	DPRINTK(3, "\n");
 	switch (priv->sleep_mode) {
 	case SLP_SLEEP:
 		hostif_sleep_request(priv, priv->sleep_mode);
@@ -2345,7 +2193,6 @@ void hostif_sme_set_pmksa(struct ks_wlan_private *priv)
 	struct pmk_t *pmk;
 	int i;
 
-	DPRINTK(4, "pmklist.size=%d\n", priv->pmklist.size);
 	i = 0;
 	list_for_each_entry(pmk, &priv->pmklist.head, list) {
 		if (i < PMK_LIST_MAX) {
@@ -2369,7 +2216,6 @@ void hostif_sme_execute(struct ks_wlan_private *priv, int event)
 {
 	__le32 val;
 
-	DPRINTK(3, "event=%d\n", event);
 	switch (event) {
 	case SME_START:
 		if (priv->dev_state == DEVICE_STATE_BOOT)
@@ -2403,8 +2249,8 @@ void hostif_sme_execute(struct ks_wlan_private *priv, int event)
 						   priv->wpa.mic_failure.failure - 1,
 						   priv->wpa.mic_failure.counter);
 		} else {
-			DPRINTK(4, "SME_MIC_FAILURE_REQUEST: failure count=%u error?\n",
-				priv->wpa.mic_failure.failure);
+			netdev_err(priv->net_dev, "SME_MIC_FAILURE_REQUEST: failure count=%u error?\n",
+				   priv->wpa.mic_failure.failure);
 		}
 		break;
 	case SME_MIC_FAILURE_CONFIRM:
@@ -2544,8 +2390,6 @@ void hostif_sme_task(unsigned long dev)
 {
 	struct ks_wlan_private *priv = (struct ks_wlan_private *)dev;
 
-	DPRINTK(3, "\n");
-
 	if (priv->dev_state < DEVICE_STATE_BOOT)
 		return;
 
@@ -2561,8 +2405,6 @@ void hostif_sme_task(unsigned long dev)
 /* send to Station Management Entity module */
 void hostif_sme_enqueue(struct ks_wlan_private *priv, unsigned short event)
 {
-	DPRINTK(3, "\n");
-
 	/* enqueue sme event */
 	if (cnt_smeqbody(priv) < (SME_EVENT_BUFF_SIZE - 1)) {
 		priv->sme_i.event_buff[priv->sme_i.qtail] = event;
@@ -2582,8 +2424,6 @@ void hostif_sme_enqueue(struct ks_wlan_private *priv, unsigned short event)
 int hostif_init(struct ks_wlan_private *priv)
 {
 	int i;
-
-	DPRINTK(3, "\n");
 
 	priv->aplist.size = 0;
 	for (i = 0; i < LOCAL_APLIST_MAX; i++)

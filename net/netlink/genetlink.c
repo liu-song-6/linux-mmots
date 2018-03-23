@@ -1035,6 +1035,7 @@ static void __net_exit genl_pernet_exit(struct net *net)
 static struct pernet_operations genl_pernet_ops = {
 	.init = genl_pernet_init,
 	.exit = genl_pernet_exit,
+	.async = true,
 };
 
 static int __init genl_init(void)
@@ -1106,7 +1107,7 @@ static int genlmsg_mcast(struct sk_buff *skb, u32 portid, unsigned long group,
 	if (!err)
 		delivered = true;
 	else if (err != -ESRCH)
-		goto error;
+		return err;
 	return delivered ? 0 : -ESRCH;
  error:
 	kfree_skb(skb);
