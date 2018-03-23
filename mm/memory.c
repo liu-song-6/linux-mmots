@@ -3048,6 +3048,7 @@ int do_swap_page(struct vm_fault *vmf)
 		activate_page(page);
 	}
 	set_pte_at(vma->vm_mm, vmf->address, vmf->pte, pte);
+	arch_do_swap_page(vma->vm_mm, vma, vmf->address, pte, vmf->orig_pte);
 
 	swap_free(entry);
 	if (mem_cgroup_swap_full(page) ||
