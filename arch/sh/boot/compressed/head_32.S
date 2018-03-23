@@ -76,6 +76,10 @@ l1:
 	mov.l	init_stack_addr, r0
 	mov.l	@r0, r15
 
+	mov.l	__stack_chk_guard_addr, r0
+	mov.l	__stack_chk_guard_val, r1
+	mov.l	r1, @r0
+
 	/* Decompress the kernel */
 	mov.l	decompress_kernel_addr, r0
 	jsr	@r0
@@ -97,6 +101,10 @@ kexec_magic:
 	.long	0x400000F0	/* magic used by kexec to parse zImage format */
 init_stack_addr:
 	.long	stack_start
+__stack_chk_guard_val:
+	.long	0x000A0DFF
+__stack_chk_guard_addr:
+	.long	__stack_chk_guard
 decompress_kernel_addr:
 	.long	decompress_kernel
 kernel_start_addr:
