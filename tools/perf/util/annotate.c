@@ -187,6 +187,9 @@ bool ins__is_fused(struct arch *arch, const char *ins1, const char *ins2)
 static int call__parse(struct arch *arch, struct ins_operands *ops, struct map *map)
 {
 	char *endptr, *tok, *name;
+	struct addr_map_symbol target = {
+		.map = map,
+	};
 
 	ops->target.addr = strtoull(ops->raw, &endptr, 16);
 
@@ -208,31 +211,35 @@ static int call__parse(struct arch *arch, struct ins_operands *ops, struct map *
 	ops->target.name = strdup(name);
 	*tok = '>';
 
-	return ops->target.name == NULL ? -1 : 0;
+	if (ops->target.name == NULL)
+		return -1;
+find_target:
+	target.addr = map__objdump_2mem(map, ops->target.addr);
+
+	if (map_groups__find_ams(&target) == 0 &&
+	    map__rip_2objdump(target.map, map->map_ip(target.map, target.addr)) == ops->target.addr)
+		ops->target.sym = target.sym;
+
+	return 0;
 
 indirect_call:
 	tok = strchr(endptr, '*');
-	if (tok == NULL) {
-		struct symbol *sym = map__find_symbol(map, map->map_ip(map, ops->target.addr));
-		if (sym != NULL)
-			ops->target.name = strdup(sym->name);
-		else
-			ops->target.addr = 0;
-		return 0;
-	}
-
-	ops->target.addr = strtoull(tok + 1, NULL, 16);
-	return 0;
+	if (tok != NULL)
+		ops->target.addr = strtoull(tok + 1, NULL, 16);
+	goto find_target;
 }
 
 static int call__scnprintf(struct ins *ins, char *bf, size_t size,
 			   struct ins_operands *ops)
 {
-	if (ops->target.name)
-		return scnprintf(bf, size, "%-6s %s", ins->name, ops->target.name);
+	if (ops->target.sym)
+		return scnprintf(bf, size, "%-6s %s", ins->name, ops->target.sym->name);
 
 	if (ops->target.addr == 0)
 		return ins__raw_scnprintf(ins, bf, size, ops);
+
+	if (ops->target.name)
+		return scnprintf(bf, size, "%-6s %s", ins->name, ops->target.name);
 
 	return scnprintf(bf, size, "%-6s *%" PRIx64, ins->name, ops->target.addr);
 }
@@ -244,7 +251,7 @@ static struct ins_ops call_ops = {
 
 bool ins__is_call(const struct ins *ins)
 {
-	return ins->ops == &call_ops;
+	return ins->ops == &call_ops || ins->ops == &s390_call_ops;
 }
 
 static int jump__parse(struct arch *arch __maybe_unused, struct ins_operands *ops, struct map *map __maybe_unused)
@@ -1283,8 +1290,8 @@ static int symbol__parse_objdump_line(struct symbol *sym, FILE *file,
 		dl->ops.target.offset_avail = true;
 	}
 
-	/* kcore has no symbols, so add the call target name */
-	if (dl->ins.ops && ins__is_call(&dl->ins) && !dl->ops.target.name) {
+	/* kcore has no symbols, so add the call target symbol */
+	if (dl->ins.ops && ins__is_call(&dl->ins) && !dl->ops.target.sym) {
 		struct addr_map_symbol target = {
 			.map = map,
 			.addr = dl->ops.target.addr,
@@ -1292,7 +1299,7 @@ static int symbol__parse_objdump_line(struct symbol *sym, FILE *file,
 
 		if (!map_groups__find_ams(&target) &&
 		    target.sym->start == target.al_addr)
-			dl->ops.target.name = strdup(target.sym->name);
+			dl->ops.target.sym = target.sym;
 	}
 
 	annotation_line__add(&dl->al, &notes->src->source);
@@ -1423,7 +1430,7 @@ static int symbol__disassemble(struct symbol *sym, struct annotate_args *args)
 {
 	struct map *map = args->map;
 	struct dso *dso = map->dso;
-	char command[PATH_MAX * 2];
+	char *command;
 	FILE *file;
 	char symfs_filename[PATH_MAX];
 	struct kcore_extract kce;
@@ -1464,7 +1471,7 @@ static int symbol__disassemble(struct symbol *sym, struct annotate_args *args)
 		strcpy(symfs_filename, tmp);
 	}
 
-	snprintf(command, sizeof(command),
+	err = asprintf(&command,
 		 "%s %s%s --start-address=0x%016" PRIx64
 		 " --stop-address=0x%016" PRIx64
 		 " -l -d %s %s -C \"%s\" 2>/dev/null|grep -v \"%s:\"|expand",
@@ -1477,12 +1484,17 @@ static int symbol__disassemble(struct symbol *sym, struct annotate_args *args)
 		 symbol_conf.annotate_src ? "-S" : "",
 		 symfs_filename, symfs_filename);
 
+	if (err < 0) {
+		pr_err("Failure allocating memory for the command to run\n");
+		goto out_remove_tmp;
+	}
+
 	pr_debug("Executing: %s\n", command);
 
 	err = -1;
 	if (pipe(stdout_fd) < 0) {
 		pr_err("Failure creating the pipe to run %s\n", command);
-		goto out_remove_tmp;
+		goto out_free_command;
 	}
 
 	pid = fork();
@@ -1509,7 +1521,7 @@ static int symbol__disassemble(struct symbol *sym, struct annotate_args *args)
 		 * If we were using debug info should retry with
 		 * original binary.
 		 */
-		goto out_remove_tmp;
+		goto out_free_command;
 	}
 
 	nline = 0;
@@ -1537,6 +1549,8 @@ static int symbol__disassemble(struct symbol *sym, struct annotate_args *args)
 
 	fclose(file);
 	err = 0;
+out_free_command:
+	free(command);
 out_remove_tmp:
 	close(stdout_fd[0]);
 
@@ -1550,7 +1564,7 @@ out:
 
 out_close_stdout:
 	close(stdout_fd[1]);
-	goto out_remove_tmp;
+	goto out_free_command;
 }
 
 static void calc_percent(struct sym_hist *hist,

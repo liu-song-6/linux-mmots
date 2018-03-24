@@ -674,7 +674,11 @@ static const struct nft_set_ops *
 nft_hash_select_ops(const struct nft_ctx *ctx, const struct nft_set_desc *desc,
 		    u32 flags)
 {
+<<<<<<< HEAD
 	if (desc->size && !(flags & NFT_SET_TIMEOUT)) {
+=======
+	if (desc->size && !(flags & (NFT_SET_EVAL | NFT_SET_TIMEOUT))) {
+>>>>>>> linux-next/akpm-base
 		switch (desc->klen) {
 		case 4:
 			return &nft_hash_fast_ops;

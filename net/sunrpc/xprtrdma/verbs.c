@@ -255,6 +255,7 @@ rpcrdma_conn_upcall(struct rdma_cm_id *id, struct rdma_cm_event *event)
 		/* Return 1 to ensure the core destroys the id. */
 		return 1;
 	case RDMA_CM_EVENT_ESTABLISHED:
+		++xprt->rx_xprt.connect_cookie;
 		connstate = 1;
 		rpcrdma_update_connect_private(xprt, &event->param.conn);
 		goto connected;
@@ -273,9 +274,11 @@ rpcrdma_conn_upcall(struct rdma_cm_id *id, struct rdma_cm_event *event)
 			connstate = -EAGAIN;
 		goto connected;
 	case RDMA_CM_EVENT_DISCONNECTED:
+		++xprt->rx_xprt.connect_cookie;
 		connstate = -ECONNABORTED;
 connected:
 		xprt->rx_buf.rb_credits = 1;
+		xprt->rx_buf.rb_posted_receives = 0;
 		ep->rep_connected = connstate;
 		rpcrdma_conn_func(ep);
 		wake_up_all(&ep->rep_connect_wait);
@@ -589,11 +592,8 @@ rpcrdma_ep_create(struct rpcrdma_ep *ep, struct rpcrdma_ia *ia,
 
 	/* Client offers RDMA Read but does not initiate */
 	ep->rep_remote_cma.initiator_depth = 0;
-	if (ia->ri_device->attrs.max_qp_rd_atom > 32)	/* arbitrary but <= 255 */
-		ep->rep_remote_cma.responder_resources = 32;
-	else
-		ep->rep_remote_cma.responder_resources =
-						ia->ri_device->attrs.max_qp_rd_atom;
+	ep->rep_remote_cma.responder_resources =
+		min_t(int, U8_MAX, ia->ri_device->attrs.max_qp_rd_atom);
 
 	/* Limit transport retries so client can detect server
 	 * GID changes quickly. RPC layer handles re-establishing
@@ -737,7 +737,6 @@ rpcrdma_ep_connect(struct rpcrdma_ep *ep, struct rpcrdma_ia *ia)
 {
 	struct rpcrdma_xprt *r_xprt = container_of(ia, struct rpcrdma_xprt,
 						   rx_ia);
-	unsigned int extras;
 	int rc;
 
 retry:
@@ -781,9 +780,7 @@ retry:
 	}
 
 	dprintk("RPC:       %s: connected\n", __func__);
-	extras = r_xprt->rx_buf.rb_bc_srv_max_requests;
-	if (extras)
-		rpcrdma_ep_post_extra_recv(r_xprt, extras);
+	rpcrdma_ep_post_recvs(r_xprt);
 
 out:
 	if (rc)
@@ -1024,7 +1021,7 @@ rpcrdma_mrs_create(struct rpcrdma_xprt *r_xprt)
 	LIST_HEAD(free);
 	LIST_HEAD(all);
 
-	for (count = 0; count < 32; count++) {
+	for (count = 0; count < 3; count++) {
 		struct rpcrdma_mr *mr;
 		int rc;
 
@@ -1049,8 +1046,9 @@ rpcrdma_mrs_create(struct rpcrdma_xprt *r_xprt)
 	list_splice(&all, &buf->rb_all);
 	r_xprt->rx_stats.mrs_allocated += count;
 	spin_unlock(&buf->rb_mrlock);
-
 	trace_xprtrdma_createmrs(r_xprt, count);
+
+	xprt_write_space(&r_xprt->rx_xprt);
 }
 
 static void
@@ -1068,28 +1066,39 @@ struct rpcrdma_req *
 rpcrdma_create_req(struct rpcrdma_xprt *r_xprt)
 {
 	struct rpcrdma_buffer *buffer = &r_xprt->rx_buf;
+	struct rpcrdma_regbuf *rb;
 	struct rpcrdma_req *req;
 
 	req = kzalloc(sizeof(*req), GFP_KERNEL);
 	if (req == NULL)
 		return ERR_PTR(-ENOMEM);
 
+	rb = rpcrdma_alloc_regbuf(RPCRDMA_HDRBUF_SIZE,
+				  DMA_TO_DEVICE, GFP_KERNEL);
+	if (IS_ERR(rb)) {
+		kfree(req);
+		return ERR_PTR(-ENOMEM);
+	}
+	req->rl_rdmabuf = rb;
+	xdr_buf_init(&req->rl_hdrbuf, rb->rg_base, rdmab_length(rb));
+	req->rl_buffer = buffer;
+	INIT_LIST_HEAD(&req->rl_registered);
+
 	spin_lock(&buffer->rb_reqslock);
 	list_add(&req->rl_all, &buffer->rb_allreqs);
 	spin_unlock(&buffer->rb_reqslock);
-	req->rl_buffer = &r_xprt->rx_buf;
-	INIT_LIST_HEAD(&req->rl_registered);
 	return req;
 }
 
 /**
  * rpcrdma_create_rep - Allocate an rpcrdma_rep object
  * @r_xprt: controlling transport
+ * @temp: destroy rep upon release
  *
  * Returns 0 on success or a negative errno on failure.
  */
 int
-rpcrdma_create_rep(struct rpcrdma_xprt *r_xprt)
+rpcrdma_create_rep(struct rpcrdma_xprt *r_xprt, bool temp)
 {
 	struct rpcrdma_create_data_internal *cdata = &r_xprt->rx_data;
 	struct rpcrdma_buffer *buf = &r_xprt->rx_buf;
@@ -1117,9 +1126,11 @@ rpcrdma_create_rep(struct rpcrdma_xprt *r_xprt)
 	rep->rr_recv_wr.wr_cqe = &rep->rr_cqe;
 	rep->rr_recv_wr.sg_list = &rep->rr_rdmabuf->rg_iov;
 	rep->rr_recv_wr.num_sge = 1;
+	rep->rr_temp = temp;
 
 	spin_lock(&buf->rb_lock);
 	list_add(&rep->rr_list, &buf->rb_recv_bufs);
+	++buf->rb_reps;
 	spin_unlock(&buf->rb_lock);
 	return 0;
 
@@ -1169,11 +1180,9 @@ rpcrdma_buffer_create(struct rpcrdma_xprt *r_xprt)
 	}
 
 	INIT_LIST_HEAD(&buf->rb_recv_bufs);
-	for (i = 0; i <= buf->rb_max_requests; i++) {
-		rc = rpcrdma_create_rep(r_xprt);
-		if (rc)
-			goto out;
-	}
+	rc = rpcrdma_create_rep(r_xprt, true);
+	if (rc)
+		goto out;
 
 	rc = rpcrdma_sendctxs_create(r_xprt);
 	if (rc)
@@ -1210,8 +1219,14 @@ rpcrdma_buffer_get_rep_locked(struct rpcrdma_buffer *buf)
 static void
 rpcrdma_destroy_rep(struct rpcrdma_rep *rep)
 {
+	struct rpcrdma_buffer *buf = &rep->rr_rxprt->rx_buf;
+
 	rpcrdma_free_regbuf(rep->rr_rdmabuf);
 	kfree(rep);
+
+	spin_lock(&buf->rb_lock);
+	--buf->rb_reps;
+	spin_unlock(&buf->rb_lock);
 }
 
 void
@@ -1263,7 +1278,6 @@ rpcrdma_buffer_destroy(struct rpcrdma_buffer *buf)
 		rep = rpcrdma_buffer_get_rep_locked(buf);
 		rpcrdma_destroy_rep(rep);
 	}
-	buf->rb_send_count = 0;
 
 	spin_lock(&buf->rb_reqslock);
 	while (!list_empty(&buf->rb_allreqs)) {
@@ -1278,7 +1292,6 @@ rpcrdma_buffer_destroy(struct rpcrdma_buffer *buf)
 		spin_lock(&buf->rb_reqslock);
 	}
 	spin_unlock(&buf->rb_reqslock);
-	buf->rb_recv_count = 0;
 
 	rpcrdma_mrs_destroy(buf);
 }
@@ -1351,27 +1364,11 @@ rpcrdma_mr_unmap_and_put(struct rpcrdma_mr *mr)
 	__rpcrdma_mr_put(&r_xprt->rx_buf, mr);
 }
 
-static struct rpcrdma_rep *
-rpcrdma_buffer_get_rep(struct rpcrdma_buffer *buffers)
-{
-	/* If an RPC previously completed without a reply (say, a
-	 * credential problem or a soft timeout occurs) then hold off
-	 * on supplying more Receive buffers until the number of new
-	 * pending RPCs catches up to the number of posted Receives.
-	 */
-	if (unlikely(buffers->rb_send_count < buffers->rb_recv_count))
-		return NULL;
-
-	if (unlikely(list_empty(&buffers->rb_recv_bufs)))
-		return NULL;
-	buffers->rb_recv_count++;
-	return rpcrdma_buffer_get_rep_locked(buffers);
-}
-
-/*
- * Get a set of request/reply buffers.
+/**
+ * rpcrdma_buffer_get - Get a request buffer
+ * @buffers: Buffer pool from which to obtain a buffer
  *
- * Reply buffer (if available) is attached to send buffer upon return.
+ * Returns a fresh rpcrdma_req, or NULL if none are available.
  */
 struct rpcrdma_req *
 rpcrdma_buffer_get(struct rpcrdma_buffer *buffers)
@@ -1379,23 +1376,21 @@ rpcrdma_buffer_get(struct rpcrdma_buffer *buffers)
 	struct rpcrdma_req *req;
 
 	spin_lock(&buffers->rb_lock);
-	if (list_empty(&buffers->rb_send_bufs))
-		goto out_reqbuf;
-	buffers->rb_send_count++;
+	if (unlikely(list_empty(&buffers->rb_send_bufs)))
+		goto out_noreqs;
 	req = rpcrdma_buffer_get_req_locked(buffers);
-	req->rl_reply = rpcrdma_buffer_get_rep(buffers);
 	spin_unlock(&buffers->rb_lock);
-
 	return req;
 
-out_reqbuf:
+out_noreqs:
 	spin_unlock(&buffers->rb_lock);
 	return NULL;
 }
 
-/*
- * Put request/reply buffers back into pool.
- * Pre-decrement counter/array index.
+/**
+ * rpcrdma_buffer_put - Put request/reply buffers back into pool
+ * @req: object to return
+ *
  */
 void
 rpcrdma_buffer_put(struct rpcrdma_req *req)
@@ -1406,13 +1401,16 @@ rpcrdma_buffer_put(struct rpcrdma_req *req)
 	req->rl_reply = NULL;
 
 	spin_lock(&buffers->rb_lock);
-	buffers->rb_send_count--;
-	list_add_tail(&req->rl_list, &buffers->rb_send_bufs);
+	list_add(&req->rl_list, &buffers->rb_send_bufs);
 	if (rep) {
-		buffers->rb_recv_count--;
-		list_add_tail(&rep->rr_list, &buffers->rb_recv_bufs);
+		if (!rep->rr_temp) {
+			list_add(&rep->rr_list, &buffers->rb_recv_bufs);
+			rep = NULL;
+		}
 	}
 	spin_unlock(&buffers->rb_lock);
+	if (rep)
+		rpcrdma_destroy_rep(rep);
 }
 
 /*
@@ -1425,7 +1423,8 @@ rpcrdma_recv_buffer_get(struct rpcrdma_req *req)
 	struct rpcrdma_buffer *buffers = req->rl_buffer;
 
 	spin_lock(&buffers->rb_lock);
-	req->rl_reply = rpcrdma_buffer_get_rep(buffers);
+	if (!list_empty(&buffers->rb_recv_bufs))
+		req->rl_reply = rpcrdma_buffer_get_rep_locked(buffers);
 	spin_unlock(&buffers->rb_lock);
 }
 
@@ -1438,10 +1437,13 @@ rpcrdma_recv_buffer_put(struct rpcrdma_rep *rep)
 {
 	struct rpcrdma_buffer *buffers = &rep->rr_rxprt->rx_buf;
 
-	spin_lock(&buffers->rb_lock);
-	buffers->rb_recv_count--;
-	list_add_tail(&rep->rr_list, &buffers->rb_recv_bufs);
-	spin_unlock(&buffers->rb_lock);
+	if (!rep->rr_temp) {
+		spin_lock(&buffers->rb_lock);
+		list_add(&rep->rr_list, &buffers->rb_recv_bufs);
+		spin_unlock(&buffers->rb_lock);
+	} else {
+		rpcrdma_destroy_rep(rep);
+	}
 }
 
 /**
@@ -1535,15 +1537,7 @@ rpcrdma_ep_post(struct rpcrdma_ia *ia,
 		struct rpcrdma_req *req)
 {
 	struct ib_send_wr *send_wr = &req->rl_sendctx->sc_wr;
-	struct ib_send_wr *send_wr_fail;
 	int rc;
-
-	if (req->rl_reply) {
-		rc = rpcrdma_ep_post_recv(ia, req->rl_reply);
-		if (rc)
-			return rc;
-		req->rl_reply = NULL;
-	}
 
 	if (!ep->rep_send_count ||
 	    test_bit(RPCRDMA_REQ_F_TX_RESOURCES, &req->rl_flags)) {
@@ -1554,68 +1548,60 @@ rpcrdma_ep_post(struct rpcrdma_ia *ia,
 		--ep->rep_send_count;
 	}
 
-	rc = ib_post_send(ia->ri_id->qp, send_wr, &send_wr_fail);
+	rc = ia->ri_ops->ro_send(ia, req);
 	trace_xprtrdma_post_send(req, rc);
 	if (rc)
 		return -ENOTCONN;
 	return 0;
 }
 
-int
-rpcrdma_ep_post_recv(struct rpcrdma_ia *ia,
-		     struct rpcrdma_rep *rep)
-{
-	struct ib_recv_wr *recv_wr_fail;
-	int rc;
-
-	if (!rpcrdma_dma_map_regbuf(ia, rep->rr_rdmabuf))
-		goto out_map;
-	rc = ib_post_recv(ia->ri_id->qp, &rep->rr_recv_wr, &recv_wr_fail);
-	trace_xprtrdma_post_recv(rep, rc);
-	if (rc)
-		return -ENOTCONN;
-	return 0;
-
-out_map:
-	pr_err("rpcrdma: failed to DMA map the Receive buffer\n");
-	return -EIO;
-}
-
 /**
- * rpcrdma_ep_post_extra_recv - Post buffers for incoming backchannel requests
- * @r_xprt: transport associated with these backchannel resources
- * @count: minimum number of incoming requests expected
+ * rpcrdma_ep_post_recvs - Post all available rpcrdma_reps
+ * @r_xprt: controlling transport
  *
- * Returns zero if all requested buffers were posted, or a negative errno.
  */
-int
-rpcrdma_ep_post_extra_recv(struct rpcrdma_xprt *r_xprt, unsigned int count)
+void
+rpcrdma_ep_post_recvs(struct rpcrdma_xprt *r_xprt)
 {
-	struct rpcrdma_buffer *buffers = &r_xprt->rx_buf;
+	struct rpcrdma_buffer *buf = &r_xprt->rx_buf;
 	struct rpcrdma_ia *ia = &r_xprt->rx_ia;
+	struct ib_recv_wr *wr, *bad_wr;
 	struct rpcrdma_rep *rep;
+	unsigned int count;
 	int rc;
 
-	while (count--) {
-		spin_lock(&buffers->rb_lock);
-		if (list_empty(&buffers->rb_recv_bufs))
-			goto out_reqbuf;
-		rep = rpcrdma_buffer_get_rep_locked(buffers);
-		spin_unlock(&buffers->rb_lock);
+	rc = 0;
+	count = 0;
+	wr = NULL;
+	spin_lock(&buf->rb_lock);
+	while (!list_empty(&buf->rb_recv_bufs)) {
+		rep = rpcrdma_buffer_get_rep_locked(buf);
 
-		rc = rpcrdma_ep_post_recv(ia, rep);
-		if (rc)
-			goto out_rc;
+		if (!rpcrdma_regbuf_is_mapped(rep->rr_rdmabuf)) {
+			spin_unlock(&buf->rb_lock);
+			if (!__rpcrdma_dma_map_regbuf(ia, rep->rr_rdmabuf)) {
+				rpcrdma_recv_buffer_put(rep);
+				goto post;
+			}
+			spin_lock(&buf->rb_lock);
+		}
+
+		rep->rr_recv_wr.next = wr;
+		wr = &rep->rr_recv_wr;
+		++count;
 	}
+	spin_unlock(&buf->rb_lock);
 
-	return 0;
-
-out_reqbuf:
-	spin_unlock(&buffers->rb_lock);
-	trace_xprtrdma_noreps(r_xprt);
-	return -ENOMEM;
-
-out_rc:
-	rpcrdma_recv_buffer_put(rep);
-	return rc;
+post:
+	if (wr)
+		rc = ib_post_recv(ia->ri_id->qp, wr, &bad_wr);
+	if (rc) {
+		for (wr = bad_wr; wr; wr = wr->next) {
+			rep = container_of(wr, struct rpcrdma_rep, rr_recv_wr);
+			rpcrdma_recv_buffer_put(rep);
+			--count;
+		}
+	}
+	buf->rb_posted_receives += count;
+	trace_xprtrdma_post_recvs(r_xprt, count, rc);
 }

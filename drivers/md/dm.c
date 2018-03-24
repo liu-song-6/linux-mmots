@@ -1616,9 +1616,8 @@ static blk_qc_t __process_bio(struct mapped_device *md,
 		}
 
 		tio = alloc_tio(&ci, ti, 0, GFP_NOIO);
-		ci.bio = bio;
-		ci.sector_count = bio_sectors(bio);
-		ret = __clone_and_map_simple_bio(&ci, tio, NULL);
+		__bio_clone_fast(&tio->clone, bio);
+		ret = __map_bio(tio);
 	}
 out:
 	/* drop the extra reference count */
@@ -1846,7 +1845,7 @@ static struct mapped_device *alloc_dev(int minor)
 	INIT_LIST_HEAD(&md->table_devices);
 	spin_lock_init(&md->uevent_lock);
 
-	md->queue = blk_alloc_queue_node(GFP_KERNEL, numa_node_id);
+	md->queue = blk_alloc_queue_node(GFP_KERNEL, numa_node_id, NULL);
 	if (!md->queue)
 		goto bad;
 	md->queue->queuedata = md;

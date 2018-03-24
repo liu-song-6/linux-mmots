@@ -1,6 +1,6 @@
 /*
  * drivers/net/ethernet/mellanox/mlxsw/spectrum.c
- * Copyright (c) 2015-2017 Mellanox Technologies. All rights reserved.
+ * Copyright (c) 2015-2018 Mellanox Technologies. All rights reserved.
  * Copyright (c) 2015-2017 Jiri Pirko <jiri@mellanox.com>
  * Copyright (c) 2015 Ido Schimmel <idosch@mellanox.com>
  * Copyright (c) 2015 Elad Raz <eladr@mellanox.com>
@@ -71,11 +71,12 @@
 #include "spectrum_cnt.h"
 #include "spectrum_dpipe.h"
 #include "spectrum_acl_flex_actions.h"
+#include "spectrum_span.h"
 #include "../mlxfw/mlxfw.h"
 
 #define MLXSW_FWREV_MAJOR 13
-#define MLXSW_FWREV_MINOR 1530
-#define MLXSW_FWREV_SUBMINOR 152
+#define MLXSW_FWREV_MINOR 1620
+#define MLXSW_FWREV_SUBMINOR 192
 #define MLXSW_FWREV_MINOR_TO_BRANCH(minor) ((minor) / 100)
 
 #define MLXSW_SP_FW_FILENAME \
@@ -487,6 +488,7 @@ static int mlxsw_sp_base_mac_get(struct mlxsw_sp *mlxsw_sp)
 	return 0;
 }
 
+<<<<<<< HEAD
 static int mlxsw_sp_span_init(struct mlxsw_sp *mlxsw_sp)
 {
 	int i;
@@ -828,6 +830,8 @@ void mlxsw_sp_span_mirror_del(struct mlxsw_sp_port *from, u8 destination_port,
 	mlxsw_sp_span_inspected_port_del(from, span_entry, type, bind);
 }
 
+=======
+>>>>>>> linux-next/akpm-base
 static int mlxsw_sp_port_sample_set(struct mlxsw_sp_port *mlxsw_sp_port,
 				    bool enable, u32 rate)
 {
@@ -1380,6 +1384,16 @@ mlxsw_sp_port_get_hw_xstats(struct net_device *dev,
 		xstats->tail_drop[i] =
 			mlxsw_reg_ppcnt_tc_no_buffer_discard_uc_get(ppcnt_pl);
 	}
+
+	for (i = 0; i < IEEE_8021QAZ_MAX_TCS; i++) {
+		err = mlxsw_sp_port_get_stats_raw(dev, MLXSW_REG_PPCNT_PRIO_CNT,
+						  i, ppcnt_pl);
+		if (err)
+			continue;
+
+		xstats->tx_packets[i] = mlxsw_reg_ppcnt_tx_frames_get(ppcnt_pl);
+		xstats->tx_bytes[i] = mlxsw_reg_ppcnt_tx_octets_get(ppcnt_pl);
+	}
 }
 
 static void update_stats_cache(struct work_struct *work)
@@ -1604,7 +1618,6 @@ mlxsw_sp_port_add_cls_matchall_mirror(struct mlxsw_sp_port *mlxsw_sp_port,
 				      bool ingress)
 {
 	enum mlxsw_sp_span_type span_type;
-	struct mlxsw_sp_port *to_port;
 	struct net_device *to_dev;
 
 	to_dev = tcf_mirred_dev(a);
@@ -1613,17 +1626,10 @@ mlxsw_sp_port_add_cls_matchall_mirror(struct mlxsw_sp_port *mlxsw_sp_port,
 		return -EINVAL;
 	}
 
-	if (!mlxsw_sp_port_dev_check(to_dev)) {
-		netdev_err(mlxsw_sp_port->dev, "Cannot mirror to a non-spectrum port");
-		return -EOPNOTSUPP;
-	}
-	to_port = netdev_priv(to_dev);
-
-	mirror->to_local_port = to_port->local_port;
 	mirror->ingress = ingress;
 	span_type = ingress ? MLXSW_SP_SPAN_INGRESS : MLXSW_SP_SPAN_EGRESS;
-	return mlxsw_sp_span_mirror_add(mlxsw_sp_port, to_port, span_type,
-					true);
+	return mlxsw_sp_span_mirror_add(mlxsw_sp_port, to_dev, span_type,
+					true, &mirror->span_id);
 }
 
 static void
@@ -1634,7 +1640,7 @@ mlxsw_sp_port_del_cls_matchall_mirror(struct mlxsw_sp_port *mlxsw_sp_port,
 
 	span_type = mirror->ingress ?
 			MLXSW_SP_SPAN_INGRESS : MLXSW_SP_SPAN_EGRESS;
-	mlxsw_sp_span_mirror_del(mlxsw_sp_port, mirror->to_local_port,
+	mlxsw_sp_span_mirror_del(mlxsw_sp_port, mirror->span_id,
 				 span_type, true);
 }
 
@@ -2728,7 +2734,7 @@ static int mlxsw_sp_port_get_link_ksettings(struct net_device *dev,
 	int err;
 
 	autoneg = mlxsw_sp_port->link.autoneg;
-	mlxsw_reg_ptys_eth_pack(ptys_pl, mlxsw_sp_port->local_port, 0);
+	mlxsw_reg_ptys_eth_pack(ptys_pl, mlxsw_sp_port->local_port, 0, false);
 	err = mlxsw_reg_query(mlxsw_sp->core, MLXSW_REG(ptys), ptys_pl);
 	if (err)
 		return err;
@@ -2762,7 +2768,7 @@ mlxsw_sp_port_set_link_ksettings(struct net_device *dev,
 	bool autoneg;
 	int err;
 
-	mlxsw_reg_ptys_eth_pack(ptys_pl, mlxsw_sp_port->local_port, 0);
+	mlxsw_reg_ptys_eth_pack(ptys_pl, mlxsw_sp_port->local_port, 0, false);
 	err = mlxsw_reg_query(mlxsw_sp->core, MLXSW_REG(ptys), ptys_pl);
 	if (err)
 		return err;
@@ -2780,7 +2786,7 @@ mlxsw_sp_port_set_link_ksettings(struct net_device *dev,
 	}
 
 	mlxsw_reg_ptys_eth_pack(ptys_pl, mlxsw_sp_port->local_port,
-				eth_proto_new);
+				eth_proto_new, autoneg);
 	err = mlxsw_reg_write(mlxsw_sp->core, MLXSW_REG(ptys), ptys_pl);
 	if (err)
 		return err;
@@ -2991,7 +2997,7 @@ mlxsw_sp_port_speed_by_width_set(struct mlxsw_sp_port *mlxsw_sp_port, u8 width)
 
 	eth_proto_admin = mlxsw_sp_to_ptys_upper_speed(upper_speed);
 	mlxsw_reg_ptys_eth_pack(ptys_pl, mlxsw_sp_port->local_port,
-				eth_proto_admin);
+				eth_proto_admin, mlxsw_sp_port->link.autoneg);
 	return mlxsw_reg_write(mlxsw_sp->core, MLXSW_REG(ptys), ptys_pl);
 }
 
@@ -4021,26 +4027,30 @@ static int mlxsw_sp_init(struct mlxsw_core *mlxsw_core,
 		goto err_afa_init;
 	}
 
+	err = mlxsw_sp_span_init(mlxsw_sp);
+	if (err) {
+		dev_err(mlxsw_sp->bus_info->dev, "Failed to init span system\n");
+		goto err_span_init;
+	}
+
+	/* Initialize router after SPAN is initialized, so that the FIB and
+	 * neighbor event handlers can issue SPAN respin.
+	 */
 	err = mlxsw_sp_router_init(mlxsw_sp);
 	if (err) {
 		dev_err(mlxsw_sp->bus_info->dev, "Failed to initialize router\n");
 		goto err_router_init;
 	}
 
-	/* Initialize netdevice notifier after router is initialized, so that
-	 * the event handler can use router structures.
+	/* Initialize netdevice notifier after router and SPAN is initialized,
+	 * so that the event handler can use router structures and call SPAN
+	 * respin.
 	 */
 	mlxsw_sp->netdevice_nb.notifier_call = mlxsw_sp_netdevice_event;
 	err = register_netdevice_notifier(&mlxsw_sp->netdevice_nb);
 	if (err) {
 		dev_err(mlxsw_sp->bus_info->dev, "Failed to register netdev notifier\n");
 		goto err_netdev_notifier;
-	}
-
-	err = mlxsw_sp_span_init(mlxsw_sp);
-	if (err) {
-		dev_err(mlxsw_sp->bus_info->dev, "Failed to init span system\n");
-		goto err_span_init;
 	}
 
 	err = mlxsw_sp_acl_init(mlxsw_sp);
@@ -4068,12 +4078,12 @@ err_ports_create:
 err_dpipe_init:
 	mlxsw_sp_acl_fini(mlxsw_sp);
 err_acl_init:
-	mlxsw_sp_span_fini(mlxsw_sp);
-err_span_init:
 	unregister_netdevice_notifier(&mlxsw_sp->netdevice_nb);
 err_netdev_notifier:
 	mlxsw_sp_router_fini(mlxsw_sp);
 err_router_init:
+	mlxsw_sp_span_fini(mlxsw_sp);
+err_span_init:
 	mlxsw_sp_afa_fini(mlxsw_sp);
 err_afa_init:
 	mlxsw_sp_counter_pool_fini(mlxsw_sp);
@@ -4099,9 +4109,9 @@ static void mlxsw_sp_fini(struct mlxsw_core *mlxsw_core)
 	mlxsw_sp_ports_remove(mlxsw_sp);
 	mlxsw_sp_dpipe_fini(mlxsw_sp);
 	mlxsw_sp_acl_fini(mlxsw_sp);
-	mlxsw_sp_span_fini(mlxsw_sp);
 	unregister_netdevice_notifier(&mlxsw_sp->netdevice_nb);
 	mlxsw_sp_router_fini(mlxsw_sp);
+	mlxsw_sp_span_fini(mlxsw_sp);
 	mlxsw_sp_afa_fini(mlxsw_sp);
 	mlxsw_sp_counter_pool_fini(mlxsw_sp);
 	mlxsw_sp_switchdev_fini(mlxsw_sp);
@@ -4113,12 +4123,8 @@ static void mlxsw_sp_fini(struct mlxsw_core *mlxsw_core)
 }
 
 static const struct mlxsw_config_profile mlxsw_sp_config_profile = {
-	.used_max_vepa_channels		= 1,
-	.max_vepa_channels		= 0,
 	.used_max_mid			= 1,
 	.max_mid			= MLXSW_SP_MID_MAX,
-	.used_max_pgt			= 1,
-	.max_pgt			= 0,
 	.used_flood_tables		= 1,
 	.used_flood_mode		= 1,
 	.flood_mode			= 3,
@@ -4144,70 +4150,6 @@ static const struct mlxsw_config_profile mlxsw_sp_config_profile = {
 	.resource_query_enable		= 1,
 };
 
-static bool
-mlxsw_sp_resource_kvd_granularity_validate(struct netlink_ext_ack *extack,
-					   u64 size)
-{
-	const struct mlxsw_config_profile *profile;
-
-	profile = &mlxsw_sp_config_profile;
-	if (size % profile->kvd_hash_granularity) {
-		NL_SET_ERR_MSG_MOD(extack, "resource set with wrong granularity");
-		return false;
-	}
-	return true;
-}
-
-static int
-mlxsw_sp_resource_kvd_size_validate(struct devlink *devlink, u64 size,
-				    struct netlink_ext_ack *extack)
-{
-	NL_SET_ERR_MSG_MOD(extack, "kvd size cannot be changed");
-	return -EINVAL;
-}
-
-static int
-mlxsw_sp_resource_kvd_linear_size_validate(struct devlink *devlink, u64 size,
-					   struct netlink_ext_ack *extack)
-{
-	if (!mlxsw_sp_resource_kvd_granularity_validate(extack, size))
-		return -EINVAL;
-
-	return 0;
-}
-
-static int
-mlxsw_sp_resource_kvd_hash_single_size_validate(struct devlink *devlink, u64 size,
-						struct netlink_ext_ack *extack)
-{
-	struct mlxsw_core *mlxsw_core = devlink_priv(devlink);
-
-	if (!mlxsw_sp_resource_kvd_granularity_validate(extack, size))
-		return -EINVAL;
-
-	if (size < MLXSW_CORE_RES_GET(mlxsw_core, KVD_SINGLE_MIN_SIZE)) {
-		NL_SET_ERR_MSG_MOD(extack, "hash single size is smaller than minimum");
-		return -EINVAL;
-	}
-	return 0;
-}
-
-static int
-mlxsw_sp_resource_kvd_hash_double_size_validate(struct devlink *devlink, u64 size,
-						struct netlink_ext_ack *extack)
-{
-	struct mlxsw_core *mlxsw_core = devlink_priv(devlink);
-
-	if (!mlxsw_sp_resource_kvd_granularity_validate(extack, size))
-		return -EINVAL;
-
-	if (size < MLXSW_CORE_RES_GET(mlxsw_core, KVD_DOUBLE_MIN_SIZE)) {
-		NL_SET_ERR_MSG_MOD(extack, "hash double size is smaller than minimum");
-		return -EINVAL;
-	}
-	return 0;
-}
-
 static u64 mlxsw_sp_resource_kvd_linear_occ_get(struct devlink *devlink)
 {
 	struct mlxsw_core *mlxsw_core = devlink_priv(devlink);
@@ -4216,21 +4158,8 @@ static u64 mlxsw_sp_resource_kvd_linear_occ_get(struct devlink *devlink)
 	return mlxsw_sp_kvdl_occ_get(mlxsw_sp);
 }
 
-static struct devlink_resource_ops mlxsw_sp_resource_kvd_ops = {
-	.size_validate = mlxsw_sp_resource_kvd_size_validate,
-};
-
 static struct devlink_resource_ops mlxsw_sp_resource_kvd_linear_ops = {
-	.size_validate = mlxsw_sp_resource_kvd_linear_size_validate,
 	.occ_get = mlxsw_sp_resource_kvd_linear_occ_get,
-};
-
-static struct devlink_resource_ops mlxsw_sp_resource_kvd_hash_single_ops = {
-	.size_validate = mlxsw_sp_resource_kvd_hash_single_size_validate,
-};
-
-static struct devlink_resource_ops mlxsw_sp_resource_kvd_hash_double_ops = {
-	.size_validate = mlxsw_sp_resource_kvd_hash_double_size_validate,
 };
 
 static void
@@ -4291,22 +4220,25 @@ static int mlxsw_sp_resources_register(struct mlxsw_core *mlxsw_core)
 
 	kvd_size = MLXSW_CORE_RES_GET(mlxsw_core, KVD_SIZE);
 	err = devlink_resource_register(devlink, MLXSW_SP_RESOURCE_NAME_KVD,
-					true, kvd_size,
-					MLXSW_SP_RESOURCE_KVD,
+					kvd_size, MLXSW_SP_RESOURCE_KVD,
 					DEVLINK_RESOURCE_ID_PARENT_TOP,
 					&kvd_size_params,
-					&mlxsw_sp_resource_kvd_ops);
+					NULL);
 	if (err)
 		return err;
 
 	linear_size = profile->kvd_linear_size;
 	err = devlink_resource_register(devlink, MLXSW_SP_RESOURCE_NAME_KVD_LINEAR,
-					false, linear_size,
+					linear_size,
 					MLXSW_SP_RESOURCE_KVD_LINEAR,
 					MLXSW_SP_RESOURCE_KVD,
 					&linear_size_params,
 					&mlxsw_sp_resource_kvd_linear_ops);
 	if (err)
+		return err;
+
+	err = mlxsw_sp_kvdl_resources_register(devlink);
+	if  (err)
 		return err;
 
 	double_size = kvd_size - linear_size;
@@ -4315,21 +4247,21 @@ static int mlxsw_sp_resources_register(struct mlxsw_core *mlxsw_core)
 		       profile->kvd_hash_single_parts;
 	double_size = rounddown(double_size, profile->kvd_hash_granularity);
 	err = devlink_resource_register(devlink, MLXSW_SP_RESOURCE_NAME_KVD_HASH_DOUBLE,
-					false, double_size,
+					double_size,
 					MLXSW_SP_RESOURCE_KVD_HASH_DOUBLE,
 					MLXSW_SP_RESOURCE_KVD,
 					&hash_double_size_params,
-					&mlxsw_sp_resource_kvd_hash_double_ops);
+					NULL);
 	if (err)
 		return err;
 
 	single_size = kvd_size - double_size - linear_size;
 	err = devlink_resource_register(devlink, MLXSW_SP_RESOURCE_NAME_KVD_HASH_SINGLE,
-					false, single_size,
+					single_size,
 					MLXSW_SP_RESOURCE_KVD_HASH_SINGLE,
 					MLXSW_SP_RESOURCE_KVD,
 					&hash_single_size_params,
-					&mlxsw_sp_resource_kvd_hash_single_ops);
+					NULL);
 	if (err)
 		return err;
 
@@ -4583,13 +4515,11 @@ mlxsw_sp_master_lag_check(struct mlxsw_sp *mlxsw_sp,
 	u16 lag_id;
 
 	if (mlxsw_sp_lag_index_get(mlxsw_sp, lag_dev, &lag_id) != 0) {
-		NL_SET_ERR_MSG(extack,
-			       "spectrum: Exceeded number of supported LAG devices");
+		NL_SET_ERR_MSG_MOD(extack, "Exceeded number of supported LAG devices");
 		return false;
 	}
 	if (lag_upper_info->tx_type != NETDEV_LAG_TX_TYPE_HASH) {
-		NL_SET_ERR_MSG(extack,
-			       "spectrum: LAG device using unsupported Tx type");
+		NL_SET_ERR_MSG_MOD(extack, "LAG device using unsupported Tx type");
 		return false;
 	}
 	return true;
@@ -4831,8 +4761,7 @@ static int mlxsw_sp_netdevice_port_upper_event(struct net_device *lower_dev,
 		    !netif_is_lag_master(upper_dev) &&
 		    !netif_is_bridge_master(upper_dev) &&
 		    !netif_is_ovs_master(upper_dev)) {
-			NL_SET_ERR_MSG(extack,
-				       "spectrum: Unknown upper device type");
+			NL_SET_ERR_MSG_MOD(extack, "Unknown upper device type");
 			return -EINVAL;
 		}
 		if (!info->linking)
@@ -4841,8 +4770,7 @@ static int mlxsw_sp_netdevice_port_upper_event(struct net_device *lower_dev,
 		    (!netif_is_bridge_master(upper_dev) ||
 		     !mlxsw_sp_bridge_device_is_offloaded(mlxsw_sp,
 							  upper_dev))) {
-			NL_SET_ERR_MSG(extack,
-				       "spectrum: Enslaving a port to a device that already has an upper device is not supported");
+			NL_SET_ERR_MSG_MOD(extack, "Enslaving a port to a device that already has an upper device is not supported");
 			return -EINVAL;
 		}
 		if (netif_is_lag_master(upper_dev) &&
@@ -4850,24 +4778,20 @@ static int mlxsw_sp_netdevice_port_upper_event(struct net_device *lower_dev,
 					       info->upper_info, extack))
 			return -EINVAL;
 		if (netif_is_lag_master(upper_dev) && vlan_uses_dev(dev)) {
-			NL_SET_ERR_MSG(extack,
-				       "spectrum: Master device is a LAG master and this device has a VLAN");
+			NL_SET_ERR_MSG_MOD(extack, "Master device is a LAG master and this device has a VLAN");
 			return -EINVAL;
 		}
 		if (netif_is_lag_port(dev) && is_vlan_dev(upper_dev) &&
 		    !netif_is_lag_master(vlan_dev_real_dev(upper_dev))) {
-			NL_SET_ERR_MSG(extack,
-				       "spectrum: Can not put a VLAN on a LAG port");
+			NL_SET_ERR_MSG_MOD(extack, "Can not put a VLAN on a LAG port");
 			return -EINVAL;
 		}
 		if (netif_is_ovs_master(upper_dev) && vlan_uses_dev(dev)) {
-			NL_SET_ERR_MSG(extack,
-				       "spectrum: Master device is an OVS master and this device has a VLAN");
+			NL_SET_ERR_MSG_MOD(extack, "Master device is an OVS master and this device has a VLAN");
 			return -EINVAL;
 		}
 		if (netif_is_ovs_port(dev) && is_vlan_dev(upper_dev)) {
-			NL_SET_ERR_MSG(extack,
-				       "spectrum: Can not put a VLAN on an OVS port");
+			NL_SET_ERR_MSG_MOD(extack, "Can not put a VLAN on an OVS port");
 			return -EINVAL;
 		}
 		break;
@@ -4980,7 +4904,7 @@ static int mlxsw_sp_netdevice_port_vlan_event(struct net_device *vlan_dev,
 	case NETDEV_PRECHANGEUPPER:
 		upper_dev = info->upper_dev;
 		if (!netif_is_bridge_master(upper_dev)) {
-			NL_SET_ERR_MSG(extack, "spectrum: VLAN devices only support bridge and VRF uppers");
+			NL_SET_ERR_MSG_MOD(extack, "VLAN devices only support bridge and VRF uppers");
 			return -EINVAL;
 		}
 		if (!info->linking)
@@ -4989,7 +4913,7 @@ static int mlxsw_sp_netdevice_port_vlan_event(struct net_device *vlan_dev,
 		    (!netif_is_bridge_master(upper_dev) ||
 		     !mlxsw_sp_bridge_device_is_offloaded(mlxsw_sp,
 							  upper_dev))) {
-			NL_SET_ERR_MSG(extack, "spectrum: Enslaving a port to a device that already has an upper device is not supported");
+			NL_SET_ERR_MSG_MOD(extack, "Enslaving a port to a device that already has an upper device is not supported");
 			return -EINVAL;
 		}
 		break;
@@ -5067,10 +4991,18 @@ static int mlxsw_sp_netdevice_event(struct notifier_block *nb,
 				    unsigned long event, void *ptr)
 {
 	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct mlxsw_sp_span_entry *span_entry;
 	struct mlxsw_sp *mlxsw_sp;
 	int err = 0;
 
 	mlxsw_sp = container_of(nb, struct mlxsw_sp, netdevice_nb);
+	if (event == NETDEV_UNREGISTER) {
+		span_entry = mlxsw_sp_span_entry_find_by_port(mlxsw_sp, dev);
+		if (span_entry)
+			mlxsw_sp_span_entry_invalidate(mlxsw_sp, span_entry);
+	}
+	mlxsw_sp_span_respin(mlxsw_sp);
+
 	if (mlxsw_sp_netdev_is_ipip_ol(mlxsw_sp, dev))
 		err = mlxsw_sp_netdevice_ipip_ol_event(mlxsw_sp, dev,
 						       event, ptr);
