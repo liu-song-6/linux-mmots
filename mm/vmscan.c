@@ -199,6 +199,18 @@ static bool sane_reclaim(struct scan_control *sc)
 #endif
 	return false;
 }
+
+static void set_memcg_bit(enum pgdat_flags flag,
+			struct mem_cgroup *memcg)
+{
+	set_bit(flag, &memcg->flags);
+}
+
+static int test_memcg_bit(enum pgdat_flags flag,
+			struct mem_cgroup *memcg)
+{
+	return test_bit(flag, &memcg->flags);
+}
 #else
 static bool global_reclaim(struct scan_control *sc)
 {
@@ -208,6 +220,17 @@ static bool global_reclaim(struct scan_control *sc)
 static bool sane_reclaim(struct scan_control *sc)
 {
 	return true;
+}
+
+static inline void set_memcg_bit(enum pgdat_flags flag,
+				struct mem_cgroup *memcg)
+{
+}
+
+static inline int test_memcg_bit(enum pgdat_flags flag,
+				struct mem_cgroup *memcg)
+{
+	return 0;
 }
 #endif
 
@@ -2472,6 +2495,12 @@ static inline bool should_continue_reclaim(struct pglist_data *pgdat,
 	return true;
 }
 
+static bool pgdat_memcg_congested(pg_data_t *pgdat, struct mem_cgroup *memcg)
+{
+	return test_bit(PGDAT_CONGESTED, &pgdat->flags) ||
+		(memcg && test_memcg_bit(PGDAT_CONGESTED, memcg));
+}
+
 static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 {
 	struct reclaim_state *reclaim_state = current->reclaim_state;
@@ -2554,29 +2583,28 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 		if (sc->nr_reclaimed - nr_reclaimed)
 			reclaimable = true;
 
-		/*
-		 * If reclaim is isolating dirty pages under writeback, it
-		 * implies that the long-lived page allocation rate is exceeding
-		 * the page laundering rate. Either the global limits are not
-		 * being effective at throttling processes due to the page
-		 * distribution throughout zones or there is heavy usage of a
-		 * slow backing device. The only option is to throttle from
-		 * reclaim context which is not ideal as there is no guarantee
-		 * the dirtying process is throttled in the same way
-		 * balance_dirty_pages() manages.
-		 *
-		 * Once a node is flagged PGDAT_WRITEBACK, kswapd will count the
-		 * number of pages under pages flagged for immediate reclaim and
-		 * stall if any are encountered in the nr_immediate check below.
-		 */
-		if (sc->nr.writeback && sc->nr.writeback == sc->nr.file_taken)
-			set_bit(PGDAT_WRITEBACK, &pgdat->flags);
+		if (current_is_kswapd()) {
+			/*
+			 * If reclaim is isolating dirty pages under writeback,
+			 * it implies that the long-lived page allocation rate
+			 * is exceeding the page laundering rate. Either the
+			 * global limits are not being effective at throttling
+			 * processes due to the page distribution throughout
+			 * zones or there is heavy usage of a slow backing
+			 * device. The only option is to throttle from reclaim
+			 * context which is not ideal as there is no guarantee
+			 * the dirtying process is throttled in the same way
+			 * balance_dirty_pages() manages.
+			 *
+			 * Once a node is flagged PGDAT_WRITEBACK, kswapd will
+			 * count the number of pages under pages flagged for
+			 * immediate reclaim and stall if any are encountered
+			 * in the nr_immediate check below.
+			 */
+			if (sc->nr.writeback &&
+			    sc->nr.writeback == sc->nr.file_taken)
+				set_bit(PGDAT_WRITEBACK, &pgdat->flags);
 
-		/*
-		 * Legacy memcg will stall in page writeback so avoid forcibly
-		 * stalling here.
-		 */
-		if (sane_reclaim(sc)) {
 			/*
 			 * Tag a node as congested if all the dirty pages
 			 * scanned were backed by a congested BDI and
@@ -2600,14 +2628,22 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 		}
 
 		/*
+		 * Legacy memcg will stall in page writeback so avoid forcibly
+		 * stalling in wait_iff_congested().
+		 */
+		if (!global_reclaim(sc) && sane_reclaim(sc) &&
+		    sc->nr.dirty && sc->nr.dirty == sc->nr.congested)
+			set_memcg_bit(PGDAT_CONGESTED, root);
+
+		/*
 		 * Stall direct reclaim for IO completions if underlying BDIs
 		 * and node is congested. Allow kswapd to continue until it
 		 * starts encountering unqueued dirty pages or cycling through
 		 * the LRU too quickly.
 		 */
 		if (!sc->hibernation_mode && !current_is_kswapd() &&
-		    current_may_throttle())
-			wait_iff_congested(pgdat, BLK_RW_ASYNC, HZ/10);
+		   current_may_throttle() && pgdat_memcg_congested(pgdat, root))
+			wait_iff_congested(BLK_RW_ASYNC, HZ/10);
 
 	} while (should_continue_reclaim(pgdat, sc->nr_reclaimed - nr_reclaimed,
 					 sc->nr_scanned - nr_scanned, sc));
@@ -3047,6 +3083,7 @@ unsigned long mem_cgroup_shrink_node(struct mem_cgroup *memcg,
 	 * the priority and make it zero.
 	 */
 	shrink_node_memcg(pgdat, memcg, &sc, &lru_pages);
+	clear_bit(PGDAT_CONGESTED, &memcg->flags);
 
 	trace_mm_vmscan_memcg_softlimit_reclaim_end(sc.nr_reclaimed);
 
@@ -3092,6 +3129,7 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
 	noreclaim_flag = memalloc_noreclaim_save();
 	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
 	memalloc_noreclaim_restore(noreclaim_flag);
+	clear_bit(PGDAT_CONGESTED, &memcg->flags);
 
 	trace_mm_vmscan_memcg_reclaim_end(nr_reclaimed);
 
