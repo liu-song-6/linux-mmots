@@ -1919,9 +1919,9 @@ static void __kmemleak_do_cleanup(void)
  */
 static void kmemleak_do_cleanup(struct work_struct *work)
 {
+	mutex_lock(&scan_mutex);
 	stop_scan_thread();
 
-	mutex_lock(&scan_mutex);
 	/*
 	 * Once it is made sure that kmemleak_scan has stopped, it is safe to no
 	 * longer track object freeing. Ordering of the scan thread stopping and
