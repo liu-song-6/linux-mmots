@@ -38,7 +38,7 @@ static void shmem_tag_pins(struct address_space *mapping)
 	start = 0;
 	rcu_read_lock();
 
-	radix_tree_for_each_slot(slot, &mapping->page_tree, &iter, start) {
+	radix_tree_for_each_slot(slot, &mapping->i_pages, &iter, start) {
 		page = radix_tree_deref_slot(slot);
 		if (!page || radix_tree_exception(page)) {
 			if (radix_tree_deref_retry(page)) {
@@ -46,10 +46,10 @@ static void shmem_tag_pins(struct address_space *mapping)
 				continue;
 			}
 		} else if (page_count(page) - page_mapcount(page) > 1) {
-			spin_lock_irq(&mapping->tree_lock);
-			radix_tree_tag_set(&mapping->page_tree, iter.index,
+			xa_lock_irq(&mapping->i_pages);
+			radix_tree_tag_set(&mapping->i_pages, iter.index,
 					   SHMEM_TAG_PINNED);
-			spin_unlock_irq(&mapping->tree_lock);
+			xa_unlock_irq(&mapping->i_pages);
 		}
 
 		if (need_resched()) {
@@ -81,7 +81,7 @@ static int shmem_wait_for_pins(struct address_space *mapping)
 
 	error = 0;
 	for (scan = 0; scan <= LAST_SCAN; scan++) {
-		if (!radix_tree_tagged(&mapping->page_tree, SHMEM_TAG_PINNED))
+		if (!radix_tree_tagged(&mapping->i_pages, SHMEM_TAG_PINNED))
 			break;
 
 		if (!scan)
@@ -91,7 +91,7 @@ static int shmem_wait_for_pins(struct address_space *mapping)
 
 		start = 0;
 		rcu_read_lock();
-		radix_tree_for_each_tagged(slot, &mapping->page_tree, &iter,
+		radix_tree_for_each_tagged(slot, &mapping->i_pages, &iter,
 					   start, SHMEM_TAG_PINNED) {
 
 			page = radix_tree_deref_slot(slot);
@@ -117,10 +117,10 @@ static int shmem_wait_for_pins(struct address_space *mapping)
 				error = -EBUSY;
 			}
 
-			spin_lock_irq(&mapping->tree_lock);
-			radix_tree_tag_clear(&mapping->page_tree,
+			xa_lock_irq(&mapping->i_pages);
+			radix_tree_tag_clear(&mapping->i_pages,
 					     iter.index, SHMEM_TAG_PINNED);
-			spin_unlock_irq(&mapping->tree_lock);
+			xa_unlock_irq(&mapping->i_pages);
 continue_resched:
 			if (need_resched()) {
 				slot = radix_tree_iter_resume(slot, &iter);
