@@ -77,6 +77,9 @@
 /* Crash MSR available */
 #define HV_FEATURE_GUEST_CRASH_MSR_AVAILABLE (1 << 10)
 
+/* stimer Direct Mode is available */
+#define HV_X64_STIMER_DIRECT_MODE_AVAILABLE	(1 << 19)
+
 /*
  * Feature identification: EBX indicates which flags were specified at
  * partition creation. The format is the same as the partition creation
@@ -303,7 +306,9 @@ enum HV_GENERIC_SET_FORMAT {
 #define HV_STATUS_INVALID_HYPERCALL_CODE	2
 #define HV_STATUS_INVALID_HYPERCALL_INPUT	3
 #define HV_STATUS_INVALID_ALIGNMENT		4
+#define HV_STATUS_INVALID_PARAMETER		5
 #define HV_STATUS_INSUFFICIENT_MEMORY		11
+#define HV_STATUS_INVALID_PORT_ID		17
 #define HV_STATUS_INVALID_CONNECTION_ID		18
 #define HV_STATUS_INSUFFICIENT_BUFFERS		19
 
@@ -318,6 +323,8 @@ typedef struct _HV_REFERENCE_TSC_PAGE {
 #define HV_SYNIC_SINT_COUNT		(16)
 /* Define the expected SynIC version. */
 #define HV_SYNIC_VERSION_1		(0x1)
+/* Valid SynIC vectors are 16-255. */
+#define HV_SYNIC_FIRST_VALID_VECTOR	(16)
 
 #define HV_SYNIC_CONTROL_ENABLE		(1ULL << 0)
 #define HV_SYNIC_SIMP_ENABLE		(1ULL << 0)

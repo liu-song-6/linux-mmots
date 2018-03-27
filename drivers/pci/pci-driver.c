@@ -1224,11 +1224,14 @@ static int pci_pm_runtime_suspend(struct device *dev)
 	int error;
 
 	/*
-	 * If pci_dev->driver is not set (unbound), the device should
-	 * always remain in D0 regardless of the runtime PM status
+	 * If pci_dev->driver is not set (unbound), we leave the device in D0,
+	 * but it may go to D3cold when the bridge above it runtime suspends.
+	 * Save its config space in case that happens.
 	 */
-	if (!pci_dev->driver)
+	if (!pci_dev->driver) {
+		pci_save_state(pci_dev);
 		return 0;
+	}
 
 	if (!pm || !pm->runtime_suspend)
 		return -ENOSYS;
@@ -1276,16 +1279,18 @@ static int pci_pm_runtime_resume(struct device *dev)
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
 
 	/*
-	 * If pci_dev->driver is not set (unbound), the device should
-	 * always remain in D0 regardless of the runtime PM status
+	 * Restoring config space is necessary even if the device is not bound
+	 * to a driver because although we left it in D0, it may have gone to
+	 * D3cold when the bridge above it runtime suspended.
 	 */
+	pci_restore_standard_config(pci_dev);
+
 	if (!pci_dev->driver)
 		return 0;
 
 	if (!pm || !pm->runtime_resume)
 		return -ENOSYS;
 
-	pci_restore_standard_config(pci_dev);
 	pci_fixup_device(pci_fixup_resume_early, pci_dev);
 	pci_enable_wake(pci_dev, PCI_D0, false);
 	pci_fixup_device(pci_fixup_resume, pci_dev);
@@ -1516,6 +1521,42 @@ static int pci_uevent(struct device *dev, struct kobj_uevent_env *env)
 
 	return 0;
 }
+
+#if defined(CONFIG_PCIEAER) || defined(CONFIG_EEH)
+/**
+ * pci_uevent_ers - emit a uevent during recovery path of PCI device
+ * @pdev: PCI device undergoing error recovery
+ * @err_type: type of error event
+ */
+void pci_uevent_ers(struct pci_dev *pdev, enum pci_ers_result err_type)
+{
+	int idx = 0;
+	char *envp[3];
+
+	switch (err_type) {
+	case PCI_ERS_RESULT_NONE:
+	case PCI_ERS_RESULT_CAN_RECOVER:
+		envp[idx++] = "ERROR_EVENT=BEGIN_RECOVERY";
+		envp[idx++] = "DEVICE_ONLINE=0";
+		break;
+	case PCI_ERS_RESULT_RECOVERED:
+		envp[idx++] = "ERROR_EVENT=SUCCESSFUL_RECOVERY";
+		envp[idx++] = "DEVICE_ONLINE=1";
+		break;
+	case PCI_ERS_RESULT_DISCONNECT:
+		envp[idx++] = "ERROR_EVENT=FAILED_RECOVERY";
+		envp[idx++] = "DEVICE_ONLINE=0";
+		break;
+	default:
+		break;
+	}
+
+	if (idx > 0) {
+		envp[idx++] = NULL;
+		kobject_uevent_env(&pdev->dev.kobj, KOBJ_CHANGE, envp);
+	}
+}
+#endif
 
 static int pci_bus_num_vf(struct device *dev)
 {

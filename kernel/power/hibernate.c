@@ -70,7 +70,7 @@ static const struct platform_hibernation_ops *hibernation_ops;
 
 bool hibernation_available(void)
 {
-	return (nohibernate == 0);
+	return nohibernate == 0 && !kernel_is_locked_down("Hibernation");
 }
 
 /**
@@ -701,7 +701,7 @@ int hibernate(void)
 	}
 
 	pr_info("Syncing filesystems ... \n");
-	sys_sync();
+	ksys_sync();
 	pr_info("done.\n");
 
 	error = freeze_processes();

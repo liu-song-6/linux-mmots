@@ -13,6 +13,7 @@
 #include <linux/sched/signal.h>
 #include <linux/rwsem.h>
 #include <linux/hugetlb.h>
+#include <linux/dax.h>
 
 #include <asm/mmu_context.h>
 #include <asm/pgtable.h>
@@ -693,7 +694,9 @@ retry:
 		if (unlikely(fatal_signal_pending(current)))
 			return i ? i : -ERESTARTSYS;
 		cond_resched();
+		dax_layout_lock();
 		page = follow_page_mask(vma, start, foll_flags, &page_mask);
+		dax_layout_unlock();
 		if (!page) {
 			int ret;
 			ret = faultin_page(tsk, vma, start, &foll_flags,
@@ -1812,7 +1815,9 @@ int get_user_pages_fast(unsigned long start, int nr_pages, int write,
 
 	if (gup_fast_permitted(start, nr_pages, write)) {
 		local_irq_disable();
+		dax_layout_lock();
 		gup_pgd_range(addr, end, write, pages, &nr);
+		dax_layout_unlock();
 		local_irq_enable();
 		ret = nr;
 	}

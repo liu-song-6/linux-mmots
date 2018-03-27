@@ -812,15 +812,22 @@ do_alloc:
 }
 
 /**
- * gfs2_block_map - Map a block from an inode to a disk block
+ * gfs2_block_map - Map one or more blocks of an inode to a disk block
  * @inode: The inode
  * @lblock: The logical block number
  * @bh_map: The bh to be mapped
  * @create: True if its ok to alloc blocks to satify the request
  *
- * Sets buffer_mapped() if successful, sets buffer_boundary() if a
- * read of metadata will be required before the next block can be
- * mapped. Sets buffer_new() if new blocks were allocated.
+ * The size of the requested mapping is defined in bh_map->b_size.
+ *
+ * Clears buffer_mapped(bh_map) and leaves bh_map->b_size unchanged
+ * when @lblock is not mapped.  Sets buffer_mapped(bh_map) and
+ * bh_map->b_size to indicate the size of the mapping when @lblock and
+ * successive blocks are mapped, up to the requested size.
+ *
+ * Sets buffer_boundary() if a read of metadata will be required
+ * before the next block can be mapped. Sets buffer_new() if new
+ * blocks were allocated.
  *
  * Returns: errno
  */
@@ -1344,6 +1351,7 @@ static inline bool walk_done(struct gfs2_sbd *sdp,
 static int punch_hole(struct gfs2_inode *ip, u64 offset, u64 length)
 {
 	struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
+	u64 maxsize = sdp->sd_heightsize[ip->i_height];
 	struct metapath mp = {};
 	struct buffer_head *dibh, *bh;
 	struct gfs2_holder rd_gh;
@@ -1359,6 +1367,14 @@ static int punch_hole(struct gfs2_inode *ip, u64 offset, u64 length)
 	u64 prev_bnr = 0;
 	__be64 *start, *end;
 
+	if (offset >= maxsize) {
+		/*
+		 * The starting point lies beyond the allocated meta-data;
+		 * there are no blocks do deallocate.
+		 */
+		return 0;
+	}
+
 	/*
 	 * The start position of the hole is defined by lblock, start_list, and
 	 * start_aligned.  The end position of the hole is defined by lend,
@@ -1372,7 +1388,6 @@ static int punch_hole(struct gfs2_inode *ip, u64 offset, u64 length)
 	 */
 
 	if (length) {
-		u64 maxsize = sdp->sd_heightsize[ip->i_height];
 		u64 end_offset = offset + length;
 		u64 lend;
 

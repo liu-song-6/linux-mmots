@@ -12,11 +12,11 @@
 
 #ifdef CONFIG_COMPAT
 
+#include <linux/compat.h>
 #include <linux/compiler.h>
 #include <linux/linkage.h>
 #include <linux/types.h>
 #include <linux/signal.h>
-#include <asm/compat.h>
 #include <asm/ia32.h>
 
 /* ia32/sys_ia32.c */
@@ -34,9 +34,6 @@ asmlinkage long compat_sys_x86_fstatat(unsigned int, const char __user *,
 			      struct stat64 __user *, int);
 struct mmap_arg_struct32;
 asmlinkage long compat_sys_x86_mmap(struct mmap_arg_struct32 __user *);
-
-asmlinkage long compat_sys_x86_waitpid(compat_pid_t, unsigned int __user *,
-				       int);
 
 asmlinkage long compat_sys_x86_pread(unsigned int, char __user *, u32, u32,
 				     u32);

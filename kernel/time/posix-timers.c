@@ -252,15 +252,16 @@ static int posix_get_coarse_res(const clockid_t which_clock, struct timespec64 *
 	return 0;
 }
 
-static int posix_get_boottime(const clockid_t which_clock, struct timespec64 *tp)
-{
-	get_monotonic_boottime64(tp);
-	return 0;
-}
-
 static int posix_get_tai(clockid_t which_clock, struct timespec64 *tp)
 {
 	timekeeping_clocktai64(tp);
+	return 0;
+}
+
+static int posix_get_monotonic_active(clockid_t which_clock,
+				      struct timespec64 *tp)
+{
+	ktime_get_active_ts64(tp);
 	return 0;
 }
 
@@ -1040,7 +1041,7 @@ void exit_itimers(struct signal_struct *sig)
 }
 
 SYSCALL_DEFINE2(clock_settime, const clockid_t, which_clock,
-		const struct timespec __user *, tp)
+		const struct __kernel_timespec __user *, tp)
 {
 	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 new_tp;
@@ -1055,7 +1056,7 @@ SYSCALL_DEFINE2(clock_settime, const clockid_t, which_clock,
 }
 
 SYSCALL_DEFINE2(clock_gettime, const clockid_t, which_clock,
-		struct timespec __user *,tp)
+		struct __kernel_timespec __user *, tp)
 {
 	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 kernel_tp;
@@ -1096,7 +1097,7 @@ SYSCALL_DEFINE2(clock_adjtime, const clockid_t, which_clock,
 }
 
 SYSCALL_DEFINE2(clock_getres, const clockid_t, which_clock,
-		struct timespec __user *, tp)
+		struct __kernel_timespec __user *, tp)
 {
 	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 rtn_tp;
@@ -1113,7 +1114,7 @@ SYSCALL_DEFINE2(clock_getres, const clockid_t, which_clock,
 	return error;
 }
 
-#ifdef CONFIG_COMPAT
+#ifdef CONFIG_COMPAT_32BIT_TIME
 
 COMPAT_SYSCALL_DEFINE2(clock_settime, clockid_t, which_clock,
 		       struct compat_timespec __user *, tp)
@@ -1148,6 +1149,10 @@ COMPAT_SYSCALL_DEFINE2(clock_gettime, clockid_t, which_clock,
 	return err;
 }
 
+#endif
+
+#ifdef CONFIG_COMPAT
+
 COMPAT_SYSCALL_DEFINE2(clock_adjtime, clockid_t, which_clock,
 		       struct compat_timex __user *, utp)
 {
@@ -1171,6 +1176,10 @@ COMPAT_SYSCALL_DEFINE2(clock_adjtime, clockid_t, which_clock,
 
 	return err;
 }
+
+#endif
+
+#ifdef CONFIG_COMPAT_32BIT_TIME
 
 COMPAT_SYSCALL_DEFINE2(clock_getres, clockid_t, which_clock,
 		       struct compat_timespec __user *, tp)
@@ -1203,8 +1212,8 @@ static int common_nsleep(const clockid_t which_clock, int flags,
 }
 
 SYSCALL_DEFINE4(clock_nanosleep, const clockid_t, which_clock, int, flags,
-		const struct timespec __user *, rqtp,
-		struct timespec __user *, rmtp)
+		const struct __kernel_timespec __user *, rqtp,
+		struct __kernel_timespec __user *, rmtp)
 {
 	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 t;
@@ -1227,7 +1236,8 @@ SYSCALL_DEFINE4(clock_nanosleep, const clockid_t, which_clock, int, flags,
 	return kc->nsleep(which_clock, flags, &t);
 }
 
-#ifdef CONFIG_COMPAT
+#ifdef CONFIG_COMPAT_32BIT_TIME
+
 COMPAT_SYSCALL_DEFINE4(clock_nanosleep, clockid_t, which_clock, int, flags,
 		       struct compat_timespec __user *, rqtp,
 		       struct compat_timespec __user *, rmtp)
@@ -1252,6 +1262,7 @@ COMPAT_SYSCALL_DEFINE4(clock_nanosleep, clockid_t, which_clock, int, flags,
 
 	return kc->nsleep(which_clock, flags, &t);
 }
+
 #endif
 
 static const struct k_clock clock_realtime = {
@@ -1316,19 +1327,9 @@ static const struct k_clock clock_tai = {
 	.timer_arm		= common_hrtimer_arm,
 };
 
-static const struct k_clock clock_boottime = {
+static const struct k_clock clock_monotonic_active = {
 	.clock_getres		= posix_get_hrtimer_res,
-	.clock_get		= posix_get_boottime,
-	.nsleep			= common_nsleep,
-	.timer_create		= common_timer_create,
-	.timer_set		= common_timer_set,
-	.timer_get		= common_timer_get,
-	.timer_del		= common_timer_del,
-	.timer_rearm		= common_hrtimer_rearm,
-	.timer_forward		= common_hrtimer_forward,
-	.timer_remaining	= common_hrtimer_remaining,
-	.timer_try_to_cancel	= common_hrtimer_try_to_cancel,
-	.timer_arm		= common_hrtimer_arm,
+	.clock_get		= posix_get_monotonic_active,
 };
 
 static const struct k_clock * const posix_clocks[] = {
@@ -1339,10 +1340,11 @@ static const struct k_clock * const posix_clocks[] = {
 	[CLOCK_MONOTONIC_RAW]		= &clock_monotonic_raw,
 	[CLOCK_REALTIME_COARSE]		= &clock_realtime_coarse,
 	[CLOCK_MONOTONIC_COARSE]	= &clock_monotonic_coarse,
-	[CLOCK_BOOTTIME]		= &clock_boottime,
+	[CLOCK_BOOTTIME]		= &clock_monotonic,
 	[CLOCK_REALTIME_ALARM]		= &alarm_clock,
 	[CLOCK_BOOTTIME_ALARM]		= &alarm_clock,
 	[CLOCK_TAI]			= &clock_tai,
+	[CLOCK_MONOTONIC_ACTIVE]	= &clock_monotonic_active,
 };
 
 static const struct k_clock *clockid_to_kclock(const clockid_t id)

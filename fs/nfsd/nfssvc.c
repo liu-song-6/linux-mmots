@@ -691,8 +691,6 @@ nfsd(void *vrqstp)
 		goto out;
 	}
 
-	current->fs->umask = 0;
-
 	/*
 	 * thread is spawned with all signals set to SIG_IGN, re-enable
 	 * the ones that will bring down the thread
