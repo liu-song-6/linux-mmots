@@ -51,6 +51,9 @@ static LIST_HEAD (rslist);
 /* Protection for the list */
 static DEFINE_MUTEX(rslistlock);
 
+/* Ultimately controls the upper bounds of the on-stack buffers. */
+#define RS_MAX_ROOTS	24
+
 /**
  * rs_init - Initialize a Reed-Solomon codec
  * @symsize:	symbol size, bits (1-8)
@@ -210,7 +213,7 @@ static struct rs_control *init_rs_internal(int symsize, int gfpoly,
     		return NULL;
 	if (prim <= 0 || prim >= (1<<symsize))
     		return NULL;
-	if (nroots < 0 || nroots >= (1<<symsize))
+	if (nroots < 0 || nroots >= (1<<symsize) || nroots > RS_MAX_ROOTS)
 		return NULL;
 
 	mutex_lock(&rslistlock);
