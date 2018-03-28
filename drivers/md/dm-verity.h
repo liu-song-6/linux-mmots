@@ -12,7 +12,7 @@
 #ifndef DM_VERITY_H
 #define DM_VERITY_H
 
-#include "dm-bufio.h"
+#include <linux/dm-bufio.h>
 #include <linux/device-mapper.h>
 #include <crypto/hash.h>
 
@@ -30,6 +30,7 @@ enum verity_block_type {
 };
 
 struct dm_verity_fec;
+struct dm_verity_fec_io;
 
 struct dm_verity {
 	struct dm_dev *data_dev;
@@ -63,6 +64,7 @@ struct dm_verity {
 	sector_t hash_level_block[DM_VERITY_MAX_LEVELS];
 
 	struct dm_verity_fec *fec;	/* forward error correction */
+	unsigned long *validated_blocks; /* bitset blocks validated */
 };
 
 struct dm_verity_io {
@@ -124,6 +126,7 @@ extern int verity_hash(struct dm_verity *v, struct ahash_request *req,
 		       const u8 *data, size_t len, u8 *digest);
 
 extern int verity_hash_for_block(struct dm_verity *v, struct dm_verity_io *io,
-				 sector_t block, u8 *digest, bool *is_zero);
+				 sector_t block, u8 *digest,
+				 struct dm_verity_fec_io *fio, bool *is_zero);
 
 #endif /* DM_VERITY_H */

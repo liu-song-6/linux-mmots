@@ -502,17 +502,22 @@ static __init int init_tracepoints(void)
 __initcall(init_tracepoints);
 #endif /* CONFIG_MODULES */
 
-static void for_each_tracepoint_range(struct tracepoint * const *begin,
-		struct tracepoint * const *end,
-		void (*fct)(struct tracepoint *tp, void *priv),
-		void *priv)
+static void *for_each_tracepoint_range(struct tracepoint * const *begin,
+				       struct tracepoint * const *end,
+				       void *(*fct)(struct tracepoint *tp, void *priv),
+				       void *priv)
 {
 	struct tracepoint * const *iter;
+	void *ret;
 
 	if (!begin)
-		return;
-	for (iter = begin; iter < end; iter++)
-		fct(*iter, priv);
+		return NULL;
+	for (iter = begin; iter < end; iter++) {
+		ret = fct(*iter, priv);
+		if (ret)
+			return ret;
+	}
+	return NULL;
 }
 
 /**
@@ -520,11 +525,11 @@ static void for_each_tracepoint_range(struct tracepoint * const *begin,
  * @fct: callback
  * @priv: private data
  */
-void for_each_kernel_tracepoint(void (*fct)(struct tracepoint *tp, void *priv),
-		void *priv)
+void *for_each_kernel_tracepoint(void *(*fct)(struct tracepoint *tp, void *priv),
+				 void *priv)
 {
-	for_each_tracepoint_range(__start___tracepoints_ptrs,
-		__stop___tracepoints_ptrs, fct, priv);
+	return for_each_tracepoint_range(__start___tracepoints_ptrs,
+					 __stop___tracepoints_ptrs, fct, priv);
 }
 EXPORT_SYMBOL_GPL(for_each_kernel_tracepoint);
 

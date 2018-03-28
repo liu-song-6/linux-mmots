@@ -203,13 +203,12 @@ static int fec_is_erasure(struct dm_verity *v, struct dm_verity_io *io,
  */
 static int fec_read_bufs(struct dm_verity *v, struct dm_verity_io *io,
 			 u64 rsb, u64 target, unsigned block_offset,
-			 int *neras)
+			 int *neras, struct dm_verity_fec_io *fio)
 {
 	bool is_zero;
 	int i, j, target_index = -1;
 	struct dm_buffer *buf;
 	struct dm_bufio_client *bufio;
-	struct dm_verity_fec_io *fio = fec_io(io);
 	u64 block, ileaved;
 	u8 *bbuf, *rs_block;
 	u8 want_digest[v->digest_size];
@@ -265,7 +264,7 @@ static int fec_read_bufs(struct dm_verity *v, struct dm_verity_io *io,
 
 		/* locate erasures if the block is on the data device */
 		if (bufio == v->fec->data_bufio &&
-		    verity_hash_for_block(v, io, block, want_digest,
+		    verity_hash_for_block(v, io, block, want_digest, fio,
 					  &is_zero) == 0) {
 			/* skip known zero blocks entirely */
 			if (is_zero)
@@ -374,7 +373,7 @@ static int fec_decode_rsb(struct dm_verity *v, struct dm_verity_io *io,
 		fec_init_bufs(v, fio);
 
 		r = fec_read_bufs(v, io, rsb, offset, pos,
-				  use_erasures ? &neras : NULL);
+				  use_erasures ? &neras : NULL, fio);
 		if (unlikely(r < 0))
 			return r;
 
@@ -419,10 +418,9 @@ static int fec_bv_copy(struct dm_verity *v, struct dm_verity_io *io, u8 *data,
  */
 int verity_fec_decode(struct dm_verity *v, struct dm_verity_io *io,
 		      enum verity_block_type type, sector_t block, u8 *dest,
-		      struct bvec_iter *iter)
+		      struct bvec_iter *iter, struct dm_verity_fec_io *fio)
 {
 	int r;
-	struct dm_verity_fec_io *fio = fec_io(io);
 	u64 offset, res, rsb;
 
 	if (!verity_fec_is_enabled(v))

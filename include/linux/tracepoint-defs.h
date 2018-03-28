@@ -33,6 +33,7 @@ struct tracepoint {
 	int (*regfunc)(void);
 	void (*unregfunc)(void);
 	struct tracepoint_func __rcu *funcs;
+	u32 num_args;
 };
 
 #endif

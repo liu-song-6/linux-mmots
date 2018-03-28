@@ -523,10 +523,10 @@ ext4_xattr_block_get(struct inode *inode, int name_index, const char *name,
 	if (error)
 		goto cleanup;
 	size = le32_to_cpu(entry->e_value_size);
+	error = -ERANGE;
+	if (size < 0 || size > buffer_size)
+		goto cleanup;
 	if (buffer) {
-		error = -ERANGE;
-		if (size > buffer_size)
-			goto cleanup;
 		if (entry->e_value_inum) {
 			error = ext4_xattr_inode_get(inode, entry, buffer,
 						     size);
@@ -572,10 +572,10 @@ ext4_xattr_ibody_get(struct inode *inode, int name_index, const char *name,
 	if (error)
 		goto cleanup;
 	size = le32_to_cpu(entry->e_value_size);
+	error = -ERANGE;
+	if (size < 0 || size > buffer_size)
+		goto cleanup;
 	if (buffer) {
-		error = -ERANGE;
-		if (size > buffer_size)
-			goto cleanup;
 		if (entry->e_value_inum) {
 			error = ext4_xattr_inode_get(inode, entry, buffer,
 						     size);

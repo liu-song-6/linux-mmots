@@ -1311,11 +1311,96 @@ static int bpf_obj_get(const union bpf_attr *attr)
 				attr->file_flags);
 }
 
+struct bpf_raw_tracepoint {
+	struct tracepoint *tp;
+	struct bpf_prog *prog;
+};
+
+static int bpf_raw_tracepoint_release(struct inode *inode, struct file *filp)
+{
+	struct bpf_raw_tracepoint *raw_tp = filp->private_data;
+
+	if (raw_tp->prog) {
+		bpf_probe_unregister(raw_tp->tp, raw_tp->prog);
+		bpf_prog_put(raw_tp->prog);
+	}
+	kfree(raw_tp);
+	return 0;
+}
+
+static const struct file_operations bpf_raw_tp_fops = {
+	.release	= bpf_raw_tracepoint_release,
+	.read		= bpf_dummy_read,
+	.write		= bpf_dummy_write,
+};
+
+static void *__find_tp(struct tracepoint *tp, void *priv)
+{
+	char *name = priv;
+
+	if (!strcmp(tp->name, name))
+		return tp;
+	return NULL;
+}
+
+#define BPF_RAW_TRACEPOINT_OPEN_LAST_FIELD raw_tracepoint.prog_fd
+
+static int bpf_raw_tracepoint_open(const union bpf_attr *attr)
+{
+	struct bpf_raw_tracepoint *raw_tp;
+	struct tracepoint *tp;
+	struct bpf_prog *prog;
+	char tp_name[128];
+	int tp_fd, err;
+
+	if (strncpy_from_user(tp_name, u64_to_user_ptr(attr->raw_tracepoint.name),
+			      sizeof(tp_name) - 1) < 0)
+		return -EFAULT;
+	tp_name[sizeof(tp_name) - 1] = 0;
+
+	tp = for_each_kernel_tracepoint(__find_tp, tp_name);
+	if (!tp)
+		return -ENOENT;
+
+	raw_tp = kmalloc(sizeof(*raw_tp), GFP_USER | __GFP_ZERO);
+	if (!raw_tp)
+		return -ENOMEM;
+	raw_tp->tp = tp;
+
+	prog = bpf_prog_get_type(attr->raw_tracepoint.prog_fd,
+				 BPF_PROG_TYPE_RAW_TRACEPOINT);
+	if (IS_ERR(prog)) {
+		err = PTR_ERR(prog);
+		goto out_free_tp;
+	}
+
+	err = bpf_probe_register(raw_tp->tp, prog);
+	if (err)
+		goto out_put_prog;
+
+	raw_tp->prog = prog;
+	tp_fd = anon_inode_getfd("bpf-raw-tracepoint", &bpf_raw_tp_fops, raw_tp,
+				 O_CLOEXEC);
+	if (tp_fd < 0) {
+		bpf_probe_unregister(raw_tp->tp, prog);
+		err = tp_fd;
+		goto out_put_prog;
+	}
+	return tp_fd;
+
+out_put_prog:
+	bpf_prog_put(prog);
+out_free_tp:
+	kfree(raw_tp);
+	return err;
+}
+
 #ifdef CONFIG_CGROUP_BPF
 
 #define BPF_PROG_ATTACH_LAST_FIELD attach_flags
 
-static int sockmap_get_from_fd(const union bpf_attr *attr, bool attach)
+static int sockmap_get_from_fd(const union bpf_attr *attr,
+			       int type, bool attach)
 {
 	struct bpf_prog *prog = NULL;
 	int ufd = attr->target_fd;
@@ -1329,8 +1414,7 @@ static int sockmap_get_from_fd(const union bpf_attr *attr, bool attach)
 		return PTR_ERR(map);
 
 	if (attach) {
-		prog = bpf_prog_get_type(attr->attach_bpf_fd,
-					 BPF_PROG_TYPE_SK_SKB);
+		prog = bpf_prog_get_type(attr->attach_bpf_fd, type);
 		if (IS_ERR(prog)) {
 			fdput(f);
 			return PTR_ERR(prog);
@@ -1382,9 +1466,11 @@ static int bpf_prog_attach(const union bpf_attr *attr)
 	case BPF_CGROUP_DEVICE:
 		ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
 		break;
+	case BPF_SK_MSG_VERDICT:
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_MSG, true);
 	case BPF_SK_SKB_STREAM_PARSER:
 	case BPF_SK_SKB_STREAM_VERDICT:
-		return sockmap_get_from_fd(attr, true);
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_SKB, true);
 	default:
 		return -EINVAL;
 	}
@@ -1437,9 +1523,11 @@ static int bpf_prog_detach(const union bpf_attr *attr)
 	case BPF_CGROUP_DEVICE:
 		ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
 		break;
+	case BPF_SK_MSG_VERDICT:
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_MSG, false);
 	case BPF_SK_SKB_STREAM_PARSER:
 	case BPF_SK_SKB_STREAM_VERDICT:
-		return sockmap_get_from_fd(attr, false);
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_SKB, false);
 	default:
 		return -EINVAL;
 	}
@@ -1848,6 +1936,9 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 	if (sysctl_unprivileged_bpf_disabled && !capable(CAP_SYS_ADMIN))
 		return -EPERM;
 
+	if (kernel_is_locked_down("BPF"))
+		return -EPERM;
+
 	err = check_uarg_tail_zero(uattr, sizeof(attr), size);
 	if (err)
 		return err;
@@ -1916,6 +2007,9 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 		break;
 	case BPF_OBJ_GET_INFO_BY_FD:
 		err = bpf_obj_get_info_by_fd(&attr, uattr);
+		break;
+	case BPF_RAW_TRACEPOINT_OPEN:
+		err = bpf_raw_tracepoint_open(&attr);
 		break;
 	default:
 		err = -EINVAL;

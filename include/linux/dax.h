@@ -38,6 +38,7 @@ static inline void put_dax(struct dax_device *dax_dev)
 }
 #endif
 
+struct writeback_control;
 int bdev_dax_pgoff(struct block_device *, sector_t, size_t, pgoff_t *pgoff);
 #if IS_ENABLED(CONFIG_FS_DAX)
 int __bdev_dax_supported(struct super_block *sb, int blocksize);
@@ -51,12 +52,22 @@ static inline struct dax_device *fs_dax_get_by_host(const char *host)
 	return dax_get_by_host(host);
 }
 
-static inline void fs_put_dax(struct dax_device *dax_dev)
+struct dax_device *fs_dax_claim_bdev(struct block_device *bdev, void *owner);
+void fs_dax_release(struct dax_device *dax_dev, void *owner);
+int dax_writeback_mapping_range(struct address_space *mapping,
+		struct block_device *bdev, struct writeback_control *wbc);
+
+static inline void dax_layout_lock(void)
 {
-	put_dax(dax_dev);
+	rcu_read_lock();
 }
 
-struct dax_device *fs_dax_get_by_bdev(struct block_device *bdev);
+static inline void dax_layout_unlock(void)
+{
+	rcu_read_unlock();
+}
+
+struct page *dax_layout_busy_page(struct address_space *mapping);
 #else
 static inline int bdev_dax_supported(struct super_block *sb, int blocksize)
 {
@@ -68,11 +79,31 @@ static inline struct dax_device *fs_dax_get_by_host(const char *host)
 	return NULL;
 }
 
-static inline void fs_put_dax(struct dax_device *dax_dev)
+static inline struct dax_device *fs_dax_claim_bdev(struct block_device *bdev,
+		void *owner)
+{
+	return NULL;
+}
+
+static inline void fs_dax_release(struct dax_device *dax_dev, void *owner)
 {
 }
 
-static inline struct dax_device *fs_dax_get_by_bdev(struct block_device *bdev)
+static inline int dax_writeback_mapping_range(struct address_space *mapping,
+		struct block_device *bdev, struct writeback_control *wbc)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline void dax_layout_lock(void)
+{
+}
+
+static inline void dax_layout_unlock(void)
+{
+}
+
+static inline struct page *dax_layout_busy_page(struct address_space *mapping)
 {
 	return NULL;
 }
@@ -82,6 +113,8 @@ int dax_read_lock(void);
 void dax_read_unlock(int id);
 struct dax_device *alloc_dax(void *private, const char *host,
 		const struct dax_operations *ops);
+struct dax_device *alloc_dax_devmap(void *private, const char *host,
+		const struct dax_operations *ops, struct dev_pagemap *pgmap);
 bool dax_alive(struct dax_device *dax_dev);
 void kill_dax(struct dax_device *dax_dev);
 void *dax_get_private(struct dax_device *dax_dev);
@@ -121,7 +154,4 @@ static inline bool dax_mapping(struct address_space *mapping)
 	return mapping->host && IS_DAX(mapping->host);
 }
 
-struct writeback_control;
-int dax_writeback_mapping_range(struct address_space *mapping,
-		struct block_device *bdev, struct writeback_control *wbc);
 #endif

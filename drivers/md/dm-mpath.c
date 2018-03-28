@@ -714,7 +714,7 @@ static void process_queued_bios(struct work_struct *work)
 		case DM_MAPIO_REMAPPED:
 			generic_make_request(bio);
 			break;
-		case 0:
+		case DM_MAPIO_SUBMITTED:
 			break;
 		default:
 			WARN_ONCE(true, "__multipath_map_bio() returned %d\n", r);
@@ -1811,7 +1811,8 @@ static void multipath_status(struct dm_target *ti, status_type_t type,
 	spin_unlock_irqrestore(&m->lock, flags);
 }
 
-static int multipath_message(struct dm_target *ti, unsigned argc, char **argv)
+static int multipath_message(struct dm_target *ti, unsigned argc, char **argv,
+			     char *result, unsigned maxlen)
 {
 	int r = -EINVAL;
 	struct dm_dev *dev;

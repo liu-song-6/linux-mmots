@@ -521,12 +521,12 @@ static const struct file_operations netstat_seq_fops = {
 
 static __net_init int ip_proc_init_net(struct net *net)
 {
-	if (!proc_create("sockstat", S_IRUGO, net->proc_net,
+	if (!proc_create("sockstat", 0444, net->proc_net,
 			 &sockstat_seq_fops))
 		goto out_sockstat;
-	if (!proc_create("netstat", S_IRUGO, net->proc_net, &netstat_seq_fops))
+	if (!proc_create("netstat", 0444, net->proc_net, &netstat_seq_fops))
 		goto out_netstat;
-	if (!proc_create("snmp", S_IRUGO, net->proc_net, &snmp_seq_fops))
+	if (!proc_create("snmp", 0444, net->proc_net, &snmp_seq_fops))
 		goto out_snmp;
 
 	return 0;
@@ -549,10 +549,10 @@ static __net_exit void ip_proc_exit_net(struct net *net)
 static __net_initdata struct pernet_operations ip_proc_ops = {
 	.init = ip_proc_init_net,
 	.exit = ip_proc_exit_net,
+	.async = true,
 };
 
 int __init ip_misc_proc_init(void)
 {
 	return register_pernet_subsys(&ip_proc_ops);
 }
-

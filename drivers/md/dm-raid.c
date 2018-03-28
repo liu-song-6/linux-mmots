@@ -1141,7 +1141,7 @@ too_many:
 static int parse_raid_params(struct raid_set *rs, struct dm_arg_set *as,
 			     unsigned int num_raid_params)
 {
-	int value, raid10_format = ALGORITHM_RAID10_DEFAULT;
+	long long value, raid10_format = ALGORITHM_RAID10_DEFAULT;
 	unsigned int raid10_copies = 2;
 	unsigned int i, write_mostly = 0;
 	unsigned int region_size = 0;
@@ -1153,7 +1153,7 @@ static int parse_raid_params(struct raid_set *rs, struct dm_arg_set *as,
 	arg = dm_shift_arg(as);
 	num_raid_params--; /* Account for chunk_size argument */
 
-	if (kstrtoint(arg, 10, &value) < 0) {
+	if (kstrtoll(arg, 10, &value) < 0) {
 		rs->ti->error = "Bad numerical argument given for chunk_size";
 		return -EINVAL;
 	}
@@ -1315,7 +1315,7 @@ static int parse_raid_params(struct raid_set *rs, struct dm_arg_set *as,
 		/*
 		 * Parameters with number values from here on.
 		 */
-		if (kstrtoint(arg, 10, &value) < 0) {
+		if (kstrtoll(arg, 10, &value) < 0) {
 			rs->ti->error = "Bad numerical argument given in raid params";
 			return -EINVAL;
 		}
@@ -1430,7 +1430,7 @@ static int parse_raid_params(struct raid_set *rs, struct dm_arg_set *as,
 				rs->ti->error = "Only one min_recovery_rate argument pair allowed";
 				return -EINVAL;
 			}
-			if (value > INT_MAX) {
+			if (!__within_range(value, 0, INT_MAX)) {
 				rs->ti->error = "min_recovery_rate out of range";
 				return -EINVAL;
 			}
@@ -1440,7 +1440,7 @@ static int parse_raid_params(struct raid_set *rs, struct dm_arg_set *as,
 				rs->ti->error = "Only one max_recovery_rate argument pair allowed";
 				return -EINVAL;
 			}
-			if (value > INT_MAX) {
+			if (!__within_range(value, 0, INT_MAX)) {
 				rs->ti->error = "max_recovery_rate out of range";
 				return -EINVAL;
 			}
@@ -1470,6 +1470,12 @@ static int parse_raid_params(struct raid_set *rs, struct dm_arg_set *as,
 			rs->ti->error = "Unable to parse RAID parameter";
 			return -EINVAL;
 		}
+	}
+
+	if (rs->md.sync_speed_max &&
+	    rs->md.sync_speed_max < rs->md.sync_speed_min) {
+		rs->ti->error = "sync speed max smaller than min";
+		return -EINVAL;
 	}
 
 	if (test_bit(__CTR_FLAG_SYNC, &rs->ctr_flags) &&
@@ -3408,7 +3414,8 @@ static sector_t rs_get_progress(struct raid_set *rs, unsigned long recovery,
 		set_bit(RT_FLAG_RS_IN_SYNC, &rs->runtime_flags);
 
 	} else {
-		if (!test_bit(MD_RECOVERY_INTR, &recovery) &&
+		if (!test_bit(__CTR_FLAG_NOSYNC, &rs->ctr_flags) &&
+		    !test_bit(MD_RECOVERY_INTR, &recovery) &&
 		    (test_bit(MD_RECOVERY_NEEDED, &recovery) ||
 		     test_bit(MD_RECOVERY_RESHAPE, &recovery) ||
 		     test_bit(MD_RECOVERY_RUNNING, &recovery)))
@@ -3663,7 +3670,8 @@ static void raid_status(struct dm_target *ti, status_type_t type,
 	}
 }
 
-static int raid_message(struct dm_target *ti, unsigned int argc, char **argv)
+static int raid_message(struct dm_target *ti, unsigned int argc, char **argv,
+			char *result, unsigned maxlen)
 {
 	struct raid_set *rs = ti->private;
 	struct mddev *mddev = &rs->md;
