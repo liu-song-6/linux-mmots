@@ -498,10 +498,11 @@ static int hmm_vma_handle_pte(struct mm_walk *walk, unsigned long addr,
 	bool fault, write_fault;
 	uint64_t cpu_flags;
 	pte_t pte = *ptep;
+	uint64_t orig_pfn = *pfn;
 
 	*pfn = range->values[HMM_PFN_NONE];
 	cpu_flags = pte_to_hmm_pfn_flags(range, pte);
-	hmm_pte_need_fault(hmm_vma_walk, *pfn, cpu_flags,
+	hmm_pte_need_fault(hmm_vma_walk, orig_pfn, cpu_flags,
 			   &fault, &write_fault);
 
 	if (pte_none(pte)) {
@@ -528,7 +529,7 @@ static int hmm_vma_handle_pte(struct mm_walk *walk, unsigned long addr,
 				range->flags[HMM_PFN_DEVICE_PRIVATE];
 			cpu_flags |= is_write_device_private_entry(entry) ?
 				range->flags[HMM_PFN_WRITE] : 0;
-			hmm_pte_need_fault(hmm_vma_walk, *pfn, cpu_flags,
+			hmm_pte_need_fault(hmm_vma_walk, orig_pfn, cpu_flags,
 					   &fault, &write_fault);
 			if (fault || write_fault)
 				goto fault;
