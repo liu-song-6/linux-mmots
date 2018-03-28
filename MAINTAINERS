@@ -6426,6 +6426,7 @@ L:	linux-mm@kvack.org
 S:	Maintained
 F:	mm/hmm*
 F:	include/linux/hmm*
+F:	Documentation/vm/hmm.txt
 
 HOST AP DRIVER
 M:	Jouni Malinen <j@w1.fi>
