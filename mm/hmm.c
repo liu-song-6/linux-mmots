@@ -390,18 +390,22 @@ static inline void hmm_pte_need_fault(const struct hmm_vma_walk *hmm_vma_walk,
 	/* We aren't ask to do anything ... */
 	if (!(pfns & range->flags[HMM_PFN_VALID]))
 		return;
+	/* If this is device memory than only fault if explicitly requested */
+	if ((cpu_flags & range->flags[HMM_PFN_DEVICE_PRIVATE])) {
+		/* Do we fault on device memory ? */
+		if (pfns & range->flags[HMM_PFN_DEVICE_PRIVATE]) {
+			*write_fault = pfns & range->flags[HMM_PFN_WRITE];
+			*fault = true;
+		}
+		return;
+	}
+
 	/* If CPU page table is not valid then we need to fault */
-	*fault = cpu_flags & range->flags[HMM_PFN_VALID];
+	*fault = !(cpu_flags & range->flags[HMM_PFN_VALID]);
 	/* Need to write fault ? */
 	if ((pfns & range->flags[HMM_PFN_WRITE]) &&
 	    !(cpu_flags & range->flags[HMM_PFN_WRITE])) {
-		*fault = *write_fault = false;
-		return;
-	}
-	/* Do we fault on device memory ? */
-	if ((pfns & range->flags[HMM_PFN_DEVICE_PRIVATE]) &&
-	    (cpu_flags & range->flags[HMM_PFN_DEVICE_PRIVATE])) {
-		*write_fault = pfns & range->flags[HMM_PFN_WRITE];
+		*write_fault = true;
 		*fault = true;
 	}
 }
