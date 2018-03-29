@@ -189,6 +189,8 @@ struct mem_cgroup {
 	/* vmpressure notifications */
 	struct vmpressure vmpressure;
 
+	unsigned long flags;
+
 	/*
 	 * Should the accounting and control be hierarchical, per subtree?
 	 */
