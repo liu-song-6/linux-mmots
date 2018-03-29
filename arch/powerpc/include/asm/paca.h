@@ -32,6 +32,7 @@
 #include <asm/accounting.h>
 #include <asm/hmi.h>
 #include <asm/cpuidle.h>
+#include <asm/atomic.h>
 
 register struct paca_struct *local_paca asm("r13");
 
@@ -141,7 +142,7 @@ struct paca_struct {
 #ifdef CONFIG_PPC_BOOK3S
 	mm_context_id_t mm_ctx_id;
 #ifdef CONFIG_PPC_MM_SLICES
-	u64 mm_ctx_low_slices_psize;
+	unsigned char mm_ctx_low_slices_psize[BITS_PER_LONG / BITS_PER_BYTE];
 	unsigned char mm_ctx_high_slices_psize[SLICE_ARRAY_SIZE];
 	unsigned long mm_ctx_slb_addr_limit;
 #else
@@ -177,6 +178,8 @@ struct paca_struct {
 	u8 thread_mask;
 	/* Mask to denote subcore sibling threads */
 	u8 subcore_sibling_mask;
+	/* Flag to request this thread not to stop */
+	atomic_t dont_stop;
 	/*
 	 * Pointer to an array which contains pointer
 	 * to the sibling threads' paca.

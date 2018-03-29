@@ -900,13 +900,13 @@ int kernel_read_file(struct file *file, void **buf, loff_t *size,
 	if (!S_ISREG(file_inode(file)->i_mode) || max_size < 0)
 		return -EINVAL;
 
-	ret = security_kernel_read_file(file, id);
-	if (ret)
-		return ret;
-
 	ret = deny_write_access(file);
 	if (ret)
 		return ret;
+
+	ret = security_kernel_read_file(file, id);
+	if (ret)
+		goto out;
 
 	i_size = i_size_read(file_inode(file));
 	if (max_size > 0 && i_size > max_size) {
@@ -1828,8 +1828,10 @@ static int do_execveat_common(int fd, struct filename *filename,
 	free_bprm(bprm);
 	kfree(pathbuf);
 	putname(filename);
-	if (displaced)
+	if (displaced) {
+		posix_change_lock_owners(current->files, displaced);
 		put_files_struct(displaced);
+	}
 	return retval;
 
 out:
