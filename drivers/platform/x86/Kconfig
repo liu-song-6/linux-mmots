@@ -439,6 +439,7 @@ config SURFACE3_WMI
 config THINKPAD_ACPI
 	tristate "ThinkPad ACPI Laptop Extras"
 	depends on ACPI
+	depends on ACPI_BATTERY
 	depends on INPUT
 	depends on RFKILL || RFKILL = n
 	depends on ACPI_VIDEO || ACPI_VIDEO = n
@@ -756,6 +757,8 @@ config TOPSTAR_LAPTOP
 	depends on ACPI
 	depends on INPUT
 	select INPUT_SPARSEKMAP
+	select LEDS_CLASS
+	select NEW_LEDS
 	---help---
 	  This driver adds support for hotkeys found on Topstar laptops.
 

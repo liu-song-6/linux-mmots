@@ -3408,7 +3408,8 @@ static sector_t rs_get_progress(struct raid_set *rs, unsigned long recovery,
 		set_bit(RT_FLAG_RS_IN_SYNC, &rs->runtime_flags);
 
 	} else {
-		if (!test_bit(MD_RECOVERY_INTR, &recovery) &&
+		if (!test_bit(__CTR_FLAG_NOSYNC, &rs->ctr_flags) &&
+		    !test_bit(MD_RECOVERY_INTR, &recovery) &&
 		    (test_bit(MD_RECOVERY_NEEDED, &recovery) ||
 		     test_bit(MD_RECOVERY_RESHAPE, &recovery) ||
 		     test_bit(MD_RECOVERY_RUNNING, &recovery)))
@@ -3663,7 +3664,8 @@ static void raid_status(struct dm_target *ti, status_type_t type,
 	}
 }
 
-static int raid_message(struct dm_target *ti, unsigned int argc, char **argv)
+static int raid_message(struct dm_target *ti, unsigned int argc, char **argv,
+			char *result, unsigned maxlen)
 {
 	struct raid_set *rs = ti->private;
 	struct mddev *mddev = &rs->md;

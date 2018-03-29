@@ -34,16 +34,6 @@
 
 #include "ks7010_sdio.h"
 
-#ifdef KS_WLAN_DEBUG
-#define DPRINTK(n, fmt, args...) \
-	do { \
-		if (KS_WLAN_DEBUG > (n)) \
-			pr_notice("%s: "fmt, __func__, ## args); \
-	} while (0)
-#else
-#define DPRINTK(n, fmt, args...)
-#endif
-
 struct ks_wlan_parameter {
 	u8 operation_mode;	/* Operation Mode */
 	u8 channel;	/*  Channel */
@@ -202,10 +192,6 @@ struct sme_info {
 	int event_buff[SME_EVENT_BUFF_SIZE];
 	unsigned int qhead;
 	unsigned int qtail;
-#ifdef KS_WLAN_DEBUG
-	/* for debug */
-	unsigned int max_event_count;
-#endif
 	spinlock_t sme_spin;
 	unsigned long sme_flag;
 };

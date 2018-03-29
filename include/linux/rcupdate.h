@@ -188,13 +188,13 @@ static inline void exit_tasks_rcu_finish(void) { }
 #endif /* #else #ifdef CONFIG_TASKS_RCU */
 
 /**
- * cond_resched_rcu_qs - Report potential quiescent states to RCU
+ * cond_resched_tasks_rcu_qs - Report potential quiescent states to RCU
  *
  * This macro resembles cond_resched(), except that it is defined to
  * report potential quiescent states to RCU-tasks even if the cond_resched()
  * machinery were to be shut off, as some advocate for PREEMPT kernels.
  */
-#define cond_resched_rcu_qs() \
+#define cond_resched_tasks_rcu_qs() \
 do { \
 	if (!cond_resched()) \
 		rcu_note_voluntary_context_switch_lite(current); \
@@ -214,10 +214,12 @@ do { \
 #endif
 
 /*
- * init_rcu_head_on_stack()/destroy_rcu_head_on_stack() are needed for dynamic
- * initialization and destruction of rcu_head on the stack. rcu_head structures
- * allocated dynamically in the heap or defined statically don't need any
- * initialization.
+ * The init_rcu_head_on_stack() and destroy_rcu_head_on_stack() calls
+ * are needed for dynamic initialization and destruction of rcu_head
+ * on the stack, and init_rcu_head()/destroy_rcu_head() are needed for
+ * dynamic initialization and destruction of statically allocated rcu_head
+ * structures.  However, rcu_head structures allocated dynamically in the
+ * heap don't need any initialization.
  */
 #ifdef CONFIG_DEBUG_OBJECTS_RCU_HEAD
 void init_rcu_head(struct rcu_head *head);

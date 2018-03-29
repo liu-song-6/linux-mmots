@@ -203,11 +203,13 @@ static int bpf_map_alloc_id(struct bpf_map *map)
 {
 	int id;
 
+	idr_preload(GFP_KERNEL);
 	spin_lock_bh(&map_idr_lock);
 	id = idr_alloc_cyclic(&map_idr, map, 1, INT_MAX, GFP_ATOMIC);
 	if (id > 0)
 		map->id = id;
 	spin_unlock_bh(&map_idr_lock);
+	idr_preload_end();
 
 	if (WARN_ON_ONCE(!id))
 		return -ENOSPC;
@@ -940,11 +942,13 @@ static int bpf_prog_alloc_id(struct bpf_prog *prog)
 {
 	int id;
 
+	idr_preload(GFP_KERNEL);
 	spin_lock_bh(&prog_idr_lock);
 	id = idr_alloc_cyclic(&prog_idr, prog, 1, INT_MAX, GFP_ATOMIC);
 	if (id > 0)
 		prog->aux->id = id;
 	spin_unlock_bh(&prog_idr_lock);
+	idr_preload_end();
 
 	/* id is in [1, INT_MAX) */
 	if (WARN_ON_ONCE(!id))
@@ -1315,7 +1319,8 @@ static int bpf_obj_get(const union bpf_attr *attr)
 
 #define BPF_PROG_ATTACH_LAST_FIELD attach_flags
 
-static int sockmap_get_from_fd(const union bpf_attr *attr, bool attach)
+static int sockmap_get_from_fd(const union bpf_attr *attr,
+			       int type, bool attach)
 {
 	struct bpf_prog *prog = NULL;
 	int ufd = attr->target_fd;
@@ -1329,8 +1334,7 @@ static int sockmap_get_from_fd(const union bpf_attr *attr, bool attach)
 		return PTR_ERR(map);
 
 	if (attach) {
-		prog = bpf_prog_get_type(attr->attach_bpf_fd,
-					 BPF_PROG_TYPE_SK_SKB);
+		prog = bpf_prog_get_type(attr->attach_bpf_fd, type);
 		if (IS_ERR(prog)) {
 			fdput(f);
 			return PTR_ERR(prog);
@@ -1382,9 +1386,11 @@ static int bpf_prog_attach(const union bpf_attr *attr)
 	case BPF_CGROUP_DEVICE:
 		ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
 		break;
+	case BPF_SK_MSG_VERDICT:
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_MSG, true);
 	case BPF_SK_SKB_STREAM_PARSER:
 	case BPF_SK_SKB_STREAM_VERDICT:
-		return sockmap_get_from_fd(attr, true);
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_SKB, true);
 	default:
 		return -EINVAL;
 	}
@@ -1437,9 +1443,11 @@ static int bpf_prog_detach(const union bpf_attr *attr)
 	case BPF_CGROUP_DEVICE:
 		ptype = BPF_PROG_TYPE_CGROUP_DEVICE;
 		break;
+	case BPF_SK_MSG_VERDICT:
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_MSG, false);
 	case BPF_SK_SKB_STREAM_PARSER:
 	case BPF_SK_SKB_STREAM_VERDICT:
-		return sockmap_get_from_fd(attr, false);
+		return sockmap_get_from_fd(attr, BPF_PROG_TYPE_SK_SKB, false);
 	default:
 		return -EINVAL;
 	}
@@ -1846,6 +1854,9 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 	int err;
 
 	if (sysctl_unprivileged_bpf_disabled && !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	if (kernel_is_locked_down("BPF"))
 		return -EPERM;
 
 	err = check_uarg_tail_zero(uattr, sizeof(attr), size);

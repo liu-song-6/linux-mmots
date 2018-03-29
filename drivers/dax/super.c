@@ -29,6 +29,7 @@ static struct vfsmount *dax_mnt;
 static DEFINE_IDA(dax_minor_ida);
 static struct kmem_cache *dax_cache __read_mostly;
 static struct super_block *dax_superblock __read_mostly;
+static DEFINE_MUTEX(devmap_lock);
 
 #define DAX_HASH_SIZE (PAGE_SIZE / sizeof(struct hlist_head))
 static struct hlist_head dax_host_list[DAX_HASH_SIZE];
@@ -61,16 +62,6 @@ int bdev_dax_pgoff(struct block_device *bdev, sector_t sector, size_t size,
 	return 0;
 }
 EXPORT_SYMBOL(bdev_dax_pgoff);
-
-#if IS_ENABLED(CONFIG_FS_DAX)
-struct dax_device *fs_dax_get_by_bdev(struct block_device *bdev)
-{
-	if (!blk_queue_dax(bdev->bd_queue))
-		return NULL;
-	return fs_dax_get_by_host(bdev->bd_disk->disk_name);
-}
-EXPORT_SYMBOL_GPL(fs_dax_get_by_bdev);
-#endif
 
 /**
  * __bdev_dax_supported() - Check if the device supports dax for filesystem
@@ -124,10 +115,19 @@ int __bdev_dax_supported(struct super_block *sb, int blocksize)
 		return len < 0 ? len : -EIO;
 	}
 
-	if ((IS_ENABLED(CONFIG_FS_DAX_LIMITED) && pfn_t_special(pfn))
-			|| pfn_t_devmap(pfn))
+	if (IS_ENABLED(CONFIG_FS_DAX_LIMITED) && pfn_t_special(pfn)) {
+		/*
+		 * An arch that has enabled the pmem api should also
+		 * have its drivers support pfn_t_devmap()
+		 *
+		 * This is a developer warning and should not trigger in
+		 * production. dax_flush() will crash since it depends
+		 * on being able to do (page_address(pfn_to_page())).
+		 */
+		WARN_ON(IS_ENABLED(CONFIG_ARCH_HAS_PMEM_API));
+	} else if (pfn_t_devmap(pfn)) {
 		/* pass */;
-	else {
+	} else {
 		pr_debug("VFS (%s): error: dax support not enabled\n",
 				sb->s_id);
 		return -EOPNOTSUPP;
@@ -160,8 +160,67 @@ struct dax_device {
 	const char *host;
 	void *private;
 	unsigned long flags;
+	struct dev_pagemap *pgmap;
 	const struct dax_operations *ops;
 };
+
+#if IS_ENABLED(CONFIG_FS_DAX)
+static void generic_dax_pagefree(struct page *page, void *data)
+{
+	wake_up_var(&page->_refcount);
+}
+
+struct dax_device *fs_dax_claim_bdev(struct block_device *bdev, void *owner)
+{
+	struct dax_device *dax_dev;
+	struct dev_pagemap *pgmap;
+
+	if (!blk_queue_dax(bdev->bd_queue))
+		return NULL;
+	dax_dev = fs_dax_get_by_host(bdev->bd_disk->disk_name);
+	if (!dax_dev->pgmap)
+		return dax_dev;
+	pgmap = dax_dev->pgmap;
+
+	mutex_lock(&devmap_lock);
+	if ((pgmap->data && pgmap->data != owner) || pgmap->page_free
+			|| pgmap->page_fault
+			|| pgmap->type != MEMORY_DEVICE_HOST) {
+		put_dax(dax_dev);
+		mutex_unlock(&devmap_lock);
+		return NULL;
+	}
+
+	dev_pagemap_get_ops();
+	pgmap->type = MEMORY_DEVICE_FS_DAX;
+	pgmap->page_free = generic_dax_pagefree;
+	pgmap->data = owner;
+	mutex_unlock(&devmap_lock);
+
+	return dax_dev;
+}
+EXPORT_SYMBOL_GPL(fs_dax_claim_bdev);
+
+void fs_dax_release(struct dax_device *dax_dev, void *owner)
+{
+	struct dev_pagemap *pgmap = dax_dev ? dax_dev->pgmap : NULL;
+
+	put_dax(dax_dev);
+	if (!pgmap)
+		return;
+	if (!pgmap->data)
+		return;
+
+	mutex_lock(&devmap_lock);
+	WARN_ON(pgmap->data != owner);
+	pgmap->type = MEMORY_DEVICE_HOST;
+	pgmap->page_free = NULL;
+	pgmap->data = NULL;
+	dev_pagemap_put_ops();
+	mutex_unlock(&devmap_lock);
+}
+EXPORT_SYMBOL_GPL(fs_dax_release);
+#endif
 
 static ssize_t write_cache_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -489,6 +548,17 @@ struct dax_device *alloc_dax(void *private, const char *__host,
 	return NULL;
 }
 EXPORT_SYMBOL_GPL(alloc_dax);
+
+struct dax_device *alloc_dax_devmap(void *private, const char *host,
+		const struct dax_operations *ops, struct dev_pagemap *pgmap)
+{
+	struct dax_device *dax_dev = alloc_dax(private, host, ops);
+
+	if (dax_dev)
+		dax_dev->pgmap = pgmap;
+	return dax_dev;
+}
+EXPORT_SYMBOL_GPL(alloc_dax_devmap);
 
 void put_dax(struct dax_device *dax_dev)
 {

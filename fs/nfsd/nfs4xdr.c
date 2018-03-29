@@ -37,6 +37,7 @@
 #include <linux/file.h>
 #include <linux/slab.h>
 #include <linux/namei.h>
+#include <linux/fsnotify.h>
 #include <linux/statfs.h>
 #include <linux/utsname.h>
 #include <linux/pagemap.h>
@@ -50,6 +51,7 @@
 #include "cache.h"
 #include "netns.h"
 #include "pnfs.h"
+#include "trace.h"
 
 #ifdef CONFIG_NFSD_V4_SECURITY_LABEL
 #include <linux/security.h>
@@ -1759,7 +1761,7 @@ nfsd4_decode_copy(struct nfsd4_compoundargs *argp, struct nfsd4_copy *copy)
 	p = xdr_decode_hyper(p, &copy->cp_src_pos);
 	p = xdr_decode_hyper(p, &copy->cp_dst_pos);
 	p = xdr_decode_hyper(p, &copy->cp_count);
-	copy->cp_consecutive = be32_to_cpup(p++);
+	p++; /* ca_consecutive: we always do consecutive copies */
 	copy->cp_synchronous = be32_to_cpup(p++);
 	tmp = be32_to_cpup(p); /* Source server list not supported */
 
@@ -3416,28 +3418,28 @@ static __be32 nfsd4_encode_splice_read(
 {
 	struct xdr_stream *xdr = &resp->xdr;
 	struct xdr_buf *buf = xdr->buf;
+	int host_err;
 	u32 eof;
 	long len;
 	int space_left;
-	__be32 nfserr;
 	__be32 *p = xdr->p - 2;
 
 	/* Make sure there will be room for padding if needed */
 	if (xdr->end - xdr->p < 1)
 		return nfserr_resource;
 
+	trace_nfsd_read_splice(resp->rqstp, read->rd_fhp,
+			       read->rd_offset, maxcount);
 	len = maxcount;
-	nfserr = nfsd_splice_read(read->rd_rqstp, file,
+	host_err = nfsd_splice_read(read->rd_rqstp, file,
 				  read->rd_offset, &maxcount);
-	if (nfserr) {
-		/*
-		 * nfsd_splice_actor may have already messed with the
-		 * page length; reset it so as not to confuse
-		 * xdr_truncate_encode:
-		 */
-		buf->page_len = 0;
-		return nfserr;
-	}
+	if (host_err < 0)
+		goto err;
+	trace_nfsd_read_io_done(read->rd_rqstp, read->rd_fhp,
+				read->rd_offset, maxcount);
+	maxcount = host_err;
+	nfsdstats.io_read += maxcount;
+	fsnotify_access(file);
 
 	eof = nfsd_eof_on_read(len, maxcount, read->rd_offset,
 				d_inode(read->rd_fhp->fh_dentry)->i_size);
@@ -3470,6 +3472,17 @@ static __be32 nfsd4_encode_splice_read(
 	xdr->end = (__be32 *)((void *)xdr->end + space_left);
 
 	return 0;
+
+err:
+	/*
+	 * nfsd_splice_actor may have already messed with the
+	 * page length; reset it so as not to confuse
+	 * xdr_truncate_encode:
+	 */
+	buf->page_len = 0;
+	trace_nfsd_read_err(read->rd_rqstp, read->rd_fhp,
+			    read->rd_offset, host_err);
+	return nfserrno(host_err);
 }
 
 static __be32 nfsd4_encode_readv(struct nfsd4_compoundres *resp,
@@ -3477,12 +3490,12 @@ static __be32 nfsd4_encode_readv(struct nfsd4_compoundres *resp,
 				 struct file *file, unsigned long maxcount)
 {
 	struct xdr_stream *xdr = &resp->xdr;
+	int host_err;
 	u32 eof;
 	int v;
 	int starting_len = xdr->buf->len - 8;
 	long len;
 	int thislen;
-	__be32 nfserr;
 	__be32 tmp;
 	__be32 *p;
 	u32 zzz = 0;
@@ -3510,11 +3523,19 @@ static __be32 nfsd4_encode_readv(struct nfsd4_compoundres *resp,
 	}
 	read->rd_vlen = v;
 
+	trace_nfsd_read_vector(resp->rqstp, read->rd_fhp,
+			       read->rd_offset, maxcount);
 	len = maxcount;
-	nfserr = nfsd_readv(file, read->rd_offset, resp->rqstp->rq_vec,
-			read->rd_vlen, &maxcount);
-	if (nfserr)
-		return nfserr;
+	host_err = nfsd_readv(file, read->rd_offset, resp->rqstp->rq_vec,
+			      read->rd_vlen, &maxcount);
+	if (host_err < 0)
+		goto err;
+	trace_nfsd_read_io_done(resp->rqstp, read->rd_fhp,
+				read->rd_offset, maxcount);
+	maxcount = host_err;
+	nfsdstats.io_read += maxcount;
+	fsnotify_access(file);
+
 	xdr_truncate_encode(xdr, starting_len + 8 + ((maxcount+3)&~3));
 
 	eof = nfsd_eof_on_read(len, maxcount, read->rd_offset,
@@ -3530,6 +3551,10 @@ static __be32 nfsd4_encode_readv(struct nfsd4_compoundres *resp,
 								&zzz, pad);
 	return 0;
 
+err:
+	trace_nfsd_read_err(resp->rqstp, read->rd_fhp,
+			    read->rd_offset, host_err);
+	return nfserrno(host_err);
 }
 
 static __be32
@@ -4214,7 +4239,7 @@ nfsd4_encode_copy(struct nfsd4_compoundres *resp, __be32 nfserr,
 		return nfserr;
 
 	p = xdr_reserve_space(&resp->xdr, 4 + 4);
-	*p++ = cpu_to_be32(copy->cp_consecutive);
+	*p++ = xdr_one; /* cr_consecutive */
 	*p++ = cpu_to_be32(copy->cp_synchronous);
 	return 0;
 }

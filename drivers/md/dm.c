@@ -1412,6 +1412,11 @@ static unsigned get_num_discard_bios(struct dm_target *ti)
 	return ti->num_discard_bios;
 }
 
+static unsigned get_num_secure_erase_bios(struct dm_target *ti)
+{
+	return ti->num_secure_erase_bios;
+}
+
 static unsigned get_num_write_same_bios(struct dm_target *ti)
 {
 	return ti->num_write_same_bios;
@@ -1465,6 +1470,11 @@ static int __send_discard(struct clone_info *ci, struct dm_target *ti)
 					   is_split_required_for_discard);
 }
 
+static int __send_secure_erase(struct clone_info *ci, struct dm_target *ti)
+{
+	return __send_changing_extent_only(ci, ti, get_num_secure_erase_bios, NULL);
+}
+
 static int __send_write_same(struct clone_info *ci, struct dm_target *ti)
 {
 	return __send_changing_extent_only(ci, ti, get_num_write_same_bios, NULL);
@@ -1473,6 +1483,25 @@ static int __send_write_same(struct clone_info *ci, struct dm_target *ti)
 static int __send_write_zeroes(struct clone_info *ci, struct dm_target *ti)
 {
 	return __send_changing_extent_only(ci, ti, get_num_write_zeroes_bios, NULL);
+}
+
+static bool __process_abnormal_io(struct clone_info *ci, struct dm_target *ti,
+				  int *result)
+{
+	struct bio *bio = ci->bio;
+
+	if (bio_op(bio) == REQ_OP_DISCARD)
+		*result = __send_discard(ci, ti);
+	else if (bio_op(bio) == REQ_OP_SECURE_ERASE)
+		*result = __send_secure_erase(ci, ti);
+	else if (bio_op(bio) == REQ_OP_WRITE_SAME)
+		*result = __send_write_same(ci, ti);
+	else if (bio_op(bio) == REQ_OP_WRITE_ZEROES)
+		*result = __send_write_zeroes(ci, ti);
+	else
+		return false;
+
+	return true;
 }
 
 /*
@@ -1489,12 +1518,8 @@ static int __split_and_process_non_flush(struct clone_info *ci)
 	if (!dm_target_is_valid(ti))
 		return -EIO;
 
-	if (unlikely(bio_op(bio) == REQ_OP_DISCARD))
-		return __send_discard(ci, ti);
-	else if (unlikely(bio_op(bio) == REQ_OP_WRITE_SAME))
-		return __send_write_same(ci, ti);
-	else if (unlikely(bio_op(bio) == REQ_OP_WRITE_ZEROES))
-		return __send_write_zeroes(ci, ti);
+	if (unlikely(__process_abnormal_io(ci, ti, &r)))
+		return r;
 
 	if (bio_op(bio) == REQ_OP_ZONE_REPORT)
 		len = ci->sector_count;
@@ -1615,9 +1640,12 @@ static blk_qc_t __process_bio(struct mapped_device *md,
 			goto out;
 		}
 
-		tio = alloc_tio(&ci, ti, 0, GFP_NOIO);
 		ci.bio = bio;
 		ci.sector_count = bio_sectors(bio);
+		if (unlikely(__process_abnormal_io(&ci, ti, &error)))
+			goto out;
+
+		tio = alloc_tio(&ci, ti, 0, GFP_NOIO);
 		ret = __clone_and_map_simple_bio(&ci, tio, NULL);
 	}
 out:
@@ -1846,7 +1874,7 @@ static struct mapped_device *alloc_dev(int minor)
 	INIT_LIST_HEAD(&md->table_devices);
 	spin_lock_init(&md->uevent_lock);
 
-	md->queue = blk_alloc_queue_node(GFP_KERNEL, numa_node_id);
+	md->queue = blk_alloc_queue_node(GFP_KERNEL, numa_node_id, NULL);
 	if (!md->queue)
 		goto bad;
 	md->queue->queuedata = md;

@@ -39,7 +39,9 @@
 #include <linux/slab.h>
 #include <linux/sysctl.h>
 
+#include <asm/esr.h>
 #include <asm/fpsimd.h>
+#include <asm/cpufeature.h>
 #include <asm/cputype.h>
 #include <asm/simd.h>
 #include <asm/sigcontext.h>
@@ -285,8 +287,7 @@ static void task_fpsimd_save(void)
 				 * re-enter user with corrupt state.
 				 * There's no way to recover, so kill it:
 				 */
-				force_signal_inject(
-					SIGKILL, 0, current_pt_regs(), 0);
+				force_signal_inject(SIGKILL, SI_KERNEL, 0);
 				return;
 			}
 
@@ -757,12 +758,10 @@ fail:
  * Enable SVE for EL1.
  * Intended for use by the cpufeatures code during CPU boot.
  */
-int sve_kernel_enable(void *__always_unused p)
+void sve_kernel_enable(const struct arm64_cpu_capabilities *__always_unused p)
 {
 	write_sysreg(read_sysreg(CPACR_EL1) | CPACR_EL1_ZEN_EL1EN, CPACR_EL1);
 	isb();
-
-	return 0;
 }
 
 void __init sve_setup(void)
@@ -831,7 +830,7 @@ asmlinkage void do_sve_acc(unsigned int esr, struct pt_regs *regs)
 {
 	/* Even if we chose not to use SVE, the hardware could still trap: */
 	if (unlikely(!system_supports_sve()) || WARN_ON(is_compat_task())) {
-		force_signal_inject(SIGILL, ILL_ILLOPC, regs, 0);
+		force_signal_inject(SIGILL, ILL_ILLOPC, regs->pc);
 		return;
 	}
 
@@ -867,18 +866,20 @@ asmlinkage void do_fpsimd_acc(unsigned int esr, struct pt_regs *regs)
 asmlinkage void do_fpsimd_exc(unsigned int esr, struct pt_regs *regs)
 {
 	siginfo_t info;
-	unsigned int si_code = FPE_FIXME;
+	unsigned int si_code = FPE_FLTUNK;
 
-	if (esr & FPEXC_IOF)
-		si_code = FPE_FLTINV;
-	else if (esr & FPEXC_DZF)
-		si_code = FPE_FLTDIV;
-	else if (esr & FPEXC_OFF)
-		si_code = FPE_FLTOVF;
-	else if (esr & FPEXC_UFF)
-		si_code = FPE_FLTUND;
-	else if (esr & FPEXC_IXF)
-		si_code = FPE_FLTRES;
+	if (esr & ESR_ELx_FP_EXC_TFV) {
+		if (esr & FPEXC_IOF)
+			si_code = FPE_FLTINV;
+		else if (esr & FPEXC_DZF)
+			si_code = FPE_FLTDIV;
+		else if (esr & FPEXC_OFF)
+			si_code = FPE_FLTOVF;
+		else if (esr & FPEXC_UFF)
+			si_code = FPE_FLTUND;
+		else if (esr & FPEXC_IXF)
+			si_code = FPE_FLTRES;
+	}
 
 	memset(&info, 0, sizeof(info));
 	info.si_signo = SIGFPE;

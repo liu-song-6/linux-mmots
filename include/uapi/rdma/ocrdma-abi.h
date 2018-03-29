@@ -65,7 +65,7 @@ struct ocrdma_alloc_ucontext_resp {
 };
 
 struct ocrdma_alloc_pd_ureq {
-	__u64 rsvd1;
+	__u32 rsvd[2];
 };
 
 struct ocrdma_alloc_pd_uresp {
@@ -73,7 +73,7 @@ struct ocrdma_alloc_pd_uresp {
 	__u32 dpp_enabled;
 	__u32 dpp_page_addr_hi;
 	__u32 dpp_page_addr_lo;
-	__u64 rsvd1;
+	__u32 rsvd[2];
 };
 
 struct ocrdma_create_cq_ureq {
@@ -127,7 +127,7 @@ struct ocrdma_create_qp_uresp {
 	__u32 db_rq_offset;
 	__u32 db_shift;
 	__u64 rsvd[11];
-} __packed;
+};
 
 struct ocrdma_create_srq_uresp {
 	__u16 rq_dbid;

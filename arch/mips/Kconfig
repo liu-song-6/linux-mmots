@@ -200,6 +200,7 @@ config ATH79
 	select SYS_SUPPORTS_MIPS16
 	select SYS_SUPPORTS_ZBOOT_UART_PROM
 	select USE_OF
+	select USB_EHCI_ROOT_HUB_TT if USB_EHCI_HCD_PLATFORM
 	help
 	  Support for the Atheros AR71XX/AR724X/AR913X SoCs.
 
@@ -2028,6 +2029,7 @@ config CPU_MIPSR6
 	select CPU_HAS_RIXI
 	select HAVE_ARCH_BITREVERSE
 	select MIPS_ASID_BITS_VARIABLE
+	select MIPS_CRC_SUPPORT
 	select MIPS_SPRAM
 
 config EVA
@@ -2499,6 +2501,9 @@ config MIPS_ASID_BITS
 	default 8
 
 config MIPS_ASID_BITS_VARIABLE
+	bool
+
+config MIPS_CRC_SUPPORT
 	bool
 
 #
