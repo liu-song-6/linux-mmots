@@ -710,11 +710,6 @@ static __init void cpufeatures_cpu_quirks(void)
 		cur_cpu_spec->cpu_features |= CPU_FTR_POWER9_DD1;
 	else if ((version & 0xffffefff) == 0x004e0201)
 		cur_cpu_spec->cpu_features |= CPU_FTR_POWER9_DD2_1;
-<<<<<<< HEAD
-
-	if ((version & 0xffff0000) == 0x004e0000)
-		cur_cpu_spec->cpu_features |= CPU_FTR_P9_TLBIE_BUG;
-=======
 	else if ((version & 0xffffefff) == 0x004e0202)
 		cur_cpu_spec->cpu_features |= CPU_FTR_P9_TM_HV_ASSIST |
 			CPU_FTR_P9_TM_XER_SO_BUG;
@@ -723,7 +718,6 @@ static __init void cpufeatures_cpu_quirks(void)
 		cur_cpu_spec->cpu_features &= ~(CPU_FTR_DAWR);
 		cur_cpu_spec->cpu_features |= CPU_FTR_P9_TLBIE_BUG;
 	}
->>>>>>> linux-next/akpm-base
 }
 
 static void __init cpufeatures_setup_finished(void)
