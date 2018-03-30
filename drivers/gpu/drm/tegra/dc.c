@@ -2027,12 +2027,8 @@ static const struct tegra_dc_soc_info tegra124_dc_soc_info = {
 	.num_primary_formats = ARRAY_SIZE(tegra124_primary_formats),
 	.primary_formats = tegra124_primary_formats,
 	.num_overlay_formats = ARRAY_SIZE(tegra124_overlay_formats),
-<<<<<<< HEAD
-	.overlay_formats = tegra124_overlay_formats,
-=======
 	.overlay_formats = tegra114_overlay_formats,
 	.modifiers = tegra124_modifiers,
->>>>>>> linux-next/akpm-base
 };
 
 static const struct tegra_dc_soc_info tegra210_dc_soc_info = {

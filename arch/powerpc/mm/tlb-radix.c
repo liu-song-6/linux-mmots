@@ -128,11 +128,7 @@ static inline void __tlbiel_va(unsigned long va, unsigned long pid,
 	rb |= ap << PPC_BITLSHIFT(58);
 	rs = pid << PPC_BITLSHIFT(31);
 	prs = 1; /* process scoped */
-<<<<<<< HEAD
-	r = 1;   /* raidx format */
-=======
 	r = 1;   /* radix format */
->>>>>>> linux-next/akpm-base
 
 	asm volatile(PPC_TLBIEL(%0, %4, %3, %2, %1)
 		     : : "r"(rb), "i"(r), "i"(prs), "i"(ric), "r"(rs) : "memory");
@@ -148,11 +144,7 @@ static inline void __tlbie_va(unsigned long va, unsigned long pid,
 	rb |= ap << PPC_BITLSHIFT(58);
 	rs = pid << PPC_BITLSHIFT(31);
 	prs = 1; /* process scoped */
-<<<<<<< HEAD
-	r = 1;   /* raidx format */
-=======
 	r = 1;   /* radix format */
->>>>>>> linux-next/akpm-base
 
 	asm volatile(PPC_TLBIE_5(%0, %4, %3, %2, %1)
 		     : : "r"(rb), "i"(r), "i"(prs), "i"(ric), "r"(rs) : "memory");
