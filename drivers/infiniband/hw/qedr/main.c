@@ -90,8 +90,8 @@ static struct net_device *qedr_get_netdev(struct ib_device *dev, u8 port_num)
 	dev_hold(qdev->ndev);
 
 	/* The HW vendor's device driver must guarantee
-	 * that this function returns NULL before the net device reaches
-	 * NETDEV_UNREGISTER_FINAL state.
+	 * that this function returns NULL before the net device has finished
+	 * NETDEV_UNREGISTER state.
 	 */
 	return qdev->ndev;
 }
@@ -257,6 +257,7 @@ static int qedr_register_device(struct qedr_dev *dev)
 	dev->ibdev.get_link_layer = qedr_link_layer;
 	dev->ibdev.get_dev_fw_str = qedr_get_dev_fw_str;
 
+	dev->ibdev.driver_id = RDMA_DRIVER_QEDR;
 	return ib_register_device(&dev->ibdev, NULL);
 }
 

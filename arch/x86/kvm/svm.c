@@ -49,7 +49,6 @@
 #include <asm/debugreg.h>
 #include <asm/kvm_para.h>
 #include <asm/irq_remapping.h>
-#include <asm/microcode.h>
 #include <asm/nospec-branch.h>
 
 #include <asm/virtext.h>
@@ -131,6 +130,28 @@ static const u32 host_save_user_msrs[] = {
 };
 
 #define NR_HOST_SAVE_USER_MSRS ARRAY_SIZE(host_save_user_msrs)
+
+struct kvm_sev_info {
+	bool active;		/* SEV enabled guest */
+	unsigned int asid;	/* ASID used for this guest */
+	unsigned int handle;	/* SEV firmware handle */
+	int fd;			/* SEV device fd */
+	unsigned long pages_locked; /* Number of pages locked */
+	struct list_head regions_list;  /* List of registered regions */
+};
+
+struct kvm_svm {
+	struct kvm kvm;
+
+	/* Struct members for AVIC */
+	u32 avic_vm_id;
+	u32 ldr_mode;
+	struct page *avic_logical_id_table_page;
+	struct page *avic_physical_id_table_page;
+	struct hlist_node hnode;
+
+	struct kvm_sev_info sev_info;
+};
 
 struct kvm_vcpu;
 
@@ -353,6 +374,12 @@ struct enc_region {
 	unsigned long size;
 };
 
+
+static inline struct kvm_svm *to_kvm_svm(struct kvm *kvm)
+{
+	return container_of(kvm, struct kvm_svm, kvm);
+}
+
 static inline bool svm_sev_enabled(void)
 {
 	return max_sev_asid;
@@ -360,14 +387,14 @@ static inline bool svm_sev_enabled(void)
 
 static inline bool sev_guest(struct kvm *kvm)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 
 	return sev->active;
 }
 
 static inline int sev_get_asid(struct kvm *kvm)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 
 	return sev->asid;
 }
@@ -1084,7 +1111,7 @@ static void disable_nmi_singlestep(struct vcpu_svm *svm)
 }
 
 /* Note:
- * This hash table is used to map VM_ID to a struct kvm_arch,
+ * This hash table is used to map VM_ID to a struct kvm_svm,
  * when handling AMD IOMMU GALOG notification to schedule in
  * a particular vCPU.
  */
@@ -1101,7 +1128,7 @@ static DEFINE_SPINLOCK(svm_vm_data_hash_lock);
 static int avic_ga_log_notifier(u32 ga_tag)
 {
 	unsigned long flags;
-	struct kvm_arch *ka = NULL;
+	struct kvm_svm *kvm_svm;
 	struct kvm_vcpu *vcpu = NULL;
 	u32 vm_id = AVIC_GATAG_TO_VMID(ga_tag);
 	u32 vcpu_id = AVIC_GATAG_TO_VCPUID(ga_tag);
@@ -1109,13 +1136,10 @@ static int avic_ga_log_notifier(u32 ga_tag)
 	pr_debug("SVM: %s: vm_id=%#x, vcpu_id=%#x\n", __func__, vm_id, vcpu_id);
 
 	spin_lock_irqsave(&svm_vm_data_hash_lock, flags);
-	hash_for_each_possible(svm_vm_data_hash, ka, hnode, vm_id) {
-		struct kvm *kvm = container_of(ka, struct kvm, arch);
-		struct kvm_arch *vm_data = &kvm->arch;
-
-		if (vm_data->avic_vm_id != vm_id)
+	hash_for_each_possible(svm_vm_data_hash, kvm_svm, hnode, vm_id) {
+		if (kvm_svm->avic_vm_id != vm_id)
 			continue;
-		vcpu = kvm_get_vcpu_by_id(kvm, vcpu_id);
+		vcpu = kvm_get_vcpu_by_id(&kvm_svm->kvm, vcpu_id);
 		break;
 	}
 	spin_unlock_irqrestore(&svm_vm_data_hash_lock, flags);
@@ -1329,10 +1353,10 @@ static void svm_write_tsc_offset(struct kvm_vcpu *vcpu, u64 offset)
 static void avic_init_vmcb(struct vcpu_svm *svm)
 {
 	struct vmcb *vmcb = svm->vmcb;
-	struct kvm_arch *vm_data = &svm->vcpu.kvm->arch;
+	struct kvm_svm *kvm_svm = to_kvm_svm(svm->vcpu.kvm);
 	phys_addr_t bpa = __sme_set(page_to_phys(svm->avic_backing_page));
-	phys_addr_t lpa = __sme_set(page_to_phys(vm_data->avic_logical_id_table_page));
-	phys_addr_t ppa = __sme_set(page_to_phys(vm_data->avic_physical_id_table_page));
+	phys_addr_t lpa = __sme_set(page_to_phys(kvm_svm->avic_logical_id_table_page));
+	phys_addr_t ppa = __sme_set(page_to_phys(kvm_svm->avic_physical_id_table_page));
 
 	vmcb->control.avic_backing_page = bpa & AVIC_HPA_MASK;
 	vmcb->control.avic_logical_id = lpa & AVIC_HPA_MASK;
@@ -1364,6 +1388,14 @@ static void init_vmcb(struct vcpu_svm *svm)
 	set_exception_intercept(svm, MC_VECTOR);
 	set_exception_intercept(svm, AC_VECTOR);
 	set_exception_intercept(svm, DB_VECTOR);
+	/*
+	 * Guest access to VMware backdoor ports could legitimately
+	 * trigger #GP because of TSS I/O permission bitmap.
+	 * We intercept those #GP and allow access to them anyway
+	 * as VMware does.
+	 */
+	if (enable_vmware_backdoor)
+		set_exception_intercept(svm, GP_VECTOR);
 
 	set_intercept(svm, INTERCEPT_INTR);
 	set_intercept(svm, INTERCEPT_NMI);
@@ -1372,7 +1404,6 @@ static void init_vmcb(struct vcpu_svm *svm)
 	set_intercept(svm, INTERCEPT_RDPMC);
 	set_intercept(svm, INTERCEPT_CPUID);
 	set_intercept(svm, INTERCEPT_INVD);
-	set_intercept(svm, INTERCEPT_HLT);
 	set_intercept(svm, INTERCEPT_INVLPG);
 	set_intercept(svm, INTERCEPT_INVLPGA);
 	set_intercept(svm, INTERCEPT_IOIO_PROT);
@@ -1390,10 +1421,13 @@ static void init_vmcb(struct vcpu_svm *svm)
 	set_intercept(svm, INTERCEPT_XSETBV);
 	set_intercept(svm, INTERCEPT_RSM);
 
-	if (!kvm_mwait_in_guest()) {
+	if (!kvm_mwait_in_guest(svm->vcpu.kvm)) {
 		set_intercept(svm, INTERCEPT_MONITOR);
 		set_intercept(svm, INTERCEPT_MWAIT);
 	}
+
+	if (!kvm_hlt_in_guest(svm->vcpu.kvm))
+		set_intercept(svm, INTERCEPT_HLT);
 
 	control->iopm_base_pa = __sme_set(iopm_base);
 	control->msrpm_base_pa = __sme_set(__pa(svm->msrpm));
@@ -1450,7 +1484,8 @@ static void init_vmcb(struct vcpu_svm *svm)
 	svm->nested.vmcb = 0;
 	svm->vcpu.arch.hflags = 0;
 
-	if (boot_cpu_has(X86_FEATURE_PAUSEFILTER)) {
+	if (boot_cpu_has(X86_FEATURE_PAUSEFILTER) &&
+	    !kvm_pause_in_guest(svm->vcpu.kvm)) {
 		control->pause_filter_count = 3000;
 		set_intercept(svm, INTERCEPT_PAUSE);
 	}
@@ -1489,12 +1524,12 @@ static u64 *avic_get_physical_id_entry(struct kvm_vcpu *vcpu,
 				       unsigned int index)
 {
 	u64 *avic_physical_id_table;
-	struct kvm_arch *vm_data = &vcpu->kvm->arch;
+	struct kvm_svm *kvm_svm = to_kvm_svm(vcpu->kvm);
 
 	if (index >= AVIC_MAX_PHYSICAL_ID_COUNT)
 		return NULL;
 
-	avic_physical_id_table = page_address(vm_data->avic_physical_id_table_page);
+	avic_physical_id_table = page_address(kvm_svm->avic_physical_id_table_page);
 
 	return &avic_physical_id_table[index];
 }
@@ -1577,7 +1612,7 @@ static void __sev_asid_free(int asid)
 
 static void sev_asid_free(struct kvm *kvm)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 
 	__sev_asid_free(sev->asid);
 }
@@ -1617,7 +1652,7 @@ static struct page **sev_pin_memory(struct kvm *kvm, unsigned long uaddr,
 				    unsigned long ulen, unsigned long *n,
 				    int write)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	unsigned long npages, npinned, size;
 	unsigned long locked, lock_limit;
 	struct page **pages;
@@ -1668,7 +1703,7 @@ err:
 static void sev_unpin_memory(struct kvm *kvm, struct page **pages,
 			     unsigned long npages)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 
 	release_pages(pages, npages);
 	kvfree(pages);
@@ -1706,9 +1741,20 @@ static void __unregister_enc_region_locked(struct kvm *kvm,
 	kfree(region);
 }
 
+static struct kvm *svm_vm_alloc(void)
+{
+	struct kvm_svm *kvm_svm = kzalloc(sizeof(struct kvm_svm), GFP_KERNEL);
+	return &kvm_svm->kvm;
+}
+
+static void svm_vm_free(struct kvm *kvm)
+{
+	kfree(to_kvm_svm(kvm));
+}
+
 static void sev_vm_destroy(struct kvm *kvm)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct list_head *head = &sev->regions_list;
 	struct list_head *pos, *q;
 
@@ -1737,18 +1783,18 @@ static void sev_vm_destroy(struct kvm *kvm)
 static void avic_vm_destroy(struct kvm *kvm)
 {
 	unsigned long flags;
-	struct kvm_arch *vm_data = &kvm->arch;
+	struct kvm_svm *kvm_svm = to_kvm_svm(kvm);
 
 	if (!avic)
 		return;
 
-	if (vm_data->avic_logical_id_table_page)
-		__free_page(vm_data->avic_logical_id_table_page);
-	if (vm_data->avic_physical_id_table_page)
-		__free_page(vm_data->avic_physical_id_table_page);
+	if (kvm_svm->avic_logical_id_table_page)
+		__free_page(kvm_svm->avic_logical_id_table_page);
+	if (kvm_svm->avic_physical_id_table_page)
+		__free_page(kvm_svm->avic_physical_id_table_page);
 
 	spin_lock_irqsave(&svm_vm_data_hash_lock, flags);
-	hash_del(&vm_data->hnode);
+	hash_del(&kvm_svm->hnode);
 	spin_unlock_irqrestore(&svm_vm_data_hash_lock, flags);
 }
 
@@ -1762,10 +1808,10 @@ static int avic_vm_init(struct kvm *kvm)
 {
 	unsigned long flags;
 	int err = -ENOMEM;
-	struct kvm_arch *vm_data = &kvm->arch;
+	struct kvm_svm *kvm_svm = to_kvm_svm(kvm);
+	struct kvm_svm *k2;
 	struct page *p_page;
 	struct page *l_page;
-	struct kvm_arch *ka;
 	u32 vm_id;
 
 	if (!avic)
@@ -1776,7 +1822,7 @@ static int avic_vm_init(struct kvm *kvm)
 	if (!p_page)
 		goto free_avic;
 
-	vm_data->avic_physical_id_table_page = p_page;
+	kvm_svm->avic_physical_id_table_page = p_page;
 	clear_page(page_address(p_page));
 
 	/* Allocating logical APIC ID table (4KB) */
@@ -1784,7 +1830,7 @@ static int avic_vm_init(struct kvm *kvm)
 	if (!l_page)
 		goto free_avic;
 
-	vm_data->avic_logical_id_table_page = l_page;
+	kvm_svm->avic_logical_id_table_page = l_page;
 	clear_page(page_address(l_page));
 
 	spin_lock_irqsave(&svm_vm_data_hash_lock, flags);
@@ -1796,15 +1842,13 @@ static int avic_vm_init(struct kvm *kvm)
 	}
 	/* Is it still in use? Only possible if wrapped at least once */
 	if (next_vm_id_wrapped) {
-		hash_for_each_possible(svm_vm_data_hash, ka, hnode, vm_id) {
-			struct kvm *k2 = container_of(ka, struct kvm, arch);
-			struct kvm_arch *vd2 = &k2->arch;
-			if (vd2->avic_vm_id == vm_id)
+		hash_for_each_possible(svm_vm_data_hash, k2, hnode, vm_id) {
+			if (k2->avic_vm_id == vm_id)
 				goto again;
 		}
 	}
-	vm_data->avic_vm_id = vm_id;
-	hash_add(svm_vm_data_hash, &vm_data->hnode, vm_data->avic_vm_id);
+	kvm_svm->avic_vm_id = vm_id;
+	hash_add(svm_vm_data_hash, &kvm_svm->hnode, kvm_svm->avic_vm_id);
 	spin_unlock_irqrestore(&svm_vm_data_hash_lock, flags);
 
 	return 0;
@@ -2552,6 +2596,23 @@ static int ac_interception(struct vcpu_svm *svm)
 	return 1;
 }
 
+static int gp_interception(struct vcpu_svm *svm)
+{
+	struct kvm_vcpu *vcpu = &svm->vcpu;
+	u32 error_code = svm->vmcb->control.exit_info_1;
+	int er;
+
+	WARN_ON_ONCE(!enable_vmware_backdoor);
+
+	er = emulate_instruction(vcpu,
+		EMULTYPE_VMWARE | EMULTYPE_NO_UD_ON_FAIL);
+	if (er == EMULATE_USER_EXIT)
+		return 0;
+	else if (er != EMULATE_DONE)
+		kvm_queue_exception_e(vcpu, GP_VECTOR, error_code);
+	return 1;
+}
+
 static bool is_erratum_383(void)
 {
 	int err, i;
@@ -2640,7 +2701,7 @@ static int io_interception(struct vcpu_svm *svm)
 {
 	struct kvm_vcpu *vcpu = &svm->vcpu;
 	u32 io_info = svm->vmcb->control.exit_info_1; /* address size bug? */
-	int size, in, string, ret;
+	int size, in, string;
 	unsigned port;
 
 	++svm->vcpu.stat.io_exits;
@@ -2652,16 +2713,8 @@ static int io_interception(struct vcpu_svm *svm)
 	port = io_info >> 16;
 	size = (io_info & SVM_IOIO_SIZE_MASK) >> SVM_IOIO_SIZE_SHIFT;
 	svm->next_rip = svm->vmcb->control.exit_info_2;
-	ret = kvm_skip_emulated_instruction(&svm->vcpu);
 
-	/*
-	 * TODO: we might be squashing a KVM_GUESTDBG_SINGLESTEP-triggered
-	 * KVM_EXIT_DEBUG here.
-	 */
-	if (in)
-		return kvm_fast_pio_in(vcpu, size, port) && ret;
-	else
-		return kvm_fast_pio_out(vcpu, size, port) && ret;
+	return kvm_fast_pio(&svm->vcpu, size, port, in);
 }
 
 static int nmi_interception(struct vcpu_svm *svm)
@@ -4324,7 +4377,7 @@ static int avic_incomplete_ipi_interception(struct vcpu_svm *svm)
 
 static u32 *avic_get_logical_id_entry(struct kvm_vcpu *vcpu, u32 ldr, bool flat)
 {
-	struct kvm_arch *vm_data = &vcpu->kvm->arch;
+	struct kvm_svm *kvm_svm = to_kvm_svm(vcpu->kvm);
 	int index;
 	u32 *logical_apic_id_table;
 	int dlid = GET_APIC_LOGICAL_ID(ldr);
@@ -4346,7 +4399,7 @@ static u32 *avic_get_logical_id_entry(struct kvm_vcpu *vcpu, u32 ldr, bool flat)
 		index = (cluster << 2) + apic;
 	}
 
-	logical_apic_id_table = (u32 *) page_address(vm_data->avic_logical_id_table_page);
+	logical_apic_id_table = (u32 *) page_address(kvm_svm->avic_logical_id_table_page);
 
 	return &logical_apic_id_table[index];
 }
@@ -4426,7 +4479,7 @@ static int avic_handle_apic_id_update(struct kvm_vcpu *vcpu)
 static int avic_handle_dfr_update(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
-	struct kvm_arch *vm_data = &vcpu->kvm->arch;
+	struct kvm_svm *kvm_svm = to_kvm_svm(vcpu->kvm);
 	u32 dfr = kvm_lapic_get_reg(vcpu->arch.apic, APIC_DFR);
 	u32 mod = (dfr >> 28) & 0xf;
 
@@ -4435,11 +4488,11 @@ static int avic_handle_dfr_update(struct kvm_vcpu *vcpu)
 	 * If this changes, we need to flush the AVIC logical
 	 * APID id table.
 	 */
-	if (vm_data->ldr_mode == mod)
+	if (kvm_svm->ldr_mode == mod)
 		return 0;
 
-	clear_page(page_address(vm_data->avic_logical_id_table_page));
-	vm_data->ldr_mode = mod;
+	clear_page(page_address(kvm_svm->avic_logical_id_table_page));
+	kvm_svm->ldr_mode = mod;
 
 	if (svm->ldr_reg)
 		avic_handle_ldr_update(vcpu);
@@ -4559,6 +4612,7 @@ static int (*const svm_exit_handlers[])(struct vcpu_svm *svm) = {
 	[SVM_EXIT_EXCP_BASE + PF_VECTOR]	= pf_interception,
 	[SVM_EXIT_EXCP_BASE + MC_VECTOR]	= mc_interception,
 	[SVM_EXIT_EXCP_BASE + AC_VECTOR]	= ac_interception,
+	[SVM_EXIT_EXCP_BASE + GP_VECTOR]	= gp_interception,
 	[SVM_EXIT_INTR]				= intr_interception,
 	[SVM_EXIT_NMI]				= nmi_interception,
 	[SVM_EXIT_SMI]				= nop_on_interception,
@@ -5074,7 +5128,7 @@ static int svm_update_pi_irte(struct kvm *kvm, unsigned int host_irq,
 			/* Try to enable guest_mode in IRTE */
 			pi.base = __sme_set(page_to_phys(svm->avic_backing_page) &
 					    AVIC_HPA_MASK);
-			pi.ga_tag = AVIC_GATAG(kvm->arch.avic_vm_id,
+			pi.ga_tag = AVIC_GATAG(to_kvm_svm(kvm)->avic_vm_id,
 						     svm->vcpu.vcpu_id);
 			pi.is_guest_mode = true;
 			pi.vcpu_data = &vcpu_info;
@@ -5234,6 +5288,11 @@ static void enable_nmi_window(struct kvm_vcpu *vcpu)
 }
 
 static int svm_set_tss_addr(struct kvm *kvm, unsigned int addr)
+{
+	return 0;
+}
+
+static int svm_set_identity_map_addr(struct kvm *kvm, u64 ident_addr)
 {
 	return 0;
 }
@@ -6038,7 +6097,7 @@ static int sev_asid_new(void)
 
 static int sev_guest_init(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	int asid, ret;
 
 	ret = -EBUSY;
@@ -6103,14 +6162,14 @@ static int __sev_issue_cmd(int fd, int id, void *data, int *error)
 
 static int sev_issue_cmd(struct kvm *kvm, int id, void *data, int *error)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 
 	return __sev_issue_cmd(sev->fd, id, data, error);
 }
 
 static int sev_launch_start(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct sev_data_launch_start *start;
 	struct kvm_sev_launch_start params;
 	void *dh_blob, *session_blob;
@@ -6208,7 +6267,7 @@ static int get_num_contig_pages(int idx, struct page **inpages,
 static int sev_launch_update_data(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
 	unsigned long vaddr, vaddr_end, next_vaddr, npages, size;
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct kvm_sev_launch_update_data params;
 	struct sev_data_launch_update_data *data;
 	struct page **inpages;
@@ -6284,7 +6343,7 @@ e_free:
 static int sev_launch_measure(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
 	void __user *measure = (void __user *)(uintptr_t)argp->data;
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct sev_data_launch_measure *data;
 	struct kvm_sev_launch_measure params;
 	void __user *p = NULL;
@@ -6352,7 +6411,7 @@ e_free:
 
 static int sev_launch_finish(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct sev_data_launch_finish *data;
 	int ret;
 
@@ -6372,7 +6431,7 @@ static int sev_launch_finish(struct kvm *kvm, struct kvm_sev_cmd *argp)
 
 static int sev_guest_status(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct kvm_sev_guest_status params;
 	struct sev_data_guest_status *data;
 	int ret;
@@ -6404,7 +6463,7 @@ static int __sev_issue_dbg_cmd(struct kvm *kvm, unsigned long src,
 			       unsigned long dst, int size,
 			       int *error, bool enc)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct sev_data_dbg *data;
 	int ret;
 
@@ -6636,7 +6695,7 @@ err:
 
 static int sev_launch_secret(struct kvm *kvm, struct kvm_sev_cmd *argp)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct sev_data_launch_secret *data;
 	struct kvm_sev_launch_secret params;
 	struct page **pages;
@@ -6760,7 +6819,7 @@ out:
 static int svm_register_enc_region(struct kvm *kvm,
 				   struct kvm_enc_region *range)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct enc_region *region;
 	int ret = 0;
 
@@ -6802,7 +6861,7 @@ e_free:
 static struct enc_region *
 find_enc_region(struct kvm *kvm, struct kvm_enc_region *range)
 {
-	struct kvm_sev_info *sev = &kvm->arch.sev_info;
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
 	struct list_head *head = &sev->regions_list;
 	struct enc_region *i;
 
@@ -6860,6 +6919,8 @@ static struct kvm_x86_ops svm_x86_ops __ro_after_init = {
 	.vcpu_free = svm_free_vcpu,
 	.vcpu_reset = svm_vcpu_reset,
 
+	.vm_alloc = svm_vm_alloc,
+	.vm_free = svm_vm_free,
 	.vm_init = avic_vm_init,
 	.vm_destroy = svm_vm_destroy,
 
@@ -6926,6 +6987,7 @@ static struct kvm_x86_ops svm_x86_ops __ro_after_init = {
 	.apicv_post_state_restore = avic_post_state_restore,
 
 	.set_tss_addr = svm_set_tss_addr,
+	.set_identity_map_addr = svm_set_identity_map_addr,
 	.get_tdp_level = get_npt_level,
 	.get_mt_mask = svm_get_mt_mask,
 

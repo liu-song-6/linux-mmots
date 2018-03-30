@@ -382,7 +382,11 @@ static ssize_t ucma_get_event(struct ucma_file *file, const char __user *inbuf,
 	struct ucma_event *uevent;
 	int ret = 0;
 
-	if (out_len < sizeof uevent->resp)
+	/*
+	 * Old 32 bit user space does not send the 4 byte padding in the
+	 * reserved field. We don't care, allow it to keep working.
+	 */
+	if (out_len < sizeof(uevent->resp) - sizeof(uevent->resp.reserved))
 		return -ENOSPC;
 
 	if (copy_from_user(&cmd, inbuf, sizeof(cmd)))
@@ -417,7 +421,8 @@ static ssize_t ucma_get_event(struct ucma_file *file, const char __user *inbuf,
 	}
 
 	if (copy_to_user((void __user *)(unsigned long)cmd.response,
-			 &uevent->resp, sizeof uevent->resp)) {
+			 &uevent->resp,
+			 min_t(size_t, out_len, sizeof(uevent->resp)))) {
 		ret = -EFAULT;
 		goto done;
 	}
@@ -477,8 +482,8 @@ static ssize_t ucma_create_id(struct ucma_file *file, const char __user *inbuf,
 		return -ENOMEM;
 
 	ctx->uid = cmd.uid;
-	cm_id = rdma_create_id(current->nsproxy->net_ns,
-			       ucma_event_handler, ctx, cmd.ps, qp_type);
+	cm_id = __rdma_create_id(current->nsproxy->net_ns,
+				ucma_event_handler, ctx, cmd.ps, qp_type, NULL);
 	if (IS_ERR(cm_id)) {
 		ret = PTR_ERR(cm_id);
 		goto err1;
@@ -1094,12 +1099,12 @@ static ssize_t ucma_accept(struct ucma_file *file, const char __user *inbuf,
 	if (cmd.conn_param.valid) {
 		ucma_copy_conn_param(ctx->cm_id, &conn_param, &cmd.conn_param);
 		mutex_lock(&file->mut);
-		ret = rdma_accept(ctx->cm_id, &conn_param);
+		ret = __rdma_accept(ctx->cm_id, &conn_param, NULL);
 		if (!ret)
 			ctx->uid = cmd.uid;
 		mutex_unlock(&file->mut);
 	} else
-		ret = rdma_accept(ctx->cm_id, NULL);
+		ret = __rdma_accept(ctx->cm_id, NULL, NULL);
 
 	ucma_put_ctx(ctx);
 	return ret;
