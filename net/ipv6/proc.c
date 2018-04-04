@@ -30,10 +30,8 @@
 #include <net/transp_v6.h>
 #include <net/ipv6.h>
 
-#define MAX4(a, b, c, d) \
-	max_t(u32, max_t(u32, a, b), max_t(u32, c, d))
-#define SNMP_MIB_MAX MAX4(UDP_MIB_MAX, TCP_MIB_MAX, \
-			IPSTATS_MIB_MAX, ICMP_MIB_MAX)
+#define SNMP_MIB_MAX const_max(const_max(UDP_MIB_MAX, TCP_MIB_MAX), \
+			       const_max(IPSTATS_MIB_MAX, ICMP_MIB_MAX))
 
 static int sockstat6_seq_show(struct seq_file *seq, void *v)
 {
@@ -199,7 +197,7 @@ static void snmp6_seq_show_item(struct seq_file *seq, void __percpu *pcpumib,
 	int i;
 
 	if (pcpumib) {
-		memset(buff, 0, sizeof(unsigned long) * SNMP_MIB_MAX);
+		memset(buff, 0, sizeof(buff));
 
 		snmp_get_cpu_field_batch(buff, itemlist, pcpumib);
 		for (i = 0; itemlist[i].name; i++)
@@ -218,7 +216,7 @@ static void snmp6_seq_show_item64(struct seq_file *seq, void __percpu *mib,
 	u64 buff64[SNMP_MIB_MAX];
 	int i;
 
-	memset(buff64, 0, sizeof(u64) * SNMP_MIB_MAX);
+	memset(buff64, 0, sizeof(buff64));
 
 	snmp_get_cpu_field64_batch(buff64, itemlist, mib, syncpoff);
 	for (i = 0; itemlist[i].name; i++)
