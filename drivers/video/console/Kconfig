@@ -8,11 +8,7 @@ config VGA_CONSOLE
 	bool "VGA text console" if EXPERT || !X86
 	depends on !4xx && !PPC_8xx && !SPARC && !M68K && !PARISC &&  !SUPERH && \
 		(!ARM || ARCH_FOOTBRIDGE || ARCH_INTEGRATOR || ARCH_NETWINDER) && \
-<<<<<<< HEAD
-		!ARM64 && !ARC && !MICROBLAZE && !OPENRISC && !NDS32
-=======
 		!ARM64 && !ARC && !MICROBLAZE && !OPENRISC && !NDS32 && HAS_IOMEM && !S390
->>>>>>> linux-next/akpm-base
 	default y
 	help
 	  Saying Y here will allow you to use Linux in text mode through a

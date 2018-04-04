@@ -131,11 +131,7 @@ tables.c: mktables
 	./mktables > tables.c
 
 clean:
-<<<<<<< HEAD
-	rm -f *.o *.a mktables mktables.c *.uc int*.c altivec*.c neon*.c tables.c raid6test
-=======
 	rm -f *.o *.a mktables mktables.c *.uc int*.c altivec*.c vpermxor*.c neon*.c tables.c raid6test
->>>>>>> linux-next/akpm-base
 
 spotless: clean
 	rm -f *~

@@ -88,8 +88,6 @@ config HVC_DCC
 	 driver. This console is used through a JTAG only on ARM. If you don't have
 	 a JTAG then you probably don't want this option.
 
-<<<<<<< HEAD
-=======
 config HVC_RISCV_SBI
 	bool "RISC-V SBI console support"
 	depends on RISCV
@@ -100,7 +98,6 @@ config HVC_RISCV_SBI
 
 	  If you don't know what do to here, say Y.
 
->>>>>>> linux-next/akpm-base
 config HVCS
 	tristate "IBM Hypervisor Virtual Console Server support"
 	depends on PPC_PSERIES && HVC_CONSOLE

@@ -272,19 +272,6 @@ static void freeque(struct ipc_namespace *ns, struct kern_ipc_perm *ipcp)
 	ipc_rcu_putref(&msq->q_perm, msg_rcu_free);
 }
 
-<<<<<<< HEAD
-/*
- * Called with msg_ids.rwsem and ipcp locked.
- */
-static inline int msg_security(struct kern_ipc_perm *ipcp, int msgflg)
-{
-	struct msg_queue *msq = container_of(ipcp, struct msg_queue, q_perm);
-
-	return security_msg_queue_associate(msq, msgflg);
-}
-
-=======
->>>>>>> linux-next/akpm-base
 long ksys_msgget(key_t key, int msgflg)
 {
 	struct ipc_namespace *ns;

@@ -383,8 +383,5 @@ extern int __sys_socketpair(int family, int type, int protocol,
 extern int __sys_shutdown(int fd, int how);
 
 
-<<<<<<< HEAD
-=======
 extern struct ns_common *get_net_ns(struct ns_common *ns);
->>>>>>> linux-next/akpm-base
 #endif /* _LINUX_SOCKET_H */

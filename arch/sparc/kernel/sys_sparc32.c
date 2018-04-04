@@ -54,26 +54,12 @@
 
 COMPAT_SYSCALL_DEFINE3(truncate64, const char __user *, path, u32, high, u32, low)
 {
-<<<<<<< HEAD
-	if ((int)high < 0)
-		return -EINVAL;
-	else
-		return ksys_truncate(path, (high << 32) | low);
-=======
 	return ksys_truncate(path, ((u64)high << 32) | low);
->>>>>>> linux-next/akpm-base
 }
 
 COMPAT_SYSCALL_DEFINE3(ftruncate64, unsigned int, fd, u32, high, u32, low)
 {
-<<<<<<< HEAD
-	if ((int)high < 0)
-		return -EINVAL;
-	else
-		return ksys_ftruncate(fd, (high << 32) | low);
-=======
 	return ksys_ftruncate(fd, ((u64)high << 32) | low);
->>>>>>> linux-next/akpm-base
 }
 
 static int cp_compat_stat64(struct kstat *stat,
@@ -205,69 +191,42 @@ COMPAT_SYSCALL_DEFINE5(rt_sigaction, int, sig,
 COMPAT_SYSCALL_DEFINE5(pread64, unsigned int, fd, char __user *, ubuf,
 			compat_size_t, count, u32, poshi, u32, poslo)
 {
-<<<<<<< HEAD
-	return ksys_pread64(fd, ubuf, count, (poshi << 32) | poslo);
-=======
 	return ksys_pread64(fd, ubuf, count, ((u64)poshi << 32) | poslo);
->>>>>>> linux-next/akpm-base
 }
 
 COMPAT_SYSCALL_DEFINE5(pwrite64, unsigned int, fd, char __user *, ubuf,
 			compat_size_t, count, u32, poshi, u32, poslo)
 {
-<<<<<<< HEAD
-	return ksys_pwrite64(fd, ubuf, count, (poshi << 32) | poslo);
-=======
 	return ksys_pwrite64(fd, ubuf, count, ((u64)poshi << 32) | poslo);
->>>>>>> linux-next/akpm-base
 }
 
 COMPAT_SYSCALL_DEFINE4(readahead, int, fd, u32, offhi, u32, offlo,
 		     compat_size_t, count)
 {
-<<<<<<< HEAD
-	return ksys_readahead(fd, (offhi << 32) | offlo, count);
-=======
 	return ksys_readahead(fd, ((u64)offhi << 32) | offlo, count);
->>>>>>> linux-next/akpm-base
 }
 
 COMPAT_SYSCALL_DEFINE5(fadvise64, int, fd, u32, offhi, u32, offlo,
 			  compat_size_t, len, int, advice)
 {
-<<<<<<< HEAD
-	return ksys_fadvise64_64(fd, (offhi << 32) | offlo, len, advice);
-=======
 	return ksys_fadvise64_64(fd, ((u64)offhi << 32) | offlo, len, advice);
->>>>>>> linux-next/akpm-base
 }
 
 COMPAT_SYSCALL_DEFINE6(fadvise64_64, int, fd, u32, offhi, u32, offlo,
 			     u32, lenhi, u32, lenlo, int, advice)
 {
 	return ksys_fadvise64_64(fd,
-<<<<<<< HEAD
-				 (offhi << 32) | offlo,
-				 (lenhi << 32) | lenlo,
-				 advice);
-=======
 				((u64)offhi << 32) | offlo,
 				((u64)lenhi << 32) | lenlo,
 				advice);
->>>>>>> linux-next/akpm-base
 }
 
 COMPAT_SYSCALL_DEFINE6(sync_file_range, unsigned int, fd, u32, off_high, u32, off_low,
 			u32, nb_high, u32, nb_low, unsigned int, flags)
 {
 	return ksys_sync_file_range(fd,
-<<<<<<< HEAD
-				   (off_high << 32) | off_low,
-				   (nb_high << 32) | nb_low,
-=======
 				   ((u64)off_high << 32) | off_low,
 				   ((u64)nb_high << 32) | nb_low,
->>>>>>> linux-next/akpm-base
 				   flags);
 }
 

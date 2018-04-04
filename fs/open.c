@@ -720,14 +720,6 @@ out:
 }
 
 SYSCALL_DEFINE3(fchown, unsigned int, fd, uid_t, user, gid_t, group)
-<<<<<<< HEAD
-{
-	return ksys_fchown(fd, user, group);
-}
-
-int open_check_o_direct(struct file *f)
-=======
->>>>>>> linux-next/akpm-base
 {
 	return ksys_fchown(fd, user, group);
 }
