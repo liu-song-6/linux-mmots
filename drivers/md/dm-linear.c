@@ -59,6 +59,7 @@ static int linear_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
 	ti->num_flush_bios = 1;
 	ti->num_discard_bios = 1;
+	ti->num_secure_erase_bios = 1;
 	ti->num_write_same_bios = 1;
 	ti->num_write_zeroes_bios = 1;
 	ti->private = lc;
@@ -136,6 +137,7 @@ static int linear_prepare_ioctl(struct dm_target *ti,
 	struct dm_dev *dev = lc->dev;
 
 	*bdev = dev->bdev;
+	*mode = dev->mode;
 
 	/*
 	 * Only pass ioctls through if the device sizes match exactly.
@@ -154,6 +156,7 @@ static int linear_iterate_devices(struct dm_target *ti,
 	return fn(ti, lc->dev, lc->start, ti->len, data);
 }
 
+#if IS_ENABLED(CONFIG_DAX_DRIVER)
 static long linear_dax_direct_access(struct dm_target *ti, pgoff_t pgoff,
 		long nr_pages, void **kaddr, pfn_t *pfn)
 {
@@ -183,6 +186,11 @@ static size_t linear_dax_copy_from_iter(struct dm_target *ti, pgoff_t pgoff,
 		return 0;
 	return dax_copy_from_iter(dax_dev, pgoff, addr, bytes, i);
 }
+
+#else
+#define linear_dax_direct_access NULL
+#define linear_dax_copy_from_iter NULL
+#endif
 
 static struct target_type linear_target = {
 	.name   = "linear",

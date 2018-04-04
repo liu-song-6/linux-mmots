@@ -207,7 +207,12 @@ typedef struct siginfo {
 #define __FPE_DECERR	11	/* packed decimal error */
 #define __FPE_INVASC	12	/* invalid ASCII digit */
 #define __FPE_INVDEC	13	/* invalid decimal digit */
+<<<<<<< HEAD
 #define NSIGFPE		13
+=======
+#define FPE_FLTUNK	14	/* undiagnosed floating-point exception */
+#define NSIGFPE		14
+>>>>>>> linux-next/akpm-base
 
 /*
  * SIGSEGV si_codes
@@ -220,7 +225,10 @@ typedef struct siginfo {
 #else
 # define SEGV_PKUERR	4	/* failed protection key checks */
 #endif
-#define NSIGSEGV	4
+#define SEGV_ACCADI	5	/* ADI not enabled for mapped object */
+#define SEGV_ADIDERR	6	/* Disrupting MCD error */
+#define SEGV_ADIPERR	7	/* Precise MCD exception */
+#define NSIGSEGV	7
 
 /*
  * SIGBUS si_codes

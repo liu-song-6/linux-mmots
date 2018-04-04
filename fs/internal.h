@@ -125,7 +125,10 @@ int do_fchmodat(int dfd, const char __user *filename, umode_t mode);
 int do_fchownat(int dfd, const char __user *filename, uid_t user, gid_t group,
 		int flag);
 
+<<<<<<< HEAD
 extern int open_check_o_direct(struct file *f);
+=======
+>>>>>>> linux-next/akpm-base
 extern int vfs_open(const struct path *, struct file *, const struct cred *);
 extern struct file *filp_clone_open(struct file *);
 

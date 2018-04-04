@@ -1097,6 +1097,60 @@ static size_t dm_dax_copy_from_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 	return ret;
 }
 
+static int dm_dax_dev_claim(struct dm_target *ti, struct dm_dev *dev,
+		sector_t start, sector_t len, void *owner)
+{
+	if (fs_dax_claim(dev->dax_dev, owner))
+		return 0;
+	/*
+	 * Outside of a kernel bug there is no reason a dax_dev should
+	 * fail a claim attempt. Device-mapper should have exclusive
+	 * ownership of the dm_dev and the filesystem should have
+	 * exclusive ownership of the dm_target.
+	 */
+	WARN_ON_ONCE(1);
+	return -ENXIO;
+}
+
+static int dm_dax_dev_release(struct dm_target *ti, struct dm_dev *dev,
+		sector_t start, sector_t len, void *owner)
+{
+	fs_dax_release(dev->dax_dev, owner);
+	return 0;
+}
+
+static struct dax_device *dm_dax_iterate(struct dax_device *dax_dev,
+		iterate_devices_callout_fn fn, void *arg)
+{
+	struct mapped_device *md = dax_get_private(dax_dev);
+	struct dm_table *map;
+	struct dm_target *ti;
+	int i, srcu_idx;
+
+	map = dm_get_live_table(md, &srcu_idx);
+
+	for (i = 0; i < dm_table_get_num_targets(map); i++) {
+		ti = dm_table_get_target(map, i);
+
+		if (ti->type->iterate_devices)
+			ti->type->iterate_devices(ti, fn, arg);
+	}
+
+	dm_put_live_table(md, srcu_idx);
+	return dax_dev;
+}
+
+static struct dax_device *dm_dax_fs_claim(struct dax_device *dax_dev,
+		void *owner)
+{
+	return dm_dax_iterate(dax_dev, dm_dax_dev_claim, owner);
+}
+
+static void dm_dax_fs_release(struct dax_device *dax_dev, void *owner)
+{
+	dm_dax_iterate(dax_dev, dm_dax_dev_release, owner);
+}
+
 /*
  * A target may call dm_accept_partial_bio only from the map routine.  It is
  * allowed for all bio types except REQ_PREFLUSH and REQ_OP_ZONE_RESET.
@@ -1414,6 +1468,11 @@ static unsigned get_num_discard_bios(struct dm_target *ti)
 	return ti->num_discard_bios;
 }
 
+static unsigned get_num_secure_erase_bios(struct dm_target *ti)
+{
+	return ti->num_secure_erase_bios;
+}
+
 static unsigned get_num_write_same_bios(struct dm_target *ti)
 {
 	return ti->num_write_same_bios;
@@ -1467,6 +1526,11 @@ static int __send_discard(struct clone_info *ci, struct dm_target *ti)
 					   is_split_required_for_discard);
 }
 
+static int __send_secure_erase(struct clone_info *ci, struct dm_target *ti)
+{
+	return __send_changing_extent_only(ci, ti, get_num_secure_erase_bios, NULL);
+}
+
 static int __send_write_same(struct clone_info *ci, struct dm_target *ti)
 {
 	return __send_changing_extent_only(ci, ti, get_num_write_same_bios, NULL);
@@ -1475,6 +1539,25 @@ static int __send_write_same(struct clone_info *ci, struct dm_target *ti)
 static int __send_write_zeroes(struct clone_info *ci, struct dm_target *ti)
 {
 	return __send_changing_extent_only(ci, ti, get_num_write_zeroes_bios, NULL);
+}
+
+static bool __process_abnormal_io(struct clone_info *ci, struct dm_target *ti,
+				  int *result)
+{
+	struct bio *bio = ci->bio;
+
+	if (bio_op(bio) == REQ_OP_DISCARD)
+		*result = __send_discard(ci, ti);
+	else if (bio_op(bio) == REQ_OP_SECURE_ERASE)
+		*result = __send_secure_erase(ci, ti);
+	else if (bio_op(bio) == REQ_OP_WRITE_SAME)
+		*result = __send_write_same(ci, ti);
+	else if (bio_op(bio) == REQ_OP_WRITE_ZEROES)
+		*result = __send_write_zeroes(ci, ti);
+	else
+		return false;
+
+	return true;
 }
 
 /*
@@ -1491,12 +1574,8 @@ static int __split_and_process_non_flush(struct clone_info *ci)
 	if (!dm_target_is_valid(ti))
 		return -EIO;
 
-	if (unlikely(bio_op(bio) == REQ_OP_DISCARD))
-		return __send_discard(ci, ti);
-	else if (unlikely(bio_op(bio) == REQ_OP_WRITE_SAME))
-		return __send_write_same(ci, ti);
-	else if (unlikely(bio_op(bio) == REQ_OP_WRITE_ZEROES))
-		return __send_write_zeroes(ci, ti);
+	if (unlikely(__process_abnormal_io(ci, ti, &r)))
+		return r;
 
 	if (bio_op(bio) == REQ_OP_ZONE_REPORT)
 		len = ci->sector_count;
@@ -1617,9 +1696,12 @@ static blk_qc_t __process_bio(struct mapped_device *md,
 			goto out;
 		}
 
-		tio = alloc_tio(&ci, ti, 0, GFP_NOIO);
 		ci.bio = bio;
 		ci.sector_count = bio_sectors(bio);
+		if (unlikely(__process_abnormal_io(&ci, ti, &error)))
+			goto out;
+
+		tio = alloc_tio(&ci, ti, 0, GFP_NOIO);
 		ret = __clone_and_map_simple_bio(&ci, tio, NULL);
 	}
 out:
@@ -1807,7 +1889,7 @@ static void cleanup_mapped_device(struct mapped_device *md)
 static struct mapped_device *alloc_dev(int minor)
 {
 	int r, numa_node_id = dm_get_numa_node();
-	struct dax_device *dax_dev;
+	struct dax_device *dax_dev = NULL;
 	struct mapped_device *md;
 	void *old_md;
 
@@ -1848,7 +1930,7 @@ static struct mapped_device *alloc_dev(int minor)
 	INIT_LIST_HEAD(&md->table_devices);
 	spin_lock_init(&md->uevent_lock);
 
-	md->queue = blk_alloc_queue_node(GFP_KERNEL, numa_node_id);
+	md->queue = blk_alloc_queue_node(GFP_KERNEL, numa_node_id, NULL);
 	if (!md->queue)
 		goto bad;
 	md->queue->queuedata = md;
@@ -1873,9 +1955,11 @@ static struct mapped_device *alloc_dev(int minor)
 	md->disk->private_data = md;
 	sprintf(md->disk->disk_name, "dm-%d", minor);
 
-	dax_dev = alloc_dax(md, md->disk->disk_name, &dm_dax_ops);
-	if (!dax_dev)
-		goto bad;
+	if (IS_ENABLED(CONFIG_DAX_DRIVER)) {
+		dax_dev = alloc_dax(md, md->disk->disk_name, &dm_dax_ops);
+		if (!dax_dev)
+			goto bad;
+	}
 	md->dax_dev = dax_dev;
 
 	add_disk_no_queue_reg(md->disk);
@@ -3116,6 +3200,8 @@ static const struct block_device_operations dm_blk_dops = {
 static const struct dax_operations dm_dax_ops = {
 	.direct_access = dm_dax_direct_access,
 	.copy_from_iter = dm_dax_copy_from_iter,
+	.fs_claim = dm_dax_fs_claim,
+	.fs_release = dm_dax_fs_release,
 };
 
 /*

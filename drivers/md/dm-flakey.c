@@ -448,6 +448,7 @@ static int flakey_prepare_ioctl(struct dm_target *ti,
 	struct flakey_c *fc = ti->private;
 
 	*bdev = fc->dev->bdev;
+	*mode = fc->dev->mode;
 
 	/*
 	 * Only pass ioctls through if the device sizes match exactly.
