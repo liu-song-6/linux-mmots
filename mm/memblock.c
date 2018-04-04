@@ -1646,7 +1646,7 @@ int __init_memblock memblock_search_pfn_nid(unsigned long pfn,
 	if (mid == -1)
 		return -1;
 
-	*start_pfn = PFN_DOWN(type->regions[mid].base);
+	*start_pfn = PFN_UP(type->regions[mid].base);
 	*end_pfn = PFN_DOWN(type->regions[mid].base + type->regions[mid].size);
 
 	return type->regions[mid].nid;
