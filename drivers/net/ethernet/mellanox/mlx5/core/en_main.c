@@ -3390,17 +3390,10 @@ static int mlx5e_set_features(struct net_device *netdev,
 {
 	netdev_features_t oper_features = netdev->features;
 	int err = 0;
-<<<<<<< HEAD
 
 #define MLX5E_HANDLE_FEATURE(feature, handler) \
 	mlx5e_handle_feature(netdev, &oper_features, features, feature, handler)
 
-=======
-
-#define MLX5E_HANDLE_FEATURE(feature, handler) \
-	mlx5e_handle_feature(netdev, &oper_features, features, feature, handler)
-
->>>>>>> linux-next/akpm-base
 	err |= MLX5E_HANDLE_FEATURE(NETIF_F_LRO, set_feature_lro);
 	err |= MLX5E_HANDLE_FEATURE(NETIF_F_HW_VLAN_CTAG_FILTER,
 				    set_feature_cvlan_filter);
@@ -4050,23 +4043,8 @@ static bool slow_pci_heuristic(struct mlx5_core_dev *mdev)
 	mlx5_core_dbg_once(mdev, "Max link speed = %d, PCI BW = %d\n",
 			   link_speed, pci_bw);
 
-<<<<<<< HEAD
-static bool slow_pci_heuristic(struct mlx5_core_dev *mdev)
-{
-	u32 link_speed = 0;
-	u32 pci_bw = 0;
-
-	mlx5e_get_max_linkspeed(mdev, &link_speed);
-	mlx5e_get_pci_bw(mdev, &pci_bw);
-	mlx5_core_dbg_once(mdev, "Max link speed = %d, PCI BW = %d\n",
-			   link_speed, pci_bw);
-
 #define MLX5E_SLOW_PCI_RATIO (2)
 
-=======
-#define MLX5E_SLOW_PCI_RATIO (2)
-
->>>>>>> linux-next/akpm-base
 	return link_speed && pci_bw &&
 		link_speed > MLX5E_SLOW_PCI_RATIO * pci_bw;
 }

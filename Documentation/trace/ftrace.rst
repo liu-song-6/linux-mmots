@@ -461,23 +461,9 @@ of ftrace. Here is a list of some of the key files:
 		and ticks at the same rate as the hardware clocksource.
 
 	boot:
-<<<<<<< HEAD
-		This is the boot clock (CLOCK_BOOTTIME) and is based on the
-		fast monotonic clock, but also accounts for time spent in
-		suspend. Since the clock access is designed for use in
-		tracing in the suspend path, some side effects are possible
-		if clock is accessed after the suspend time is accounted before
-		the fast mono clock is updated. In this case, the clock update
-		appears to happen slightly sooner than it normally would have.
-		Also on 32-bit systems, it's possible that the 64-bit boot offset
-		sees a partial update. These effects are rare and post
-		processing should be able to handle them. See comments in the
-		ktime_get_boot_fast_ns() function for more information.
-=======
 		Same as mono. Used to be a separate clock which accounted
 		for the time spent in suspend while CLOCK_MONOTONIC did
 		not.
->>>>>>> linux-next/akpm-base
 
 		To set a clock, simply echo the clock name into this file::
 
@@ -557,8 +543,6 @@ of ftrace. Here is a list of some of the key files:
 
 	See events.txt for more information.
 
-<<<<<<< HEAD
-=======
   timestamp_mode:
 
 	Certain tracers may change the timestamp mode used when
@@ -583,7 +567,6 @@ of ftrace. Here is a list of some of the key files:
                  against some other value.  As such it takes up more
                  space and is less efficient.
 
->>>>>>> linux-next/akpm-base
   hwlat_detector:
 
 	Directory for the Hardware Latency Detector.

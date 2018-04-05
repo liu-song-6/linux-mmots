@@ -1634,17 +1634,10 @@ static int sctp_sendmsg_parse(struct sock *sk, struct sctp_cmsgs *cmsgs,
 
 	if (sctp_sstate(sk, LISTENING) && sctp_style(sk, TCP))
 		return -EPIPE;
-<<<<<<< HEAD
 
 	if (msg_len > sk->sk_sndbuf)
 		return -EMSGSIZE;
 
-=======
-
-	if (msg_len > sk->sk_sndbuf)
-		return -EMSGSIZE;
-
->>>>>>> linux-next/akpm-base
 	memset(cmsgs, 0, sizeof(*cmsgs));
 	err = sctp_msghdr_parse(msg, cmsgs);
 	if (err) {
@@ -1703,10 +1696,7 @@ static int sctp_sendmsg_new_asoc(struct sock *sk, __u16 sflags,
 	struct sctp_association *asoc;
 	enum sctp_scope scope;
 	struct cmsghdr *cmsg;
-<<<<<<< HEAD
-=======
 	struct sctp_af *af;
->>>>>>> linux-next/akpm-base
 	int err;
 
 	*tp = NULL;
@@ -1732,37 +1722,6 @@ static int sctp_sendmsg_new_asoc(struct sock *sk, __u16 sflags,
 
 	scope = sctp_scope(daddr);
 
-<<<<<<< HEAD
-	asoc = sctp_association_new(ep, sk, scope, GFP_KERNEL);
-	if (!asoc)
-		return -ENOMEM;
-
-	if (sctp_assoc_set_bind_addr_from_ep(asoc, scope, GFP_KERNEL) < 0) {
-		err = -ENOMEM;
-		goto free;
-	}
-
-	if (cmsgs->init) {
-		struct sctp_initmsg *init = cmsgs->init;
-
-		if (init->sinit_num_ostreams) {
-			__u16 outcnt = init->sinit_num_ostreams;
-
-			asoc->c.sinit_num_ostreams = outcnt;
-			/* outcnt has been changed, need to re-init stream */
-			err = sctp_stream_init(&asoc->stream, outcnt, 0,
-					       GFP_KERNEL);
-			if (err)
-				goto free;
-		}
-
-		if (init->sinit_max_instreams)
-			asoc->c.sinit_max_instreams = init->sinit_max_instreams;
-
-		if (init->sinit_max_attempts)
-			asoc->max_init_attempts = init->sinit_max_attempts;
-
-=======
 	/* Label connection socket for first association 1-to-many
 	 * style for client sequence socket()->sendmsg(). This
 	 * needs to be done before sctp_assoc_add_peer() as that will
@@ -1807,7 +1766,6 @@ static int sctp_sendmsg_new_asoc(struct sock *sk, __u16 sflags,
 		if (init->sinit_max_attempts)
 			asoc->max_init_attempts = init->sinit_max_attempts;
 
->>>>>>> linux-next/akpm-base
 		if (init->sinit_max_init_timeo)
 			asoc->max_init_timeo =
 				msecs_to_jiffies(init->sinit_max_init_timeo);
@@ -1950,7 +1908,6 @@ static int sctp_sendmsg_to_asoc(struct sctp_association *asoc,
 		err = sctp_stream_init_ext(&asoc->stream, sinfo->sinfo_stream);
 		if (err)
 			goto err;
-<<<<<<< HEAD
 	}
 
 	if (sctp_sk(sk)->disable_fragments && msg_len > asoc->frag_point) {
@@ -1958,15 +1915,6 @@ static int sctp_sendmsg_to_asoc(struct sctp_association *asoc,
 		goto err;
 	}
 
-=======
-	}
-
-	if (sctp_sk(sk)->disable_fragments && msg_len > asoc->frag_point) {
-		err = -EMSGSIZE;
-		goto err;
-	}
-
->>>>>>> linux-next/akpm-base
 	if (asoc->pmtu_pending)
 		sctp_assoc_pending_pmtu(asoc);
 

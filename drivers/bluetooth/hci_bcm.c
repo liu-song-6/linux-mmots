@@ -794,16 +794,6 @@ static const struct acpi_gpio_mapping acpi_bcm_int_first_gpios[] = {
 	{ },
 };
 
-<<<<<<< HEAD
-#ifdef CONFIG_ACPI
-/* IRQ polarity of some chipsets are not defined correctly in ACPI table. */
-static const struct dmi_system_id bcm_active_low_irq_dmi_table[] = {
-	{	/* Handle ThinkPad 8 tablets with BCM2E55 chipset ACPI ID */
-		.ident = "Lenovo ThinkPad 8",
-		.matches = {
-			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "LENOVO"),
-			DMI_EXACT_MATCH(DMI_PRODUCT_VERSION, "ThinkPad 8"),
-=======
 /* Some firmware reports an IRQ which does not work (wrong pin in fw table?) */
 static const struct dmi_system_id bcm_broken_irq_dmi_table[] = {
 	{
@@ -813,7 +803,6 @@ static const struct dmi_system_id bcm_broken_irq_dmi_table[] = {
 					"To be filled by OEM."),
 			DMI_EXACT_MATCH(DMI_BOARD_NAME, "T3 MRD"),
 			DMI_EXACT_MATCH(DMI_BOARD_VERSION, "V1.1"),
->>>>>>> linux-next/akpm-base
 		},
 	},
 	{ }
@@ -1012,16 +1001,6 @@ static int bcm_acpi_probe(struct bcm_device *dev)
 		dev->irq_active_low = irq_polarity;
 		dev_warn(dev->dev, "Overwriting IRQ polarity to active %s by module-param\n",
 			 dev->irq_active_low ? "low" : "high");
-<<<<<<< HEAD
-	} else {
-		dmi_id = dmi_first_match(bcm_active_low_irq_dmi_table);
-		if (dmi_id) {
-			dev_warn(dev->dev, "%s: Overwriting IRQ polarity to active low",
-				 dmi_id->ident);
-			dev->irq_active_low = true;
-		}
-=======
->>>>>>> linux-next/akpm-base
 	}
 
 	return 0;

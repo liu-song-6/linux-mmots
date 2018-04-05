@@ -2833,17 +2833,6 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 	size_t  array_size = 0;
 	void __user *user_ptr = NULL;
 	void	**kernel_ptr = NULL;
-<<<<<<< HEAD
-	const size_t ioc_size = _IOC_SIZE(cmd);
-
-	/*  Copy arguments into temp kernel buffer  */
-	if (_IOC_DIR(cmd) != _IOC_NONE) {
-		if (ioc_size <= sizeof(sbuf)) {
-			parg = sbuf;
-		} else {
-			/* too big to allocate from stack */
-			mbuf = kvmalloc(ioc_size, GFP_KERNEL);
-=======
 	size_t	size = _IOC_SIZE(cmd);
 
 	/*  Copy arguments into temp kernel buffer  */
@@ -2853,7 +2842,6 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 		} else {
 			/* too big to allocate from stack */
 			mbuf = kvmalloc(size, GFP_KERNEL);
->>>>>>> linux-next/akpm-base
 			if (NULL == mbuf)
 				return -ENOMEM;
 			parg = mbuf;
@@ -2861,11 +2849,7 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 
 		err = -EFAULT;
 		if (_IOC_DIR(cmd) & _IOC_WRITE) {
-<<<<<<< HEAD
-			unsigned int n = ioc_size;
-=======
 			unsigned int n = size;
->>>>>>> linux-next/akpm-base
 
 			/*
 			 * In some cases, only a few fields are used as input,
@@ -2886,19 +2870,11 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 				goto out;
 
 			/* zero out anything we don't copy from userspace */
-<<<<<<< HEAD
-			if (n < ioc_size)
-				memset((u8 *)parg + n, 0, ioc_size - n);
-		} else {
-			/* read-only ioctl */
-			memset(parg, 0, ioc_size);
-=======
 			if (n < size)
 				memset((u8 *)parg + n, 0, size - n);
 		} else {
 			/* read-only ioctl */
 			memset(parg, 0, size);
->>>>>>> linux-next/akpm-base
 		}
 	}
 
@@ -2956,11 +2932,7 @@ out_array_args:
 	switch (_IOC_DIR(cmd)) {
 	case _IOC_READ:
 	case (_IOC_WRITE | _IOC_READ):
-<<<<<<< HEAD
-		if (copy_to_user((void __user *)arg, parg, ioc_size))
-=======
 		if (copy_to_user((void __user *)arg, parg, size))
->>>>>>> linux-next/akpm-base
 			err = -EFAULT;
 		break;
 	}
