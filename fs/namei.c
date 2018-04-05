@@ -39,6 +39,7 @@
 #include <linux/bitops.h>
 #include <linux/init_task.h>
 #include <linux/uaccess.h>
+#include <linux/build_bug.h>
 
 #include "internal.h"
 #include "mount.h"
@@ -130,6 +131,7 @@ getname_flags(const char __user *filename, int flags, int *empty)
 	struct filename *result;
 	char *kname;
 	int len;
+	BUILD_BUG_ON(offsetof(struct filename, iname) % sizeof(long) != 0);
 
 	result = audit_reusename(filename);
 	if (result)
@@ -927,7 +929,8 @@ static inline int may_follow_link(struct nameidata *nd)
 	if (nd->flags & LOOKUP_RCU)
 		return -ECHILD;
 
-	audit_log_link_denied("follow_link", &nd->stack[0].link);
+	audit_inode(nd->name, nd->stack[0].link.dentry, 0);
+	audit_log_link_denied("follow_link");
 	return -EACCES;
 }
 
@@ -993,7 +996,7 @@ static int may_linkat(struct path *link)
 	if (safe_hardlink_source(inode) || inode_owner_or_capable(inode))
 		return 0;
 
-	audit_log_link_denied("linkat", link);
+	audit_log_link_denied("linkat");
 	return -EPERM;
 }
 
@@ -1474,21 +1477,29 @@ static struct dentry *lookup_dcache(const struct qstr *name,
 }
 
 /*
- * Call i_op->lookup on the dentry.  The dentry must be negative and
- * unhashed.
- *
- * dir->d_inode->i_mutex must be held
+ * Parent directory has inode locked exclusive.  This is one
+ * and only case when ->lookup() gets called on non in-lookup
+ * dentries - as the matter of fact, this only gets called
+ * when directory is guaranteed to have no in-lookup children
+ * at all.
  */
-static struct dentry *lookup_real(struct inode *dir, struct dentry *dentry,
-				  unsigned int flags)
+static struct dentry *__lookup_hash(const struct qstr *name,
+		struct dentry *base, unsigned int flags)
 {
+	struct dentry *dentry = lookup_dcache(name, base, flags);
 	struct dentry *old;
+	struct inode *dir = base->d_inode;
+
+	if (dentry)
+		return dentry;
 
 	/* Don't create child dentry for a dead directory. */
-	if (unlikely(IS_DEADDIR(dir))) {
-		dput(dentry);
+	if (unlikely(IS_DEADDIR(dir)))
 		return ERR_PTR(-ENOENT);
-	}
+
+	dentry = d_alloc(base, name);
+	if (unlikely(!dentry))
+		return ERR_PTR(-ENOMEM);
 
 	old = dir->i_op->lookup(dir, dentry, flags);
 	if (unlikely(old)) {
@@ -1496,21 +1507,6 @@ static struct dentry *lookup_real(struct inode *dir, struct dentry *dentry,
 		dentry = old;
 	}
 	return dentry;
-}
-
-static struct dentry *__lookup_hash(const struct qstr *name,
-		struct dentry *base, unsigned int flags)
-{
-	struct dentry *dentry = lookup_dcache(name, base, flags);
-
-	if (dentry)
-		return dentry;
-
-	dentry = d_alloc(base, name);
-	if (unlikely(!dentry))
-		return ERR_PTR(-ENOMEM);
-
-	return lookup_real(base->d_inode, dentry, flags);
 }
 
 static int lookup_fast(struct nameidata *nd,
@@ -3381,9 +3377,7 @@ finish_open_created:
 		goto out;
 	*opened |= FILE_OPENED;
 opened:
-	error = open_check_o_direct(file);
-	if (!error)
-		error = ima_file_check(file, op->acc_mode, *opened);
+	error = ima_file_check(file, op->acc_mode, *opened);
 	if (!error && will_truncate)
 		error = handle_truncate(file);
 out:
@@ -3463,9 +3457,6 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
 	error = finish_open(file, child, NULL, opened);
 	if (error)
 		goto out2;
-	error = open_check_o_direct(file);
-	if (error)
-		fput(file);
 out2:
 	mnt_drop_write(path.mnt);
 out:

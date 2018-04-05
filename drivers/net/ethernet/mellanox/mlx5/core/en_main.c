@@ -1212,10 +1212,13 @@ static void mlx5e_close_txqsq(struct mlx5e_txqsq *sq)
 {
 	struct mlx5e_channel *c = sq->channel;
 	struct mlx5_core_dev *mdev = c->mdev;
+	struct mlx5_rate_limit rl = {0};
 
 	mlx5e_destroy_sq(mdev, sq->sqn);
-	if (sq->rate_limit)
-		mlx5_rl_remove_rate(mdev, sq->rate_limit);
+	if (sq->rate_limit) {
+		rl.rate = sq->rate_limit;
+		mlx5_rl_remove_rate(mdev, &rl);
+	}
 	mlx5e_free_txqsq_descs(sq);
 	mlx5e_free_txqsq(sq);
 }
@@ -1646,6 +1649,7 @@ static int mlx5e_set_sq_maxrate(struct net_device *dev,
 	struct mlx5e_priv *priv = netdev_priv(dev);
 	struct mlx5_core_dev *mdev = priv->mdev;
 	struct mlx5e_modify_sq_param msp = {0};
+	struct mlx5_rate_limit rl = {0};
 	u16 rl_index = 0;
 	int err;
 
@@ -1653,14 +1657,17 @@ static int mlx5e_set_sq_maxrate(struct net_device *dev,
 		/* nothing to do */
 		return 0;
 
-	if (sq->rate_limit)
+	if (sq->rate_limit) {
+		rl.rate = sq->rate_limit;
 		/* remove current rl index to free space to next ones */
-		mlx5_rl_remove_rate(mdev, sq->rate_limit);
+		mlx5_rl_remove_rate(mdev, &rl);
+	}
 
 	sq->rate_limit = 0;
 
 	if (rate) {
-		err = mlx5_rl_add_rate(mdev, rate, &rl_index);
+		rl.rate = rate;
+		err = mlx5_rl_add_rate(mdev, &rl_index, &rl);
 		if (err) {
 			netdev_err(dev, "Failed configuring rate %u: %d\n",
 				   rate, err);
@@ -1678,7 +1685,7 @@ static int mlx5e_set_sq_maxrate(struct net_device *dev,
 			   rate, err);
 		/* remove the rate from the table */
 		if (rate)
-			mlx5_rl_remove_rate(mdev, rate);
+			mlx5_rl_remove_rate(mdev, &rl);
 		return err;
 	}
 
@@ -3383,10 +3390,17 @@ static int mlx5e_set_features(struct net_device *netdev,
 {
 	netdev_features_t oper_features = netdev->features;
 	int err = 0;
+<<<<<<< HEAD
 
 #define MLX5E_HANDLE_FEATURE(feature, handler) \
 	mlx5e_handle_feature(netdev, &oper_features, features, feature, handler)
 
+=======
+
+#define MLX5E_HANDLE_FEATURE(feature, handler) \
+	mlx5e_handle_feature(netdev, &oper_features, features, feature, handler)
+
+>>>>>>> linux-next/akpm-base
 	err |= MLX5E_HANDLE_FEATURE(NETIF_F_LRO, set_feature_lro);
 	err |= MLX5E_HANDLE_FEATURE(NETIF_F_HW_VLAN_CTAG_FILTER,
 				    set_feature_cvlan_filter);
@@ -4026,36 +4040,17 @@ void mlx5e_build_default_indir_rqt(u32 *indirection_rqt, int len,
 		indirection_rqt[i] = i % num_channels;
 }
 
-static int mlx5e_get_pci_bw(struct mlx5_core_dev *mdev, u32 *pci_bw)
+static bool slow_pci_heuristic(struct mlx5_core_dev *mdev)
 {
-	enum pcie_link_width width;
-	enum pci_bus_speed speed;
-	int err = 0;
+	u32 link_speed = 0;
+	u32 pci_bw = 0;
 
-	err = pcie_get_minimum_link(mdev->pdev, &speed, &width);
-	if (err)
-		return err;
+	mlx5e_get_max_linkspeed(mdev, &link_speed);
+	pci_bw = pcie_bandwidth_available(mdev->pdev, NULL, NULL, NULL);
+	mlx5_core_dbg_once(mdev, "Max link speed = %d, PCI BW = %d\n",
+			   link_speed, pci_bw);
 
-	if (speed == PCI_SPEED_UNKNOWN || width == PCIE_LNK_WIDTH_UNKNOWN)
-		return -EINVAL;
-
-	switch (speed) {
-	case PCIE_SPEED_2_5GT:
-		*pci_bw = 2500 * width;
-		break;
-	case PCIE_SPEED_5_0GT:
-		*pci_bw = 5000 * width;
-		break;
-	case PCIE_SPEED_8_0GT:
-		*pci_bw = 8000 * width;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
+<<<<<<< HEAD
 static bool slow_pci_heuristic(struct mlx5_core_dev *mdev)
 {
 	u32 link_speed = 0;
@@ -4068,6 +4063,10 @@ static bool slow_pci_heuristic(struct mlx5_core_dev *mdev)
 
 #define MLX5E_SLOW_PCI_RATIO (2)
 
+=======
+#define MLX5E_SLOW_PCI_RATIO (2)
+
+>>>>>>> linux-next/akpm-base
 	return link_speed && pci_bw &&
 		link_speed > MLX5E_SLOW_PCI_RATIO * pci_bw;
 }
