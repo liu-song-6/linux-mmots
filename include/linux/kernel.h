@@ -823,6 +823,25 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 	      x, y)
 
 /**
+ * const_max - return maximum of two positive compile-time constant values
+ * @x: first compile-time constant value
+ * @y: second compile-time constant value
+ *
+ * This has no type checking nor multi-evaluation defenses, and must
+ * only ever be used with positive compile-time constant values (for
+ * example when calculating a stack array size).
+ */
+size_t __error_not_const_arg(void) \
+__compiletime_error("const_max() used with non-compile-time constant arg");
+#define const_max(x, y)						\
+	__builtin_choose_expr(__builtin_constant_p(x) &&	\
+			      __builtin_constant_p(y),		\
+			      (size_t)(x) > (size_t)(y) ?	\
+					(size_t)(x) :		\
+					(size_t)(y),		\
+			      __error_not_const_arg())
+
+/**
  * min3 - return minimum of three values
  * @x: first value
  * @y: second value
