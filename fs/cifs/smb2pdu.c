@@ -268,8 +268,11 @@ smb2_reconnect(__le16 smb2_command, struct cifs_tcon *tcon)
 	mutex_unlock(&tcon->ses->session_mutex);
 
 	cifs_dbg(FYI, "reconnect tcon rc = %d\n", rc);
-	if (rc)
+	if (rc) {
+		/* If sess reconnected but tcon didn't, something strange ... */
+		printk_once(KERN_WARNING "reconnect tcon failed rc = %d\n", rc);
 		goto out;
+	}
 
 	if (smb2_command != SMB2_INTERNAL_CMD)
 		queue_delayed_work(cifsiod_wq, &server->reconnect, 0);
@@ -3454,7 +3457,7 @@ static int
 build_qfs_info_req(struct kvec *iov, struct cifs_tcon *tcon, int level,
 		   int outbuf_len, u64 persistent_fid, u64 volatile_fid)
 {
-	struct TCP_Server_Info *server = tcon->ses->server;
+	struct TCP_Server_Info *server;
 	int rc;
 	struct smb2_query_info_req *req;
 	unsigned int total_len;
@@ -3463,6 +3466,8 @@ build_qfs_info_req(struct kvec *iov, struct cifs_tcon *tcon, int level,
 
 	if ((tcon->ses == NULL) || (tcon->ses->server == NULL))
 		return -EIO;
+
+	server = tcon->ses->server;
 
 	rc = smb2_plain_req_init(SMB2_QUERY_INFO, tcon, (void **) &req,
 			     &total_len);
