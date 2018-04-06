@@ -549,7 +549,7 @@ int autofs4_wait_release(struct autofs_sb_info *sbi, autofs_wqt_t wait_queue_tok
 	kfree(wq->name.name);
 	wq->name.name = NULL;	/* Do not wait on this queue */
 	wq->status = status;
-	wake_up_interruptible(&wq->queue);
+	wake_up(&wq->queue);
 	if (!--wq->wait_ctr)
 		kfree(wq);
 	mutex_unlock(&sbi->wq_mutex);
