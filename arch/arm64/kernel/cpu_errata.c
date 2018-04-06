@@ -346,13 +346,10 @@ static const struct arm64_cpu_capabilities arm64_bp_harden_list[] = {
 };
 
 #endif
-<<<<<<< HEAD
-=======
 
 #ifndef ERRATA_MIDR_ALL_VERSIONS
 #define	ERRATA_MIDR_ALL_VERSIONS(x)	MIDR_ALL_VERSIONS(x)
 #endif
->>>>>>> linux-next/akpm-base
 
 const struct arm64_cpu_capabilities arm64_errata[] = {
 #if	defined(CONFIG_ARM64_ERRATUM_826319) || \
@@ -505,8 +502,6 @@ const struct arm64_cpu_capabilities arm64_errata[] = {
 	{
 		.capability = ARM64_HARDEN_BP_POST_GUEST_EXIT,
 		ERRATA_MIDR_RANGE_LIST(qcom_bp_harden_cpus),
-<<<<<<< HEAD
-=======
 	},
 #endif
 #ifdef CONFIG_HARDEN_EL2_VECTORS
@@ -519,7 +514,6 @@ const struct arm64_cpu_capabilities arm64_errata[] = {
 		.desc = "Cortex-A72 EL2 vector hardening",
 		.capability = ARM64_HARDEN_EL2_VECTORS,
 		ERRATA_MIDR_ALL_VERSIONS(MIDR_CORTEX_A72),
->>>>>>> linux-next/akpm-base
 	},
 #endif
 	{

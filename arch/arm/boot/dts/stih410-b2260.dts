@@ -16,11 +16,7 @@
 
 	chosen {
 		bootargs = "clk_ignore_unused";
-<<<<<<< HEAD
-		linux,stdout-path = &uart1;
-=======
 		stdout-path = &uart1;
->>>>>>> linux-next/akpm-base
 	};
 
 	memory@40000000 {
