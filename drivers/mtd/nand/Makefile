@@ -1,13 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
-#
-# linux/drivers/nand/Makefile
-#
 
-obj-$(CONFIG_MTD_NAND)			+= nand.o
-obj-$(CONFIG_MTD_NAND_ECC)		+= nand_ecc.o
-obj-$(CONFIG_MTD_NAND_BCH)		+= nand_bch.o
-obj-$(CONFIG_MTD_SM_COMMON) 		+= sm_common.o
+nandcore-objs := core.o bbt.o
+obj-$(CONFIG_MTD_NAND_CORE) += nandcore.o
 
+<<<<<<< HEAD
 obj-$(CONFIG_MTD_NAND_CAFE)		+= cafe_nand.o
 obj-$(CONFIG_MTD_NAND_AMS_DELTA)	+= ams-delta.o
 obj-$(CONFIG_MTD_NAND_DENALI)		+= denali.o
@@ -68,3 +64,7 @@ nand-objs += nand_macronix.o
 nand-objs += nand_micron.o
 nand-objs += nand_samsung.o
 nand-objs += nand_toshiba.o
+=======
+obj-y	+= onenand/
+obj-y	+= raw/
+>>>>>>> linux-next/akpm-base

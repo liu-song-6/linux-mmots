@@ -130,9 +130,6 @@ struct mlx5_ib_ucontext {
 	/* protect vma_private_list add/del */
 	struct mutex		vma_private_list_mutex;
 
-	unsigned long		upd_xlt_page;
-	/* protect ODP/KSM */
-	struct mutex		upd_xlt_page_mutex;
 	u64			lib_caps;
 };
 
@@ -155,6 +152,7 @@ struct mlx5_ib_pd {
 
 #define MLX5_IB_NUM_FLOW_FT		(MLX5_IB_FLOW_LEFTOVERS_PRIO + 1)
 #define MLX5_IB_NUM_SNIFFER_FTS		2
+#define MLX5_IB_NUM_EGRESS_FTS		1
 struct mlx5_ib_flow_prio {
 	struct mlx5_flow_table		*flow_table;
 	unsigned int			refcount;
@@ -170,6 +168,7 @@ struct mlx5_ib_flow_handler {
 struct mlx5_ib_flow_db {
 	struct mlx5_ib_flow_prio	prios[MLX5_IB_NUM_FLOW_FT];
 	struct mlx5_ib_flow_prio	sniffer[MLX5_IB_NUM_SNIFFER_FTS];
+	struct mlx5_ib_flow_prio	egress[MLX5_IB_NUM_EGRESS_FTS];
 	struct mlx5_flow_table		*lag_demux_ft;
 	/* Protect flow steering bypass flow tables
 	 * when add/del flow rules.
@@ -406,7 +405,7 @@ struct mlx5_ib_qp {
 	struct list_head	qps_list;
 	struct list_head	cq_recv_list;
 	struct list_head	cq_send_list;
-	u32			rate_limit;
+	struct mlx5_rate_limit	rl;
 	u32                     underlay_qpn;
 	bool			tunnel_offload_en;
 	/* storage for qp sub type when core qp type is IB_QPT_DRIVER */
@@ -743,6 +742,7 @@ enum mlx5_ib_stages {
 	MLX5_IB_STAGE_UAR,
 	MLX5_IB_STAGE_BFREG,
 	MLX5_IB_STAGE_PRE_IB_REG_UMR,
+	MLX5_IB_STAGE_SPECS,
 	MLX5_IB_STAGE_IB_REG,
 	MLX5_IB_STAGE_POST_IB_REG_UMR,
 	MLX5_IB_STAGE_DELAY_DROP,
@@ -772,6 +772,16 @@ struct mlx5_ib_multiport_info {
 	u32 mdev_refcnt;
 	bool is_master;
 	bool unaffiliate;
+};
+
+struct mlx5_ib_flow_action {
+	struct ib_flow_action		ib_action;
+	union {
+		struct {
+			u64			    ib_flags;
+			struct mlx5_accel_esp_xfrm *ctx;
+		} esp_aes_gcm;
+	};
 };
 
 struct mlx5_ib_dev {
@@ -895,6 +905,12 @@ static inline struct mlx5_ib_mr *to_mmr(struct ib_mr *ibmr)
 static inline struct mlx5_ib_mw *to_mmw(struct ib_mw *ibmw)
 {
 	return container_of(ibmw, struct mlx5_ib_mw, ibmw);
+}
+
+static inline struct mlx5_ib_flow_action *
+to_mflow_act(struct ib_flow_action *ibact)
+{
+	return container_of(ibact, struct mlx5_ib_flow_action, ib_action);
 }
 
 int mlx5_ib_db_map_user(struct mlx5_ib_ucontext *context, unsigned long virt,
@@ -1220,5 +1236,8 @@ static inline int get_num_static_uars(struct mlx5_ib_dev *dev,
 {
 	return get_uars_per_sys_page(dev, bfregi->lib_uar_4k) * bfregi->num_static_sys_pages;
 }
+
+unsigned long mlx5_ib_get_xlt_emergency_page(void);
+void mlx5_ib_put_xlt_emergency_page(void);
 
 #endif /* MLX5_IB_H */

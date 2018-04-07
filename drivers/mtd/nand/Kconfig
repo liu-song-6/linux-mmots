@@ -1,14 +1,9 @@
-config MTD_NAND_ECC
+config MTD_NAND_CORE
 	tristate
 
-config MTD_NAND_ECC_SMC
-	bool "NAND ECC Smart Media byte order"
-	depends on MTD_NAND_ECC
-	default n
-	help
-	  Software ECC according to the Smart Media Specification.
-	  The original Linux implementation had byte 0 and 1 swapped.
+source "drivers/mtd/nand/onenand/Kconfig"
 
+<<<<<<< HEAD
 
 menuconfig MTD_NAND
 	tristate "NAND Device Support"
@@ -567,3 +562,6 @@ config MTD_NAND_MTK
 	  This controller is found on mt27xx, mt81xx, mt65xx SoCs.
 
 endif # MTD_NAND
+=======
+source "drivers/mtd/nand/raw/Kconfig"
+>>>>>>> linux-next/akpm-base

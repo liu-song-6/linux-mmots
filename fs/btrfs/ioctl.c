@@ -1,19 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2007 Oracle.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License v2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
  */
 
 #include <linux/kernel.h>
@@ -164,9 +151,15 @@ void btrfs_update_iflags(struct inode *inode)
 		new_fl |= S_NOATIME;
 	if (ip->flags & BTRFS_INODE_DIRSYNC)
 		new_fl |= S_DIRSYNC;
+	/*
+	 * The btree_inode will be always in the root cgroup. The cgroup
+	 * writeback can be enabled on regular inodes selectively.
+	 */
+	new_fl |= S_CGROUPWB;
 
 	set_mask_bits(&inode->i_flags,
-		      S_SYNC | S_APPEND | S_IMMUTABLE | S_NOATIME | S_DIRSYNC,
+		      S_SYNC | S_APPEND | S_IMMUTABLE | S_NOATIME | S_DIRSYNC |
+		      S_CGROUPWB,
 		      new_fl);
 }
 
@@ -1760,6 +1753,7 @@ static noinline int btrfs_ioctl_subvol_setflags(struct file *file,
 	struct btrfs_trans_handle *trans;
 	u64 root_flags;
 	u64 flags;
+	bool clear_received_state = false;
 	int ret = 0;
 
 	if (!inode_owner_or_capable(inode))
@@ -1809,6 +1803,7 @@ static noinline int btrfs_ioctl_subvol_setflags(struct file *file,
 			btrfs_set_root_flags(&root->root_item,
 				     root_flags & ~BTRFS_ROOT_SUBVOL_RDONLY);
 			spin_unlock(&root->root_item_lock);
+			clear_received_state = true;
 		} else {
 			spin_unlock(&root->root_item_lock);
 			btrfs_warn(fs_info,
@@ -1823,6 +1818,31 @@ static noinline int btrfs_ioctl_subvol_setflags(struct file *file,
 	if (IS_ERR(trans)) {
 		ret = PTR_ERR(trans);
 		goto out_reset;
+	}
+
+	if (clear_received_state) {
+	        if (!btrfs_is_empty_uuid(root->root_item.received_uuid)) {
+			struct btrfs_root_item *root_item = &root->root_item;
+
+	                ret = btrfs_uuid_tree_rem(trans, fs_info,
+	                                root->root_item.received_uuid,
+	                                BTRFS_UUID_KEY_RECEIVED_SUBVOL,
+	                                root->root_key.objectid);
+
+	                if (ret && ret != -ENOENT) {
+	                        btrfs_abort_transaction(trans, ret);
+	                        btrfs_end_transaction(trans);
+	                        goto out_reset;
+	                }
+
+	                memset(root_item->received_uuid, 0, BTRFS_UUID_SIZE);
+			btrfs_set_root_stransid(root_item, 0);
+			btrfs_set_root_rtransid(root_item, 0);
+			btrfs_set_stack_timespec_sec(&root_item->stime, 0);
+			btrfs_set_stack_timespec_nsec(&root_item->stime, 0);
+			btrfs_set_stack_timespec_sec(&root_item->rtime, 0);
+			btrfs_set_stack_timespec_nsec(&root_item->rtime, 0);
+	        }
 	}
 
 	ret = btrfs_update_root(trans, fs_info->tree_root,
@@ -4020,8 +4040,8 @@ out:
 	return ret;
 }
 
-void btrfs_get_block_group_info(struct list_head *groups_list,
-				struct btrfs_ioctl_space_info *space)
+static void get_block_group_info(struct list_head *groups_list,
+				 struct btrfs_ioctl_space_info *space)
 {
 	struct btrfs_block_group_cache *block_group;
 
@@ -4137,8 +4157,8 @@ static long btrfs_ioctl_space_info(struct btrfs_fs_info *fs_info,
 		down_read(&info->groups_sem);
 		for (c = 0; c < BTRFS_NR_RAID_TYPES; c++) {
 			if (!list_empty(&info->block_groups[c])) {
-				btrfs_get_block_group_info(
-					&info->block_groups[c], &space);
+				get_block_group_info(&info->block_groups[c],
+						     &space);
 				memcpy(dest, &space, sizeof(space));
 				dest++;
 				space_args.total_spaces++;

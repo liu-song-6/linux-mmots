@@ -1226,18 +1226,6 @@ bpf_prog_load_check_attach_type(enum bpf_prog_type prog_type,
 	}
 }
 
-static int bpf_prog_attach_check_attach_type(const struct bpf_prog *prog,
-					     enum bpf_attach_type attach_type)
-{
-	switch (prog->type) {
-	case BPF_PROG_TYPE_CGROUP_SOCK:
-	case BPF_PROG_TYPE_CGROUP_SOCK_ADDR:
-		return attach_type == prog->expected_attach_type ? 0 : -EINVAL;
-	default:
-		return 0;
-	}
-}
-
 /* last field in 'union bpf_attr' used by this command */
 #define	BPF_PROG_LOAD_LAST_FIELD expected_attach_type
 
@@ -1464,6 +1452,18 @@ out_free_tp:
 }
 
 #ifdef CONFIG_CGROUP_BPF
+
+static int bpf_prog_attach_check_attach_type(const struct bpf_prog *prog,
+					     enum bpf_attach_type attach_type)
+{
+	switch (prog->type) {
+	case BPF_PROG_TYPE_CGROUP_SOCK:
+	case BPF_PROG_TYPE_CGROUP_SOCK_ADDR:
+		return attach_type == prog->expected_attach_type ? 0 : -EINVAL;
+	default:
+		return 0;
+	}
+}
 
 #define BPF_PROG_ATTACH_LAST_FIELD attach_flags
 
@@ -2029,6 +2029,9 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 	int err;
 
 	if (sysctl_unprivileged_bpf_disabled && !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	if (kernel_is_locked_down("BPF"))
 		return -EPERM;
 
 	err = check_uarg_tail_zero(uattr, sizeof(attr), size);

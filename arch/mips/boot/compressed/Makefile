@@ -46,10 +46,10 @@ $(obj)/uart-ath79.c: $(srctree)/arch/mips/ath79/early_printk.c
 
 vmlinuzobjs-$(CONFIG_KERNEL_XZ) += $(obj)/ashldi3.o $(obj)/bswapsi.o
 
-extra-y += ashldi3.c bswapsi.c
-$(obj)/ashldi3.o $(obj)/bswapsi.o: KBUILD_CFLAGS += -I$(srctree)/arch/mips/lib
-$(obj)/ashldi3.c $(obj)/bswapsi.c: $(obj)/%.c: $(srctree)/arch/mips/lib/%.c
-	$(call cmd,shipped)
+$(obj)/ashldi3.o: $(srctree)/lib/ashldi3.c
+	$(call cmd,cc_o_c)
+$(obj)/bswapsi.o: $(srctree)/arch/mips/lib/bswapsi.c
+	$(call cmd,cc_o_c)
 
 targets := $(notdir $(vmlinuzobjs-y))
 

@@ -1,19 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2008 Oracle.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License v2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
  */
 
 #include <linux/kernel.h>
@@ -1621,12 +1608,23 @@ out:
 
 unsigned int btrfs_compress_str2level(const char *str)
 {
-	if (strncmp(str, "zlib", 4) != 0)
+	long level;
+	int max;
+
+	if (strncmp(str, "zlib", 4) == 0)
+		max = 9;
+	else if (strncmp(str, "zstd", 4) == 0)
+		max = 15; // encoded on 4 bits, real max is 22
+	else
 		return 0;
 
-	/* Accepted form: zlib:1 up to zlib:9 and nothing left after the number */
-	if (str[4] == ':' && '1' <= str[5] && str[5] <= '9' && str[6] == 0)
-		return str[5] - '0';
+	/* Accepted form: zxxx:1 up to zxxx:9 and nothing left after the number */
+	str += 4;
+	if (*str == ':')
+		str++;
 
-	return BTRFS_ZLIB_DEFAULT_LEVEL;
+	if (kstrtoul(str, 10, &level))
+		return BTRFS_ZLIB_DEFAULT_LEVEL;
+
+	return (level > max) ? BTRFS_ZLIB_DEFAULT_LEVEL : level;
 }

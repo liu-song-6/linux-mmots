@@ -1,23 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (C) 2007 Oracle.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License v2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
  */
 
-#ifndef __BTRFS_CTREE__
-#define __BTRFS_CTREE__
+#ifndef BTRFS_CTREE_H
+#define BTRFS_CTREE_H
 
 #include <linux/mm.h>
 #include <linux/sched/signal.h>
@@ -3253,8 +3240,6 @@ int btrfs_is_empty_uuid(u8 *uuid);
 int btrfs_defrag_file(struct inode *inode, struct file *file,
 		      struct btrfs_ioctl_defrag_range_args *range,
 		      u64 newer_than, unsigned long max_pages);
-void btrfs_get_block_group_info(struct list_head *groups_list,
-				struct btrfs_ioctl_space_info *space);
 void update_ioctl_balance_args(struct btrfs_fs_info *fs_info, int lock,
 			       struct btrfs_ioctl_balance_args *bargs);
 ssize_t btrfs_dedupe_file_range(struct file *src_file, u64 loff, u64 olen,
@@ -3752,4 +3737,5 @@ static inline int btrfs_is_testing(struct btrfs_fs_info *fs_info)
 #endif
 	return 0;
 }
+
 #endif
