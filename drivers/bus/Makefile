@@ -5,11 +5,8 @@
 
 # Interconnect bus drivers for ARM platforms
 obj-$(CONFIG_ARM_CCI)		+= arm-cci.o
-<<<<<<< HEAD
-=======
 
 obj-$(CONFIG_HISILICON_LPC)	+= hisi_lpc.o
->>>>>>> linux-next/akpm-base
 obj-$(CONFIG_BRCMSTB_GISB_ARB)	+= brcmstb_gisb.o
 
 # DPAA2 fsl-mc bus

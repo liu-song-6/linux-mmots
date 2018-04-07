@@ -197,15 +197,6 @@ $(obj)/%.tab.c: $(src)/%.y FORCE
 
 quiet_cmd_bison_h = YACC    $@
       cmd_bison_h = bison -o/dev/null --defines=$@ -t -l $<
-<<<<<<< HEAD
-
-ifdef REGENERATE_PARSERS
-.PRECIOUS: $(src)/%.tab.h_shipped
-$(src)/%.tab.h_shipped: $(src)/%.y
-	$(call cmd,bison_h)
-endif
-=======
->>>>>>> linux-next/akpm-base
 
 $(obj)/%.tab.h: $(src)/%.y FORCE
 	$(call if_changed,bison_h)
