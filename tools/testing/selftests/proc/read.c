@@ -106,10 +106,10 @@ static void f(DIR *d, unsigned int level)
 			int fd;
 
 		case DT_REG:
-			if (level == 1 && streq(de->d_name, "clear_refs")) {
-				f_reg_write(d, de->d_name, "1", 1);
-			} else if (level == 1 && streq(de->d_name, "sysrq-trigger")) {
+			if (level == 0 && streq(de->d_name, "sysrq-trigger")) {
 				f_reg_write(d, de->d_name, "h", 1);
+			} else if (level == 1 && streq(de->d_name, "clear_refs")) {
+				f_reg_write(d, de->d_name, "1", 1);
 			} else if (level == 3 && streq(de->d_name, "clear_refs")) {
 				f_reg_write(d, de->d_name, "1", 1);
 			} else {
