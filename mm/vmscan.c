@@ -201,16 +201,27 @@ static bool sane_reclaim(struct scan_control *sc)
 	return false;
 }
 
-static void set_memcg_bit(enum pgdat_flags flag,
-			struct mem_cgroup *memcg)
+static void set_memcg_congestion(pg_data_t *pgdat,
+				struct mem_cgroup *memcg,
+				bool congested)
 {
-	set_bit(flag, &memcg->flags);
+	struct mem_cgroup_per_node *mz;
+
+	if (!memcg)
+		return;
+
+	mz = mem_cgroup_nodeinfo(memcg, pgdat->node_id);
+	WRITE_ONCE(mz->congested, congested);
 }
 
-static int test_memcg_bit(enum pgdat_flags flag,
+static bool memcg_congested(pg_data_t *pgdat,
 			struct mem_cgroup *memcg)
 {
-	return test_bit(flag, &memcg->flags);
+	struct mem_cgroup_per_node *mz;
+
+	mz = mem_cgroup_nodeinfo(memcg, pgdat->node_id);
+	return READ_ONCE(mz->congested);
+
 }
 #else
 static bool global_reclaim(struct scan_control *sc)
@@ -223,15 +234,16 @@ static bool sane_reclaim(struct scan_control *sc)
 	return true;
 }
 
-static inline void set_memcg_bit(enum pgdat_flags flag,
-				struct mem_cgroup *memcg)
+static inline void set_memcg_congestion(struct pglist_data *pgdat,
+				struct mem_cgroup *memcg, bool congested)
 {
 }
 
-static inline int test_memcg_bit(enum pgdat_flags flag,
-				struct mem_cgroup *memcg)
+static inline bool memcg_congested(struct pglist_data *pgdat,
+			struct mem_cgroup *memcg)
 {
-	return 0;
+	return false;
+
 }
 #endif
 
@@ -2500,7 +2512,7 @@ static inline bool should_continue_reclaim(struct pglist_data *pgdat,
 static bool pgdat_memcg_congested(pg_data_t *pgdat, struct mem_cgroup *memcg)
 {
 	return test_bit(PGDAT_CONGESTED, &pgdat->flags) ||
-		(memcg && test_memcg_bit(PGDAT_CONGESTED, memcg));
+		(memcg && memcg_congested(pgdat, memcg));
 }
 
 static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
@@ -2635,7 +2647,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 		 */
 		if (!global_reclaim(sc) && sane_reclaim(sc) &&
 		    sc->nr.dirty && sc->nr.dirty == sc->nr.congested)
-			set_memcg_bit(PGDAT_CONGESTED, root);
+			set_memcg_congestion(pgdat, root, true);
 
 		/*
 		 * Stall direct reclaim for IO completions if underlying BDIs
@@ -2862,6 +2874,7 @@ retry:
 			continue;
 		last_pgdat = zone->zone_pgdat;
 		snapshot_refaults(sc->target_mem_cgroup, zone->zone_pgdat);
+		set_memcg_congestion(last_pgdat, sc->target_mem_cgroup, false);
 	}
 
 	delayacct_freepages_end();
@@ -3085,7 +3098,6 @@ unsigned long mem_cgroup_shrink_node(struct mem_cgroup *memcg,
 	 * the priority and make it zero.
 	 */
 	shrink_node_memcg(pgdat, memcg, &sc, &lru_pages);
-	clear_bit(PGDAT_CONGESTED, &memcg->flags);
 
 	trace_mm_vmscan_memcg_softlimit_reclaim_end(sc.nr_reclaimed);
 
@@ -3131,7 +3143,6 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
 	noreclaim_flag = memalloc_noreclaim_save();
 	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
 	memalloc_noreclaim_restore(noreclaim_flag);
-	clear_bit(PGDAT_CONGESTED, &memcg->flags);
 
 	trace_mm_vmscan_memcg_reclaim_end(nr_reclaimed);
 
