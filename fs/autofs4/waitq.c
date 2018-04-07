@@ -19,9 +19,6 @@
  */
 static autofs_wqt_t autofs4_next_wait_queue = 1;
 
-/* These are the signals we allow interrupting a pending mount */
-#define SHUTDOWN_SIGS	(sigmask(SIGKILL) | sigmask(SIGINT) | sigmask(SIGQUIT))
-
 void autofs4_catatonic_mode(struct autofs_sb_info *sbi)
 {
 	struct autofs_wait_queue *wq, *nwq;
@@ -486,29 +483,7 @@ int autofs4_wait(struct autofs_sb_info *sbi,
 	 * wq->name.name is NULL iff the lock is already released
 	 * or the mount has been made catatonic.
 	 */
-	if (wq->name.name) {
-		/* Block all but "shutdown" signals while waiting */
-		unsigned long shutdown_sigs_mask;
-		unsigned long irqflags;
-		sigset_t oldset;
-
-		spin_lock_irqsave(&current->sighand->siglock, irqflags);
-		oldset = current->blocked;
-		shutdown_sigs_mask = SHUTDOWN_SIGS & ~oldset.sig[0];
-		siginitsetinv(&current->blocked, shutdown_sigs_mask);
-		recalc_sigpending();
-		spin_unlock_irqrestore(&current->sighand->siglock, irqflags);
-
-		wait_event_interruptible(wq->queue, wq->name.name == NULL);
-
-		spin_lock_irqsave(&current->sighand->siglock, irqflags);
-		current->blocked = oldset;
-		recalc_sigpending();
-		spin_unlock_irqrestore(&current->sighand->siglock, irqflags);
-	} else {
-		pr_debug("skipped sleeping\n");
-	}
-
+	wait_event_killable(wq->queue, wq->name.name == NULL);
 	status = wq->status;
 
 	/*
