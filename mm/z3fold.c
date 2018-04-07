@@ -490,6 +490,7 @@ static struct z3fold_pool *z3fold_create_pool(const char *name, gfp_t gfp,
 out_wq:
 	destroy_workqueue(pool->compact_wq);
 out:
+	free_percpu(pool->unbuddied);
 	kfree(pool);
 	return NULL;
 }
