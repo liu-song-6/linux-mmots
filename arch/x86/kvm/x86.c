@@ -146,12 +146,6 @@ bool __read_mostly enable_vmware_backdoor = false;
 module_param(enable_vmware_backdoor, bool, S_IRUGO);
 EXPORT_SYMBOL_GPL(enable_vmware_backdoor);
 
-<<<<<<< HEAD
-static bool __read_mostly force_emulation_prefix = false;
-module_param(force_emulation_prefix, bool, S_IRUGO);
-
-=======
->>>>>>> linux-next/akpm-base
 #define KVM_NR_SHARED_MSRS 16
 
 struct kvm_shared_msrs_global {
