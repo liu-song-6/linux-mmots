@@ -2357,9 +2357,13 @@ static unsigned long segment_base(u16 selector)
 static void vmx_save_host_state(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
+<<<<<<< HEAD
 #ifdef CONFIG_X86_64
 	int cpu = raw_smp_processor_id();
 #endif
+=======
+	int cpu = raw_smp_processor_id();
+>>>>>>> linux-next/akpm-base
 	int i;
 
 	if (vmx->host_state.loaded)
@@ -2399,9 +2403,21 @@ static void vmx_save_host_state(struct kvm_vcpu *vcpu)
 	savesegment(ds, vmx->host_state.ds_sel);
 	savesegment(es, vmx->host_state.es_sel);
 
+<<<<<<< HEAD
 	vmcs_writel(HOST_FS_BASE, current->thread.fsbase);
 	vmcs_writel(HOST_GS_BASE, cpu_kernelmode_gs_base(cpu));
 
+=======
+#ifdef CONFIG_X86_64
+	vmcs_writel(HOST_FS_BASE, current->thread.fsbase);
+	vmcs_writel(HOST_GS_BASE, cpu_kernelmode_gs_base(cpu));
+#else
+	vmcs_writel(HOST_FS_BASE, segment_base(vmx->host_state.fs_sel));
+	vmcs_writel(HOST_GS_BASE, segment_base(vmx->host_state.gs_sel));
+#endif
+
+#ifdef CONFIG_X86_64
+>>>>>>> linux-next/akpm-base
 	vmx->msr_host_kernel_gs_base = current->thread.gsbase;
 	if (is_long_mode(&vmx->vcpu))
 		wrmsrl(MSR_KERNEL_GS_BASE, vmx->msr_guest_kernel_gs_base);
@@ -7172,12 +7188,15 @@ static int handle_invalid_guest_state(struct kvm_vcpu *vcpu)
 
 out:
 	return ret;
+<<<<<<< HEAD
 
 emulation_error:
 	vcpu->run->exit_reason = KVM_EXIT_INTERNAL_ERROR;
 	vcpu->run->internal.suberror = KVM_INTERNAL_ERROR_EMULATION;
 	vcpu->run->internal.ndata = 0;
 	return 0;
+=======
+>>>>>>> linux-next/akpm-base
 }
 
 static void grow_ple_window(struct kvm_vcpu *vcpu)

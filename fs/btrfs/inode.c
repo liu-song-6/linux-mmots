@@ -1,19 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2007 Oracle.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License v2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
  */
 
 #include <linux/kernel.h>
@@ -2007,6 +1994,15 @@ static blk_status_t btrfs_submit_bio_hook(void *private_data, struct bio *bio,
 
 	skip_sum = BTRFS_I(inode)->flags & BTRFS_INODE_NODATASUM;
 
+#ifdef CONFIG_BLK_CGROUP
+	/*
+	 * if we're under IO controls, force a synchronous crc and
+	 * IO submission so things get accounted in the proper slots.
+	 */
+	if (!task_css_is_root(current, io_cgrp_id))
+		async = 0;
+#endif
+
 	if (btrfs_is_free_space_inode(BTRFS_I(inode)))
 		metadata = BTRFS_WQ_ENDIO_FREE_SPACE;
 
@@ -2026,10 +2022,10 @@ static blk_status_t btrfs_submit_bio_hook(void *private_data, struct bio *bio,
 				goto out;
 		}
 		goto mapit;
-	} else if (async && !skip_sum) {
+	} else if (root->root_key.objectid == BTRFS_DATA_RELOC_TREE_OBJECTID) {
 		/* csum items have already been cloned */
-		if (root->root_key.objectid == BTRFS_DATA_RELOC_TREE_OBJECTID)
-			goto mapit;
+		goto mapit;
+	} else if (async && !skip_sum) {
 		/* we're doing a write, do the async checksumming */
 		ret = btrfs_wq_submit_bio(fs_info, bio, mirror_num, bio_flags,
 					  bio_offset, inode,

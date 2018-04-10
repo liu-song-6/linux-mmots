@@ -934,8 +934,8 @@ F:	drivers/char/apm-emulation.c
 APPARMOR SECURITY MODULE
 M:	John Johansen <john.johansen@canonical.com>
 L:	apparmor@lists.ubuntu.com (subscribers-only, general discussion)
-W:	apparmor.wiki.kernel.org
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jj/apparmor-dev.git
+W:	wiki.apparmor.net
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jj/linux-apparmor
 S:	Supported
 F:	security/apparmor/
 F:	Documentation/admin-guide/LSM/apparmor.rst
@@ -8852,6 +8852,15 @@ M:	Sean Wang <sean.wang@mediatek.com>
 S:	Maintained
 F:	drivers/media/rc/mtk-cir.c
 
+MEDIATEK DMA DRIVER
+M:	Sean Wang <sean.wang@mediatek.com>
+L:	dmaengine@vger.kernel.org
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+L:	linux-mediatek@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	Documentation/devicetree/bindings/dma/mtk-*
+F:	drivers/dma/mediatek/
+
 MEDIATEK PMIC LED DRIVER
 M:	Sean Wang <sean.wang@mediatek.com>
 S:	Maintained
@@ -9222,6 +9231,15 @@ L:	linux-usb@vger.kernel.org
 S:	Maintained
 F:	drivers/usb/misc/usb251xb.c
 F:	Documentation/devicetree/bindings/usb/usb251xb.txt
+
+MICROSEMI MIPS SOCS
+M:	Alexandre Belloni <alexandre.belloni@bootlin.com>
+L:	linux-mips@linux-mips.org
+S:	Maintained
+F:	arch/mips/generic/board-ocelot.c
+F:	arch/mips/configs/generic/board-ocelot.config
+F:	arch/mips/boot/dts/mscc/
+F:	Documentation/devicetree/bindings/mips/mscc.txt
 
 MICROSEMI SMART ARRAY SMARTPQI DRIVER (smartpqi)
 M:	Don Brace <don.brace@microsemi.com>
@@ -11811,7 +11829,7 @@ X:	kernel/torture.c
 
 REAL TIME CLOCK (RTC) SUBSYSTEM
 M:	Alessandro Zummo <a.zummo@towertech.it>
-M:	Alexandre Belloni <alexandre.belloni@free-electrons.com>
+M:	Alexandre Belloni <alexandre.belloni@bootlin.com>
 L:	linux-rtc@vger.kernel.org
 Q:	http://patchwork.ozlabs.org/project/rtc-linux/list/
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux.git
@@ -12308,6 +12326,7 @@ M:	Tomasz Figa <tomasz.figa@gmail.com>
 M:	Chanwoo Choi <cw00.choi@samsung.com>
 S:	Supported
 L:	linux-samsung-soc@vger.kernel.org (moderated for non-subscribers)
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/snawrocki/clk.git
 F:	drivers/clk/samsung/
 F:	include/dt-bindings/clock/exynos*.h
 F:	Documentation/devicetree/bindings/clock/exynos*.txt
@@ -13466,6 +13485,12 @@ S:	Maintained
 F:	drivers/gpio/gpio-dwapb.c
 F:	Documentation/devicetree/bindings/gpio/snps-dwapb-gpio.txt
 
+SYNOPSYS DESIGNWARE AXI DMAC DRIVER
+M:	Eugeniy Paltsev <Eugeniy.Paltsev@synopsys.com>
+S:	Maintained
+F:	drivers/dma/dwi-axi-dmac/
+F:	Documentation/devicetree/bindings/dma/snps,dw-axi-dmac.txt
+
 SYNOPSYS DESIGNWARE DMAC DRIVER
 M:	Viresh Kumar <vireshk@kernel.org>
 R:	Andy Shevchenko <andriy.shevchenko@linux.intel.com>
@@ -13937,6 +13962,13 @@ S:	Supported
 F:	arch/arm/mach-davinci/
 F:	drivers/i2c/busses/i2c-davinci.c
 F:	arch/arm/boot/dts/da850*
+
+TI DAVINCI SERIES CLOCK DRIVER
+M:	David Lechner <david@lechnology.com>
+R:	Sekhar Nori <nsekhar@ti.com>
+S:	Maintained
+F:	Documentation/devicetree/bindings/clock/ti/davinci/
+F:	drivers/clk/davinci/
 
 TI DAVINCI SERIES GPIO DRIVER
 M:	Keerthy <j-keerthy@ti.com>

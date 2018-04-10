@@ -3,13 +3,15 @@
 #
 
 menu "Graphics support"
+<<<<<<< HEAD
+
+if HAS_IOMEM
+=======
+>>>>>>> linux-next/akpm-base
 
 if HAS_IOMEM
 
 config HAVE_FB_ATMEL
-	bool
-
-config SH_LCD_MIPI_DSI
 	bool
 
 source "drivers/char/agp/Kconfig"
