@@ -124,6 +124,7 @@ struct scan_control {
 		unsigned int writeback;
 		unsigned int immediate;
 		unsigned int file_taken;
+		unsigned int taken;
 	} nr;
 };
 
@@ -1782,6 +1783,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	sc->nr.unqueued_dirty += stat.nr_unqueued_dirty;
 	sc->nr.writeback += stat.nr_writeback;
 	sc->nr.immediate += stat.nr_immediate;
+	sc->nr.taken += nr_taken;
 	if (file)
 		sc->nr.file_taken += nr_taken;
 
@@ -2569,7 +2571,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 		 * number of pages under pages flagged for immediate reclaim and
 		 * stall if any are encountered in the nr_immediate check below.
 		 */
-		if (sc->nr.writeback && sc->nr.writeback == sc->nr.file_taken)
+		if (sc->nr.writeback && sc->nr.writeback == sc->nr.taken)
 			set_bit(PGDAT_WRITEBACK, &pgdat->flags);
 
 		/*
