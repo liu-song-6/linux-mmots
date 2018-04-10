@@ -212,6 +212,9 @@ static inline bool resource_contains(struct resource *r1, struct resource *r2)
 		return false;
 	if (r1->flags & IORESOURCE_UNSET || r2->flags & IORESOURCE_UNSET)
 		return false;
+	/* sanity check whether it's a valid resource range */
+	if (r2->end < r2->start)
+		return false;
 	return r1->start <= r2->start && r1->end >= r2->end;
 }
 
