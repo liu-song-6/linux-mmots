@@ -205,22 +205,22 @@ static void set_memcg_congestion(pg_data_t *pgdat,
 				struct mem_cgroup *memcg,
 				bool congested)
 {
-	struct mem_cgroup_per_node *mz;
+	struct mem_cgroup_per_node *mn;
 
 	if (!memcg)
 		return;
 
-	mz = mem_cgroup_nodeinfo(memcg, pgdat->node_id);
-	WRITE_ONCE(mz->congested, congested);
+	mn = mem_cgroup_nodeinfo(memcg, pgdat->node_id);
+	WRITE_ONCE(mn->congested, congested);
 }
 
 static bool memcg_congested(pg_data_t *pgdat,
 			struct mem_cgroup *memcg)
 {
-	struct mem_cgroup_per_node *mz;
+	struct mem_cgroup_per_node *mn;
 
-	mz = mem_cgroup_nodeinfo(memcg, pgdat->node_id);
-	return READ_ONCE(mz->congested);
+	mn = mem_cgroup_nodeinfo(memcg, pgdat->node_id);
+	return READ_ONCE(mn->congested);
 
 }
 #else
@@ -2615,8 +2615,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 			 * immediate reclaim and stall if any are encountered
 			 * in the nr_immediate check below.
 			 */
-			if (sc->nr.writeback &&
-			    sc->nr.writeback == sc->nr.file_taken)
+			if (sc->nr.writeback && sc->nr.writeback == sc->nr.taken)
 				set_bit(PGDAT_WRITEBACK, &pgdat->flags);
 
 			/*
