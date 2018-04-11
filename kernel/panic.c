@@ -289,7 +289,7 @@ void panic(const char *fmt, ...)
 		disabled_wait(caller);
 	}
 #endif
-	pr_emerg("---[ end Kernel panic - not syncing: %s\n", buf);
+	pr_emerg("---[ end Kernel panic - not syncing: %s ]---\n", buf);
 	local_irq_enable();
 	for (i = 0; ; i += PANIC_TIMER_STEP) {
 		touch_softlockup_watchdog();
@@ -553,6 +553,8 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
 		show_regs(regs);
 	else
 		dump_stack();
+
+	print_irqtrace_events(current);
 
 	print_oops_end_marker();
 
