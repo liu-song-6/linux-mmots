@@ -1404,18 +1404,6 @@ void ext2_set_file_ops(struct inode *inode)
 		inode->i_mapping->a_ops = &ext2_aops;
 }
 
-void ext2_set_file_ops(struct inode *inode)
-{
-	inode->i_op = &ext2_file_inode_operations;
-	inode->i_fop = &ext2_file_operations;
-	if (IS_DAX(inode))
-		inode->i_mapping->a_ops = &ext2_dax_aops;
-	else if (test_opt(inode->i_sb, NOBH))
-		inode->i_mapping->a_ops = &ext2_nobh_aops;
-	else
-		inode->i_mapping->a_ops = &ext2_aops;
-}
-
 struct inode *ext2_iget (struct super_block *sb, unsigned long ino)
 {
 	struct ext2_inode_info *ei;
