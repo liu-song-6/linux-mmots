@@ -41,8 +41,9 @@ static int __gup_benchmark_ioctl(unsigned int cmd,
 		}
 
 		nr = get_user_pages_fast(addr, nr, gup->flags & 1, pages + i);
-		if (nr > 0)
-			i += nr;
+		if (nr <= 0)
+			break;
+		i += nr;
 	}
 	end_time = ktime_get();
 
