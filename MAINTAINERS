@@ -934,8 +934,8 @@ F:	drivers/char/apm-emulation.c
 APPARMOR SECURITY MODULE
 M:	John Johansen <john.johansen@canonical.com>
 L:	apparmor@lists.ubuntu.com (subscribers-only, general discussion)
-W:	apparmor.wiki.kernel.org
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jj/apparmor-dev.git
+W:	wiki.apparmor.net
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/jj/linux-apparmor
 S:	Supported
 F:	security/apparmor/
 F:	Documentation/admin-guide/LSM/apparmor.rst
@@ -8860,6 +8860,15 @@ M:	Sean Wang <sean.wang@mediatek.com>
 S:	Maintained
 F:	drivers/media/rc/mtk-cir.c
 
+MEDIATEK DMA DRIVER
+M:	Sean Wang <sean.wang@mediatek.com>
+L:	dmaengine@vger.kernel.org
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+L:	linux-mediatek@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	Documentation/devicetree/bindings/dma/mtk-*
+F:	drivers/dma/mediatek/
+
 MEDIATEK PMIC LED DRIVER
 M:	Sean Wang <sean.wang@mediatek.com>
 S:	Maintained
@@ -12325,6 +12334,7 @@ M:	Tomasz Figa <tomasz.figa@gmail.com>
 M:	Chanwoo Choi <cw00.choi@samsung.com>
 S:	Supported
 L:	linux-samsung-soc@vger.kernel.org (moderated for non-subscribers)
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/snawrocki/clk.git
 F:	drivers/clk/samsung/
 F:	include/dt-bindings/clock/exynos*.h
 F:	Documentation/devicetree/bindings/clock/exynos*.txt
@@ -13483,6 +13493,12 @@ S:	Maintained
 F:	drivers/gpio/gpio-dwapb.c
 F:	Documentation/devicetree/bindings/gpio/snps-dwapb-gpio.txt
 
+SYNOPSYS DESIGNWARE AXI DMAC DRIVER
+M:	Eugeniy Paltsev <Eugeniy.Paltsev@synopsys.com>
+S:	Maintained
+F:	drivers/dma/dwi-axi-dmac/
+F:	Documentation/devicetree/bindings/dma/snps,dw-axi-dmac.txt
+
 SYNOPSYS DESIGNWARE DMAC DRIVER
 M:	Viresh Kumar <vireshk@kernel.org>
 R:	Andy Shevchenko <andriy.shevchenko@linux.intel.com>
@@ -13954,6 +13970,13 @@ S:	Supported
 F:	arch/arm/mach-davinci/
 F:	drivers/i2c/busses/i2c-davinci.c
 F:	arch/arm/boot/dts/da850*
+
+TI DAVINCI SERIES CLOCK DRIVER
+M:	David Lechner <david@lechnology.com>
+R:	Sekhar Nori <nsekhar@ti.com>
+S:	Maintained
+F:	Documentation/devicetree/bindings/clock/ti/davinci/
+F:	drivers/clk/davinci/
 
 TI DAVINCI SERIES GPIO DRIVER
 M:	Keerthy <j-keerthy@ti.com>
