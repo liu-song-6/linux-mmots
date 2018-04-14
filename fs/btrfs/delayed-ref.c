@@ -1,19 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2009 Oracle.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License v2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
  */
 
 #include <linux/sched.h>
@@ -336,9 +323,7 @@ again:
 	}
 }
 
-int btrfs_check_delayed_seq(struct btrfs_fs_info *fs_info,
-			    struct btrfs_delayed_ref_root *delayed_refs,
-			    u64 seq)
+int btrfs_check_delayed_seq(struct btrfs_fs_info *fs_info, u64 seq)
 {
 	struct seq_list *elem;
 	int ret = 0;
@@ -349,10 +334,9 @@ int btrfs_check_delayed_seq(struct btrfs_fs_info *fs_info,
 					struct seq_list, list);
 		if (seq >= elem->seq) {
 			btrfs_debug(fs_info,
-				"holding back delayed_ref %#x.%x, lowest is %#x.%x (%p)",
+				"holding back delayed_ref %#x.%x, lowest is %#x.%x",
 				(u32)(seq >> 32), (u32)seq,
-				(u32)(elem->seq >> 32), (u32)elem->seq,
-				delayed_refs);
+				(u32)(elem->seq >> 32), (u32)elem->seq);
 			ret = 1;
 		}
 	}

@@ -1,19 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) STRATO AG 2011.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License v2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
  */
 
 /*
@@ -2741,7 +2728,7 @@ int btrfsic_submit_bh(int op, int op_flags, struct buffer_head *bh)
 	struct btrfsic_dev_state *dev_state;
 
 	if (!btrfsic_is_initialized)
-		return submit_bh(op, op_flags, bh);
+		return submit_bh_blkcg_css(op, op_flags, bh, blkcg_root_css);
 
 	mutex_lock(&btrfsic_mutex);
 	/* since btrfsic_submit_bh() might also be called before
