@@ -2502,7 +2502,7 @@ void account_page_redirty(struct page *page)
 	if (mapping && mapping_cap_account_dirty(mapping)) {
 		struct inode *inode = mapping->host;
 		struct bdi_writeback *wb;
-		struct wb_lock_cookie cookie = {0};
+		struct wb_lock_cookie cookie = {};
 
 		wb = unlocked_inode_to_wb_begin(inode, &cookie);
 		current->nr_dirtied--;
@@ -2614,7 +2614,7 @@ void __cancel_dirty_page(struct page *page)
 	if (mapping_cap_account_dirty(mapping)) {
 		struct inode *inode = mapping->host;
 		struct bdi_writeback *wb;
-		struct wb_lock_cookie cookie = {0};
+		struct wb_lock_cookie cookie = {};
 
 		lock_page_memcg(page);
 		wb = unlocked_inode_to_wb_begin(inode, &cookie);
@@ -2654,7 +2654,7 @@ int clear_page_dirty_for_io(struct page *page)
 	if (mapping && mapping_cap_account_dirty(mapping)) {
 		struct inode *inode = mapping->host;
 		struct bdi_writeback *wb;
-		struct wb_lock_cookie cookie = {0};
+		struct wb_lock_cookie cookie = {};
 
 		/*
 		 * Yes, Virginia, this is indeed insane.

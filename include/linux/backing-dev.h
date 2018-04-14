@@ -355,7 +355,8 @@ static inline struct bdi_writeback *inode_to_wb(const struct inode *inode)
  * unlocked_inode_to_wb_end().
  *
  * The caller must call unlocked_inode_to_wb_end() with *@cookie afterwards and
- * can't sleep during transaction.  IRQ may or may not be disabled on return.
+ * can't sleep during the transaction.  IRQs may or may not be disabled on
+ * return.
  */
 static inline struct bdi_writeback *
 unlocked_inode_to_wb_begin(struct inode *inode, struct wb_lock_cookie *cookie)
