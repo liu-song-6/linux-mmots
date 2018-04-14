@@ -372,7 +372,6 @@ unlocked_inode_to_wb_begin(struct inode *inode, struct wb_lock_cookie *cookie)
 	if (unlikely(cookie->locked))
 		xa_lock_irqsave(&inode->i_mapping->i_pages, cookie->flags);
 
-
 	/*
 	 * Protected by either !I_WB_SWITCH + rcu_read_lock() or the i_pages
 	 * lock.  inode_to_wb() will bark.  Deref directly.
