@@ -69,11 +69,11 @@ static void intc_irq_mask(struct irq_data *d)
 	unsigned int irq = d->irq - MCFINT_VECBASE;
 
 	if (MCFINTC2_SIMR && (irq > 128))
-		__raw_writeb(irq - 128, MCFINTC2_SIMR);
+		__raw_writeb(irq - 128, iomem(MCFINTC2_SIMR));
 	else if (MCFINTC1_SIMR && (irq > 64))
-		__raw_writeb(irq - 64, MCFINTC1_SIMR);
+		__raw_writeb(irq - 64, iomem(MCFINTC1_SIMR));
 	else
-		__raw_writeb(irq, MCFINTC0_SIMR);
+		__raw_writeb(irq, iomem(MCFINTC0_SIMR));
 }
 
 static void intc_irq_unmask(struct irq_data *d)
@@ -81,18 +81,18 @@ static void intc_irq_unmask(struct irq_data *d)
 	unsigned int irq = d->irq - MCFINT_VECBASE;
 
 	if (MCFINTC2_CIMR && (irq > 128))
-		__raw_writeb(irq - 128, MCFINTC2_CIMR);
+		__raw_writeb(irq - 128, iomem(MCFINTC2_CIMR));
 	else if (MCFINTC1_CIMR && (irq > 64))
-		__raw_writeb(irq - 64, MCFINTC1_CIMR);
+		__raw_writeb(irq - 64, iomem(MCFINTC1_CIMR));
 	else
-		__raw_writeb(irq, MCFINTC0_CIMR);
+		__raw_writeb(irq, iomem(MCFINTC0_CIMR));
 }
 
 static void intc_irq_ack(struct irq_data *d)
 {
 	unsigned int ebit = irq2ebit(d->irq);
 
-	__raw_writeb(0x1 << ebit, MCFEPORT_EPFR);
+	__raw_writeb(0x1 << ebit, iomem(MCFEPORT_EPFR));
 }
 
 static unsigned int intc_irq_startup(struct irq_data *d)
@@ -105,22 +105,22 @@ static unsigned int intc_irq_startup(struct irq_data *d)
 
 #if defined(MCFEPORT_EPDDR)
 		/* Set EPORT line as input */
-		v = __raw_readb(MCFEPORT_EPDDR);
-		__raw_writeb(v & ~(0x1 << ebit), MCFEPORT_EPDDR);
+		v = __raw_readb(iomem(MCFEPORT_EPDDR));
+		__raw_writeb(v & ~(0x1 << ebit), iomem(MCFEPORT_EPDDR));
 #endif
 
 		/* Set EPORT line as interrupt source */
-		v = __raw_readb(MCFEPORT_EPIER);
-		__raw_writeb(v | (0x1 << ebit), MCFEPORT_EPIER);
+		v = __raw_readb(iomem(MCFEPORT_EPIER));
+		__raw_writeb(v | (0x1 << ebit), iomem(MCFEPORT_EPIER));
 	}
 
 	irq -= MCFINT_VECBASE;
 	if (MCFINTC2_ICR0 && (irq > 128))
-		__raw_writeb(5, MCFINTC2_ICR0 + irq - 128);
+		__raw_writeb(5, iomem(MCFINTC2_ICR0 + irq - 128));
 	else if (MCFINTC1_ICR0 && (irq > 64))
-		__raw_writeb(5, MCFINTC1_ICR0 + irq - 64);
+		__raw_writeb(5, iomem(MCFINTC1_ICR0 + irq - 64));
 	else
-		__raw_writeb(5, MCFINTC0_ICR0 + irq);
+		__raw_writeb(5, iomem(MCFINTC0_ICR0 + irq));
 
 	intc_irq_unmask(d);
 	return 0;
@@ -151,9 +151,9 @@ static int intc_irq_set_type(struct irq_data *d, unsigned int type)
 		irq_set_handler(irq, handle_edge_irq);
 
 	ebit = irq2ebit(irq) * 2;
-	pa = __raw_readw(MCFEPORT_EPPAR);
+	pa = __raw_readw(iomem(MCFEPORT_EPPAR));
 	pa = (pa & ~(0x3 << ebit)) | (tb << ebit);
-	__raw_writew(pa, MCFEPORT_EPPAR);
+	__raw_writew(pa, iomem(MCFEPORT_EPPAR));
 	
 	return 0;
 }
@@ -179,11 +179,11 @@ void __init init_IRQ(void)
 	int irq, eirq;
 
 	/* Mask all interrupt sources */
-	__raw_writeb(0xff, MCFINTC0_SIMR);
+	__raw_writeb(0xff, iomem(MCFINTC0_SIMR));
 	if (MCFINTC1_SIMR)
-		__raw_writeb(0xff, MCFINTC1_SIMR);
+		__raw_writeb(0xff, iomem(MCFINTC1_SIMR));
 	if (MCFINTC2_SIMR)
-		__raw_writeb(0xff, MCFINTC2_SIMR);
+		__raw_writeb(0xff, iomem(MCFINTC2_SIMR));
 
 	eirq = MCFINT_VECBASE + 64 + (MCFINTC1_ICR0 ? 64 : 0) +
 						(MCFINTC2_ICR0 ? 64 : 0);

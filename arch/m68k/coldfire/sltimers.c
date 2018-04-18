@@ -33,7 +33,7 @@
 /*
  *	By default use Slice Timer 1 as the profiler clock timer.
  */
-#define	PA(a)	(MCFSLT_TIMER1 + (a))
+#define	PA(a)	iomem(MCFSLT_TIMER1 + (a))
 
 /*
  *	Choose a reasonably fast profile timer. Make it an odd value to
@@ -77,7 +77,7 @@ void mcfslt_profile_init(void)
 /*
  *	By default use Slice Timer 0 as the system clock timer.
  */
-#define	TA(a)	(MCFSLT_TIMER0 + (a))
+#define	TA(a)	iomem(MCFSLT_TIMER0 + (a))
 
 static u32 mcfslt_cycles_per_jiffy;
 static u32 mcfslt_cnt;

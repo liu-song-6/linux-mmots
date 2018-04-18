@@ -45,23 +45,23 @@ unsigned char mcf_irq2imr[NR_IRQS];
 void mcf_setimr(int index)
 {
 	u16 imr;
-	imr = __raw_readw(MCFSIM_IMR);
-	__raw_writew(imr | (0x1 << index), MCFSIM_IMR);
+	imr = __raw_readw(iomem(MCFSIM_IMR));
+	__raw_writew(imr | (0x1 << index), iomem(MCFSIM_IMR));
 }
 
 void mcf_clrimr(int index)
 {
 	u16 imr;
-	imr = __raw_readw(MCFSIM_IMR);
-	__raw_writew(imr & ~(0x1 << index), MCFSIM_IMR);
+	imr = __raw_readw(iomem(MCFSIM_IMR));
+	__raw_writew(imr & ~(0x1 << index), iomem(MCFSIM_IMR));
 }
 
 void mcf_maskimr(unsigned int mask)
 {
 	u16 imr;
-	imr = __raw_readw(MCFSIM_IMR);
+	imr = __raw_readw(iomem(MCFSIM_IMR));
 	imr |= mask;
-	__raw_writew(imr, MCFSIM_IMR);
+	__raw_writew(imr, iomem(MCFSIM_IMR));
 }
 
 #else
@@ -69,23 +69,23 @@ void mcf_maskimr(unsigned int mask)
 void mcf_setimr(int index)
 {
 	u32 imr;
-	imr = __raw_readl(MCFSIM_IMR);
-	__raw_writel(imr | (0x1 << index), MCFSIM_IMR);
+	imr = __raw_readl(iomem(MCFSIM_IMR));
+	__raw_writel(imr | (0x1 << index), iomem(MCFSIM_IMR));
 }
 
 void mcf_clrimr(int index)
 {
 	u32 imr;
-	imr = __raw_readl(MCFSIM_IMR);
-	__raw_writel(imr & ~(0x1 << index), MCFSIM_IMR);
+	imr = __raw_readl(iomem(MCFSIM_IMR));
+	__raw_writel(imr & ~(0x1 << index), iomem(MCFSIM_IMR));
 }
 
 void mcf_maskimr(unsigned int mask)
 {
 	u32 imr;
-	imr = __raw_readl(MCFSIM_IMR);
+	imr = __raw_readl(iomem(MCFSIM_IMR));
 	imr |= mask;
-	__raw_writel(imr, MCFSIM_IMR);
+	__raw_writel(imr, iomem(MCFSIM_IMR));
 }
 
 #endif
@@ -104,9 +104,9 @@ void mcf_autovector(int irq)
 #ifdef MCFSIM_AVR
 	if ((irq >= EIRQ1) && (irq <= EIRQ7)) {
 		u8 avec;
-		avec = __raw_readb(MCFSIM_AVR);
+		avec = __raw_readb(iomem(MCFSIM_AVR));
 		avec |= (0x1 << (irq - EIRQ1 + 1));
-		__raw_writeb(avec, MCFSIM_AVR);
+		__raw_writeb(avec, iomem(MCFSIM_AVR));
 	}
 #endif
 }
