@@ -745,7 +745,7 @@ int inode_congested(struct inode *inode, int cong_bits)
 	 */
 	if (inode && inode_to_wb_is_valid(inode)) {
 		struct bdi_writeback *wb;
-		struct wb_lock_cookie lock_cookie;
+		struct wb_lock_cookie lock_cookie = {};
 		bool congested;
 
 		wb = unlocked_inode_to_wb_begin(inode, &lock_cookie);
