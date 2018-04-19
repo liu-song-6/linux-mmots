@@ -5788,6 +5788,14 @@ F:	fs/crypto/
 F:	include/linux/fscrypt*.h
 F:	Documentation/filesystems/fscrypt.rst
 
+FSNOTIFY: FILESYSTEM NOTIFICATION INFRASTRUCTURE
+M:	Jan Kara <jack@suse.cz>
+R:	Amir Goldstein <amir73il@gmail.com>
+L:	linux-fsdevel@vger.kernel.org
+S:	Maintained
+F:	fs/notify/
+F:	include/linux/fsnotify*.h
+
 FUJITSU LAPTOP EXTRAS
 M:	Jonathan Woithe <jwoithe@just42.net>
 L:	platform-driver-x86@vger.kernel.org
@@ -6260,7 +6268,7 @@ S:	Odd Fixes
 F:	drivers/media/usb/hdpvr/
 
 HEWLETT PACKARD ENTERPRISE ILO NMI WATCHDOG DRIVER
-M:	Jimmy Vance <jimmy.vance@hpe.com>
+M:	Jerry Hoemann <jerry.hoemann@hpe.com>
 S:	Supported
 F:	Documentation/watchdog/hpwdt.txt
 F:	drivers/watchdog/hpwdt.c
@@ -7399,16 +7407,6 @@ L:	netdev@vger.kernel.org
 S:	Obsolete
 F:	include/uapi/linux/ipx.h
 F:	drivers/staging/ipx/
-
-IRDA SUBSYSTEM
-M:	Samuel Ortiz <samuel@sortiz.org>
-L:	irda-users@lists.sourceforge.net (subscribers-only)
-L:	netdev@vger.kernel.org
-W:	http://irda.sourceforge.net/
-S:	Obsolete
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/sameo/irda-2.6.git
-F:	Documentation/networking/irda.txt
-F:	drivers/staging/irda/
 
 IRQ DOMAINS (IRQ NUMBER MAPPING LIBRARY)
 M:	Marc Zyngier <marc.zyngier@arm.com>
@@ -15626,7 +15624,7 @@ L:	linux-mm@kvack.org
 S:	Maintained
 F:	mm/zsmalloc.c
 F:	include/linux/zsmalloc.h
-F:	Documentation/vm/zsmalloc.txt
+F:	Documentation/vm/zsmalloc.rst
 
 ZSWAP COMPRESSED SWAP CACHING
 M:	Seth Jennings <sjenning@redhat.com>

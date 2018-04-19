@@ -2529,7 +2529,6 @@ int addrconf_prefix_rcv_add_addr(struct net *net, struct net_device *dev,
 		if (IS_ERR_OR_NULL(ifp))
 			return -1;
 
-		update_lft = 0;
 		create = 1;
 		spin_lock_bh(&ifp->lock);
 		ifp->flags |= IFA_F_MANAGETEMPADDR;
@@ -2551,7 +2550,7 @@ int addrconf_prefix_rcv_add_addr(struct net *net, struct net_device *dev,
 			stored_lft = ifp->valid_lft - (now - ifp->tstamp) / HZ;
 		else
 			stored_lft = 0;
-		if (!update_lft && !create && stored_lft) {
+		if (!create && stored_lft) {
 			const u32 minimum_lft = min_t(u32,
 				stored_lft, MIN_VALID_LIFETIME);
 			valid_lft = max(valid_lft, minimum_lft);
@@ -2902,6 +2901,11 @@ static int inet6_addr_add(struct net *net, int ifindex,
 					      expires, flags);
 		}
 
+		/* Send a netlink notification if DAD is enabled and
+		 * optimistic flag is not set
+		 */
+		if (!(ifp->flags & (IFA_F_OPTIMISTIC | IFA_F_NODAD)))
+			ipv6_ifa_notify(0, ifp);
 		/*
 		 * Note that section 3.1 of RFC 4429 indicates
 		 * that the Optimistic flag should not be set for
@@ -5028,14 +5032,6 @@ static void inet6_ifa_notify(int event, struct inet6_ifaddr *ifa)
 	struct sk_buff *skb;
 	struct net *net = dev_net(ifa->idev->dev);
 	int err = -ENOBUFS;
-
-	/* Don't send DELADDR notification for TENTATIVE address,
-	 * since NEWADDR notification is sent only after removing
-	 * TENTATIVE flag, if DAD has not failed.
-	 */
-	if (ifa->flags & IFA_F_TENTATIVE && !(ifa->flags & IFA_F_DADFAILED) &&
-	    event == RTM_DELADDR)
-		return;
 
 	skb = nlmsg_new(inet6_ifaddr_msgsize(), GFP_ATOMIC);
 	if (!skb)

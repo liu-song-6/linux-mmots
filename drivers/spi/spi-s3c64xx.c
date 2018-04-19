@@ -28,15 +28,15 @@
 
 #define S3C64XX_SPI_CH_CFG		0x00
 #define S3C64XX_SPI_CLK_CFG		0x04
-#define S3C64XX_SPI_MODE_CFG	0x08
-#define S3C64XX_SPI_SLAVE_SEL	0x0C
+#define S3C64XX_SPI_MODE_CFG		0x08
+#define S3C64XX_SPI_SLAVE_SEL		0x0C
 #define S3C64XX_SPI_INT_EN		0x10
 #define S3C64XX_SPI_STATUS		0x14
 #define S3C64XX_SPI_TX_DATA		0x18
 #define S3C64XX_SPI_RX_DATA		0x1C
-#define S3C64XX_SPI_PACKET_CNT	0x20
-#define S3C64XX_SPI_PENDING_CLR	0x24
-#define S3C64XX_SPI_SWAP_CFG	0x28
+#define S3C64XX_SPI_PACKET_CNT		0x20
+#define S3C64XX_SPI_PENDING_CLR		0x24
+#define S3C64XX_SPI_SWAP_CFG		0x28
 #define S3C64XX_SPI_FB_CLK		0x2C
 
 #define S3C64XX_SPI_CH_HS_EN		(1<<6)	/* High Speed Enable */
@@ -77,9 +77,9 @@
 #define S3C64XX_SPI_INT_TX_FIFORDY_EN		(1<<0)
 
 #define S3C64XX_SPI_ST_RX_OVERRUN_ERR		(1<<5)
-#define S3C64XX_SPI_ST_RX_UNDERRUN_ERR	(1<<4)
+#define S3C64XX_SPI_ST_RX_UNDERRUN_ERR		(1<<4)
 #define S3C64XX_SPI_ST_TX_OVERRUN_ERR		(1<<3)
-#define S3C64XX_SPI_ST_TX_UNDERRUN_ERR	(1<<2)
+#define S3C64XX_SPI_ST_TX_UNDERRUN_ERR		(1<<2)
 #define S3C64XX_SPI_ST_RX_FIFORDY		(1<<1)
 #define S3C64XX_SPI_ST_TX_FIFORDY		(1<<0)
 
@@ -100,7 +100,7 @@
 #define S3C64XX_SPI_SWAP_TX_BIT			(1<<1)
 #define S3C64XX_SPI_SWAP_TX_EN			(1<<0)
 
-#define S3C64XX_SPI_FBCLK_MSK		(3<<0)
+#define S3C64XX_SPI_FBCLK_MSK			(3<<0)
 
 #define FIFO_LVL_MASK(i) ((i)->port_conf->fifo_lvl_mask[i->port_id])
 #define S3C64XX_SPI_ST_TX_DONE(v, i) (((v) & \
@@ -156,7 +156,6 @@ struct s3c64xx_spi_port_config {
  * @ioclk: Pointer to the i/o clock between master and slave
  * @master: Pointer to the SPI Protocol master.
  * @cntrlr_info: Platform specific data for the controller this driver manages.
- * @tgl_spi: Pointer to the last CS left untoggled by the cs_change hint.
  * @lock: Controller specific lock.
  * @state: Set of FLAGS to indicate status.
  * @rx_dmach: Controller's DMA channel for Rx.
@@ -177,7 +176,6 @@ struct s3c64xx_spi_driver_data {
 	struct platform_device          *pdev;
 	struct spi_master               *master;
 	struct s3c64xx_spi_info  *cntrlr_info;
-	struct spi_device               *tgl_spi;
 	spinlock_t                      lock;
 	unsigned long                   sfr_start;
 	struct completion               xfer_completion;
@@ -505,6 +503,8 @@ static int wait_for_pio(struct s3c64xx_spi_driver_data *sdd,
 		status = readl(regs + S3C64XX_SPI_STATUS);
 	} while (RX_FIFO_LVL(status, sdd) < xfer->len && --val);
 
+	if (!val)
+		return -EIO;
 
 	/* If it was only Tx */
 	if (!xfer->rx_buf) {
@@ -891,7 +891,7 @@ static irqreturn_t s3c64xx_spi_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static void s3c64xx_spi_hwinit(struct s3c64xx_spi_driver_data *sdd, int channel)
+static void s3c64xx_spi_hwinit(struct s3c64xx_spi_driver_data *sdd)
 {
 	struct s3c64xx_spi_info *sci = sdd->cntrlr_info;
 	void __iomem *regs = sdd->regs;
@@ -1145,7 +1145,7 @@ static int s3c64xx_spi_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(&pdev->dev);
 
 	/* Setup Deufult Mode */
-	s3c64xx_spi_hwinit(sdd, sdd->port_id);
+	s3c64xx_spi_hwinit(sdd);
 
 	spin_lock_init(&sdd->lock);
 	init_completion(&sdd->xfer_completion);
@@ -1260,7 +1260,7 @@ static int s3c64xx_spi_resume(struct device *dev)
 	if (ret < 0)
 		return ret;
 
-	s3c64xx_spi_hwinit(sdd, sdd->port_id);
+	s3c64xx_spi_hwinit(sdd);
 
 	return spi_master_resume(master);
 }

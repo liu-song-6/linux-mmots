@@ -111,8 +111,8 @@ static inline void gpio_free(unsigned gpio)
 
 #define MCFGPIO_PORTTYPE		u8
 #define MCFGPIO_PORTSIZE		8
-#define mcfgpio_read(port)		__raw_readb(port)
-#define mcfgpio_write(data, port)	__raw_writeb(data, port)
+#define mcfgpio_read(port)		__raw_readb(iomem(port))
+#define mcfgpio_write(data, port)	__raw_writeb(data, iomem(port))
 
 #elif defined(CONFIG_M5307) || defined(CONFIG_M5407) || defined(CONFIG_M5272)
 
@@ -120,8 +120,8 @@ static inline void gpio_free(unsigned gpio)
 
 #define MCFGPIO_PORTTYPE		u16
 #define MCFGPIO_PORTSIZE		16
-#define mcfgpio_read(port)		__raw_readw(port)
-#define mcfgpio_write(data, port)	__raw_writew(data, port)
+#define mcfgpio_read(port)		__raw_readw(iomem(port))
+#define mcfgpio_write(data, port)	__raw_writew(data, iomem(port))
 
 #elif defined(CONFIG_M5249) || defined(CONFIG_M525x)
 
@@ -129,8 +129,8 @@ static inline void gpio_free(unsigned gpio)
 
 #define MCFGPIO_PORTTYPE		u32
 #define MCFGPIO_PORTSIZE		32
-#define mcfgpio_read(port)		__raw_readl(port)
-#define mcfgpio_write(data, port)	__raw_writel(data, port)
+#define mcfgpio_read(port)		__raw_readl(iomem(port))
+#define mcfgpio_write(data, port)	__raw_writel(data, iomem(port))
 
 #endif
 

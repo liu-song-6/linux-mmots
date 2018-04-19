@@ -7,8 +7,7 @@
  */
 
 #include <linux/types.h>
-
-#ifdef CONFIG_COMPAT
+#include <linux/compat_time.h>
 
 #include <linux/stat.h>
 #include <linux/param.h>	/* for HZ */
@@ -21,8 +20,11 @@
 #include <linux/unistd.h>
 
 #include <asm/compat.h>
+
+#ifdef CONFIG_COMPAT
 #include <asm/siginfo.h>
 #include <asm/signal.h>
+#endif
 
 #ifdef CONFIG_ARCH_HAS_SYSCALL_WRAPPER
 /*
@@ -82,6 +84,8 @@
 	}									\
 	static inline long __do_compat_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))
 #endif /* COMPAT_SYSCALL_DEFINEx */
+
+#ifdef CONFIG_COMPAT
 
 #ifndef compat_user_stack_pointer
 #define compat_user_stack_pointer() current_user_stack_pointer()
@@ -290,8 +294,6 @@ extern int compat_get_timespec(struct timespec *, const void __user *);
 extern int compat_put_timespec(const struct timespec *, void __user *);
 extern int compat_get_timeval(struct timeval *, const void __user *);
 extern int compat_put_timeval(const struct timeval *, void __user *);
-extern int compat_get_timespec64(struct timespec64 *, const void __user *);
-extern int compat_put_timespec64(const struct timespec64 *, void __user *);
 extern int get_compat_itimerspec64(struct itimerspec64 *its,
 			const struct compat_itimerspec __user *uits);
 extern int put_compat_itimerspec64(const struct itimerspec64 *its,
@@ -791,11 +793,11 @@ asmlinkage long compat_sys_mq_open(const char __user *u_name,
 			struct compat_mq_attr __user *u_attr);
 asmlinkage long compat_sys_mq_timedsend(mqd_t mqdes,
 			const char __user *u_msg_ptr,
-			compat_size_t msg_len, unsigned int msg_prio,
+			u32 msg_len, unsigned int msg_prio,
 			const struct compat_timespec __user *u_abs_timeout);
 asmlinkage ssize_t compat_sys_mq_timedreceive(mqd_t mqdes,
 			char __user *u_msg_ptr,
-			compat_size_t msg_len, unsigned int __user *u_msg_prio,
+			u32 msg_len, unsigned int __user *u_msg_prio,
 			const struct compat_timespec __user *u_abs_timeout);
 asmlinkage long compat_sys_mq_notify(mqd_t mqdes,
 			const struct compat_sigevent __user *u_notification);
@@ -1016,7 +1018,9 @@ static inline struct compat_timeval ns_to_compat_timeval(s64 nsec)
 #else /* !CONFIG_COMPAT */
 
 #define is_compat_task() (0)
+#ifndef in_compat_syscall
 static inline bool in_compat_syscall(void) { return false; }
+#endif
 
 #endif /* CONFIG_COMPAT */
 

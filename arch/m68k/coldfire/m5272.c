@@ -64,13 +64,13 @@ static void __init m5272_uarts_init(void)
 	u32 v;
 
 	/* Enable the output lines for the serial ports */
-	v = readl(MCFSIM_PBCNT);
+	v = readl(iomem(MCFSIM_PBCNT));
 	v = (v & ~0x000000ff) | 0x00000055;
-	writel(v, MCFSIM_PBCNT);
+	writel(v, iomem(MCFSIM_PBCNT));
 
-	v = readl(MCFSIM_PDCNT);
+	v = readl(iomem(MCFSIM_PDCNT));
 	v = (v & ~0x000003fc) | 0x000002a8;
-	writel(v, MCFSIM_PDCNT);
+	writel(v, iomem(MCFSIM_PDCNT));
 }
 
 /***************************************************************************/
@@ -79,9 +79,9 @@ static void m5272_cpu_reset(void)
 {
 	local_irq_disable();
 	/* Set watchdog to reset, and enabled */
-	__raw_writew(0, MCFSIM_WIRR);
-	__raw_writew(1, MCFSIM_WRRR);
-	__raw_writew(0, MCFSIM_WCR);
+	__raw_writew(0, iomem(MCFSIM_WIRR));
+	__raw_writew(1, iomem(MCFSIM_WRRR));
+	__raw_writew(0, iomem(MCFSIM_WCR));
 	for (;;)
 		/* wait for watchdog to timeout */;
 }
@@ -92,7 +92,7 @@ void __init config_BSP(char *commandp, int size)
 {
 #if defined (CONFIG_MOD5272)
 	/* Set base of device vectors to be 64 */
-	writeb(0x40, MCFSIM_PIVR);
+	writeb(0x40, iomem(MCFSIM_PIVR));
 #endif
 
 #if defined(CONFIG_NETtel) || defined(CONFIG_SCALES)
