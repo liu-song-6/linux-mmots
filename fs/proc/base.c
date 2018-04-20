@@ -205,11 +205,34 @@ static int proc_root_link(struct dentry *dentry, struct path *path)
 	return result;
 }
 
+static int __mem_open(struct inode *inode, struct file *file, unsigned int mode)
+{
+	struct mm_struct *mm = proc_mem_open(inode, mode);
+
+	if (IS_ERR(mm))
+		return PTR_ERR(mm);
+
+	file->private_data = mm;
+	return 0;
+}
+
+static int proc_pid_cmdline_open(struct inode *inode, struct file *file)
+{
+	return __mem_open(inode, file, PTRACE_MODE_READ);
+}
+
+static int mem_release(struct inode *inode, struct file *file)
+{
+	struct mm_struct *mm = file->private_data;
+	if (mm)
+		mmdrop(mm);
+	return 0;
+}
+
 static ssize_t proc_pid_cmdline_read(struct file *file, char __user *buf,
 				     size_t _count, loff_t *pos)
 {
-	struct task_struct *tsk;
-	struct mm_struct *mm;
+	struct mm_struct *mm = file->private_data;
 	char *page;
 	unsigned long count = _count;
 	unsigned long arg_start, arg_end, env_start, env_end;
@@ -220,18 +243,11 @@ static ssize_t proc_pid_cmdline_read(struct file *file, char __user *buf,
 
 	BUG_ON(*pos < 0);
 
-	tsk = get_proc_task(file_inode(file));
-	if (!tsk)
-		return -ESRCH;
-	mm = get_task_mm(tsk);
-	put_task_struct(tsk);
-	if (!mm)
-		return 0;
 	/* Check if process spawned far enough to have cmdline. */
-	if (!mm->env_end) {
-		rv = 0;
-		goto out_mmput;
-	}
+	if (!mm || !mm->env_end)
+		return 0;
+	if (!mmget_not_zero(mm))
+		return 0;
 
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (!page) {
@@ -373,8 +389,10 @@ out_mmput:
 }
 
 static const struct file_operations proc_pid_cmdline_ops = {
-	.read	= proc_pid_cmdline_read,
-	.llseek	= generic_file_llseek,
+	.open		= proc_pid_cmdline_open,
+	.read		= proc_pid_cmdline_read,
+	.llseek		= generic_file_llseek,
+	.release	= mem_release,
 };
 
 #ifdef CONFIG_KALLSYMS
@@ -783,17 +801,6 @@ struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
 	return mm;
 }
 
-static int __mem_open(struct inode *inode, struct file *file, unsigned int mode)
-{
-	struct mm_struct *mm = proc_mem_open(inode, mode);
-
-	if (IS_ERR(mm))
-		return PTR_ERR(mm);
-
-	file->private_data = mm;
-	return 0;
-}
-
 static int mem_open(struct inode *inode, struct file *file)
 {
 	int ret = __mem_open(inode, file, PTRACE_MODE_ATTACH);
@@ -885,14 +892,6 @@ loff_t mem_lseek(struct file *file, loff_t offset, int orig)
 	}
 	force_successful_syscall_return();
 	return file->f_pos;
-}
-
-static int mem_release(struct inode *inode, struct file *file)
-{
-	struct mm_struct *mm = file->private_data;
-	if (mm)
-		mmdrop(mm);
-	return 0;
 }
 
 static const struct file_operations proc_mem_operations = {
