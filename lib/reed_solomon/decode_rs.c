@@ -31,9 +31,10 @@
 	 * of nroots is 8. So the necessary stack size will be about
 	 * 220 bytes max.
 	 */
-	uint16_t lambda[nroots + 1], syn[nroots];
-	uint16_t b[nroots + 1], t[nroots + 1], omega[nroots + 1];
-	uint16_t root[nroots], reg[nroots + 1], loc[nroots];
+	uint16_t lambda[RS_MAX_ROOTS + 1], syn[RS_MAX_ROOTS];
+	uint16_t b[RS_MAX_ROOTS + 1], t[RS_MAX_ROOTS + 1];
+	uint16_t omega[RS_MAX_ROOTS + 1], root[RS_MAX_ROOTS];
+	uint16_t reg[RS_MAX_ROOTS + 1], loc[RS_MAX_ROOTS];
 	int count = 0;
 	uint16_t msk = (uint16_t) rs->nn;
 
