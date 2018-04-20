@@ -564,6 +564,7 @@ static bool __oom_reap_task_mm(struct task_struct *tsk, struct mm_struct *mm)
 			tlb_finish_mmu(&tlb, start, end);
 		}
 	}
+	set_bit(MMF_OOM_SKIP, &mm->flags);
 	pr_info("oom_reaper: reaped process %d (%s), now anon-rss:%lukB, file-rss:%lukB, shmem-rss:%lukB\n",
 			task_pid_nr(tsk), tsk->comm,
 			K(get_mm_counter(mm, MM_ANONPAGES)),
@@ -591,7 +592,6 @@ static void oom_reap_task(struct task_struct *tsk)
 	    test_bit(MMF_OOM_SKIP, &mm->flags))
 		goto done;
 
-
 	pr_info("oom_reaper: unable to reap pid:%d (%s)\n",
 		task_pid_nr(tsk), tsk->comm);
 	debug_show_all_locks();
@@ -600,10 +600,11 @@ done:
 	tsk->oom_reaper_list = NULL;
 
 	/*
-	 * Hide this mm from OOM killer because it has been either reaped or
-	 * somebody can't call up_write(mmap_sem).
+	 * If the oom reaper could not get started on this mm and it has not yet
+	 * reached exit_mmap(), set MMF_OOM_SKIP to disregard.
 	 */
-	set_bit(MMF_OOM_SKIP, &mm->flags);
+	if (!test_bit(MMF_UNSTABLE, &mm->flags))
+		set_bit(MMF_OOM_SKIP, &mm->flags);
 
 	/* Drop a reference taken by wake_oom_reaper */
 	put_task_struct(tsk);
