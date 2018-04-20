@@ -2692,6 +2692,7 @@ static unsigned long xdp_get_metalen(const struct xdp_buff *xdp)
 
 BPF_CALL_2(bpf_xdp_adjust_head, struct xdp_buff *, xdp, int, offset)
 {
+	void *xdp_frame_end = xdp->data_hard_start + sizeof(struct xdp_frame);
 	unsigned long metalen = xdp_get_metalen(xdp);
 	void *data_start = xdp->data_hard_start + metalen;
 	void *data = xdp->data + offset;
@@ -2699,6 +2700,13 @@ BPF_CALL_2(bpf_xdp_adjust_head, struct xdp_buff *, xdp, int, offset)
 	if (unlikely(data < data_start ||
 		     data > xdp->data_end - ETH_HLEN))
 		return -EINVAL;
+
+	/* Avoid info leak, when reusing area prev used by xdp_frame */
+	if (data < xdp_frame_end) {
+		unsigned long clearlen = xdp_frame_end - data;
+
+		memset(data, 0, clearlen);
+	}
 
 	if (metalen)
 		memmove(xdp->data_meta + offset,
@@ -2711,6 +2719,30 @@ BPF_CALL_2(bpf_xdp_adjust_head, struct xdp_buff *, xdp, int, offset)
 
 static const struct bpf_func_proto bpf_xdp_adjust_head_proto = {
 	.func		= bpf_xdp_adjust_head,
+	.gpl_only	= false,
+	.ret_type	= RET_INTEGER,
+	.arg1_type	= ARG_PTR_TO_CTX,
+	.arg2_type	= ARG_ANYTHING,
+};
+
+BPF_CALL_2(bpf_xdp_adjust_tail, struct xdp_buff *, xdp, int, offset)
+{
+	void *data_end = xdp->data_end + offset;
+
+	/* only shrinking is allowed for now. */
+	if (unlikely(offset >= 0))
+		return -EINVAL;
+
+	if (unlikely(data_end < xdp->data + ETH_HLEN))
+		return -EINVAL;
+
+	xdp->data_end = data_end;
+
+	return 0;
+}
+
+static const struct bpf_func_proto bpf_xdp_adjust_tail_proto = {
+	.func		= bpf_xdp_adjust_tail,
 	.gpl_only	= false,
 	.ret_type	= RET_INTEGER,
 	.arg1_type	= ARG_PTR_TO_CTX,
@@ -2749,13 +2781,18 @@ static int __bpf_tx_xdp(struct net_device *dev,
 			struct xdp_buff *xdp,
 			u32 index)
 {
+	struct xdp_frame *xdpf;
 	int err;
 
 	if (!dev->netdev_ops->ndo_xdp_xmit) {
 		return -EOPNOTSUPP;
 	}
 
-	err = dev->netdev_ops->ndo_xdp_xmit(dev, xdp);
+	xdpf = convert_to_xdp_frame(xdp);
+	if (unlikely(!xdpf))
+		return -EOVERFLOW;
+
+	err = dev->netdev_ops->ndo_xdp_xmit(dev, xdpf);
 	if (err)
 		return err;
 	dev->netdev_ops->ndo_xdp_flush(dev);
@@ -2771,11 +2808,19 @@ static int __bpf_tx_xdp_map(struct net_device *dev_rx, void *fwd,
 
 	if (map->map_type == BPF_MAP_TYPE_DEVMAP) {
 		struct net_device *dev = fwd;
+		struct xdp_frame *xdpf;
 
 		if (!dev->netdev_ops->ndo_xdp_xmit)
 			return -EOPNOTSUPP;
 
-		err = dev->netdev_ops->ndo_xdp_xmit(dev, xdp);
+		xdpf = convert_to_xdp_frame(xdp);
+		if (unlikely(!xdpf))
+			return -EOVERFLOW;
+
+		/* TODO: move to inside map code instead, for bulk support
+		 * err = dev_map_enqueue(dev, xdp);
+		 */
+		err = dev->netdev_ops->ndo_xdp_xmit(dev, xdpf);
 		if (err)
 			return err;
 		__dev_map_insert_ctx(map, index);
@@ -3053,7 +3098,8 @@ bool bpf_helper_changes_pkt_data(void *func)
 	    func == bpf_l4_csum_replace ||
 	    func == bpf_xdp_adjust_head ||
 	    func == bpf_xdp_adjust_meta ||
-	    func == bpf_msg_pull_data)
+	    func == bpf_msg_pull_data ||
+	    func == bpf_xdp_adjust_tail)
 		return true;
 
 	return false;
@@ -3867,6 +3913,8 @@ xdp_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 		return &bpf_xdp_redirect_proto;
 	case BPF_FUNC_redirect_map:
 		return &bpf_xdp_redirect_map_proto;
+	case BPF_FUNC_xdp_adjust_tail:
+		return &bpf_xdp_adjust_tail_proto;
 	default:
 		return bpf_base_func_proto(func_id);
 	}

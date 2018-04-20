@@ -173,6 +173,17 @@
 		};
 	};
 
+	tempmon: tempmon {
+		compatible = "fsl,imx7d-tempmon";
+		interrupt-parent = <&gpc>;
+		interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+		fsl,tempmon =<&anatop>;
+		nvmem-cells = <&tempmon_calib>,
+			<&tempmon_temp_grade>;
+		nvmem-cell-names = "calib", "temp_grade";
+		clocks = <&clks IMX7D_PLL_SYS_MAIN_CLK>;
+	};
+
 	timer {
 		compatible = "arm,armv7-timer";
 		interrupt-parent = <&intc>;
@@ -540,16 +551,6 @@
 				};
 			};
 
-			tempmon: tempmon {
-				compatible = "fsl,imx7d-tempmon";
-				interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
-				fsl,tempmon =<&anatop>;
-				nvmem-cells = <&tempmon_calib>,
-					<&tempmon_temp_grade>;
-				nvmem-cell-names = "calib", "temp_grade";
-				clocks = <&clks IMX7D_PLL_SYS_MAIN_CLK>;
-			};
-
 			anatop: anatop@30360000 {
 				compatible = "fsl,imx7d-anatop", "fsl,imx6q-anatop",
 					"syscon", "simple-bus";
@@ -571,6 +572,21 @@
 					anatop-min-bit-val = <8>;
 					anatop-min-voltage = <800000>;
 					anatop-max-voltage = <1200000>;
+					anatop-enable-bit = <0>;
+				};
+
+				reg_1p2: regulator-vdd1p2@30360220 {
+					reg = <0x30360220>;
+					compatible = "fsl,anatop-regulator";
+					regulator-name = "vdd1p2";
+					regulator-min-microvolt = <1100000>;
+					regulator-max-microvolt = <1300000>;
+					anatop-reg-offset = <0x220>;
+					anatop-vol-bit-shift = <8>;
+					anatop-vol-bit-width = <5>;
+					anatop-min-bit-val = <0x14>;
+					anatop-min-voltage = <1100000>;
+					anatop-max-voltage = <1300000>;
 					anatop-enable-bit = <0>;
 				};
 			};

@@ -99,14 +99,14 @@ static struct platform_device *stmark2_devices[] __initdata = {
 static int __init init_stmark2(void)
 {
 	/* DSPI0, all pins as DSPI, and using CS1 */
-	__raw_writeb(0x80, MCFGPIO_PAR_DSPIOWL);
-	__raw_writeb(0xfc, MCFGPIO_PAR_DSPIOWH);
+	__raw_writeb(0x80, iomem(MCFGPIO_PAR_DSPIOWL));
+	__raw_writeb(0xfc, iomem(MCFGPIO_PAR_DSPIOWH));
 
 	/* Board gpio setup */
-	__raw_writeb(0x00, MCFGPIO_PAR_BE);
-	__raw_writeb(0x00, MCFGPIO_PAR_FBCTL);
-	__raw_writeb(0x00, MCFGPIO_PAR_CS);
-	__raw_writeb(0x00, MCFGPIO_PAR_CANI2C);
+	__raw_writeb(0x00, iomem(MCFGPIO_PAR_BE));
+	__raw_writeb(0x00, iomem(MCFGPIO_PAR_FBCTL));
+	__raw_writeb(0x00, iomem(MCFGPIO_PAR_CS));
+	__raw_writeb(0x00, iomem(MCFGPIO_PAR_CANI2C));
 
 	platform_add_devices(stmark2_devices, ARRAY_SIZE(stmark2_devices));
 

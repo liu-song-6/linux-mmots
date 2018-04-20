@@ -1,8 +1,13 @@
+generic-y += compat.h
 generic-y += exec.h
+generic-y += ipcbuf.h
 generic-y += irq_work.h
 generic-y += mcs_spinlock.h
 generic-y += mm-arch-hooks.h
+generic-y += msgbuf.h
 generic-y += preempt.h
+generic-y += sembuf.h
+generic-y += shmbuf.h
 generic-y += trace_clock.h
 generic-y += vtime.h
 generic-y += word-at-a-time.h

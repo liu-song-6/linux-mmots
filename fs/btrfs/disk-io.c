@@ -55,7 +55,8 @@
 static const struct extent_io_ops btree_extent_io_ops;
 static void end_workqueue_fn(struct btrfs_work *work);
 static void free_fs_root(struct btrfs_root *root);
-static int btrfs_check_super_valid(struct btrfs_fs_info *fs_info);
+static int btrfs_check_super_valid(struct btrfs_fs_info *fs_info,
+				   struct btrfs_super_block *sb);
 static void btrfs_destroy_ordered_extents(struct btrfs_root *root);
 static int btrfs_destroy_delayed_refs(struct btrfs_transaction *trans,
 				      struct btrfs_fs_info *fs_info);
@@ -888,6 +889,8 @@ static blk_status_t btree_submit_bio_hook(void *private_data, struct bio *bio,
 	struct btrfs_fs_info *fs_info = btrfs_sb(inode->i_sb);
 	int async = check_async_write(BTRFS_I(inode));
 	blk_status_t ret;
+
+	bio_associate_blkcg(bio, blkcg_root_css);
 
 	if (bio_op(bio) != REQ_OP_WRITE) {
 		/*
@@ -1824,6 +1827,7 @@ static int transaction_kthread(void *arg)
 
 		now = get_seconds();
 		if (cur->state < TRANS_STATE_BLOCKED &&
+		    !test_bit(BTRFS_FS_NEED_ASYNC_COMMIT, &fs_info->flags) &&
 		    (now < cur->start_time ||
 		     now - cur->start_time < fs_info->commit_interval)) {
 			spin_unlock(&fs_info->trans_lock);
@@ -2667,7 +2671,7 @@ int open_ctree(struct super_block *sb,
 
 	memcpy(fs_info->fsid, fs_info->super_copy->fsid, BTRFS_FSID_SIZE);
 
-	ret = btrfs_check_super_valid(fs_info);
+	ret = btrfs_check_super_valid(fs_info, fs_info->super_copy);
 	if (ret) {
 		btrfs_err(fs_info, "superblock contains fatal errors");
 		err = -EINVAL;
@@ -3416,6 +3420,8 @@ static void write_dev_flush(struct btrfs_device *device)
 		return;
 
 	bio_reset(bio);
+	bio_associate_blkcg(bio, blkcg_root_css);
+
 	bio->bi_end_io = btrfs_end_empty_barrier;
 	bio_set_dev(bio, device->bdev);
 	bio->bi_opf = REQ_OP_WRITE | REQ_SYNC | REQ_PREFLUSH;
@@ -3561,6 +3567,21 @@ int write_all_supers(struct btrfs_fs_info *fs_info, int max_mirrors)
 
 	sb = fs_info->super_for_commit;
 	dev_item = &sb->dev_item;
+
+	/* Do extra check on the sb to be written */
+	ret = btrfs_check_super_valid(fs_info, sb);
+	if (ret) {
+		btrfs_err(fs_info, "fatal superblock corrupted detected");
+		return -EUCLEAN;
+	}
+	/*
+	 * Unknown incompat flags can't be mounted, so newly developed flags
+	 * means corruption
+	 */
+	if (btrfs_super_incompat_flags(sb) & ~BTRFS_FEATURE_INCOMPAT_SUPP) {
+		btrfs_err(fs_info, "fatal superblock corrupted detected");
+		return -EUCLEAN;
+	}
 
 	mutex_lock(&fs_info->fs_devices->device_list_mutex);
 	head = &fs_info->fs_devices->devices;
@@ -3973,9 +3994,9 @@ int btrfs_read_buffer(struct extent_buffer *buf, u64 parent_transid, int level,
 					      level, first_key);
 }
 
-static int btrfs_check_super_valid(struct btrfs_fs_info *fs_info)
+static int btrfs_check_super_valid(struct btrfs_fs_info *fs_info,
+				   struct btrfs_super_block *sb)
 {
-	struct btrfs_super_block *sb = fs_info->super_copy;
 	u64 nodesize = btrfs_super_nodesize(sb);
 	u64 sectorsize = btrfs_super_sectorsize(sb);
 	int ret = 0;

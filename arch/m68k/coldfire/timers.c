@@ -29,7 +29,7 @@
  *	By default use timer1 as the system clock timer.
  */
 #define	FREQ	(MCF_BUSCLK / 16)
-#define	TA(a)	(MCFTIMER_BASE1 + (a))
+#define	TA(a)	iomem(MCFTIMER_BASE1 + (a))
 
 /*
  *	These provide the underlying interrupt vector support.
@@ -57,13 +57,13 @@ static void init_timer_irq(void)
 #ifdef MCFSIM_ICR_AUTOVEC
 	/* Timer1 is always used as system timer */
 	writeb(MCFSIM_ICR_AUTOVEC | MCFSIM_ICR_LEVEL6 | MCFSIM_ICR_PRI3,
-		MCFSIM_TIMER1ICR);
+		iomem(MCFSIM_TIMER1ICR));
 	mcf_mapirq2imr(MCF_IRQ_TIMER, MCFINTC_TIMER1);
 
 #ifdef CONFIG_HIGHPROFILE
 	/* Timer2 is to be used as a high speed profile timer  */
 	writeb(MCFSIM_ICR_AUTOVEC | MCFSIM_ICR_LEVEL7 | MCFSIM_ICR_PRI3,
-		MCFSIM_TIMER2ICR);
+		iomem(MCFSIM_TIMER2ICR));
 	mcf_mapirq2imr(MCF_IRQ_PROFILER, MCFINTC_TIMER2);
 #endif
 #endif /* MCFSIM_ICR_AUTOVEC */

@@ -84,8 +84,8 @@ static inline int le_test_bit(int nr, const u8 *addr)
 	return 1U & (addr[BIT_BYTE(nr)] >> (nr & (BITS_PER_BYTE-1)));
 }
 
-void le_bitmap_set(u8 *map, unsigned int start, int len);
-void le_bitmap_clear(u8 *map, unsigned int start, int len);
+void le_bitmap_set(unsigned long *map, unsigned int start, int len);
+void le_bitmap_clear(unsigned long *map, unsigned int start, int len);
 
 struct extent_state;
 struct btrfs_root;

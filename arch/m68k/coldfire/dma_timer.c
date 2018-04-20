@@ -20,12 +20,12 @@
 #define DMA_TIMER_2	(0x80)
 #define DMA_TIMER_3	(0xc0)
 
-#define DTMR0	(MCF_IPSBAR + DMA_TIMER_0 + 0x400)
-#define DTXMR0	(MCF_IPSBAR + DMA_TIMER_0 + 0x402)
-#define DTER0	(MCF_IPSBAR + DMA_TIMER_0 + 0x403)
-#define DTRR0	(MCF_IPSBAR + DMA_TIMER_0 + 0x404)
-#define DTCR0	(MCF_IPSBAR + DMA_TIMER_0 + 0x408)
-#define DTCN0	(MCF_IPSBAR + DMA_TIMER_0 + 0x40c)
+#define DTMR0	iomem(MCF_IPSBAR + DMA_TIMER_0 + 0x400)
+#define DTXMR0	iomem(MCF_IPSBAR + DMA_TIMER_0 + 0x402)
+#define DTER0	iomem(MCF_IPSBAR + DMA_TIMER_0 + 0x403)
+#define DTRR0	iomem(MCF_IPSBAR + DMA_TIMER_0 + 0x404)
+#define DTCR0	iomem(MCF_IPSBAR + DMA_TIMER_0 + 0x408)
+#define DTCN0	iomem(MCF_IPSBAR + DMA_TIMER_0 + 0x40c)
 
 #define DMA_FREQ    ((MCF_CLK / 2) / 16)
 
@@ -56,10 +56,10 @@ static int __init  init_cf_dt_clocksource(void)
 	 * get a ~213 ns resolution and the 32bit register will overflow almost
 	 * every 15 minutes.
 	 */
-	__raw_writeb(0x00, DTXMR0);
-	__raw_writeb(0x00, DTER0);
-	__raw_writel(0x00000000, DTRR0);
-	__raw_writew(DMA_DTMR_CLK_DIV_16 | DMA_DTMR_ENABLE, DTMR0);
+	__raw_writeb(0x00, iomem(DTXMR0));
+	__raw_writeb(0x00, iomem(DTER0));
+	__raw_writel(0x00000000, iomem(DTRR0));
+	__raw_writew(DMA_DTMR_CLK_DIV_16 | DMA_DTMR_ENABLE, iomem(DTMR0));
 	return clocksource_register_hz(&clocksource_cf_dt, DMA_FREQ);
 }
 

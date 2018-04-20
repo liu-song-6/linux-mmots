@@ -207,14 +207,14 @@ static void __init m5441x_clk_init(void)
 
 static void __init m5441x_uarts_init(void)
 {
-	__raw_writeb(0x0f, MCFGPIO_PAR_UART0);
-	__raw_writeb(0x00, MCFGPIO_PAR_UART1);
-	__raw_writeb(0x00, MCFGPIO_PAR_UART2);
+	__raw_writeb(0x0f, iomem(MCFGPIO_PAR_UART0));
+	__raw_writeb(0x00, iomem(MCFGPIO_PAR_UART1));
+	__raw_writeb(0x00, iomem(MCFGPIO_PAR_UART2));
 }
 
 static void __init m5441x_fec_init(void)
 {
-	__raw_writeb(0x03, MCFGPIO_PAR_FEC);
+	__raw_writeb(0x03, iomem(MCFGPIO_PAR_FEC));
 }
 
 void __init config_BSP(char *commandp, int size)
