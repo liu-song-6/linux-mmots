@@ -65,10 +65,6 @@ endif
 # kernel.
 cflags-y	+= -mdisable-fpregs
 
-# Without this, "ld -r" results in .text sections that are too big
-# (> 0x40000) for branches to reach stubs.
-cflags-y	+= -ffunction-sections
-
 # Use long jumps instead of long branches (needed if your linker fails to
 # link a too big vmlinux executable). Not enabled for building modules.
 ifdef CONFIG_MLONGCALLS
@@ -122,6 +118,9 @@ BOOT_TARGETS    = zImage Image palo lifimage
 INSTALL_TARGETS = zinstall install
 
 PHONY += bzImage $(BOOT_TARGETS) $(INSTALL_TARGETS)
+
+# Default kernel to build
+all: bzImage
 
 zImage: vmlinuz
 Image: vmlinux

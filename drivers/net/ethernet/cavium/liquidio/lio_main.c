@@ -2252,14 +2252,11 @@ static int liquidio_set_mac(struct net_device *netdev, void *p)
 	return 0;
 }
 
-/**
- * \brief Net device get_stats
- * @param netdev network device
- */
-static struct net_device_stats *liquidio_get_stats(struct net_device *netdev)
+static void
+liquidio_get_stats64(struct net_device *netdev,
+		     struct rtnl_link_stats64 *lstats)
 {
 	struct lio *lio = GET_LIO(netdev);
-	struct net_device_stats *stats = &netdev->stats;
 	struct octeon_device *oct;
 	u64 pkts = 0, drop = 0, bytes = 0;
 	struct oct_droq_stats *oq_stats;
@@ -2269,7 +2266,7 @@ static struct net_device_stats *liquidio_get_stats(struct net_device *netdev)
 	oct = lio->oct_dev;
 
 	if (ifstate_check(lio, LIO_IFSTATE_RESETTING))
-		return stats;
+		return;
 
 	for (i = 0; i < oct->num_iqs; i++) {
 		iq_no = lio->linfo.txpciq[i].s.q_no;
@@ -2279,9 +2276,9 @@ static struct net_device_stats *liquidio_get_stats(struct net_device *netdev)
 		bytes += iq_stats->tx_tot_bytes;
 	}
 
-	stats->tx_packets = pkts;
-	stats->tx_bytes = bytes;
-	stats->tx_dropped = drop;
+	lstats->tx_packets = pkts;
+	lstats->tx_bytes = bytes;
+	lstats->tx_dropped = drop;
 
 	pkts = 0;
 	drop = 0;
@@ -2298,11 +2295,34 @@ static struct net_device_stats *liquidio_get_stats(struct net_device *netdev)
 		bytes += oq_stats->rx_bytes_received;
 	}
 
-	stats->rx_bytes = bytes;
-	stats->rx_packets = pkts;
-	stats->rx_dropped = drop;
+	lstats->rx_bytes = bytes;
+	lstats->rx_packets = pkts;
+	lstats->rx_dropped = drop;
 
-	return stats;
+	octnet_get_link_stats(netdev);
+	lstats->multicast = oct->link_stats.fromwire.fw_total_mcast;
+	lstats->collisions = oct->link_stats.fromhost.total_collisions;
+
+	/* detailed rx_errors: */
+	lstats->rx_length_errors = oct->link_stats.fromwire.l2_err;
+	/* recved pkt with crc error    */
+	lstats->rx_crc_errors = oct->link_stats.fromwire.fcs_err;
+	/* recv'd frame alignment error */
+	lstats->rx_frame_errors = oct->link_stats.fromwire.frame_err;
+	/* recv'r fifo overrun */
+	lstats->rx_fifo_errors = oct->link_stats.fromwire.fifo_err;
+
+	lstats->rx_errors = lstats->rx_length_errors + lstats->rx_crc_errors +
+		lstats->rx_frame_errors + lstats->rx_fifo_errors;
+
+	/* detailed tx_errors */
+	lstats->tx_aborted_errors = oct->link_stats.fromhost.fw_err_pko;
+	lstats->tx_carrier_errors = oct->link_stats.fromhost.fw_err_link;
+	lstats->tx_fifo_errors = oct->link_stats.fromhost.fifo_err;
+
+	lstats->tx_errors = lstats->tx_aborted_errors +
+		lstats->tx_carrier_errors +
+		lstats->tx_fifo_errors;
 }
 
 /**
@@ -2585,6 +2605,7 @@ static int liquidio_xmit(struct sk_buff *skb, struct net_device *netdev)
 		if (dma_mapping_error(&oct->pci_dev->dev, dptr)) {
 			dev_err(&oct->pci_dev->dev, "%s DMA mapping error 1\n",
 				__func__);
+			stats->tx_dmamap_fail++;
 			return NETDEV_TX_BUSY;
 		}
 
@@ -2624,6 +2645,7 @@ static int liquidio_xmit(struct sk_buff *skb, struct net_device *netdev)
 		if (dma_mapping_error(&oct->pci_dev->dev, g->sg[0].ptr[0])) {
 			dev_err(&oct->pci_dev->dev, "%s DMA mapping error 2\n",
 				__func__);
+			stats->tx_dmamap_fail++;
 			return NETDEV_TX_BUSY;
 		}
 		add_sg_size(&g->sg[0], (skb->len - skb->data_len), 0);
@@ -3324,11 +3346,36 @@ static const struct switchdev_ops lio_pf_switchdev_ops = {
 	.switchdev_port_attr_get = lio_pf_switchdev_attr_get,
 };
 
+static int liquidio_get_vf_stats(struct net_device *netdev, int vfidx,
+				 struct ifla_vf_stats *vf_stats)
+{
+	struct lio *lio = GET_LIO(netdev);
+	struct octeon_device *oct = lio->oct_dev;
+	struct oct_vf_stats stats;
+	int ret;
+
+	if (vfidx < 0 || vfidx >= oct->sriov_info.num_vfs_alloced)
+		return -EINVAL;
+
+	memset(&stats, 0, sizeof(struct oct_vf_stats));
+	ret = cn23xx_get_vf_stats(oct, vfidx, &stats);
+	if (!ret) {
+		vf_stats->rx_packets = stats.rx_packets;
+		vf_stats->tx_packets = stats.tx_packets;
+		vf_stats->rx_bytes = stats.rx_bytes;
+		vf_stats->tx_bytes = stats.tx_bytes;
+		vf_stats->broadcast = stats.broadcast;
+		vf_stats->multicast = stats.multicast;
+	}
+
+	return ret;
+}
+
 static const struct net_device_ops lionetdevops = {
 	.ndo_open		= liquidio_open,
 	.ndo_stop		= liquidio_stop,
 	.ndo_start_xmit		= liquidio_xmit,
-	.ndo_get_stats		= liquidio_get_stats,
+	.ndo_get_stats64	= liquidio_get_stats64,
 	.ndo_set_mac_address	= liquidio_set_mac,
 	.ndo_set_rx_mode	= liquidio_set_mcast_list,
 	.ndo_tx_timeout		= liquidio_tx_timeout,
@@ -3346,6 +3393,7 @@ static const struct net_device_ops lionetdevops = {
 	.ndo_get_vf_config	= liquidio_get_vf_config,
 	.ndo_set_vf_trust	= liquidio_set_vf_trust,
 	.ndo_set_vf_link_state  = liquidio_set_vf_link_state,
+	.ndo_get_vf_stats	= liquidio_get_vf_stats,
 };
 
 /** \brief Entry point for the liquidio module
