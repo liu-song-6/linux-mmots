@@ -1026,6 +1026,7 @@ static int regdb_query_country(const struct fwdb_header *db,
 
 			if (!tmp_rd) {
 				kfree(regdom);
+				kfree(wmm_ptrs);
 				return -ENOMEM;
 			}
 			regdom = tmp_rd;
@@ -1652,7 +1653,7 @@ const char *reg_initiator_name(enum nl80211_reg_initiator initiator)
 	case NL80211_REGDOM_SET_BY_DRIVER:
 		return "driver";
 	case NL80211_REGDOM_SET_BY_COUNTRY_IE:
-		return "country IE";
+		return "country element";
 	default:
 		WARN_ON(1);
 		return "bug";
@@ -2618,7 +2619,7 @@ reg_process_hint_country_ie(struct wiphy *wiphy,
 		 * This doesn't happen yet, not sure we
 		 * ever want to support it for this case.
 		 */
-		WARN_ONCE(1, "Unexpected intersection for country IEs");
+		WARN_ONCE(1, "Unexpected intersection for country elements");
 		return REG_REQ_IGNORE;
 	}
 
