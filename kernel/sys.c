@@ -1815,68 +1815,7 @@ SYSCALL_DEFINE1(umask, int, mask)
 	return mask;
 }
 
-static int prctl_set_mm_exe_file(struct mm_struct *mm, unsigned int fd)
-{
-	struct fd exe;
-	struct file *old_exe, *exe_file;
-	struct inode *inode;
-	int err;
-
-	exe = fdget(fd);
-	if (!exe.file)
-		return -EBADF;
-
-	inode = file_inode(exe.file);
-
-	/*
-	 * Because the original mm->exe_file points to executable file, make
-	 * sure that this one is executable as well, to avoid breaking an
-	 * overall picture.
-	 */
-	err = -EACCES;
-	if (!S_ISREG(inode->i_mode) || path_noexec(&exe.file->f_path))
-		goto exit;
-
-	err = inode_permission(inode, MAY_EXEC);
-	if (err)
-		goto exit;
-
-	/*
-	 * Forbid mm->exe_file change if old file still mapped.
-	 */
-	exe_file = get_mm_exe_file(mm);
-	err = -EBUSY;
-	if (exe_file) {
-		struct vm_area_struct *vma;
-
-		down_read(&mm->mmap_sem);
-		for (vma = mm->mmap; vma; vma = vma->vm_next) {
-			if (!vma->vm_file)
-				continue;
-			if (path_equal(&vma->vm_file->f_path,
-				       &exe_file->f_path))
-				goto exit_err;
-		}
-
-		up_read(&mm->mmap_sem);
-		fput(exe_file);
-	}
-
-	err = 0;
-	/* set the new file, lockless */
-	get_file(exe.file);
-	old_exe = xchg(&mm->exe_file, exe.file);
-	if (old_exe)
-		fput(old_exe);
-exit:
-	fdput(exe);
-	return err;
-exit_err:
-	up_read(&mm->mmap_sem);
-	fput(exe_file);
-	goto exit;
-}
-
+#ifdef CONFIG_CHECKPOINT_RESTORE
 /*
  * WARNING: we don't require any capability here so be very careful
  * in what is allowed for modification from userspace.
@@ -1968,7 +1907,68 @@ out:
 	return error;
 }
 
-#ifdef CONFIG_CHECKPOINT_RESTORE
+static int prctl_set_mm_exe_file(struct mm_struct *mm, unsigned int fd)
+{
+	struct fd exe;
+	struct file *old_exe, *exe_file;
+	struct inode *inode;
+	int err;
+
+	exe = fdget(fd);
+	if (!exe.file)
+		return -EBADF;
+
+	inode = file_inode(exe.file);
+
+	/*
+	 * Because the original mm->exe_file points to executable file, make
+	 * sure that this one is executable as well, to avoid breaking an
+	 * overall picture.
+	 */
+	err = -EACCES;
+	if (!S_ISREG(inode->i_mode) || path_noexec(&exe.file->f_path))
+		goto exit;
+
+	err = inode_permission(inode, MAY_EXEC);
+	if (err)
+		goto exit;
+
+	/*
+	 * Forbid mm->exe_file change if old file still mapped.
+	 */
+	exe_file = get_mm_exe_file(mm);
+	err = -EBUSY;
+	if (exe_file) {
+		struct vm_area_struct *vma;
+
+		down_read(&mm->mmap_sem);
+		for (vma = mm->mmap; vma; vma = vma->vm_next) {
+			if (!vma->vm_file)
+				continue;
+			if (path_equal(&vma->vm_file->f_path,
+				       &exe_file->f_path))
+				goto exit_err;
+		}
+
+		up_read(&mm->mmap_sem);
+		fput(exe_file);
+	}
+
+	err = 0;
+	/* set the new file, lockless */
+	get_file(exe.file);
+	old_exe = xchg(&mm->exe_file, exe.file);
+	if (old_exe)
+		fput(old_exe);
+exit:
+	fdput(exe);
+	return err;
+exit_err:
+	up_read(&mm->mmap_sem);
+	fput(exe_file);
+	goto exit;
+}
+
 static int prctl_set_mm_map(int opt, const void __user *addr, unsigned long data_size)
 {
 	struct prctl_mm_map prctl_map = { .exe_fd = (u32)-1, };
