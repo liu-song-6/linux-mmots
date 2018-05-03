@@ -12,25 +12,12 @@
 #ifndef _KS_WLAN_H
 #define _KS_WLAN_H
 
-#define WPS
-
-#include <linux/interrupt.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-
-#include <linux/spinlock.h>	/* spinlock_t */
-#include <linux/sched.h>	/* wait_queue_head_t */
-#include <linux/types.h>	/* pid_t */
-#include <linux/netdevice.h>	/* struct net_device_stats,  struct sk_buff */
-#include <linux/etherdevice.h>
-#include <linux/wireless.h>
 #include <linux/atomic.h>	/* struct atomic_t */
-#include <linux/timer.h>	/* struct timer_list */
-#include <linux/string.h>
 #include <linux/completion.h>	/* struct completion */
-#include <linux/workqueue.h>
-
-#include <linux/io.h>
+#include <linux/netdevice.h>	/* struct net_device_stats,  struct sk_buff */
+#include <linux/sched.h>	/* wait_queue_head_t */
+#include <linux/spinlock.h>	/* spinlock_t */
+#include <linux/wireless.h>
 
 #include "ks7010_sdio.h"
 
@@ -133,10 +120,8 @@ enum {
 	SME_RSN_AUTH_REQUEST,
 	SME_RSN_ENABLED_REQUEST,
 	SME_RSN_MODE_REQUEST,
-#ifdef WPS
 	SME_WPS_ENABLE_REQUEST,
 	SME_WPS_PROBE_REQUEST,
-#endif
 	SME_SET_GAIN,
 	SME_GET_GAIN,
 	SME_SLEEP_REQUEST,
@@ -196,29 +181,27 @@ struct sme_info {
 	unsigned long sme_flag;
 };
 
-struct hostt_t {
+struct hostt {
 	int buff[SME_EVENT_BUFF_SIZE];
 	unsigned int qhead;
 	unsigned int qtail;
 };
 
 #define RSN_IE_BODY_MAX 64
-struct rsn_ie_t {
+struct rsn_ie {
 	u8 id;	/* 0xdd = WPA or 0x30 = RSN */
 	u8 size;	/* max ? 255 ? */
 	u8 body[RSN_IE_BODY_MAX];
 } __packed;
 
-#ifdef WPS
 #define WPS_IE_BODY_MAX 255
-struct wps_ie_t {
+struct wps_ie {
 	u8 id;	/* 221 'dd <len> 00 50 F2 04' */
 	u8 size;	/* max ? 255 ? */
 	u8 body[WPS_IE_BODY_MAX];
 } __packed;
-#endif /* WPS */
 
-struct local_ap_t {
+struct local_ap {
 	u8 bssid[6];
 	u8 rssi;
 	u8 sq;
@@ -235,28 +218,26 @@ struct local_ap_t {
 	u16 capability;
 	u8 channel;
 	u8 noise;
-	struct rsn_ie_t wpa_ie;
-	struct rsn_ie_t rsn_ie;
-#ifdef WPS
-	struct wps_ie_t wps_ie;
-#endif /* WPS */
+	struct rsn_ie wpa_ie;
+	struct rsn_ie rsn_ie;
+	struct wps_ie wps_ie;
 };
 
 #define LOCAL_APLIST_MAX 31
 #define LOCAL_CURRENT_AP LOCAL_APLIST_MAX
-struct local_aplist_t {
+struct local_aplist {
 	int size;
-	struct local_ap_t ap[LOCAL_APLIST_MAX + 1];
+	struct local_ap ap[LOCAL_APLIST_MAX + 1];
 };
 
-struct local_gain_t {
+struct local_gain {
 	u8 tx_mode;
 	u8 rx_mode;
 	u8 tx_gain;
 	u8 rx_gain;
 };
 
-struct local_eeprom_sum_t {
+struct local_eeprom_sum {
 	u8 type;
 	u8 result;
 };
@@ -278,31 +259,23 @@ enum {
 	PS_WAKEUP
 };
 
-struct power_save_status_t {
+struct power_save_status {
 	atomic_t status;	/* initialvalue 0 */
 	struct completion wakeup_wait;
 	atomic_t confirm_wait;
 	atomic_t snooze_guard;
 };
 
-struct sleep_status_t {
+struct sleep_status {
 	atomic_t status;	/* initialvalue 0 */
 	atomic_t doze_request;
 	atomic_t wakeup_request;
 };
 
 /* WPA */
-struct scan_ext_t {
+struct scan_ext {
 	unsigned int flag;
 	char ssid[IW_ESSID_MAX_SIZE + 1];
-};
-
-enum {
-	CIPHER_NONE,
-	CIPHER_WEP40,
-	CIPHER_TKIP,
-	CIPHER_CCMP,
-	CIPHER_WEP104
 };
 
 #define CIPHER_ID_WPA_NONE    "\x00\x50\xf2\x00"
@@ -339,7 +312,7 @@ enum {
 
 #define MIC_KEY_SIZE 8
 
-struct wpa_key_t {
+struct wpa_key {
 	u32 ext_flags;	/* IW_ENCODE_EXT_xxx */
 	u8 tx_seq[IW_ENCODE_SEQ_MAX_SIZE];	/* LSB first */
 	u8 rx_seq[IW_ENCODE_SEQ_MAX_SIZE];	/* LSB first */
@@ -357,14 +330,14 @@ struct wpa_key_t {
 #define WPA_KEY_INDEX_MAX 4
 #define WPA_RX_SEQ_LEN 6
 
-struct mic_failure_t {
+struct mic_failure {
 	u16 failure;	/* MIC Failure counter 0 or 1 or 2 */
 	u16 counter;	/* 1sec counter 0-60 */
 	u32 last_failure_time;
 	int stop;	/* stop flag */
 };
 
-struct wpa_status_t {
+struct wpa_status {
 	int wpa_enabled;
 	unsigned int rsn_enabled;
 	int version;
@@ -373,30 +346,28 @@ struct wpa_status_t {
 	int key_mgmt_suite;	/* authentication key management suite */
 	int auth_alg;
 	int txkey;
-	struct wpa_key_t key[WPA_KEY_INDEX_MAX];
-	struct scan_ext_t scan_ext;
-	struct mic_failure_t mic_failure;
+	struct wpa_key key[WPA_KEY_INDEX_MAX];
+	struct scan_ext scan_ext;
+	struct mic_failure mic_failure;
 };
 
 #include <linux/list.h>
 #define PMK_LIST_MAX 8
-struct pmk_list_t {
+struct pmk_list {
 	u16 size;
 	struct list_head head;
-	struct pmk_t {
+	struct pmk {
 		struct list_head list;
 		u8 bssid[ETH_ALEN];
 		u8 pmkid[IW_PMKID_LEN];
 	} pmk[PMK_LIST_MAX];
 };
 
-#ifdef WPS
-struct wps_status_t {
+struct wps_status {
 	int wps_enabled;
 	int ielen;
 	u8 ie[255];
 };
-#endif /* WPS */
 
 struct ks_wlan_private {
 	/* hardware information */
@@ -423,12 +394,12 @@ struct ks_wlan_private {
 
 	unsigned char eth_addr[ETH_ALEN];
 
-	struct local_aplist_t aplist;
-	struct local_ap_t current_ap;
-	struct power_save_status_t psstatus;
-	struct sleep_status_t sleepstatus;
-	struct wpa_status_t wpa;
-	struct pmk_list_t pmklist;
+	struct local_aplist aplist;
+	struct local_ap current_ap;
+	struct power_save_status psstatus;
+	struct sleep_status sleepstatus;
+	struct wpa_status wpa;
+	struct pmk_list pmklist;
 	/* wireless parameter */
 	struct ks_wlan_parameter reg;
 	u8 current_rate;
@@ -443,7 +414,7 @@ struct ks_wlan_private {
 	unsigned int need_commit;	/* for ioctl */
 
 	/* DeviceIoControl */
-	int device_open_status;
+	bool is_device_open;
 	atomic_t event_count;
 	atomic_t rec_count;
 	int dev_count;
@@ -466,24 +437,17 @@ struct ks_wlan_private {
 #define CONNECT_STATUS_MASK 0x7FFFFFFF
 	u32 connect_status;	/* connect status */
 	int infra_status;	/* Infractructure status */
-
-	u8 data_buff[0x1000];
-
 	u8 scan_ssid_len;
 	u8 scan_ssid[IW_ESSID_MAX_SIZE + 1];
-	struct local_gain_t gain;
-#ifdef WPS
-	struct net_device *l2_dev;
-	int l2_fd;
-	struct wps_status_t wps;
-#endif /* WPS */
+	struct local_gain gain;
+	struct wps_status wps;
 	u8 sleep_mode;
 
 	u8 region;
-	struct local_eeprom_sum_t eeprom_sum;
+	struct local_eeprom_sum eeprom_sum;
 	u8 eeprom_checksum;
 
-	struct hostt_t hostt;
+	struct hostt hostt;
 
 	unsigned long last_doze;
 	unsigned long last_wakeup;
