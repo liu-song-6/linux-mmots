@@ -9,10 +9,6 @@
 #ifndef WILC_WFI_NETDEVICE
 #define WILC_WFI_NETDEVICE
 
-#define WILC_WFI_RX_INTR 0x0001
-#define WILC_WFI_TX_INTR 0x0002
-
-#define WILC_WFI_TIMEOUT 5
 #define WILC_MAX_NUM_PMKIDS  16
 #define PMKID_LEN  16
 #define PMKID_FOUND 1
@@ -49,12 +45,7 @@
 #define FLOW_CONTROL_LOWER_THRESHOLD	128
 #define FLOW_CONTROL_UPPER_THRESHOLD	256
 
-enum stats_flags {
-	WILC_WFI_RX_PKT = BIT(0),
-	WILC_WFI_TX_PKT = BIT(1),
-};
-
-struct WILC_WFI_stats {
+struct wilc_wfi_stats {
 	unsigned long rx_packets;
 	unsigned long tx_packets;
 	unsigned long rx_bytes;
@@ -69,7 +60,7 @@ struct WILC_WFI_stats {
  * packets in and out, so there is place for a packet
  */
 
-#define num_reg_frame 2
+#define NUM_REG_FRAME 2
 
 struct wilc_wfi_key {
 	u8 *key;
@@ -112,20 +103,14 @@ struct wilc_priv {
 	struct net_device_stats stats;
 	u8 monitor_flag;
 	int status;
-	struct WILC_WFI_packet *ppool;
-	struct WILC_WFI_packet *rx_queue; /* List of incoming packets */
-	int rx_int_enabled;
-	int tx_packetlen;
-	u8 *tx_packetdata;
 	struct sk_buff *skb;
 	spinlock_t lock;
 	struct net_device *dev;
-	struct napi_struct napi;
 	struct host_if_drv *hif_drv;
 	struct host_if_pmkid_attr pmkid_list;
-	struct WILC_WFI_stats netstats;
-	u8 WILC_WFI_wep_key[4][WLAN_KEY_LEN_WEP104];
-	u8 WILC_WFI_wep_key_len[4];
+	struct wilc_wfi_stats netstats;
+	u8 wep_key[4][WLAN_KEY_LEN_WEP104];
+	u8 wep_key_len[4];
 	/* The real interface that the monitor is on */
 	struct net_device *real_ndev;
 	struct wilc_wfi_key *wilc_gtk[MAX_NUM_STA];
@@ -150,7 +135,7 @@ struct wilc_vif {
 	u8 iftype;
 	int monitor_flag;
 	int mac_opened;
-	struct frame_reg frame_reg[num_reg_frame];
+	struct frame_reg frame_reg[NUM_REG_FRAME];
 	struct net_device_stats netstats;
 	struct wilc *wilc;
 	u8 src_addr[ETH_ALEN];
@@ -222,16 +207,12 @@ struct WILC_WFI_mon_priv {
 	struct net_device *real_ndev;
 };
 
-int wilc1000_wlan_init(struct net_device *dev, struct wilc_vif *vif);
-
 void wilc_frmw_to_linux(struct wilc *wilc, u8 *buff, u32 size, u32 pkt_offset);
 void wilc_mac_indicate(struct wilc *wilc, int flag);
 void wilc_netdev_cleanup(struct wilc *wilc);
 int wilc_netdev_init(struct wilc **wilc, struct device *dev, int io_type,
 		     int gpio, const struct wilc_hif_func *ops);
-void wilc1000_wlan_deinit(struct net_device *dev);
 void wilc_wfi_mgmt_rx(struct wilc *wilc, u8 *buff, u32 size);
-int wilc_wlan_get_firmware(struct net_device *dev);
 int wilc_wlan_set_bssid(struct net_device *wilc_netdev, u8 *bssid, u8 mode);
 
 #endif
