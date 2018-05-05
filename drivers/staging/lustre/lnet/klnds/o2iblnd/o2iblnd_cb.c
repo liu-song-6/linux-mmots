@@ -1853,8 +1853,8 @@ kiblnd_thread_fini(void)
 static void
 kiblnd_peer_alive(struct kib_peer *peer)
 {
-	/* This is racy, but everyone's only writing cfs_time_current() */
-	peer->ibp_last_alive = cfs_time_current();
+	/* This is racy, but everyone's only writing jiffies */
+	peer->ibp_last_alive = jiffies;
 	mb();
 }
 
@@ -3141,10 +3141,10 @@ kiblnd_check_txs_locked(struct kib_conn *conn, struct list_head *txs)
 			LASSERT(tx->tx_waiting || tx->tx_sending);
 		}
 
-		if (cfs_time_aftereq(jiffies, tx->tx_deadline)) {
+		if (time_after_eq(jiffies, tx->tx_deadline)) {
 			CERROR("Timed out tx: %s, %lu seconds\n",
 			       kiblnd_queue2str(conn, txs),
-			       cfs_duration_sec(jiffies - tx->tx_deadline));
+			       (jiffies - tx->tx_deadline) / HZ);
 			return 1;
 		}
 	}
@@ -3206,8 +3206,7 @@ kiblnd_check_conns(int idx)
 			if (timedout) {
 				CERROR("Timed out RDMA with %s (%lu): c: %u, oc: %u, rc: %u\n",
 				       libcfs_nid2str(peer->ibp_nid),
-				       cfs_duration_sec(cfs_time_current() -
-							peer->ibp_last_alive),
+				       (jiffies - peer->ibp_last_alive) / HZ,
 				       conn->ibc_credits,
 				       conn->ibc_outstanding_credits,
 				       conn->ibc_reserved_credits);
@@ -3681,7 +3680,7 @@ kiblnd_failover_thread(void *arg)
 
 		list_for_each_entry(dev, &kiblnd_data.kib_failed_devs,
 				    ibd_fail_list) {
-			if (time_before(cfs_time_current(),
+			if (time_before(jiffies,
 					dev->ibd_next_failover))
 				continue;
 			do_failover = 1;
@@ -3700,13 +3699,13 @@ kiblnd_failover_thread(void *arg)
 			LASSERT(dev->ibd_failover);
 			dev->ibd_failover = 0;
 			if (rc >= 0) { /* Device is OK or failover succeed */
-				dev->ibd_next_failover = cfs_time_shift(3);
+				dev->ibd_next_failover = jiffies + 3 * HZ;
 				continue;
 			}
 
 			/* failed to failover, retry later */
 			dev->ibd_next_failover =
-				cfs_time_shift(min(dev->ibd_failed_failover, 10));
+				jiffies + min(dev->ibd_failed_failover, 10) * HZ;
 			if (kiblnd_dev_can_failover(dev)) {
 				list_add_tail(&dev->ibd_fail_list,
 					      &kiblnd_data.kib_failed_devs);
