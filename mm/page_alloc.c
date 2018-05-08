@@ -7710,6 +7710,7 @@ bool has_unmovable_pages(struct zone *zone, struct page *page, int count,
 	return false;
 }
 
+#ifdef CONFIG_MEMORY_HOTREMOVE
 bool is_pageblock_removable_nolock(struct page *page)
 {
 	struct zone *zone;
@@ -7732,6 +7733,7 @@ bool is_pageblock_removable_nolock(struct page *page)
 
 	return !has_unmovable_pages(zone, page, 0, MIGRATE_MOVABLE, true);
 }
+#endif
 
 #if (defined(CONFIG_MEMORY_ISOLATION) && defined(CONFIG_COMPACTION)) || defined(CONFIG_CMA)
 
