@@ -122,8 +122,8 @@ enum si_stat_indexes {
 };
 
 struct smi_info {
-	int                    intf_num;
-	ipmi_smi_t             intf;
+	int                    si_num;
+	struct ipmi_smi        *intf;
 	struct si_sm_data      *si_sm;
 	const struct si_sm_handlers *handlers;
 	spinlock_t             si_lock;
@@ -261,7 +261,6 @@ static int num_max_busy_us;
 static bool unload_when_empty = true;
 
 static int try_smi_init(struct smi_info *smi);
-static void shutdown_one_si(struct smi_info *smi_info);
 static void cleanup_one_si(struct smi_info *smi_info);
 static void cleanup_ipmi_si(void);
 
@@ -287,10 +286,7 @@ static void deliver_recv_msg(struct smi_info *smi_info,
 			     struct ipmi_smi_msg *msg)
 {
 	/* Deliver the message to the upper layer. */
-	if (smi_info->intf)
-		ipmi_smi_msg_received(smi_info->intf, msg);
-	else
-		ipmi_free_smi_msg(msg);
+	ipmi_smi_msg_received(smi_info->intf, msg);
 }
 
 static void return_hosed_msg(struct smi_info *smi_info, int cCode)
@@ -471,8 +467,7 @@ retry:
 
 		start_clear_flags(smi_info);
 		smi_info->msg_flags &= ~WDT_PRE_TIMEOUT_INT;
-		if (smi_info->intf)
-			ipmi_smi_watchdog_pretimeout(smi_info->intf);
+		ipmi_smi_watchdog_pretimeout(smi_info->intf);
 	} else if (smi_info->msg_flags & RECEIVE_MSG_AVAIL) {
 		/* Messages available. */
 		smi_info->curr_msg = alloc_msg_handle_irq(smi_info);
@@ -798,8 +793,7 @@ restart:
 	 * We prefer handling attn over new messages.  But don't do
 	 * this if there is not yet an upper layer to handle anything.
 	 */
-	if (likely(smi_info->intf) &&
-	    (si_sm_result == SI_SM_ATTN || smi_info->got_attn)) {
+	if (si_sm_result == SI_SM_ATTN || smi_info->got_attn) {
 		unsigned char msg[2];
 
 		if (smi_info->si_state != SI_NORMAL) {
@@ -962,8 +956,8 @@ static inline int ipmi_thread_busy_wait(enum si_sm_result smi_result,
 {
 	unsigned int max_busy_us = 0;
 
-	if (smi_info->intf_num < num_max_busy_us)
-		max_busy_us = kipmid_max_busy_us[smi_info->intf_num];
+	if (smi_info->si_num < num_max_busy_us)
+		max_busy_us = kipmid_max_busy_us[smi_info->si_num];
 	if (max_busy_us == 0 || smi_result != SI_SM_CALL_WITH_DELAY)
 		ipmi_si_set_not_busy(busy_until);
 	else if (!ipmi_si_is_busy(busy_until)) {
@@ -1143,8 +1137,8 @@ irqreturn_t ipmi_si_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int smi_start_processing(void       *send_info,
-				ipmi_smi_t intf)
+static int smi_start_processing(void            *send_info,
+				struct ipmi_smi *intf)
 {
 	struct smi_info *new_smi = send_info;
 	int             enable = 0;
@@ -1165,8 +1159,8 @@ static int smi_start_processing(void       *send_info,
 	/*
 	 * Check if the user forcefully enabled the daemon.
 	 */
-	if (new_smi->intf_num < num_force_kipmid)
-		enable = force_kipmid[new_smi->intf_num];
+	if (new_smi->si_num < num_force_kipmid)
+		enable = force_kipmid[new_smi->si_num];
 	/*
 	 * The BT interface is efficient enough to not need a thread,
 	 * and there is no need for a thread if we have interrupts.
@@ -1176,7 +1170,7 @@ static int smi_start_processing(void       *send_info,
 
 	if (enable) {
 		new_smi->thread = kthread_run(ipmi_thread, new_smi,
-					      "kipmi%d", new_smi->intf_num);
+					      "kipmi%d", new_smi->si_num);
 		if (IS_ERR(new_smi->thread)) {
 			dev_notice(new_smi->io.dev, "Could not start"
 				   " kernel thread due to error %ld, only using"
@@ -1209,9 +1203,11 @@ static void set_maintenance_mode(void *send_info, bool enable)
 		atomic_set(&smi_info->req_events, 0);
 }
 
+static void shutdown_smi(void *send_info);
 static const struct ipmi_smi_handlers handlers = {
 	.owner                  = THIS_MODULE,
 	.start_processing       = smi_start_processing,
+	.shutdown               = shutdown_smi,
 	.get_smi_info		= get_smi_info,
 	.sender			= sender,
 	.request_events		= request_events,
@@ -2006,14 +2002,8 @@ int ipmi_si_add_smi(struct si_sm_io *io)
 
 	list_add_tail(&new_smi->link, &smi_infos);
 
-	if (initialized) {
+	if (initialized)
 		rv = try_smi_init(new_smi);
-		if (rv) {
-			cleanup_one_si(new_smi);
-			mutex_unlock(&smi_infos_lock);
-			return rv;
-		}
-	}
 out_err:
 	mutex_unlock(&smi_infos_lock);
 	return rv;
@@ -2056,19 +2046,19 @@ static int try_smi_init(struct smi_info *new_smi)
 		goto out_err;
 	}
 
-	new_smi->intf_num = smi_num;
+	new_smi->si_num = smi_num;
 
 	/* Do this early so it's available for logs. */
 	if (!new_smi->io.dev) {
 		init_name = kasprintf(GFP_KERNEL, "ipmi_si.%d",
-				      new_smi->intf_num);
+				      new_smi->si_num);
 
 		/*
 		 * If we don't already have a device from something
 		 * else (like PCI), then register a new one.
 		 */
 		new_smi->pdev = platform_device_alloc("ipmi_si",
-						      new_smi->intf_num);
+						      new_smi->si_num);
 		if (!new_smi->pdev) {
 			pr_err(PFX "Unable to allocate platform device\n");
 			rv = -ENOMEM;
@@ -2223,7 +2213,8 @@ static int try_smi_init(struct smi_info *new_smi)
 	return 0;
 
 out_err:
-	shutdown_one_si(new_smi);
+	ipmi_unregister_smi(new_smi->intf);
+	new_smi->intf = NULL;
 
 	kfree(init_name);
 
@@ -2301,20 +2292,9 @@ skip_fallback_noirq:
 }
 module_init(init_ipmi_si);
 
-static void shutdown_one_si(struct smi_info *smi_info)
+static void shutdown_smi(void *send_info)
 {
-	int           rv = 0;
-
-	if (smi_info->intf) {
-		ipmi_smi_t intf = smi_info->intf;
-
-		smi_info->intf = NULL;
-		rv = ipmi_unregister_smi(intf);
-		if (rv) {
-			pr_err(PFX "Unable to unregister device: errno=%d\n",
-			       rv);
-		}
-	}
+	struct smi_info *smi_info = send_info;
 
 	if (smi_info->dev_group_added) {
 		device_remove_group(smi_info->io.dev, &ipmi_si_dev_attr_group);
@@ -2372,6 +2352,10 @@ static void shutdown_one_si(struct smi_info *smi_info)
 	smi_info->si_sm = NULL;
 }
 
+/*
+ * Must be called with smi_infos_lock held, to serialize the
+ * smi_info->intf check.
+ */
 static void cleanup_one_si(struct smi_info *smi_info)
 {
 	if (!smi_info)
@@ -2379,7 +2363,10 @@ static void cleanup_one_si(struct smi_info *smi_info)
 
 	list_del(&smi_info->link);
 
-	shutdown_one_si(smi_info);
+	if (smi_info->intf) {
+		ipmi_unregister_smi(smi_info->intf);
+		smi_info->intf = NULL;
+	}
 
 	if (smi_info->pdev) {
 		if (smi_info->pdev_registered)

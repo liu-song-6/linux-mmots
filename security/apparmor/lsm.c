@@ -39,6 +39,7 @@
 #include "include/policy_ns.h"
 #include "include/procattr.h"
 #include "include/mount.h"
+#include "include/secid.h"
 
 /* Flag indicating whether initialization completed */
 int apparmor_initialized;
@@ -711,6 +712,13 @@ static void apparmor_bprm_committed_creds(struct linux_binprm *bprm)
 	return;
 }
 
+static void apparmor_task_getsecid(struct task_struct *p, u32 *secid)
+{
+	struct aa_label *label = aa_get_task_label(p);
+	*secid = label->secid;
+	aa_put_label(label);
+}
+
 static int apparmor_task_setrlimit(struct task_struct *task,
 		unsigned int resource, struct rlimit *new_rlim)
 {
@@ -1187,8 +1195,13 @@ static struct security_hook_list apparmor_hooks[] __lsm_ro_after_init = {
 
 	LSM_HOOK_INIT(task_free, apparmor_task_free),
 	LSM_HOOK_INIT(task_alloc, apparmor_task_alloc),
+	LSM_HOOK_INIT(task_getsecid, apparmor_task_getsecid),
 	LSM_HOOK_INIT(task_setrlimit, apparmor_task_setrlimit),
 	LSM_HOOK_INIT(task_kill, apparmor_task_kill),
+
+	LSM_HOOK_INIT(secid_to_secctx, apparmor_secid_to_secctx),
+	LSM_HOOK_INIT(secctx_to_secid, apparmor_secctx_to_secid),
+	LSM_HOOK_INIT(release_secctx, apparmor_release_secctx),
 };
 
 /*
