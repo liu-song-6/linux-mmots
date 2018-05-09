@@ -875,6 +875,31 @@ out:
 	return ret;
 }
 
+static void queue_rescan_worker(struct btrfs_fs_info *fs_info)
+{
+	mutex_lock(&fs_info->qgroup_rescan_lock);
+	if (btrfs_fs_closing(fs_info)) {
+		mutex_unlock(&fs_info->qgroup_rescan_lock);
+		return;
+	}
+	if (WARN_ON(fs_info->qgroup_rescan_running)) {
+		btrfs_warn(fs_info, "rescan worker already queued");
+		mutex_unlock(&fs_info->qgroup_rescan_lock);
+		return;
+	}
+
+	/*
+	 * Being queued is enough for btrfs_qgroup_wait_for_completion
+	 * to need to wait.
+	 */
+	fs_info->qgroup_rescan_running = true;
+	mutex_unlock(&fs_info->qgroup_rescan_lock);
+
+	btrfs_queue_work(fs_info->qgroup_rescan_workers,
+			 &fs_info->qgroup_rescan_work);
+}
+
+
 int btrfs_quota_enable(struct btrfs_trans_handle *trans,
 		       struct btrfs_fs_info *fs_info)
 {
@@ -990,8 +1015,7 @@ out_add_root:
 	ret = qgroup_rescan_init(fs_info, 0, 1);
 	if (!ret) {
 	        qgroup_rescan_zero_tracking(fs_info);
-	        btrfs_queue_work(fs_info->qgroup_rescan_workers,
-	                         &fs_info->qgroup_rescan_work);
+		queue_rescan_worker(fs_info);
 	}
 
 out_free_path:
@@ -1882,8 +1906,8 @@ static int qgroup_update_counters(struct btrfs_fs_info *fs_info,
 		cur_old_count = btrfs_qgroup_get_old_refcnt(qg, seq);
 		cur_new_count = btrfs_qgroup_get_new_refcnt(qg, seq);
 
-		trace_qgroup_update_counters(fs_info, qg->qgroupid,
-					     cur_old_count, cur_new_count);
+		trace_qgroup_update_counters(fs_info, qg, cur_old_count,
+					     cur_new_count);
 
 		/* Rfer update part */
 		if (cur_old_count == 0 && cur_new_count > 0) {
@@ -2700,7 +2724,6 @@ static void btrfs_qgroup_rescan_worker(struct btrfs_work *work)
 			btrfs_end_transaction(trans);
 	}
 
-out:
 	btrfs_free_path(path);
 
 	mutex_lock(&fs_info->qgroup_rescan_lock);
@@ -2736,13 +2759,13 @@ out:
 
 	if (btrfs_fs_closing(fs_info)) {
 		btrfs_info(fs_info, "qgroup scan paused");
-	} else if (err >= 0) {
+		err = 0;
+	} else if (err >= 0)
 		btrfs_info(fs_info, "qgroup scan completed%s",
 			err > 0 ? " (inconsistency flag cleared)" : "");
-	} else {
+out:
+	if (err < 0)
 		btrfs_err(fs_info, "qgroup scan failed with %d", err);
-	}
-
 done:
 	mutex_lock(&fs_info->qgroup_rescan_lock);
 	fs_info->qgroup_rescan_running = false;
@@ -2788,13 +2811,10 @@ qgroup_rescan_init(struct btrfs_fs_info *fs_info, u64 progress_objectid,
 		sizeof(fs_info->qgroup_rescan_progress));
 	fs_info->qgroup_rescan_progress.objectid = progress_objectid;
 	init_completion(&fs_info->qgroup_rescan_completion);
-	fs_info->qgroup_rescan_running = true;
 
 	spin_unlock(&fs_info->qgroup_lock);
 	mutex_unlock(&fs_info->qgroup_rescan_lock);
 
-	memset(&fs_info->qgroup_rescan_work, 0,
-	       sizeof(fs_info->qgroup_rescan_work));
 	btrfs_init_work(&fs_info->qgroup_rescan_work,
 			btrfs_qgroup_rescan_helper,
 			btrfs_qgroup_rescan_worker, NULL, NULL);
@@ -2860,9 +2880,7 @@ btrfs_qgroup_rescan(struct btrfs_fs_info *fs_info)
 
 	qgroup_rescan_zero_tracking(fs_info);
 
-	btrfs_queue_work(fs_info->qgroup_rescan_workers,
-			 &fs_info->qgroup_rescan_work);
-
+	queue_rescan_worker(fs_info);
 	return 0;
 }
 
@@ -2873,9 +2891,7 @@ int btrfs_qgroup_wait_for_completion(struct btrfs_fs_info *fs_info,
 	int ret = 0;
 
 	mutex_lock(&fs_info->qgroup_rescan_lock);
-	spin_lock(&fs_info->qgroup_lock);
 	running = fs_info->qgroup_rescan_running;
-	spin_unlock(&fs_info->qgroup_lock);
 	mutex_unlock(&fs_info->qgroup_rescan_lock);
 
 	if (!running)
@@ -2898,8 +2914,7 @@ void
 btrfs_qgroup_rescan_resume(struct btrfs_fs_info *fs_info)
 {
 	if (fs_info->qgroup_flags & BTRFS_QGROUP_STATUS_FLAG_RESCAN)
-		btrfs_queue_work(fs_info->qgroup_rescan_workers,
-				 &fs_info->qgroup_rescan_work);
+		queue_rescan_worker(fs_info);
 }
 
 /*
