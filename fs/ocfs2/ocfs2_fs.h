@@ -808,10 +808,10 @@ struct ocfs2_dir_block_trailer {
 /*10*/	__u8		db_signature[8];	/* Signature for verification */
 	__le64		db_reserved2;
 	__le64		db_free_next;		/* Next block in list (unused) */
-/*20*/	__le64		db_blkno;		/* Offset on disk, in blocks */
+/*28*/	__le64		db_blkno;		/* Offset on disk, in blocks */
 	__le64		db_parent_dinode;	/* dinode which owns me, in
 						   blocks */
-/*30*/	struct ocfs2_block_check db_check;	/* Error checking */
+/*38*/	struct ocfs2_block_check db_check;	/* Error checking */
 /*40*/
 };
 
