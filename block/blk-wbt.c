@@ -101,9 +101,15 @@ static bool wb_recent_wait(struct rq_wb *rwb)
 	return time_before(jiffies, wb->dirty_sleep + HZ);
 }
 
-static inline struct rq_wait *get_rq_wait(struct rq_wb *rwb, bool is_kswapd)
+static inline struct rq_wait *get_rq_wait(struct rq_wb *rwb,
+					  enum wbt_flags wb_acct)
 {
-	return &rwb->rq_wait[is_kswapd];
+	if (wb_acct & WBT_KSWAPD)
+		return &rwb->rq_wait[WBT_RWQ_KSWAPD];
+	else if (wb_acct & WBT_DISCARD)
+		return &rwb->rq_wait[WBT_RWQ_DISCARD];
+
+	return &rwb->rq_wait[WBT_RWQ_BG];
 }
 
 static void rwb_wake_all(struct rq_wb *rwb)
@@ -126,7 +132,7 @@ void __wbt_done(struct rq_wb *rwb, enum wbt_flags wb_acct)
 	if (!(wb_acct & WBT_TRACKED))
 		return;
 
-	rqw = get_rq_wait(rwb, wb_acct & WBT_KSWAPD);
+	rqw = get_rq_wait(rwb, wb_acct);
 	inflight = atomic_dec_return(&rqw->inflight);
 
 	/*
@@ -139,10 +145,13 @@ void __wbt_done(struct rq_wb *rwb, enum wbt_flags wb_acct)
 	}
 
 	/*
-	 * If the device does write back caching, drop further down
-	 * before we wake people up.
+	 * For discards, our limit is always the background. For writes, if
+	 * the device does write back caching, drop further down before we
+	 * wake people up.
 	 */
-	if (rwb->wc && !wb_recent_wait(rwb))
+	if (wb_acct & WBT_DISCARD)
+		limit = rwb->wb_background;
+	else if (rwb->wc && !wb_recent_wait(rwb))
 		limit = 0;
 	else
 		limit = rwb->wb_normal;
@@ -479,6 +488,9 @@ static inline unsigned int get_limit(struct rq_wb *rwb, unsigned long rw)
 {
 	unsigned int limit;
 
+	if ((rw & REQ_OP_MASK) == REQ_OP_DISCARD)
+		return rwb->wb_background;
+
 	/*
 	 * At this point we know it's a buffered write. If this is
 	 * kswapd trying to free memory, or REQ_SYNC is set, then
@@ -529,11 +541,12 @@ static inline bool may_queue(struct rq_wb *rwb, struct rq_wait *rqw,
  * Block if we will exceed our limit, or if we are currently waiting for
  * the timer to kick off queuing again.
  */
-static void __wbt_wait(struct rq_wb *rwb, unsigned long rw, spinlock_t *lock)
+static void __wbt_wait(struct rq_wb *rwb, enum wbt_flags wb_acct,
+		       unsigned long rw, spinlock_t *lock)
 	__releases(lock)
 	__acquires(lock)
 {
-	struct rq_wait *rqw = get_rq_wait(rwb, current_is_kswapd());
+	struct rq_wait *rqw = get_rq_wait(rwb, wb_acct);
 	DEFINE_WAIT(wait);
 
 	if (may_queue(rwb, rqw, &wait, rw))
@@ -559,21 +572,20 @@ static void __wbt_wait(struct rq_wb *rwb, unsigned long rw, spinlock_t *lock)
 
 static inline bool wbt_should_throttle(struct rq_wb *rwb, struct bio *bio)
 {
-	const int op = bio_op(bio);
-
-	/*
-	 * If not a WRITE, do nothing
-	 */
-	if (op != REQ_OP_WRITE)
+	switch (bio_op(bio)) {
+	case REQ_OP_WRITE:
+		/*
+		 * Don't throttle WRITE_ODIRECT
+		 */
+		if ((bio->bi_opf & (REQ_SYNC | REQ_IDLE)) ==
+		    (REQ_SYNC | REQ_IDLE))
+			return false;
+		/* fallthrough */
+	case REQ_OP_DISCARD:
+		return true;
+	default:
 		return false;
-
-	/*
-	 * Don't throttle WRITE_ODIRECT
-	 */
-	if ((bio->bi_opf & (REQ_SYNC | REQ_IDLE)) == (REQ_SYNC | REQ_IDLE))
-		return false;
-
-	return true;
+	}
 }
 
 /*
@@ -584,7 +596,7 @@ static inline bool wbt_should_throttle(struct rq_wb *rwb, struct bio *bio)
  */
 enum wbt_flags wbt_wait(struct rq_wb *rwb, struct bio *bio, spinlock_t *lock)
 {
-	unsigned int ret = 0;
+	enum wbt_flags ret = 0;
 
 	if (!rwb_enabled(rwb))
 		return 0;
@@ -598,13 +610,15 @@ enum wbt_flags wbt_wait(struct rq_wb *rwb, struct bio *bio, spinlock_t *lock)
 		return ret;
 	}
 
-	__wbt_wait(rwb, bio->bi_opf, lock);
+	if (current_is_kswapd())
+		ret |= WBT_KSWAPD;
+	if (bio_op(bio) == REQ_OP_DISCARD)
+		ret |= WBT_DISCARD;
+
+	__wbt_wait(rwb, ret, bio->bi_opf, lock);
 
 	if (!blk_stat_is_active(rwb->cb))
 		rwb_arm_timer(rwb);
-
-	if (current_is_kswapd())
-		ret |= WBT_KSWAPD;
 
 	return ret | WBT_TRACKED;
 }
@@ -701,7 +715,7 @@ static int wbt_data_dir(const struct request *rq)
 
 	if (op == REQ_OP_READ)
 		return READ;
-	else if (op == REQ_OP_WRITE || op == REQ_OP_FLUSH)
+	else if (op_is_write(op))
 		return WRITE;
 
 	/* don't account */

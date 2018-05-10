@@ -153,6 +153,23 @@ micron_nand_read_page_on_die_ecc(struct mtd_info *mtd, struct nand_chip *chip,
 		ret = nand_read_data_op(chip, chip->oob_poi, mtd->oobsize,
 					false);
 
+	/*
+	 * Looks like the NAND_STATUS_FAIL bit is sticky after an ECC failure,
+	 * which leads all READ operations following the failing one to report
+	 * an ECC failure.
+	 * Reset the chip to clear it.
+	 *
+	 * Note that this behavior is not document in the datasheet, but
+	 * resetting the chip is the only solution we found to clear this bit.
+	 */
+	if (status & NAND_STATUS_FAIL) {
+		int cs = page >> (chip->chip_shift - chip->page_shift);
+
+		chip->select_chip(mtd, -1);
+		nand_reset(chip, cs);
+		chip->select_chip(mtd, cs);
+	}
+
 out:
 	micron_nand_on_die_ecc_setup(chip, false);
 
