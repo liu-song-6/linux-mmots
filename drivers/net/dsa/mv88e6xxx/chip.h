@@ -21,10 +21,6 @@
 #include <linux/timecounter.h>
 #include <net/dsa.h>
 
-#ifndef UINT64_MAX
-#define UINT64_MAX		(u64)(~((u64)0))
-#endif
-
 #define SMI_CMD			0x00
 #define SMI_CMD_BUSY		BIT(15)
 #define SMI_CMD_CLAUSE_22	BIT(12)
@@ -114,6 +110,7 @@ struct mv88e6xxx_info {
 	unsigned int num_gpio;
 	unsigned int max_vid;
 	unsigned int port_base_addr;
+	unsigned int phy_base_addr;
 	unsigned int global1_addr;
 	unsigned int global2_addr;
 	unsigned int age_time_coeff;

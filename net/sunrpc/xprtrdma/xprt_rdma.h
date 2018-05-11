@@ -380,7 +380,7 @@ rpcrdma_mr_pop(struct list_head *list)
 	struct rpcrdma_mr *mr;
 
 	mr = list_first_entry(list, struct rpcrdma_mr, mr_list);
-	list_del(&mr->mr_list);
+	list_del_init(&mr->mr_list);
 	return mr;
 }
 
@@ -675,5 +675,3 @@ void xprt_rdma_bc_destroy(struct rpc_xprt *, unsigned int);
 extern struct xprt_class xprt_rdma_bc;
 
 #endif				/* _LINUX_SUNRPC_XPRT_RDMA_H */
-
-#include <trace/events/rpcrdma.h>
