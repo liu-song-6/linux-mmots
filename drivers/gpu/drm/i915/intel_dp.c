@@ -1921,20 +1921,12 @@ intel_dp_compute_config(struct intel_encoder *encoder,
 	if (intel_connector->panel.downclock_mode != NULL &&
 		dev_priv->drrs.type == SEAMLESS_DRRS_SUPPORT) {
 			pipe_config->has_drrs = true;
-<<<<<<< HEAD
-			intel_link_compute_m_n(bpp, lane_count,
-				intel_connector->panel.downclock_mode->clock,
-				pipe_config->port_clock,
-				&pipe_config->dp_m2_n2,
-				reduce_m_n);
-=======
 			intel_link_compute_m_n(pipe_config->pipe_bpp,
 					       pipe_config->lane_count,
 					       intel_connector->panel.downclock_mode->clock,
 					       pipe_config->port_clock,
 					       &pipe_config->dp_m2_n2,
 					       reduce_m_n);
->>>>>>> linux-next/akpm-base
 	}
 
 	if (!HAS_DDI(dev_priv))
