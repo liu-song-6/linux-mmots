@@ -665,13 +665,13 @@ static uint64_t _mv88e6xxx_get_ethtool_stat(struct mv88e6xxx_chip *chip,
 	case STATS_TYPE_PORT:
 		err = mv88e6xxx_port_read(chip, port, s->reg, &reg);
 		if (err)
-			return UINT64_MAX;
+			return U64_MAX;
 
 		low = reg;
 		if (s->size == 4) {
 			err = mv88e6xxx_port_read(chip, port, s->reg + 1, &reg);
 			if (err)
-				return UINT64_MAX;
+				return U64_MAX;
 			high = reg;
 		}
 		break;
@@ -685,7 +685,7 @@ static uint64_t _mv88e6xxx_get_ethtool_stat(struct mv88e6xxx_chip *chip,
 			mv88e6xxx_g1_stats_read(chip, reg + 1, &high);
 		break;
 	default:
-		return UINT64_MAX;
+		return U64_MAX;
 	}
 	value = (((u64)high) << 16) | low;
 	return value;
@@ -742,10 +742,13 @@ static void mv88e6xxx_atu_vtu_get_strings(uint8_t *data)
 }
 
 static void mv88e6xxx_get_strings(struct dsa_switch *ds, int port,
-				  uint8_t *data)
+				  u32 stringset, uint8_t *data)
 {
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int count = 0;
+
+	if (stringset != ETH_SS_STATS)
+		return;
 
 	mutex_lock(&chip->reg_lock);
 
@@ -789,11 +792,14 @@ static int mv88e6320_stats_get_sset_count(struct mv88e6xxx_chip *chip)
 					      STATS_TYPE_BANK1);
 }
 
-static int mv88e6xxx_get_sset_count(struct dsa_switch *ds, int port)
+static int mv88e6xxx_get_sset_count(struct dsa_switch *ds, int port, int sset)
 {
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int serdes_count = 0;
 	int count = 0;
+
+	if (sset != ETH_SS_STATS)
+		return 0;
 
 	mutex_lock(&chip->reg_lock);
 	if (chip->info->ops->stats_get_sset_count)
@@ -1018,6 +1024,57 @@ static void mv88e6xxx_port_stp_state_set(struct dsa_switch *ds, int port,
 
 	if (err)
 		dev_err(ds->dev, "p%d: failed to update state\n", port);
+}
+
+static int mv88e6xxx_devmap_setup(struct mv88e6xxx_chip *chip)
+{
+	int target, port;
+	int err;
+
+	if (!chip->info->global2_addr)
+		return 0;
+
+	/* Initialize the routing port to the 32 possible target devices */
+	for (target = 0; target < 32; target++) {
+		port = 0x1f;
+		if (target < DSA_MAX_SWITCHES)
+			if (chip->ds->rtable[target] != DSA_RTABLE_NONE)
+				port = chip->ds->rtable[target];
+
+		err = mv88e6xxx_g2_device_mapping_write(chip, target, port);
+		if (err)
+			return err;
+	}
+
+	if (chip->info->ops->set_cascade_port) {
+		port = MV88E6XXX_CASCADE_PORT_MULTIPLE;
+		err = chip->info->ops->set_cascade_port(chip, port);
+		if (err)
+			return err;
+	}
+
+	err = mv88e6xxx_g1_set_device_number(chip, chip->ds->index);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+static int mv88e6xxx_trunk_setup(struct mv88e6xxx_chip *chip)
+{
+	/* Clear all trunk masks and mapping */
+	if (chip->info->global2_addr)
+		return mv88e6xxx_g2_trunk_clear(chip);
+
+	return 0;
+}
+
+static int mv88e6xxx_rmu_setup(struct mv88e6xxx_chip *chip)
+{
+	if (chip->info->ops->rmu_disable)
+		return chip->info->ops->rmu_disable(chip);
+
+	return 0;
 }
 
 static int mv88e6xxx_pot_setup(struct mv88e6xxx_chip *chip)
@@ -2115,15 +2172,7 @@ static int mv88e6xxx_set_ageing_time(struct dsa_switch *ds,
 
 static int mv88e6xxx_g1_setup(struct mv88e6xxx_chip *chip)
 {
-	struct dsa_switch *ds = chip->ds;
 	int err;
-
-	/* Disable remote management, and set the switch's DSA device number. */
-	err = mv88e6xxx_g1_write(chip, MV88E6XXX_G1_CTL2,
-				 MV88E6XXX_G1_CTL2_MULTIPLE_CASCADE |
-				 (ds->index & 0x1f));
-	if (err)
-		return err;
 
 	/* Configure the IP ToS mapping registers. */
 	err = mv88e6xxx_g1_write(chip, MV88E6XXX_G1_IP_PRI_0, 0x0000);
@@ -2190,13 +2239,6 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
 	if (err)
 		goto unlock;
 
-	/* Setup Switch Global 2 Registers */
-	if (chip->info->global2_addr) {
-		err = mv88e6xxx_g2_setup(chip);
-		if (err)
-			goto unlock;
-	}
-
 	err = mv88e6xxx_irl_setup(chip);
 	if (err)
 		goto unlock;
@@ -2229,7 +2271,19 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
 	if (err)
 		goto unlock;
 
+	err = mv88e6xxx_rmu_setup(chip);
+	if (err)
+		goto unlock;
+
 	err = mv88e6xxx_rsvd2cpu_setup(chip);
+	if (err)
+		goto unlock;
+
+	err = mv88e6xxx_trunk_setup(chip);
+	if (err)
+		goto unlock;
+
+	err = mv88e6xxx_devmap_setup(chip);
 	if (err)
 		goto unlock;
 
@@ -2488,8 +2542,10 @@ static const struct mv88e6xxx_ops mv88e6085_ops = {
 	.ppu_enable = mv88e6185_g1_ppu_enable,
 	.ppu_disable = mv88e6185_g1_ppu_disable,
 	.reset = mv88e6185_g1_reset,
+	.rmu_disable = mv88e6085_g1_rmu_disable,
 	.vtu_getnext = mv88e6352_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6352_g1_vtu_loadpurge,
+	.serdes_power = mv88e6341_serdes_power,
 };
 
 static const struct mv88e6xxx_ops mv88e6095_ops = {
@@ -2545,6 +2601,7 @@ static const struct mv88e6xxx_ops mv88e6097_ops = {
 	.mgmt_rsvd2cpu = mv88e6352_g2_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6085_g1_rmu_disable,
 	.vtu_getnext = mv88e6352_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6352_g1_vtu_loadpurge,
 };
@@ -2603,6 +2660,7 @@ static const struct mv88e6xxx_ops mv88e6131_ops = {
 	.watchdog_ops = &mv88e6097_watchdog_ops,
 	.mgmt_rsvd2cpu = mv88e6185_g2_mgmt_rsvd2cpu,
 	.ppu_enable = mv88e6185_g1_ppu_enable,
+	.set_cascade_port = mv88e6185_g1_set_cascade_port,
 	.ppu_disable = mv88e6185_g1_ppu_disable,
 	.reset = mv88e6185_g1_reset,
 	.vtu_getnext = mv88e6185_g1_vtu_getnext,
@@ -2771,6 +2829,7 @@ static const struct mv88e6xxx_ops mv88e6172_ops = {
 	.mgmt_rsvd2cpu = mv88e6352_g2_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6352_g1_rmu_disable,
 	.vtu_getnext = mv88e6352_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6352_g1_vtu_loadpurge,
 	.serdes_power = mv88e6352_serdes_power,
@@ -2809,6 +2868,7 @@ static const struct mv88e6xxx_ops mv88e6175_ops = {
 	.reset = mv88e6352_g1_reset,
 	.vtu_getnext = mv88e6352_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6352_g1_vtu_loadpurge,
+	.serdes_power = mv88e6341_serdes_power,
 };
 
 static const struct mv88e6xxx_ops mv88e6176_ops = {
@@ -2843,6 +2903,7 @@ static const struct mv88e6xxx_ops mv88e6176_ops = {
 	.mgmt_rsvd2cpu = mv88e6352_g2_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6352_g1_rmu_disable,
 	.vtu_getnext = mv88e6352_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6352_g1_vtu_loadpurge,
 	.serdes_power = mv88e6352_serdes_power,
@@ -2870,6 +2931,7 @@ static const struct mv88e6xxx_ops mv88e6185_ops = {
 	.set_egress_port = mv88e6095_g1_set_egress_port,
 	.watchdog_ops = &mv88e6097_watchdog_ops,
 	.mgmt_rsvd2cpu = mv88e6185_g2_mgmt_rsvd2cpu,
+	.set_cascade_port = mv88e6185_g1_set_cascade_port,
 	.ppu_enable = mv88e6185_g1_ppu_enable,
 	.ppu_disable = mv88e6185_g1_ppu_disable,
 	.reset = mv88e6185_g1_reset,
@@ -2907,6 +2969,7 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
 	.mgmt_rsvd2cpu = mv88e6390_g1_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6390_g1_rmu_disable,
 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
 	.serdes_power = mv88e6390_serdes_power,
@@ -2943,6 +3006,7 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
 	.mgmt_rsvd2cpu = mv88e6390_g1_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6390_g1_rmu_disable,
 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
 	.serdes_power = mv88e6390_serdes_power,
@@ -2979,6 +3043,7 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
 	.mgmt_rsvd2cpu = mv88e6390_g1_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6390_g1_rmu_disable,
 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
 	.serdes_power = mv88e6390_serdes_power,
@@ -3016,6 +3081,7 @@ static const struct mv88e6xxx_ops mv88e6240_ops = {
 	.mgmt_rsvd2cpu = mv88e6352_g2_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6352_g1_rmu_disable,
 	.vtu_getnext = mv88e6352_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6352_g1_vtu_loadpurge,
 	.serdes_power = mv88e6352_serdes_power,
@@ -3054,6 +3120,7 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
 	.mgmt_rsvd2cpu = mv88e6390_g1_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6390_g1_rmu_disable,
 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
 	.serdes_power = mv88e6390_serdes_power,
@@ -3270,6 +3337,7 @@ static const struct mv88e6xxx_ops mv88e6352_ops = {
 	.mgmt_rsvd2cpu = mv88e6352_g2_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6352_g1_rmu_disable,
 	.vtu_getnext = mv88e6352_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6352_g1_vtu_loadpurge,
 	.serdes_power = mv88e6352_serdes_power,
@@ -3313,6 +3381,7 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
 	.mgmt_rsvd2cpu = mv88e6390_g1_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6390_g1_rmu_disable,
 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
 	.serdes_power = mv88e6390_serdes_power,
@@ -3353,6 +3422,7 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
 	.mgmt_rsvd2cpu = mv88e6390_g1_mgmt_rsvd2cpu,
 	.pot_clear = mv88e6xxx_g2_pot_clear,
 	.reset = mv88e6352_g1_reset,
+	.rmu_disable = mv88e6390_g1_rmu_disable,
 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
 	.serdes_power = mv88e6390_serdes_power,
@@ -3370,6 +3440,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 5,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3391,6 +3462,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 0,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3410,6 +3482,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 8,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3431,6 +3504,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 5,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3452,6 +3526,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 0,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3472,6 +3547,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 11,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x10,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 3750,
@@ -3493,6 +3569,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 5,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3514,6 +3591,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 0,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3535,6 +3613,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 5,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3557,6 +3636,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 15,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3578,6 +3658,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 5,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3600,6 +3681,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 15,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3621,6 +3703,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 0,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3641,6 +3724,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 16,
 		.max_vid = 8191,
 		.port_base_addr = 0x0,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.tag_protocol = DSA_TAG_PROTO_DSA,
@@ -3663,6 +3747,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 16,
 		.max_vid = 8191,
 		.port_base_addr = 0x0,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 3750,
@@ -3684,6 +3769,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 11,
 		.max_vid = 8191,
 		.port_base_addr = 0x0,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 3750,
@@ -3707,6 +3793,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 15,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3730,6 +3817,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 16,
 		.max_vid = 8191,
 		.port_base_addr = 0x0,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 3750,
@@ -3753,6 +3841,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 15,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3776,6 +3865,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 15,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3798,6 +3888,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 11,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x10,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 3750,
@@ -3820,6 +3911,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 5,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3841,6 +3933,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_internal_phys = 5,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3863,6 +3956,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 15,
 		.max_vid = 4095,
 		.port_base_addr = 0x10,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 15000,
@@ -3885,6 +3979,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 16,
 		.max_vid = 8191,
 		.port_base_addr = 0x0,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 3750,
@@ -3907,6 +4002,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
 		.num_gpio = 16,
 		.max_vid = 8191,
 		.port_base_addr = 0x0,
+		.phy_base_addr = 0x0,
 		.global1_addr = 0x1b,
 		.global2_addr = 0x1c,
 		.age_time_coeff = 3750,

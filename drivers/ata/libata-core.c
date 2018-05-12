@@ -3573,9 +3573,11 @@ static int ata_dev_set_mode(struct ata_device *dev)
 	DPRINTK("xfer_shift=%u, xfer_mode=0x%x\n",
 		dev->xfer_shift, (int)dev->xfer_mode);
 
-	ata_dev_info(dev, "configured for %s%s\n",
-		     ata_mode_string(ata_xfer_mode2mask(dev->xfer_mode)),
-		     dev_err_whine);
+	if (!(ehc->i.flags & ATA_EHI_QUIET) ||
+	    ehc->i.flags & ATA_EHI_DID_HARDRESET)
+		ata_dev_info(dev, "configured for %s%s\n",
+			     ata_mode_string(ata_xfer_mode2mask(dev->xfer_mode)),
+			     dev_err_whine);
 
 	return 0;
 
@@ -4492,6 +4494,10 @@ static const struct ata_blacklist_entry ata_device_blacklist [] = {
 
 	/* https://bugzilla.kernel.org/show_bug.cgi?id=15573 */
 	{ "C300-CTFDDAC128MAG",	"0001",		ATA_HORKAGE_NONCQ, },
+
+	/* Some Sandisk SSDs lock up hard with NCQ enabled.  Reported on
+	   SD7SN6S256G and SD8SN8U256G */
+	{ "SanDisk SD[78]SN*G",	NULL,		ATA_HORKAGE_NONCQ, },
 
 	/* devices which puke on READ_NATIVE_MAX */
 	{ "HDS724040KLSA80",	"KFAOA20N",	ATA_HORKAGE_BROKEN_HPA, },

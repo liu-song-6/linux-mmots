@@ -872,6 +872,9 @@ static struct ata_queued_cmd *ata_scsi_qc_new(struct ata_device *dev,
 
 		qc->sg = scsi_sglist(cmd);
 		qc->n_elem = scsi_sg_count(cmd);
+
+		if (cmd->request->rq_flags & RQF_QUIET)
+			qc->flags |= ATA_QCFLAG_QUIET;
 	} else {
 		cmd->result = (DID_OK << 16) | (QUEUE_FULL << 1);
 		cmd->scsi_done(cmd);
@@ -5050,6 +5053,18 @@ int ata_sas_port_init(struct ata_port *ap)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(ata_sas_port_init);
+
+int ata_sas_tport_add(struct device *parent, struct ata_port *ap)
+{
+	return ata_tport_add(parent, ap);
+}
+EXPORT_SYMBOL_GPL(ata_sas_tport_add);
+
+void ata_sas_tport_delete(struct ata_port *ap)
+{
+	ata_tport_delete(ap);
+}
+EXPORT_SYMBOL_GPL(ata_sas_tport_delete);
 
 /**
  *	ata_sas_port_destroy - Destroy a SATA port allocated by ata_sas_port_alloc

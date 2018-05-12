@@ -560,7 +560,8 @@ static void dsa_slave_get_strings(struct net_device *dev,
 		strncpy(data + 2 * len, "rx_packets", len);
 		strncpy(data + 3 * len, "rx_bytes", len);
 		if (ds->ops->get_strings)
-			ds->ops->get_strings(ds, dp->index, data + 4 * len);
+			ds->ops->get_strings(ds, dp->index, stringset,
+					     data + 4 * len);
 	}
 }
 
@@ -605,7 +606,7 @@ static int dsa_slave_get_sset_count(struct net_device *dev, int sset)
 
 		count = 4;
 		if (ds->ops->get_sset_count)
-			count += ds->ops->get_sset_count(ds, dp->index);
+			count += ds->ops->get_sset_count(ds, dp->index, sset);
 
 		return count;
 	}
@@ -1394,6 +1395,9 @@ static void dsa_slave_switchdev_event_work(struct work_struct *work)
 	switch (switchdev_work->event) {
 	case SWITCHDEV_FDB_ADD_TO_DEVICE:
 		fdb_info = &switchdev_work->fdb_info;
+		if (!fdb_info->added_by_user)
+			break;
+
 		err = dsa_port_fdb_add(dp, fdb_info->addr, fdb_info->vid);
 		if (err) {
 			netdev_dbg(dev, "fdb add failed err=%d\n", err);
@@ -1405,6 +1409,9 @@ static void dsa_slave_switchdev_event_work(struct work_struct *work)
 
 	case SWITCHDEV_FDB_DEL_TO_DEVICE:
 		fdb_info = &switchdev_work->fdb_info;
+		if (!fdb_info->added_by_user)
+			break;
+
 		err = dsa_port_fdb_del(dp, fdb_info->addr, fdb_info->vid);
 		if (err) {
 			netdev_dbg(dev, "fdb del failed err=%d\n", err);
@@ -1457,8 +1464,7 @@ static int dsa_slave_switchdev_event(struct notifier_block *unused,
 	switch (event) {
 	case SWITCHDEV_FDB_ADD_TO_DEVICE: /* fall through */
 	case SWITCHDEV_FDB_DEL_TO_DEVICE:
-		if (dsa_slave_switchdev_fdb_work_init(switchdev_work,
-						      ptr))
+		if (dsa_slave_switchdev_fdb_work_init(switchdev_work, ptr))
 			goto err_fdb_work_init;
 		dev_hold(dev);
 		break;
