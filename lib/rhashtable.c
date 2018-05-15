@@ -981,8 +981,6 @@ int rhashtable_init(struct rhashtable *ht,
 	struct bucket_table *tbl;
 	size_t size;
 
-	size = HASH_DEFAULT_SIZE;
-
 	if ((!params->key_len && !params->obj_hashfn) ||
 	    (params->obj_hashfn && !params->obj_cmpfn))
 		return -EINVAL;
@@ -991,9 +989,16 @@ int rhashtable_init(struct rhashtable *ht,
 		return -EINVAL;
 
 	memset(ht, 0, sizeof(*ht));
-	mutex_init(&ht->mutex);
-	spin_lock_init(&ht->lock);
 	memcpy(&ht->p, params, sizeof(*params));
+
+	if (!params->nelem_hint)
+		size = HASH_DEFAULT_SIZE;
+	else
+		size = rounded_hashtable_size(&ht->p);
+
+	tbl = bucket_table_alloc(ht, size, GFP_KERNEL);
+	if (tbl == NULL)
+		return -ENOMEM;
 
 	if (params->min_size)
 		ht->p.min_size = roundup_pow_of_two(params->min_size);
@@ -1008,9 +1013,6 @@ int rhashtable_init(struct rhashtable *ht,
 	}
 
 	ht->p.min_size = max_t(u16, ht->p.min_size, HASH_MIN_SIZE);
-
-	if (params->nelem_hint)
-		size = rounded_hashtable_size(&ht->p);
 
 	if (params->locks_mul)
 		ht->p.locks_mul = roundup_pow_of_two(params->locks_mul);
@@ -1027,10 +1029,8 @@ int rhashtable_init(struct rhashtable *ht,
 		}
 	}
 
-	tbl = bucket_table_alloc(ht, size, GFP_KERNEL);
-	if (tbl == NULL)
-		return -ENOMEM;
-
+	mutex_init(&ht->mutex);
+	spin_lock_init(&ht->lock);
 	atomic_set(&ht->nelems, 0);
 
 	RCU_INIT_POINTER(ht->tbl, tbl);
