@@ -804,7 +804,7 @@ int ore_create(struct ore_io_state *ios)
 	for (i = 0; i < ios->oc->numdevs; i++) {
 		struct osd_request *or;
 
-		or = osd_start_request(_ios_od(ios, i), GFP_KERNEL);
+		or = osd_start_request(_ios_od(ios, i));
 		if (unlikely(!or)) {
 			ORE_ERR("%s: osd_start_request failed\n", __func__);
 			ret = -ENOMEM;
@@ -829,7 +829,7 @@ int ore_remove(struct ore_io_state *ios)
 	for (i = 0; i < ios->oc->numdevs; i++) {
 		struct osd_request *or;
 
-		or = osd_start_request(_ios_od(ios, i), GFP_KERNEL);
+		or = osd_start_request(_ios_od(ios, i));
 		if (unlikely(!or)) {
 			ORE_ERR("%s: osd_start_request failed\n", __func__);
 			ret = -ENOMEM;
@@ -861,7 +861,7 @@ static int _write_mirror(struct ore_io_state *ios, int cur_comp)
 		struct ore_per_dev_state *per_dev = &ios->per_dev[cur_comp];
 		struct osd_request *or;
 
-		or = osd_start_request(_ios_od(ios, dev), GFP_KERNEL);
+		or = osd_start_request(_ios_od(ios, dev));
 		if (unlikely(!or)) {
 			ORE_ERR("%s: osd_start_request failed\n", __func__);
 			ret = -ENOMEM;
@@ -980,7 +980,7 @@ int _ore_read_mirror(struct ore_io_state *ios, unsigned cur_comp)
 		return 0; /* Just an empty slot */
 
 	first_dev = per_dev->dev + first_dev % ios->layout->mirrors_p1;
-	or = osd_start_request(_ios_od(ios, first_dev), GFP_KERNEL);
+	or = osd_start_request(_ios_od(ios, first_dev));
 	if (unlikely(!or)) {
 		ORE_ERR("%s: osd_start_request failed\n", __func__);
 		return -ENOMEM;
@@ -1074,7 +1074,7 @@ static int _truncate_mirrors(struct ore_io_state *ios, unsigned cur_comp,
 		struct ore_per_dev_state *per_dev = &ios->per_dev[cur_comp];
 		struct osd_request *or;
 
-		or = osd_start_request(_ios_od(ios, cur_comp), GFP_KERNEL);
+		or = osd_start_request(_ios_od(ios, cur_comp));
 		if (unlikely(!or)) {
 			ORE_ERR("%s: osd_start_request failed\n", __func__);
 			return -ENOMEM;

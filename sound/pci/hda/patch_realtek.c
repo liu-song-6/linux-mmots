@@ -2363,6 +2363,7 @@ static const struct snd_pci_quirk alc882_fixup_tbl[] = {
 	SND_PCI_QUIRK_VENDOR(0x1462, "MSI", ALC882_FIXUP_GPIO3),
 	SND_PCI_QUIRK(0x147b, 0x107a, "Abit AW9D-MAX", ALC882_FIXUP_ABIT_AW9D_MAX),
 	SND_PCI_QUIRK(0x1558, 0x9501, "Clevo P950HR", ALC1220_FIXUP_CLEVO_P950),
+	SND_PCI_QUIRK(0x1558, 0x95e2, "Clevo P950ER", ALC1220_FIXUP_CLEVO_P950),
 	SND_PCI_QUIRK_VENDOR(0x1558, "Clevo laptop", ALC882_FIXUP_EAPD),
 	SND_PCI_QUIRK(0x161f, 0x2054, "Medion laptop", ALC883_FIXUP_EAPD),
 	SND_PCI_QUIRK(0x17aa, 0x3a0d, "Lenovo Y530", ALC882_FIXUP_LENOVO_Y530),
@@ -2829,6 +2830,7 @@ static int find_ext_mic_pin(struct hda_codec *codec);
 
 static void alc286_shutup(struct hda_codec *codec)
 {
+	const struct hda_pincfg *pin;
 	int i;
 	int mic_pin = find_ext_mic_pin(codec);
 	/* don't shut up pins when unloading the driver; otherwise it breaks
@@ -2836,8 +2838,7 @@ static void alc286_shutup(struct hda_codec *codec)
 	 */
 	if (codec->bus->shutdown)
 		return;
-	for (i = 0; i < codec->init_pins.used; i++) {
-		struct hda_pincfg *pin = snd_array_elem(&codec->init_pins, i);
+	snd_array_for_each(&codec->init_pins, i, pin) {
 		/* use read here for syncing after issuing each verb */
 		if (pin->nid != mic_pin)
 			snd_hda_codec_read(codec, pin->nid, 0,
