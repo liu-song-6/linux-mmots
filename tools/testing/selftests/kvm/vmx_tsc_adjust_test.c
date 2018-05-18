@@ -192,11 +192,7 @@ int main(int argc, char *argv[])
 
 	if (!(entry->ecx & CPUID_VMX)) {
 		fprintf(stderr, "nested VMX not enabled, skipping test\n");
-<<<<<<< HEAD
-		exit(KSFT_SKIP);
-=======
 		return KSFT_SKIP;
->>>>>>> linux-next/akpm-base
 	}
 
 	vm = vm_create_default_vmx(VCPU_ID, (void *) l1_guest_code);
