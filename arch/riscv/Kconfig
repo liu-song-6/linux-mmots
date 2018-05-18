@@ -5,6 +5,8 @@
 
 config RISCV
 	def_bool y
+	# even on 32-bit, physical (and DMA) addresses are > 32-bits
+	select PHYS_ADDR_T_64BIT
 	select OF
 	select OF_EARLY_FLATTREE
 	select OF_IRQ
@@ -22,7 +24,6 @@ config RISCV
 	select GENERIC_ATOMIC64 if !64BIT || !RISCV_ISA_A
 	select HAVE_MEMBLOCK
 	select HAVE_MEMBLOCK_NODE_MAP
-	select HAVE_DMA_API_DEBUG
 	select HAVE_DMA_CONTIGUOUS
 	select HAVE_GENERIC_DMA_COHERENT
 	select IRQ_DOMAIN
@@ -40,16 +41,9 @@ config RISCV
 config MMU
 	def_bool y
 
-# even on 32-bit, physical (and DMA) addresses are > 32-bits
-config ARCH_PHYS_ADDR_T_64BIT
-	def_bool y
-
 config ZONE_DMA32
 	bool
 	default y
-
-config ARCH_DMA_ADDR_T_64BIT
-	def_bool y
 
 config PAGE_OFFSET
 	hex
@@ -104,9 +98,9 @@ config ARCH_RV32I
 	bool "RV32I"
 	select CPU_SUPPORTS_32BIT_KERNEL
 	select 32BIT
-	select GENERIC_ASHLDI3
-	select GENERIC_ASHRDI3
-	select GENERIC_LSHRDI3
+	select GENERIC_LIB_ASHLDI3
+	select GENERIC_LIB_ASHRDI3
+	select GENERIC_LIB_LSHRDI3
 
 config ARCH_RV64I
 	bool "RV64I"
