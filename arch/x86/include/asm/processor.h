@@ -186,15 +186,6 @@ extern void identify_boot_cpu(void);
 extern void identify_secondary_cpu(struct cpuinfo_x86 *);
 extern void print_cpu_info(struct cpuinfo_x86 *);
 void print_cpu_msr(struct cpuinfo_x86 *);
-extern void init_scattered_cpuid_features(struct cpuinfo_x86 *c);
-extern u32 get_scattered_cpuid_leaf(unsigned int level,
-				    unsigned int sub_leaf,
-				    enum cpuid_regs_idx reg);
-extern unsigned int init_intel_cacheinfo(struct cpuinfo_x86 *c);
-extern void init_amd_cacheinfo(struct cpuinfo_x86 *c);
-
-extern void detect_extended_topology(struct cpuinfo_x86 *c);
-extern void detect_ht(struct cpuinfo_x86 *c);
 
 #ifdef CONFIG_X86_32
 extern int have_cpuid_p(void);
@@ -503,6 +494,13 @@ struct thread_struct {
 	unsigned		io_bitmap_max;
 
 	mm_segment_t		addr_limit;
+
+#ifdef CONFIG_GCC_PLUGIN_STACKLEAK
+	unsigned long		lowest_stack;
+# ifdef CONFIG_STACKLEAK_METRICS
+	unsigned long		prev_lowest_stack;
+# endif
+#endif
 
 	unsigned int		sig_on_uaccess_err:1;
 	unsigned int		uaccess_err:1;	/* uaccess failed */

@@ -38,26 +38,11 @@ static int tegra_atomic_check(struct drm_device *drm,
 {
 	int err;
 
-	err = drm_atomic_helper_check_modeset(drm, state);
+	err = drm_atomic_helper_check(drm, state);
 	if (err < 0)
 		return err;
 
-	err = tegra_display_hub_atomic_check(drm, state);
-	if (err < 0)
-		return err;
-
-	err = drm_atomic_normalize_zpos(drm, state);
-	if (err < 0)
-		return err;
-
-	err = drm_atomic_helper_check_planes(drm, state);
-	if (err < 0)
-		return err;
-
-	if (state->legacy_cursor_update)
-		state->async_update = !drm_atomic_helper_async_check(drm, state);
-
-	return 0;
+	return tegra_display_hub_atomic_check(drm, state);
 }
 
 static const struct drm_mode_config_funcs tegra_drm_mode_config_funcs = {
@@ -113,6 +98,10 @@ static int tegra_drm_load(struct drm_device *drm, unsigned long flags)
 			goto free;
 		}
 
+		err = iova_cache_get();
+		if (err < 0)
+			goto domain;
+
 		geometry = &tegra->domain->geometry;
 		gem_start = geometry->aperture_start;
 		gem_end = geometry->aperture_end - CARVEOUT_SZ;
@@ -150,6 +139,8 @@ static int tegra_drm_load(struct drm_device *drm, unsigned long flags)
 	drm->mode_config.max_height = 4096;
 
 	drm->mode_config.allow_fb_modifiers = true;
+
+	drm->mode_config.normalize_zpos = true;
 
 	drm->mode_config.funcs = &tegra_drm_mode_config_funcs;
 	drm->mode_config.helper_private = &tegra_drm_mode_config_helpers;
@@ -202,12 +193,13 @@ fbdev:
 	tegra_drm_fb_free(drm);
 config:
 	drm_mode_config_cleanup(drm);
-
+domain:
 	if (tegra->domain) {
-		iommu_domain_free(tegra->domain);
-		drm_mm_takedown(&tegra->mm);
 		mutex_destroy(&tegra->mm_lock);
+		drm_mm_takedown(&tegra->mm);
 		put_iova_domain(&tegra->carveout.domain);
+		iova_cache_put();
+		iommu_domain_free(tegra->domain);
 	}
 free:
 	kfree(tegra);
@@ -230,10 +222,11 @@ static void tegra_drm_unload(struct drm_device *drm)
 		return;
 
 	if (tegra->domain) {
-		iommu_domain_free(tegra->domain);
-		drm_mm_takedown(&tegra->mm);
 		mutex_destroy(&tegra->mm_lock);
+		drm_mm_takedown(&tegra->mm);
 		put_iova_domain(&tegra->carveout.domain);
+		iova_cache_put();
+		iommu_domain_free(tegra->domain);
 	}
 
 	kfree(tegra);
@@ -1112,6 +1105,48 @@ int tegra_drm_unregister_client(struct tegra_drm *tegra,
 	mutex_unlock(&tegra->clients_lock);
 
 	return 0;
+}
+
+struct iommu_group *host1x_client_iommu_attach(struct host1x_client *client,
+					       bool shared)
+{
+	struct drm_device *drm = dev_get_drvdata(client->parent);
+	struct tegra_drm *tegra = drm->dev_private;
+	struct iommu_group *group = NULL;
+	int err;
+
+	if (tegra->domain) {
+		group = iommu_group_get(client->dev);
+
+		if (group && (!shared || (shared && (group != tegra->group)))) {
+			err = iommu_attach_group(tegra->domain, group);
+			if (err < 0) {
+				iommu_group_put(group);
+				return ERR_PTR(err);
+			}
+
+			if (shared && !tegra->group)
+				tegra->group = group;
+		}
+	}
+
+	return group;
+}
+
+void host1x_client_iommu_detach(struct host1x_client *client,
+				struct iommu_group *group)
+{
+	struct drm_device *drm = dev_get_drvdata(client->parent);
+	struct tegra_drm *tegra = drm->dev_private;
+
+	if (group) {
+		if (group == tegra->group) {
+			iommu_detach_group(tegra->domain, group);
+			tegra->group = NULL;
+		}
+
+		iommu_group_put(group);
+	}
 }
 
 void *tegra_drm_alloc(struct tegra_drm *tegra, size_t size, dma_addr_t *dma)

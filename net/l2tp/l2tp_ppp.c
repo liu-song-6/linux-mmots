@@ -1576,6 +1576,10 @@ static void pppol2tp_next_tunnel(struct net *net, struct pppol2tp_seq_data *pd)
 
 static void pppol2tp_next_session(struct net *net, struct pppol2tp_seq_data *pd)
 {
+	/* Drop reference taken during previous invocation */
+	if (pd->session)
+		l2tp_session_dec_refcount(pd->session);
+
 	pd->session = l2tp_session_get_nth(pd->tunnel, pd->session_idx);
 	pd->session_idx++;
 
@@ -1624,11 +1628,16 @@ static void pppol2tp_seq_stop(struct seq_file *p, void *v)
 	if (!pd || pd == SEQ_START_TOKEN)
 		return;
 
-	/* Drop reference taken by last invocation of pppol2tp_next_tunnel() */
+	/* Drop reference taken by last invocation of pppol2tp_next_session()
+	 * or pppol2tp_next_tunnel().
+	 */
+	if (pd->session) {
+		l2tp_session_dec_refcount(pd->session);
+		pd->session = NULL;
+	}
 	if (pd->tunnel) {
 		l2tp_tunnel_dec_refcount(pd->tunnel);
 		pd->tunnel = NULL;
-		pd->session = NULL;
 	}
 }
 
@@ -1723,14 +1732,10 @@ static int pppol2tp_seq_show(struct seq_file *m, void *v)
 		goto out;
 	}
 
-	/* Show the tunnel or session context.
-	 */
-	if (!pd->session) {
+	if (!pd->session)
 		pppol2tp_seq_tunnel_show(m, pd->tunnel);
-	} else {
+	else
 		pppol2tp_seq_session_show(m, pd->session);
-		l2tp_session_dec_refcount(pd->session);
-	}
 
 out:
 	return 0;
@@ -1742,24 +1747,6 @@ static const struct seq_operations pppol2tp_seq_ops = {
 	.stop		= pppol2tp_seq_stop,
 	.show		= pppol2tp_seq_show,
 };
-
-/* Called when our /proc file is opened. We allocate data for use when
- * iterating our tunnel / session contexts and store it in the private
- * data of the seq_file.
- */
-static int pppol2tp_proc_open(struct inode *inode, struct file *file)
-{
-	return seq_open_net(inode, file, &pppol2tp_seq_ops,
-			    sizeof(struct pppol2tp_seq_data));
-}
-
-static const struct file_operations pppol2tp_proc_fops = {
-	.open		= pppol2tp_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= seq_release_net,
-};
-
 #endif /* CONFIG_PROC_FS */
 
 /*****************************************************************************
@@ -1771,8 +1758,8 @@ static __net_init int pppol2tp_init_net(struct net *net)
 	struct proc_dir_entry *pde;
 	int err = 0;
 
-	pde = proc_create("pppol2tp", 0444, net->proc_net,
-			  &pppol2tp_proc_fops);
+	pde = proc_create_net("pppol2tp", 0444, net->proc_net,
+			&pppol2tp_seq_ops, sizeof(struct pppol2tp_seq_data));
 	if (!pde) {
 		err = -ENOMEM;
 		goto out;
