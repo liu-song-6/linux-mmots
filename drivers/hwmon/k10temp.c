@@ -226,12 +226,6 @@ static umode_t k10temp_is_visible(struct kobject *kobj,
 	struct device *dev = container_of(kobj, struct device, kobj);
 	struct k10temp_data *data = dev_get_drvdata(dev);
 	struct pci_dev *pdev = data->pdev;
-<<<<<<< HEAD
-
-	if (index >= 2) {
-		u32 reg;
-
-=======
 	u32 reg;
 
 	switch (index) {
@@ -239,7 +233,6 @@ static umode_t k10temp_is_visible(struct kobject *kobj,
 	default:
 		break;
 	case 2 ... 3:	/* temp1_crit, temp1_crit_hyst */
->>>>>>> linux-next/akpm-base
 		if (!data->read_htcreg)
 			return 0;
 
@@ -250,13 +243,10 @@ static umode_t k10temp_is_visible(struct kobject *kobj,
 
 		data->read_htcreg(data->pdev, &reg);
 		if (!(reg & HTC_ENABLE))
-<<<<<<< HEAD
-=======
 			return 0;
 		break;
 	case 4 ... 6:	/* temp1_label, temp2_input, temp2_label */
 		if (!data->show_tdie)
->>>>>>> linux-next/akpm-base
 			return 0;
 		break;
 	}

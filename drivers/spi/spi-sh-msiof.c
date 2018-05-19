@@ -278,10 +278,6 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 		else
 			brps = div;
 
-<<<<<<< HEAD
-	k = min_t(int, k, ARRAY_SIZE(sh_msiof_spi_div_table) - 1);
-	brps = min_t(int, brps, 32);
-=======
 		for (; brps > 32; div_pow++)
 			brps = (brps + 1) >> 1;
 	} else {
@@ -291,7 +287,6 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 		div_pow = 5;
 		brps = 32;
 	}
->>>>>>> linux-next/akpm-base
 
 	scr = sh_msiof_spi_div_array[div_pow] | SCR_BRPS(brps);
 	sh_msiof_write(p, TSCR, scr);

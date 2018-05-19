@@ -1654,26 +1654,9 @@ char *device_node_string(char *buf, char *end, struct device_node *dn,
 	return widen_string(buf, buf - buf_start, end, spec);
 }
 
-<<<<<<< HEAD
-static noinline_for_stack
-char *pointer_string(char *buf, char *end, const void *ptr,
-		     struct printf_spec spec)
-{
-	spec.base = 16;
-	spec.flags |= SMALL;
-	if (spec.field_width == -1) {
-		spec.field_width = 2 * sizeof(ptr);
-		spec.flags |= ZEROPAD;
-	}
-
-	return number(buf, end, (unsigned long int)ptr, spec);
-}
-
-static DEFINE_STATIC_KEY_TRUE(not_filled_random_ptr_key);
-=======
 static bool have_filled_random_ptr_key __read_mostly;
->>>>>>> linux-next/akpm-base
 static siphash_key_t ptr_key __read_mostly;
+static DEFINE_STATIC_KEY_TRUE(not_filled_random_ptr_key);
 
 static void enable_ptr_key_workfn(struct work_struct *work)
 {
@@ -1716,13 +1699,8 @@ static char *ptr_to_id(char *buf, char *end, void *ptr, struct printf_spec spec)
 	const char *str = sizeof(ptr) == 8 ? "(____ptrval____)" : "(ptrval)";
 	unsigned long hashval;
 
-<<<<<<< HEAD
-	if (static_branch_unlikely(&not_filled_random_ptr_key)) {
-		spec.field_width = default_width;
-=======
 	if (unlikely(!have_filled_random_ptr_key)) {
 		spec.field_width = 2 * sizeof(ptr);
->>>>>>> linux-next/akpm-base
 		/* string length must be less than default_width */
 		return string(buf, end, str, spec);
 	}
